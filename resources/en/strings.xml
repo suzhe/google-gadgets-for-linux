@@ -52,6 +52,7 @@
 <ADD_GADGETS_TOOLTIP>Add gadgets</ADD_GADGETS_TOOLTIP>
 
 <GOOGLE_GADGETS>Google Gadgets</GOOGLE_GADGETS>
+<LOAD_EXTENSIONS_FAIL>Program can't start because it failed to load the following module(s):</LOAD_EXTENSIONS_FAIL>
 
 <!-- Menu item text. The & character(&amp;) will not be visible. It is put in
 front of the character that should be used as a shortcut for this menu item,

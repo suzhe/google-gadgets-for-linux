@@ -22,6 +22,7 @@
 #include <QtGui/QWidget>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QPushButton>
+#include <QtGui/QMessageBox>
 
 #include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
@@ -32,6 +33,7 @@
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/localized_file_manager.h>
+#include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_view_host.h>
@@ -40,6 +42,8 @@
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/xml_http_request_interface.h>
+#include <ggadget/xml_parser_interface.h>
 #include "qt_host.h"
 #if defined(Q_WS_X11) && defined(HAVE_X11)
 #include <X11/extensions/Xrender.h>
@@ -68,6 +72,42 @@ static const char *kGlobalExtensions[] = {
   "gadget-browser-script-utils",
   NULL
 };
+
+static bool CheckRequiredExtensions() {
+  if (!ggadget::GetGlobalFileManager()->FileExists(ggadget::kCommonJS, NULL)) {
+    // We can't use localized message here because resource failed to load. 
+    QMessageBox::information(
+        NULL, "Google Gadgets",
+        "Program can't start because it failed to load resources");
+    return false;
+  }
+
+  if (!ggadget::GetXMLParser()) {
+    // We can't use localized message here because XML parser is not available.
+    QMessageBox::information(
+        NULL, "Google Gadgets",
+        "Program can't start because it failed to load the "
+        "libxml2-xml-parser module.");
+    return false;
+  }
+
+  std::string message;
+  if (!ggadget::ScriptRuntimeManager::get()->GetScriptRuntime("js"))
+    message += "smjs-script-runtime\n";
+  if (!ggadget::GetXMLHttpRequestFactory())
+    message += "qt-xml-http-request\n";
+  if (!ggadget::GetGadgetManager())
+    message += "google-gadget-manager\n";
+
+  if (!message.empty()) {
+    message = GMS_("LOAD_EXTENSIONS_FAIL") + "\n\n" + message;
+    QMessageBox::information(
+        NULL, QString::fromUtf8(GM_("GOOGLE_GADGETS")),
+        QString::fromUtf8(message.c_str()));
+    return false;
+  }
+  return true;
+}
 
 static const char *kGlobalResourcePaths[] = {
 #ifdef _DEBUG
@@ -221,6 +261,9 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
+
+  if (!CheckRequiredExtensions())
+    return 1;
 
   ext_manager->SetReadonly();
   hosts::qt::QtHost host = hosts::qt::QtHost(debug_mode);

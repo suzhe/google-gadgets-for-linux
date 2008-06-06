@@ -76,6 +76,11 @@ ScriptRuntimeManager::CreateScriptContext(const char *tag_name) {
   return impl_->CreateScriptContext(tag_name);
 }
 
+ScriptRuntimeInterface *
+ScriptRuntimeManager::GetScriptRuntime(const char *tag_name) {
+  return impl_->GetScriptRuntime(tag_name);
+}
+
 ScriptRuntimeManager *ScriptRuntimeManager::get() {
   if (!Impl::manager_)
     Impl::manager_ = new ScriptRuntimeManager();

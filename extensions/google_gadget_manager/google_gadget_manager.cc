@@ -16,7 +16,8 @@
 
 #include "google_gadget_manager.h"
 
-#include <time.h>
+#include <ctime>
+#include <cstdlib>
 #include <ggadget/digest_utils.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/gadget.h>
@@ -39,6 +40,10 @@
 namespace ggadget {
 namespace google {
 
+// Note: The backoff and randomization features in this implementation is
+// very important for proper server-side operation. Please do *NOT* disable
+// or remove them.
+
 // Convert a string to a valid and safe file name. Need not be inversable.
 static std::string MakeGoodFileName(const char *uuid_or_url) {
   std::string result(uuid_or_url);
@@ -50,8 +55,13 @@ static std::string MakeGoodFileName(const char *uuid_or_url) {
   return result;
 }
 
-// TODO: Add blacklisting of gadgets and whitelisting of gadget features. 
+// Return a value which is the input value +/- random(20%).
+static int Randomize(int input) {
+  int variant = input * 20 / 100;
+  return input + (rand() % (variant * 2)) - variant;
+}
 
+// TODO: Add blacklisting of gadgets and whitelisting of gadget features. 
 GoogleGadgetManager::GoogleGadgetManager()
     : main_loop_(GetGlobalMainLoop()),
       global_options_(GetGlobalOptions()),
@@ -139,7 +149,7 @@ void GoogleGadgetManager::ScheduleNextUpdate() {
     }
     if (retry_timeout_ <= 0 ||
         retry_timeout_ > kGadgetsMetadataRetryMaxInterval) {
-      retry_timeout_ = kGadgetsMetadataRetryInterval;
+      retry_timeout_ = Randomize(kGadgetsMetadataRetryInterval);
     }
     ScheduleUpdate(last_try_time_ + retry_timeout_);
   } else {
@@ -216,8 +226,8 @@ void GoogleGadgetManager::OnUpdateDone(bool request_success,
   if (retry_timeout_ == 0) {
     retry_timeout_ = kGadgetsMetadataRetryInterval;
   } else {
-    retry_timeout_ = std::min(retry_timeout_ * 2,
-                              kGadgetsMetadataRetryMaxInterval);
+    retry_timeout_ = Randomize(std::min(retry_timeout_ * 2,
+                                        kGadgetsMetadataRetryMaxInterval));
   }
   global_options_->PutValue(kRetryTimeoutOption, Variant(retry_timeout_));
   LOG("Failed to update gadget metadata. Will retry after %dms",

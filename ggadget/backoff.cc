@@ -30,6 +30,9 @@ static const uint64_t kMaxRetryInterval = 12U * 3600U * 1000U; // 12 hours.
 // Backoff entry will be removed it has not been requested for this interval.
 static const uint64_t kExpirationInterval = 24U * 3600U * 1000U; // 24 hours.
 
+// NOTE: The backoff and randomization features in this implementation is
+// very important for proper server-side operation. Please do *NOT* disable
+// or remove them.
 class Backoff::Impl {
  public:
   bool IsOkToRequest(uint64_t now, const char *request) {

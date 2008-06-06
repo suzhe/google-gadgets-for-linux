@@ -1809,8 +1809,7 @@ BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
     return PR_UNSPECIFIED;
 
   if (input.ConvertToDouble(output))
-    return (std::isnan(*output) || std::isinf(*output)) ?
-           PR_UNSPECIFIED : PR_PIXEL;
+    return PR_PIXEL;
 
   if (!input.ConvertToString(&str) || str.empty())
     return PR_UNSPECIFIED;

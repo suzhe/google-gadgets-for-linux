@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <cstring>
 #include <curl/curl.h>
-#include <openssl/ssl.h>
 #include <pthread.h>
 #include <vector>
 
@@ -142,11 +141,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     pthread_attr_destroy(&thread_attr_);
   }
 
-  virtual void AddAcceptedCertDomain(const char *domain) {
-    if (domain && *domain)
-      accepted_cert_domains_.push_back(domain);
-  }
-
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
     return onreadystatechange_signal_.Connect(handler);
   }
@@ -201,14 +195,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (is_https) {
       curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 1);
       curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 2);
-      if (!accepted_cert_domains_.empty()) {
-        // Because we don't know if the backend is OpenSSL, we set
-        // CURLOPT_SSL_VERIFYHOST to 1 (disable curl host domain checking)
-        // only in the callback. If the callback is not called, the backend
-        // is not OpenSSL, then the default logic will be used.
-        curl_easy_setopt(curl_, CURLOPT_SSL_CTX_FUNCTION, SSLCtxFunction);
-        curl_easy_setopt(curl_, CURLOPT_SSL_CTX_DATA, &accepted_cert_domains_);
-      }
     }
 
     // Disable curl using signals because we use curl in multiple threads.
@@ -246,55 +232,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     async_ = async;
     ChangeState(OPENED);
     return NO_ERR;
-  }
-
-  static CURLcode SSLCtxFunction(CURL *curl, void *sslctx, void *param) {
-    // 1 means only existence of Common Name field in certificates will be
-    // checked by curl. The validation of Common Name is checked in our own
-    // callback.
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1);
-    SSL_CTX *ctx = static_cast<SSL_CTX *>(sslctx);
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
-    SSL_CTX_set_cert_verify_callback(ctx, VerifyCallback, param);
-    return CURLE_OK;
-  }
-
-  static int VerifyCallback(X509_STORE_CTX *ctx, void *arg) {
-    if (!ctx || !ctx->cert) {
-      DLOG("No certificate!");
-      return 0;
-    }
-
-    char subject[256];
-    X509_NAME_oneline(X509_get_subject_name(ctx->cert), subject,
-                      sizeof(subject));
-    char *cn_start = strstr(subject, "/CN=");
-    if (!cn_start) {
-      DLOG("No CN field in certificate subject: %s", subject);
-      return 0;
-    }
-
-    cn_start += 4;
-    if (!*cn_start || *cn_start == '/') {
-      DLOG("Malformed certificate subject: %s", subject);
-      return 0;
-    }
-
-    char *cn_end = strchr(cn_start, '/');
-    if (cn_end) *cn_end = '\0';
-    DLOG("Certificate subject CN is: %s", cn_start);
-
-    std::vector<std::string> *accepted_domains =
-        static_cast<std::vector<std::string> *>(arg);
-    for (size_t i = 0; i < accepted_domains->size(); i++) {
-      if ((*accepted_domains)[i] == cn_start) {
-        DLOG("Certificate accepted");
-        return 1;
-      }
-    }
-
-    DLOG("Certificate rejected");
-    return 0;
   }
 
   virtual ExceptionCode SetRequestHeader(const char *header,
@@ -1031,7 +968,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   XMLParserInterface *xml_parser_;
   Signal0<void> onreadystatechange_signal_;
 
-  std::vector<std::string> accepted_cert_domains_;
   std::string url_, host_;
   bool async_;
 

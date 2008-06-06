@@ -29,13 +29,10 @@ class HttpHandler : public QObject {
             this, SLOT(OnResponseHeaderReceived(const QHttpResponseHeader&)));
     connect(http, SIGNAL(done(bool)),
             this, SLOT(OnDone(bool)));
-    connect(http, SIGNAL(sslErrors(const QList<QSslError>&)),
-            this, SLOT(OnSslErrors(const QList<QSslError>&)));
   }
  private slots:
   void OnResponseHeaderReceived(const QHttpResponseHeader& header);
   void OnDone(bool error);
-  void OnSslErrors(const QList<QSslError>& errors);
 
  private:
   XMLHttpRequest *request_;
