@@ -97,6 +97,7 @@ static const char *g_help_string =
   "  -b         Draw window border for Main View.\n"
   "  -ns        Use dashboard mode instead of sidebar mode.\n"
   "  -bg        Run in background.\n"
+  "  -h, --help Print this message and exit.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths.\n"
