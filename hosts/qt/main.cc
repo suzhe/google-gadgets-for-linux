@@ -45,10 +45,6 @@
 #include <X11/extensions/Xrender.h>
 #endif
 
-static double g_zoom = 1.;
-static int g_debug_mode = 0;
-static bool g_useshapemask = false;
-static bool g_decorated = true;
 static ggadget::qt::QtMainLoop *g_main_loop;
 
 static const char *kGlobalExtensions[] = {
@@ -84,6 +80,23 @@ static const char *kGlobalResourcePaths[] = {
 #endif
   NULL
 };
+
+static const char *g_help_string =
+  "Usage: %s [Options] [Gadgets]\n"
+  "Options:\n"
+#ifdef _DEBUG
+  "  -d mode    Specify debug modes for drawing View:\n"
+  "             0 - No debug.\n"
+  "             1 - Draw bounding boxes around container elements.\n"
+  "             2 - Draw bounding boxes around all elements.\n"
+  "             4 - Draw bounding boxes around clip region.\n"
+#endif
+  "  -h, --help Print this message and exit.\n"
+  "\n"
+  "Gadgets:\n"
+  "  Can specify one or more Desktop Gadget paths.\n"
+  "  If any gadgets are specified, they will be installed by using\n"
+  "  GadgetManager.\n";
 
 #if defined(Q_WS_X11) && defined(HAVE_X11)
 static Display *dpy;
@@ -126,37 +139,28 @@ static void init_argb() {
 int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
-  const char *gadget_name = "examples/test";
 
-  if (argc >= 2) gadget_name = argv[1];
+  int debug_mode = 0;
 
-  if (argc >= 3) {
-    sscanf(argv[2], "%lg", &g_zoom);
-    if (g_zoom <= 0 || g_zoom > 5) {
-      LOG("Zoom level invalid, resetting to 1");
-      g_zoom = 1.;
+  // Parse command line.
+  std::vector<std::string> gadget_paths;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
+      printf(g_help_string, argv[0]);
+      return 0;
+#ifdef _DEBUG
+    } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
+      if (++i < argc) {
+        debug_mode = atoi(argv[i]);
+      } else {
+        debug_mode = 1;
+      }
+#endif
+    } else {
+      gadget_paths.push_back(argv[i]);
     }
   }
 
-  if (argc >= 4) {
-    sscanf(argv[3], "%d", &g_debug_mode);
-    if (g_debug_mode < 0 || g_debug_mode > 2) {
-      LOG("Debug mode invalid, resetting to 0");
-      g_debug_mode = 0;
-    }
-  }
-
-  if (argc >= 5) {
-    int useshapemask;
-    sscanf(argv[4], "%d", &useshapemask);
-    g_useshapemask = (useshapemask != 0);
-  }
-
-  if (argc >= 6) {
-    int decorated;
-    sscanf(argv[5], "%d", &decorated);
-    g_decorated = (decorated != 0);
-  }
 #if defined(Q_WS_X11) && defined(HAVE_X11)
   init_argb();
   QApplication app(dpy, argc, argv,
@@ -165,7 +169,6 @@ int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
 #endif
 
-  setlocale(LC_ALL, "");
   // Set global main loop
   g_main_loop = new ggadget::qt::QtMainLoop();
   ggadget::SetGlobalMainLoop(g_main_loop);
@@ -220,14 +223,14 @@ int main(int argc, char* argv[]) {
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   ext_manager->SetReadonly();
-  hosts::qt::QtHost host = hosts::qt::QtHost(g_debug_mode);
+  hosts::qt::QtHost host = hosts::qt::QtHost(debug_mode);
 
   // Load gadget files.
-  if (argc >= 2) {
+  if (gadget_paths.size()) {
     ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
 
-    for (int i = 1; i < argc; ++i)
-      manager->NewGadgetInstanceFromFile(argv[i]);
+    for (size_t i = 0; i < gadget_paths.size(); ++i)
+      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
   }
   g_main_loop->Run();
 
