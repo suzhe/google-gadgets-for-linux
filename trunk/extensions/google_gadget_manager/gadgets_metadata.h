@@ -31,13 +31,10 @@ template <typename R, typename P1, typename P2> class Slot2;
 namespace google {
 
 const char kPluginsXMLRequestPrefix[] =
-    "https://desktop2.google.com/desktop/plugins.xml?platform="
+    "https://clients2.google.com/desktop/plugins.xml?platform="
     GGL_PLATFORM_SHORT "&cv=" GGL_API_VERSION;
 
 const char kPluginsXMLLocation[] = "profile://plugins.xml";
-// Though plugins.xml is from desktop2.google.com, its certificate is of
-// www.google.com.
-const char kPluginsXMLAcceptedCertDomain[] = "www.google.com";
 
 enum GadgetType {
   GADGET_DESKTOP = 0,

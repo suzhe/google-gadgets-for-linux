@@ -99,8 +99,9 @@ class Messages {
   DISALLOW_EVIL_CONSTRUCTORS(Messages);
 };
 
-#define GMS_(id)  (Messages::get()->GetMessage(id))
-#define GMSL_(id,locale)  (Messages::get()->GetMessageForLocale((id),(locale)))
+#define GMS_(id)  (::ggadget::Messages::get()->GetMessage(id))
+#define GMSL_(id,locale)  \
+  (::ggadget::Messages::get()->GetMessageForLocale((id),(locale)))
 #define GM_(id)  (GMS_(id).c_str())
 #define GML_(id,locale)  (GMSL_(id,locale).c_str())
 

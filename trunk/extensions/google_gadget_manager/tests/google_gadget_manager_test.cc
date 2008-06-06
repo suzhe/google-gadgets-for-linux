@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <ctime>
+#include <cstdlib>
 #include "extensions/google_gadget_manager/google_gadget_manager.h"
 #include "ggadget/file_manager_factory.h"
 #include "ggadget/locales.h"
@@ -126,21 +128,23 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
               global_options->GetValue(kLastUpdateTimeOption));
     ASSERT_EQ(Variant(last_try_time),
               global_options->GetValue(kLastTryTimeOption));
-    ASSERT_EQ(Variant(retry_timeout),
-              global_options->GetValue(kRetryTimeoutOption));
+    int actual_retry_timeout =
+        VariantValue<int>()(global_options->GetValue(kRetryTimeoutOption));
+    ASSERT_NEAR(retry_timeout, actual_retry_timeout,
+                retry_timeout * 20 / 100 + 1);
 
     g_mocked_fm.requested_file_.clear();
     g_mocked_xml_http_request_requested_url.clear();
-    g_mocked_main_loop.AdvanceTime(retry_timeout - 100);
+    g_mocked_main_loop.AdvanceTime(actual_retry_timeout - 100);
     ASSERT_NE(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
     ASSERT_EQ(std::string(), g_mocked_xml_http_request_requested_url);
 
     g_mocked_main_loop.DoIteration(true);
-    last_try_time += retry_timeout;
-    retry_timeout *= 2;
+    last_try_time += actual_retry_timeout;
+    retry_timeout = actual_retry_timeout * 2;
   }
 
-  retry_timeout = 86400 * 1000;
+  retry_timeout = kGadgetsMetadataRetryMaxInterval;
   ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) +
             "&diff_from_date=12182007",
             g_mocked_xml_http_request_requested_url);
@@ -148,8 +152,10 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
             global_options->GetValue(kLastUpdateTimeOption));
   ASSERT_EQ(Variant(last_try_time),
             global_options->GetValue(kLastTryTimeOption));
-  ASSERT_EQ(Variant(retry_timeout),
-            global_options->GetValue(kRetryTimeoutOption));
+  int actual_retry_timeout =
+      VariantValue<int>()(global_options->GetValue(kRetryTimeoutOption));
+  ASSERT_NEAR(retry_timeout, actual_retry_timeout,
+              retry_timeout * 20 / 100 + 1);
 
   // This time we let the retry succeed.
   g_mocked_xml_http_request_return_status = 200;
@@ -347,6 +353,7 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
 }
 
 int main(int argc, char **argv) {
+  srand(static_cast<unsigned int>(time(NULL)));
   testing::ParseGTestFlags(&argc, argv);
   SetGlobalFileManager(&g_mocked_fm);
   SetGlobalMainLoop(&g_mocked_main_loop);

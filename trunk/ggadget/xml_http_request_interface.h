@@ -57,19 +57,6 @@ class XMLHttpRequestInterface : public ScriptableInterface {
 
   virtual ~XMLHttpRequestInterface() { }
 
-  /**
-   * This method is not in the XMLHttpRequest spec.
-   *
-   * By default, a certificate will be only accepted if its domain equals to
-   * the domain of the requested URL. This method adds a domain to the
-   * accepted domains list. Once this method is called, the default rule will
-   * be disabled.
-   *
-   * The domain names are matched literally. For example, a domain name
-   * "*.google.com" only matches "*.google.com", not "www.google.com".
-   */
-  virtual void AddAcceptedCertDomain(const char *domain) = 0;
-
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) = 0;
   virtual State GetReadyState() = 0;
 

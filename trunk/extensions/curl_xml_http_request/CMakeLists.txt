@@ -17,12 +17,10 @@
 IF(GGL_BUILD_CURL_XML_HTTP_REQUEST)
 
 APPLY_CONFIG(LIBCURL)
-APPLY_CONFIG(OPENSSL)
 ADD_MODULE(curl-xml-http-request curl_xml_http_request.cc)
 TARGET_LINK_LIBRARIES(curl-xml-http-request
   ${LIBCURL_LIBRARIES}
   ${PTHREAD_LIBRARIES}
-  ${OPENSSL_LIBRARIES}
   ggadget)
 OUTPUT_MODULE(curl-xml-http-request)
 

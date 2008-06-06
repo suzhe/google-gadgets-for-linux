@@ -329,13 +329,13 @@ bool Variant::ConvertToInt(int *result) const {
 
 static bool ParseStringToDouble(const char *str_value, double *result) {
   char *end_ptr;
-  // We don't allow hexidecimal numbers and INFINITY or NAN.
+  // We don't allow hexidecimal floating-point numbers or INFINITY or NAN.
   if (strchr(str_value, 'x') || strchr(str_value, 'X') ||
       strchr(str_value, 'n') || strchr(str_value, 'N'))
     return false;
 
   double d = strtod(str_value, &end_ptr);
-  if (*end_ptr == '\0' && !std::isnan(d) && !std::isinf(d)) {
+  if (*end_ptr == '\0') {
     *result = d;
     return true;
   }
@@ -371,8 +371,6 @@ bool Variant::ConvertToInt64(int64_t *result) const {
       *result = v_.int64_value_;
       return true;
     case TYPE_DOUBLE:
-      if (std::isnan(v_.double_value_) || std::isinf(v_.double_value_))
-        return false;
       *result = static_cast<int64_t>(v_.double_value_);
       return true;
     case TYPE_STRING:

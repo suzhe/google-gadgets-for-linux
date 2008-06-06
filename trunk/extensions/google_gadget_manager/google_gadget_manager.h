@@ -153,6 +153,10 @@ const char kGoogleGadgetBrowserOptionsName[] = "google-gadget-browser";
  * won't be actually removed, but becomes inactive. When the user'd add a new
  * instance of the gadget, the inactive instance will be reused, so that the
  * last options data can continue to be used.
+ *
+ * NOTE: The backoff and randomization features in this implementation is
+ * very important for proper server-side operation. Please do *NOT* disable
+ * or remove them.
  */
 class GoogleGadgetManager : public GoogleGadgetManagerInterface {
  public:

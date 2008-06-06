@@ -20,6 +20,7 @@
 #include <jsobj.h>
 #include <jscntxt.h>
 #include <jsfun.h>
+#include <jsnum.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_interface.h>
@@ -80,7 +81,7 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     if (result) {
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars. Both case are invalid for int.
-      if (!std::isnan(double_val))
+      if (!JSDOUBLE_IS_NaN(double_val))
         *native_val = Variant(static_cast<int64_t>(round(double_val)));
       else
         result = JS_FALSE;

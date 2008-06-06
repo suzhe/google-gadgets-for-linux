@@ -502,9 +502,6 @@ if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; t
   has_libcurl=no
 fi
 
-# Check openssl.
-PKG_CHECK_MODULES(OPENSSL, [openssl >= 0.9.8a], [has_openssl=yes], [has_openssl=no])
-
 # Check libxml2.
 AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 
@@ -566,9 +563,9 @@ if test x$has_libxml2 != xyes -a x$build_libxml2_xml_parser = xyes; then
   build_libxml2_xml_parser=no
 fi
 
-if test x$has_libcurl != xyes -o x$has_openssl != xyes; then
+if test x$has_libcurl != xyes; then
   if test x$build_curl_xml_http_request = xyes; then
-    AC_MSG_WARN([Library curl or openssl is not available, curl-xml-http-request extension won't be built.])
+    AC_MSG_WARN([Library curl is not available, curl-xml-http-request extension won't be built.])
     build_curl_xml_http_request=no
   fi
 fi
@@ -864,11 +861,4 @@ Build options:
 if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then
   AC_MSG_WARN([Neither gtk host nor qt host will be built !!!]
 	      [Nothing can be used to run Google Gadgets for Linux.])
-fi
-
-if test x$build_curl_xml_http_request = xyes; then
-  AC_MSG_NOTICE(
-    [Please make sure that the curl library on your system is
-     compiled with openssl support. Otherwise this program might
-     not work.])
 fi

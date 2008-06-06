@@ -43,8 +43,6 @@ public:
         return_data_(return_data) {
   }
 
-  virtual void AddAcceptedCertDomain(const char *domain) { }
-
   void ChangeState(State new_state) {
     state_ = new_state;
     statechange_signal_();

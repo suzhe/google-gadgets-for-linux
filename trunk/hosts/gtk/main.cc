@@ -38,11 +38,14 @@
 #include <ggadget/host_interface.h>
 #include <ggadget/localized_file_manager.h>
 #include <ggadget/logger.h>
+#include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/xml_http_request_interface.h>
+#include <ggadget/xml_parser_interface.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
 
@@ -69,6 +72,39 @@ static const char *kGlobalExtensions[] = {
   "google-gadget-manager",
   NULL
 };
+
+static bool CheckRequiredExtensions() {
+  if (!ggadget::GetGlobalFileManager()->FileExists(ggadget::kCommonJS, NULL)) {
+    // We can't use localized message here because resource failed to load. 
+    ggadget::gtk::ShowAlertDialog(
+        "Google Gadgets",
+        "Program can't start because it failed to load resources");
+    return false;
+  }
+
+  if (!ggadget::GetXMLParser()) {
+    // We can't use localized message here because XML parser is not available.
+    ggadget::gtk::ShowAlertDialog(
+        "Google Gadgets", "Program can't start because it failed to load the "
+        "libxml2-xml-parser module.");
+    return false;
+  }
+
+  std::string message;
+  if (!ggadget::ScriptRuntimeManager::get()->GetScriptRuntime("js"))
+    message += "smjs-script-runtime\n";
+  if (!ggadget::GetXMLHttpRequestFactory())
+    message += "curl-xml-http-request\n";
+  if (!ggadget::GetGadgetManager())
+    message += "google-gadget-manager\n";
+
+  if (!message.empty()) {
+    message = GMS_("LOAD_EXTENSIONS_FAIL") + "\n\n" + message;
+    ggadget::gtk::ShowAlertDialog(GM_("GOOGLE_GADGETS"), message.c_str());
+    return false;
+  }
+  return true;
+}
 
 static const char *kGlobalResourcePaths[] = {
 #ifdef _DEBUG
@@ -209,6 +245,9 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
+
+  if (!CheckRequiredExtensions())
+    return 1;
 
   // Make the global extension manager readonly to avoid the potential
   // danger that a bad gadget register local extensions into the global

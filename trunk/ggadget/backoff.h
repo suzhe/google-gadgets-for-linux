@@ -30,6 +30,10 @@ namespace ggadget {
  * but with hard low and high limits.
  * For more information see:
  * http://en.wikipedia.org/wiki/Truncated_binary_exponential_backoff
+ *
+ * NOTE: The backoff and randomization features in this implementation is
+ * very important for proper server-side operation. Please do *NOT* disable
+ * or remove them.
  */
 class Backoff {
  public:

@@ -328,7 +328,6 @@ class GadgetsMetadata::Impl {
     request_url += GetQueryDate();
 
     request_.Reset(request);
-    request->AddAcceptedCertDomain(kPluginsXMLAcceptedCertDomain);
     request->ConnectOnReadyStateChange(
         NewSlot(this, &Impl::OnRequestReadyStateChange));
     if (request->Open("GET", request_url.c_str(), true, NULL, NULL) ==

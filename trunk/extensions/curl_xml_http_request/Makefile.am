@@ -29,12 +29,10 @@ curl_xml_http_request_la_CXXFLAGS = \
 
 curl_xml_http_request_la_CPPFLAGS = \
 			  @LIBCURL_CPPFLAGS@ \
-			  @OPENSSL_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 curl_xml_http_request_la_LIBADD = \
 			  @LIBCURL@ \
-			  @OPENSSL_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 curl_xml_http_request_la_LDFLAGS = \

@@ -49,6 +49,12 @@ class ScriptRuntimeManager {
    */
   ScriptContextInterface *CreateScriptContext(const char *tag_name);
 
+  /**
+   * Returns the ScriptRuntimeInterface implementation object for a
+   * script file type.
+   */
+  ScriptRuntimeInterface *GetScriptRuntime(const char *tag_name);
+
  public:
   /**
    * Get the singleton of ScriptRuntimeManager.

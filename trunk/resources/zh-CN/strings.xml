@@ -52,6 +52,7 @@
 <ADD_GADGETS_TOOLTIP>添加小工具</ADD_GADGETS_TOOLTIP>
 
 <GOOGLE_GADGETS>Google 小工具</GOOGLE_GADGETS>
+<LOAD_EXTENSIONS_FAIL>由于在调入以下扩展模块时失败，程序无法启动：</LOAD_EXTENSIONS_FAIL>
 
 <!-- Menu item text. The & character(&amp;) will not be visible. It is put in
 front of the character that should be used as a shortcut for this menu item,
@@ -69,7 +70,7 @@ even in the middle of a word. -->
 <MENU_ITEM_EXPAND>扩展(&amp;P)</MENU_ITEM_EXPAND>
 <MENU_ITEM_FONT_SIZE>字号(&amp;Z)</MENU_ITEM_FONT_SIZE>
 <MENU_ITEM_FONT_SIZE_DEFAULT>默认(&amp;D)</MENU_ITEM_FONT_SIZE_DEFAULT>
-<MENU_ITEM_FONT_SIZE_LARGER> 更大(&amp;L)</MENU_ITEM_FONT_SIZE_LARGER>
+<MENU_ITEM_FONT_SIZE_LARGER>更大(&amp;L)</MENU_ITEM_FONT_SIZE_LARGER>
 <MENU_ITEM_FONT_SIZE_SMALLER>较小(&amp;S)</MENU_ITEM_FONT_SIZE_SMALLER>
 <MENU_ITEM_HIDE_ALL>全部隐藏</MENU_ITEM_HIDE_ALL>
 <MENU_ITEM_LEFT>左(&amp;L)</MENU_ITEM_LEFT>
