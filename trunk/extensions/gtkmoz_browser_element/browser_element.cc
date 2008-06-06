@@ -536,7 +536,7 @@ class BrowserElement::Impl {
     }
 
     void Write(int fd, const char *data, size_t size) {
-      sighandler_t old_handler = signal(SIGPIPE, OnSigPipe);
+      sig_t old_handler = signal(SIGPIPE, OnSigPipe);
       if (write(fd, data, size) < 0)
         RestartChild();
       signal(SIGPIPE, old_handler);

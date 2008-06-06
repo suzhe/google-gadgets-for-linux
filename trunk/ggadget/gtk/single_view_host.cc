@@ -375,21 +375,8 @@ class SingleViewHost::Impl {
   void SetWindowType(GdkWindowTypeHint type) {
     ASSERT(window_);
     if (window_ && window_->window) {
-      bool visible = GTK_WIDGET_VISIBLE(window_);
-      enable_signals_ = false;
-      if (visible)
-        gtk_widget_hide(window_);
       gdk_window_set_type_hint(window_->window, type);
-      if (visible) {
-        gtk_widget_show(window_);
-        // Make sure that the window has correct position.
-        gtk_window_move(GTK_WINDOW(window_), win_x_, win_y_);
-        if (!decorated_)
-          gdk_window_set_decorations(window_->window,
-                                     static_cast<GdkWMDecoration>(0));
-      }
       gtk_window_set_keep_above(GTK_WINDOW(window_), is_keep_above_);
-      enable_signals_ = true;
     }
   }
 

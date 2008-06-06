@@ -345,7 +345,7 @@ static bool ParseStringToDouble(const char *str_value, double *result) {
 static bool ParseStringToInt64(const char *str_value, int64_t *result) {
   char *end_ptr;
   // TODO: Check if strtoll is available
-  int64_t i = static_cast<int64_t>(std::strtoll(str_value, &end_ptr, 10));
+  int64_t i = static_cast<int64_t>(strtoll(str_value, &end_ptr, 10));
   if (*end_ptr == '\0') {
     *result = i;
     return true;

@@ -608,7 +608,7 @@ class DecoratedViewHost::Impl {
       double minimized_top = sidebar_ ? kVDMainSidebarBorderHeight :
                               (!transparent_ ? kVDMainBorderWidth :
                                 kVDMainToolbarHeight + kVDMainBorderWidth);
-      if (transparent_) {
+      if (transparent_ || sidebar_) {
         minimized_bkgnd_= new ImgElement(NULL, this, NULL);
         minimized_bkgnd_->SetSrc(Variant(kVDMainBackgroundMinimized));
         minimized_bkgnd_->SetStretchMiddle(true);

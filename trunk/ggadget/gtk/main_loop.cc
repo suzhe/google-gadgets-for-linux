@@ -75,7 +75,7 @@ class MainLoop::Impl {
 
  public:
   Impl(MainLoopInterface *main_loop)
-    : main_loop_(main_loop) {
+    : main_loop_(main_loop), destroyed_(false) {
     g_static_mutex_init(&mutex_);
     watches_ = g_hash_table_new_full(g_direct_hash,
                                      g_direct_equal,
@@ -98,10 +98,13 @@ class MainLoop::Impl {
   }
 
   ~Impl() {
-    RemoveAllWatches();
+    g_static_mutex_lock(&mutex_);
+    destroyed_ = true;
+    g_hash_table_foreach_remove(watches_, ForeachRemoveCallback, this);
     g_hash_table_destroy(watches_);
     if (wakeup_pipe_[0] >= 0) close(wakeup_pipe_[0]);
     if (wakeup_pipe_[1] >= 0) close(wakeup_pipe_[1]);
+    g_static_mutex_unlock(&mutex_);
     g_static_mutex_free(&mutex_);
   }
 
@@ -109,6 +112,10 @@ class MainLoop::Impl {
                  WatchCallbackInterface *callback) {
     if (fd < 0 || !callback) return -1;
     g_static_mutex_lock(&mutex_);
+    if (destroyed_) {
+      g_static_mutex_unlock(&mutex_);
+      return -1;
+    }
     GIOCondition cond =
         (type == MainLoopInterface::IO_READ_WATCH ? G_IO_IN : G_IO_OUT);
     GIOChannel *channel = g_io_channel_unix_new(fd);
@@ -128,6 +135,10 @@ class MainLoop::Impl {
   int AddTimeoutWatch(int interval, WatchCallbackInterface *callback) {
     if (interval < 0 || !callback) return -1;
     g_static_mutex_lock(&mutex_);
+    if (destroyed_) {
+      g_static_mutex_unlock(&mutex_);
+      return -1;
+    }
     WatchNode *node = new WatchNode();
     node->type = MainLoopInterface::TIMEOUT_WATCH;
     node->data = interval;
@@ -150,37 +161,44 @@ class MainLoop::Impl {
 
   MainLoopInterface::WatchType GetWatchType(int watch_id) {
     g_static_mutex_lock(&mutex_);
-    WatchNode *node = static_cast<WatchNode *>(
-        g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-    MainLoopInterface::WatchType type =
-        node ? node->type : MainLoopInterface::INVALID_WATCH;
+    MainLoopInterface::WatchType type = MainLoopInterface::INVALID_WATCH;
+    if (!destroyed_) {
+      WatchNode *node = static_cast<WatchNode *>(
+          g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
+      type = node ? node->type : MainLoopInterface::INVALID_WATCH;
+    }
     g_static_mutex_unlock(&mutex_);
     return type;
   }
 
   int GetWatchData(int watch_id) {
     g_static_mutex_lock(&mutex_);
-    WatchNode *node = static_cast<WatchNode *>(
-        g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-    int data = node ? node->data : -1;
+    int data = -1;
+    if (!destroyed_) {
+      WatchNode *node = static_cast<WatchNode *>(
+          g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
+      data = node ? node->data : -1;
+    }
     g_static_mutex_unlock(&mutex_);
     return data;
   }
 
   void RemoveWatch(int watch_id) {
     g_static_mutex_lock(&mutex_);
-    WatchNode *node = static_cast<WatchNode *>(
-        g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-    if (node && !node->removing) {
-      node->removing = true;
-      if (!node->calling) {
-        g_source_remove(watch_id);
-        WatchCallbackInterface *callback = node->callback;
-        //DLOG("MainLoop::RemoveWatch: id=%d", watch_id);
-        g_static_mutex_unlock(&mutex_);
-        callback->OnRemove(main_loop_, watch_id);
-        g_static_mutex_lock(&mutex_);
-        g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
+    if (!destroyed_) {
+      WatchNode *node = static_cast<WatchNode *>(
+          g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
+      if (node && !node->removing) {
+        node->removing = true;
+        if (!node->calling) {
+          g_source_remove(watch_id);
+          WatchCallbackInterface *callback = node->callback;
+          //DLOG("MainLoop::RemoveWatch: id=%d", watch_id);
+          g_static_mutex_unlock(&mutex_);
+          callback->OnRemove(main_loop_, watch_id);
+          g_static_mutex_lock(&mutex_);
+          g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
+        }
       }
     }
     g_static_mutex_unlock(&mutex_);
@@ -234,26 +252,21 @@ class MainLoop::Impl {
     g_static_mutex_unlock(&mutex_);
   }
 
-  void RemoveAllWatches() {
-    g_hash_table_foreach_remove(watches_, ForeachRemoveCallback, this);
-  }
-
   static gboolean ForeachRemoveCallback(gpointer key, gpointer value,
                                     gpointer data) {
     Impl *impl = static_cast<MainLoop::Impl *>(data);
-    g_static_mutex_lock(&impl->mutex_);
     int watch_id = GPOINTER_TO_INT(key);
     WatchNode *node = static_cast<WatchNode *>(value);
-    if (node->removing) {
-      g_static_mutex_unlock(&impl->mutex_);
+    if (node->removing)
       return TRUE;
-    }
     node->removing = true;
     WatchCallbackInterface *callback = node->callback;
     g_source_remove(watch_id);
     //DLOG("MainLoop::ForeachRemoveCallback: id=%d", watch_id);
+    // mutex is locked in ~Impl().
     g_static_mutex_unlock(&impl->mutex_);
     callback->OnRemove(impl->main_loop_, watch_id);
+    g_static_mutex_lock(&impl->mutex_);
     return TRUE;
   }
 
@@ -332,6 +345,7 @@ class MainLoop::Impl {
   // wakeup_pipe_[0] (for reading) will be added into main loop.
   // wakeup_pipe_[1] (for writing) will be used by WakeUp() method.
   int wakeup_pipe_[2];
+  bool destroyed_;
 };
 
 MainLoop::MainLoop()
@@ -339,6 +353,7 @@ MainLoop::MainLoop()
 }
 MainLoop::~MainLoop() {
   delete impl_;
+  impl_ = NULL;
 }
 int MainLoop::AddIOReadWatch(int fd, WatchCallbackInterface *callback) {
   return impl_->AddIOWatch(IO_READ_WATCH, fd, callback);

@@ -17,7 +17,7 @@
 <strings>
 <GADGET_NAME>iGoogle Gadget</GADGET_NAME>
 <GADGET_DESC>Run iGoogle gadgets.</GADGET_DESC>
-<GADGET_REQUIRED>Sorry, Gadget cannot be displayed until all required settings are provided.</GADGET_REQUIRED>
+<GADGET_REQUIRED>Sorry! Gadget cannot be displayed until all required settings are provided.</GADGET_REQUIRED>
 <GADGET_SHOWOPTIONS>Options...</GADGET_SHOWOPTIONS>
 <GADGET_REFRESH>Refresh</GADGET_REFRESH>
 <GADGET_LOADING>Loading...</GADGET_LOADING>

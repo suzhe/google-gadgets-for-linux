@@ -318,6 +318,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     DLOG("Initialized View(%p) size: %f x %f", main_view_->view(),
          main_view_->view()->GetWidth(), main_view_->view()->GetHeight());
 
+    // Let gadget know the initial display target.
+    ondisplaytargetchange_signal_(display_target_);
     return true;
   }
 
