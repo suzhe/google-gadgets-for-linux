@@ -384,7 +384,7 @@ class SideBar::Impl : public View {
   void SetupButtons() {
     icon_ = new ImgElement(NULL, this, NULL);
     GetChildren()->InsertElement(icon_, NULL);
-    icon_->SetSrc(Variant(kSideBarIcon));
+    icon_->SetSrc(Variant(kSideBarGoogleIcon));
     icon_->EnableCanvasCache(true);
     icon_->SetPixelX(kBoderWidth);
     icon_->SetPixelY(kBoderWidth);
@@ -394,23 +394,25 @@ class SideBar::Impl : public View {
     button_array_[0]->SetDownImage(Variant(kSBButtonAddDown));
     button_array_[0]->SetOverImage(Variant(kSBButtonAddOver));
     button_array_[0]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
-    button_array_[0]->SetTooltip(GM_("ADD_GADGETS_TOOLTIP"));
+    button_array_[0]->SetTooltip(GM_("SIDEBAR_ADD_GADGETS_TOOLTIP"));
     GetChildren()->InsertElement(button_array_[0], NULL);
 
     button_array_[1] = new ButtonElement(NULL, this, NULL);
-    button_array_[1]->SetImage(Variant(kSBButtonConfigUp));
-    button_array_[1]->SetDownImage(Variant(kSBButtonConfigDown));
-    button_array_[1]->SetOverImage(Variant(kSBButtonConfigOver));
+    button_array_[1]->SetImage(Variant(kSBButtonMenuUp));
+    button_array_[1]->SetDownImage(Variant(kSBButtonMenuDown));
+    button_array_[1]->SetOverImage(Variant(kSBButtonMenuOver));
     button_array_[1]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
     button_array_[1]->ConnectOnClickEvent(NewSlot(
         this, &Impl::HandleConfigureButtonClick));
+    button_array_[1]->SetTooltip(GM_("SIDEBAR_MENU_BUTTON_TOOLTIP"));
     GetChildren()->InsertElement(button_array_[1], NULL);
 
     button_array_[2] = new ButtonElement(NULL, this, NULL);
-    button_array_[2]->SetImage(Variant(kSBButtonCloseUp));
-    button_array_[2]->SetDownImage(Variant(kSBButtonCloseDown));
-    button_array_[2]->SetOverImage(Variant(kSBButtonCloseOver));
+    button_array_[2]->SetImage(Variant(kSBButtonMinimizeUp));
+    button_array_[2]->SetDownImage(Variant(kSBButtonMinimizeDown));
+    button_array_[2]->SetOverImage(Variant(kSBButtonMinimizeOver));
     button_array_[2]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
+    button_array_[2]->SetTooltip(GM_("SIDEBAR_MINIMIZE_BUTTON_TOOLTIP"));
     GetChildren()->InsertElement(button_array_[2], NULL);
   }
   bool ShouldFirePopInEvent(const MouseEvent &event) {

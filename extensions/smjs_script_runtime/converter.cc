@@ -76,7 +76,7 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     if (result)
       *native_val = Variant(int_val);
   } else {
-    jsdouble double_val;
+    jsdouble double_val = 0;
     result = JS_ValueToNumber(cx, js_val, &double_val);
     if (result) {
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
@@ -97,13 +97,13 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
     return JS_TRUE;
   }
 
-  double double_val = 0;
+  jsdouble double_val = 0;
   JSBool result = JS_ValueToNumber(cx, js_val, &double_val);
   if (result) {
-    if (JSVAL_IS_DOUBLE(js_val) || !std::isnan(double_val))
+    if (JSVAL_IS_DOUBLE(js_val) || !JSDOUBLE_IS_NaN(double_val))
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars. The former case is acceptable.
-      *native_val = Variant(double_val);
+      *native_val = Variant(static_cast<double>(double_val));
     else
       result = JS_FALSE;
   }

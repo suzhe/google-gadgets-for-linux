@@ -57,12 +57,12 @@ RESOURCE_FILES= button_down.png \
 		sidebar_add_up.png \
 		sidebar_add_down.png \
 		sidebar_add_over.png \
-		sidebar_config_up.png \
-		sidebar_config_down.png \
-		sidebar_config_over.png \
-		sidebar_close_up.png \
-		sidebar_close_down.png \
-		sidebar_close_over.png \
+		sidebar_menu_up.png \
+		sidebar_menu_down.png \
+		sidebar_menu_over.png \
+		sidebar_minimize_up.png \
+		sidebar_minimize_down.png \
+		sidebar_minimize_over.png \
 		text_details_view.xml \
 		unpinned.png \
 		unpinned_over.png \

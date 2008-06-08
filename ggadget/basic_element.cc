@@ -1805,20 +1805,25 @@ BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
   *output = 0;
   std::string str;
 
-  if (input.ConvertToString(&str) && str.empty())
+  if (!input.ConvertToString(&str) || str.empty()) {
+    // Anything that can't be converted to string is not allowed.
     return PR_UNSPECIFIED;
-
-  if (input.ConvertToDouble(output))
+  } else if (str.find_first_of("xnXN") != std::string::npos) {
+    // INFINITY or NAN or hexidecimal floating-point numbers are not allowed.
+    // NOTE: This statement relies on the printf output of a NaN or INF double
+    // value. If the input is a double nan or inf, then it can be converted to
+    // string and the result shall be "nan" or "inf".
+    return PR_UNSPECIFIED;
+  } else if (input.ConvertToDouble(output)) {
+    // If it can be converted to double directly then treat it as pixel value.
     return PR_PIXEL;
-
-  if (!input.ConvertToString(&str) || str.empty())
-    return PR_UNSPECIFIED;
-
-  char *end_ptr;
-  *output = strtod(str.c_str(), &end_ptr);
-  if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
-    *output /= 100.0;
-    return PR_RELATIVE;
+  } else {
+    char *end_ptr;
+    *output = strtod(str.c_str(), &end_ptr);
+    if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
+      *output /= 100.0;
+      return PR_RELATIVE;
+    }
   }
   LOG("Invalid pixel or relative value: %s", input.Print().c_str());
   return PR_INVALID;
