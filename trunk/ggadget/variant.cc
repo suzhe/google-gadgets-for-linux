@@ -458,7 +458,7 @@ ResultVariant::ResultVariant(const ResultVariant &v)
       scriptable->Ref();
   }
 }
-    
+
 ResultVariant::~ResultVariant() {
   if (v_.type() == Variant::TYPE_SCRIPTABLE) {
     ScriptableInterface *scriptable =
