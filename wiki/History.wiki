@@ -18,3 +18,4 @@ This page is dedicated for recording notable changes of each release.
     * Fixed some issues in qt host.
     * Added Simplified Chinese translation of most messages.
     * Various other bug fixes.
+    * Made sidebar mode the default in gtk host. Use `-ns` switch to disable sidebar mode.
