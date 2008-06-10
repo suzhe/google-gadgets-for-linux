@@ -3,11 +3,11 @@
 
 = Project Description =
 
-Google Gadgets for Linux provides a platform for running desktop gadgets under Linux, catering to the unique needs of Linux users. We are compatible with the gadgets written for Google Desktop for Windows as well as the Universal Gadgets on iGoogle. Following Linux norms, this project will be open-sourced, under the Apache License.
+Google Gadgets for Linux provides a platform for running desktop gadgets under Linux, catering to the unique needs of Linux users. We are compatible with the gadgets written for Google Desktop for Windows as well as the Universal Gadgets on iGoogle. Following Linux norms, this project is open-sourced under the Apache License.
 
 The Windows and Mac versions of Google Desktop has provided gadget hosting functionality on Windows and Mac for a while now and the Linux version of Google Gadgets will extend this platform to Linux users. By enabling cross-platform gadgets, a large library of existing gadgets are immediately available to Linux users. In addition, gadget developers will benefit from a much larger potential user base without having to learn a new API.
 
-There's two main components to the application: one is a common gadget library responsible for running and presenting a gadget, and the other is a host program that allows the user to choose gadgets and run them on the desktop. Currently we have hosts written for GTK+ and QT, with the GTK+ host offering a sidebar similiar to that of Google Desktop for Windows.
+There's two main components to the application: one is a common gadget library responsible for running and presenting a gadget, and the other is a host program that allows the user to choose gadgets and run them on the desktop. Currently we have hosts written for GTK+ and QT, with the GTK+ host offering a sidebar similar to that of Google Desktop for Windows.
 
 = Quick Start Guide =
 
