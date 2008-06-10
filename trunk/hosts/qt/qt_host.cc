@@ -133,11 +133,12 @@ class QtHost::Impl {
         .append(download_url).append("\n\n")
         .append(GM_("GADGET_DESCRIPTION"))
         .append(description);
-    int ret = QMessageBox::question(NULL,
-                                    GM_("GADGET_CONFIRM_TITLE"),
-                                    QString::fromUtf8(message.c_str()),
-                                    QMessageBox::Yes| QMessageBox::No,
-                                    QMessageBox::Yes);
+    int ret = QMessageBox::question(
+        NULL,
+        QString::fromUtf8(GM_("GADGET_CONFIRM_TITLE")),
+        QString::fromUtf8(message.c_str()),
+        QMessageBox::Yes| QMessageBox::No,
+        QMessageBox::Yes);
     return ret == QMessageBox::Yes;
   }
 
