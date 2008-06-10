@@ -89,6 +89,20 @@ static void ErrorFunc(void *ctx, const char *msg, ...) {
   g_error_occurred = true;
 }
 
+static std::string GetEncodingSuperSet(const std::string &encoding) {
+  // Many files declared as GB2312 encoding contain chararacters outside
+  // of standard GB2312 range. Tolerate this by using superset GB18030 or GBK.
+  if (strcasecmp(encoding.c_str(), "GB2312") == 0) {
+    if (xmlFindCharEncodingHandler("GB18030"))
+      return "GB18030";
+    DLOG("libxml2 doesn't support GB18030, try GBK");
+    if (xmlFindCharEncodingHandler("GBK"))
+      return "GBK";
+    DLOG("libxml2 doesn't support GBK, fallback to original GB2312");
+  }
+  return encoding;
+}
+
 // Converts a string in given encoding to a utf8.
 // Here use libxml routines instead of normal iconv routines to simplify
 // compile-time dependencies.
@@ -250,11 +264,9 @@ static xmlDoc *ParseXML(const std::string &xml,
     use_encoding = encoding_hint;
   }
 
-  xmlDoc *result = NULL;
-  bool retry;
-  do {
-    retry = false;
+  while (true) {
     if (!use_encoding.empty()) {
+      use_encoding = GetEncodingSuperSet(use_encoding);
       if (ConvertStringToUTF8(xml, use_encoding.c_str(), &converted_xml)) {
         converted = true;
         if (utf8_content)
@@ -267,7 +279,6 @@ static xmlDoc *ParseXML(const std::string &xml,
         // Encoding conversion failed, try fallback_encoding if it has not
         // been tried.
         use_encoding = encoding_fallback;
-        retry = true;
         continue;
       }
     } else {
@@ -298,8 +309,9 @@ static xmlDoc *ParseXML(const std::string &xml,
     ctxt->input->filename = xmlMemStrdup(filename);
 
     xmlParseDocument(ctxt);
+
     if (ctxt->wellFormed) {
-      result = ctxt->myDoc;
+      // Successfully parsed the document.
       if (!converted) {
         if (ctxt->input && ctxt->input->encoding)
           use_encoding = FromXmlCharPtr(ctxt->input->encoding);
@@ -308,32 +320,52 @@ static xmlDoc *ParseXML(const std::string &xml,
         if (utf8_content)
           ConvertStringToUTF8(xml, use_encoding.c_str(), utf8_content);
       }
-    } else if ((ctxt->errNo == XML_ERR_INVALID_CHAR ||
-                ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
-                ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
-               encoding_fallback && use_encoding != encoding_fallback) {
-      xmlFreeDoc(ctxt->myDoc);
-      ctxt->myDoc = NULL;
+      xmlDoc *result = ctxt->myDoc;
+      xmlFreeParserCtxt(ctxt);
+      if (encoding)
+        *encoding = use_encoding;
+      return result;
+    }
+
+    // Handle errors.
+    xmlFreeDoc(ctxt->myDoc);
+    ctxt->myDoc = NULL;
+
+    if (ctxt->errNo == XML_ERR_INVALID_CHAR &&
+        !converted && ctxt->input && ctxt->input->encoding) {
+      // Some characters are invalid for the declared encoding, try the
+      // superset of the declared encoding.
+      use_encoding = GetEncodingSuperSet(FromXmlCharPtr(ctxt->input->encoding));
+      if (use_encoding != FromXmlCharPtr(ctxt->input->encoding)) {
+        xmlFreeParserCtxt(ctxt);
+        continue;
+      }
+    }
+
+    if ((ctxt->errNo == XML_ERR_INVALID_CHAR ||
+         ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
+         ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
+        encoding_fallback && use_encoding != encoding_fallback) {
       // libxml2 encoding conversion failed, try fallback_encoding if it has
       // not been tried.
       use_encoding = encoding_fallback;
-      retry = true;
-    } else {
-      xmlFreeDoc(ctxt->myDoc);
-      ctxt->myDoc = NULL;
+      xmlFreeParserCtxt(ctxt);
+      continue;
+    }
 
-      if (!converted) {
-        use_encoding.clear();
-        if (utf8_content)
-          utf8_content->clear();
-      }
+    // Failed to parse.
+    if (!converted) {
+      if (utf8_content)
+        utf8_content->clear();
+    } else if (encoding) {
+      *encoding = use_encoding;
     }
     xmlFreeParserCtxt(ctxt);
-  } while (retry);
+    return NULL;
+  }
 
-  if (encoding)
-    *encoding = use_encoding;
-  return result;
+  ASSERT_M(false, ("Should not reach here!"));
+  return NULL;
 }
 
 static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
@@ -651,17 +683,19 @@ class XMLParser : public XMLParserInterface {
       // This is not an XML content, only do encoding conversion.
       std::string encoding_to_use;
       if (!DetectUTFEncoding(content, &encoding_to_use)) {
-        if (encoding_hint && *encoding_hint)
-          encoding_to_use = encoding_hint;
-        else if (strcasecmp(content_type, "text/html") == 0)
-          encoding_to_use = GetHTMLCharset(content.c_str());
-        else
+        if (encoding_hint && *encoding_hint) {
+          encoding_to_use = GetEncodingSuperSet(encoding_hint);
+        } else if (strcasecmp(content_type, "text/html") == 0) {
+          encoding_to_use = GetEncodingSuperSet(
+              GetHTMLCharset(content.c_str()));
+        } else {
           encoding_to_use = "UTF-8";
+        }
       }
       result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
                                    utf8_content);
       if (!result && encoding_fallback && *encoding_fallback) {
-        encoding_to_use = encoding_fallback;
+        encoding_to_use = GetEncodingSuperSet(encoding_fallback);
         result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
       }
       if (encoding)
