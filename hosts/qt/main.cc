@@ -122,6 +122,7 @@ static const char *kGlobalResourcePaths[] = {
 };
 
 static const char *g_help_string =
+  "Google Gadgets for Linux " GGL_VERSION "\n"
   "Usage: %s [Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
