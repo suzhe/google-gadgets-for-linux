@@ -220,13 +220,14 @@ TEST(XMLParser, ConvertStringToUTF8) {
   ASSERT_STREQ(dest, output.c_str());
   ASSERT_STREQ("UTF-16LE", encoding.c_str());
 
-  src = "\xBA\xBA\xD7\xD6";
-  dest = "\xE6\xB1\x89\xE5\xAD\x97";
+  // This string is not actually GB2312, but contains characters in GBK.
+  src = "\xBA\xBA\xD7\xD6\x8E\x88";
+  dest = "\xE6\xB1\x89\xE5\xAD\x97\xE5\xB7\xBF";
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
                                               "GB2312", NULL, NULL,
                                               &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
-  ASSERT_STREQ("GB2312", encoding.c_str());
+  ASSERT_TRUE(encoding == "GBK" || encoding == "GB18030");
 
   ASSERT_FALSE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
                                                NULL, NULL, NULL,
@@ -249,7 +250,12 @@ void TestXMLEncoding(const char *xml, const char *name,
                                               hint_encoding, NULL, domdoc,
                                               &encoding, &output));
   ASSERT_STREQ(expected_text, output.c_str());
-  ASSERT_STREQ(expected_encoding, encoding.c_str());
+  if (strcasecmp(expected_encoding, "GB2312") == 0) {
+    ASSERT_TRUE(encoding == "GB2312" || encoding == "GBK" ||
+                encoding == "GB18030");
+  } else {
+    ASSERT_STREQ(expected_encoding, encoding.c_str());
+  }
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
 }
@@ -328,7 +334,7 @@ TEST(XMLParser, HTMLEncoding) {
   XMLParserInterface *xml_parser = GetXMLParser();
   const char *src =
     "<html><head>"
-    "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=gb2312\">"
+    "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=GB2312\">"
     "</head></html>";
   std::string output;
   std::string encoding;
@@ -336,7 +342,8 @@ TEST(XMLParser, HTMLEncoding) {
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/html",
                                               NULL, NULL, NULL,
                                               &encoding, &output));
-  ASSERT_STREQ("gb2312", encoding.c_str());
+  ASSERT_TRUE(encoding == "GB2312" || encoding == "GBK" ||
+              encoding == "GB18030");
   ASSERT_STREQ(src, output.c_str());
   src = "<html><head><!--"
     "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=gb2312\">"
