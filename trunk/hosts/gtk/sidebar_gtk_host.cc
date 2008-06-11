@@ -611,13 +611,15 @@ class SideBarGtkHost::Impl {
     if (info->details_view_host) {
       info->gadget->CloseDetailsView();
       info->details_view_host = NULL;
+      if (details_view_opened_gadget_ &&
+          details_view_opened_gadget_->GetInstanceID() == gadget_id)
+        sidebar_->SetPopOutedView(NULL);
     }
   }
 
   bool Dock(int gadget_id, bool force_insert) {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     ASSERT(info);
-    info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     ViewHostInterface *view_host = sidebar_->NewViewHost(info->index_in_sidebar);
     DecoratedViewHost *dvh =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED,
@@ -630,15 +632,20 @@ class SideBarGtkHost::Impl {
     dvh->SetDockEdge(option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
     CloseDetailsView(gadget_id);
     ViewHostInterface *old = info->gadget->GetMainView()->SwitchViewHost(dvh);
-    info->floating_view_host = NULL;
+    // Display target must be set after switching to the new view host and
+    // before destroying the old view host.
+    // Browser element relies on it to reparent the browser widget.
+    // Otherwise the browser widget might be destroyed along with the old view
+    // host.
+    info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     if (old) old->Destroy();
     view_host->ShowView(false, 0, NULL);
+    info->floating_view_host = NULL;
     return true;
   }
 
   bool Undock(int gadget_id, bool move_to_cursor) {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
-    info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     CloseDetailsView(gadget_id);
     double view_x, view_y;
     View *view = info->gadget->GetMainView();
@@ -649,7 +656,17 @@ class SideBarGtkHost::Impl {
     if (move_to_cursor)
       new_host->EnableAutoRestoreViewSize(false);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
+    // Display target must be set after switching to the new view host and
+    // before destroying the old view host.
+    // Browser element relies on it to reparent the browser widget.
+    // Otherwise the browser widget might be destroyed along with the old view
+    // host.
+    // In drag undock mode, the display target will be set until the end of
+    // move drag.
+    if (!move_to_cursor)
+      info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     if (old) old->Destroy();
+    // ShowView will be called in HandleFloatingUndock() or HandleUndock().
     return true;
   }
 
@@ -710,6 +727,8 @@ class SideBarGtkHost::Impl {
       sidebar_->UpdateElememtsIndex();
     } else {
       if (info->undock_by_drag) {
+        // In drag undock mode, Undock() will not set the display target.
+        info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
         info->decorated_view_host->EnableAutoRestoreViewSize(true);
         info->decorated_view_host->RestoreViewSize();
         info->undock_by_drag = false;

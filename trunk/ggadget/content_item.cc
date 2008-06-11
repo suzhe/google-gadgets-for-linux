@@ -606,7 +606,7 @@ Connection *ContentItem::ConnectOnToggleItemPinnedState(
 
 bool ContentItem::IsTooltipRequired(Gadget::DisplayTarget target,
                                     CanvasInterface *canvas,
-                                    double x, double y, 
+                                    double x, double y,
                                     double width, double height) {
   if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
