@@ -810,11 +810,6 @@ class View::Impl {
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
 
-      if (gadget_) {
-        // Might be better to send signal from host instead of here.
-        gadget_->OnDisplayStateChange(Gadget::TILE_DISPLAY_STATE_RESIZED);
-      }
-
       if (view_host_) {
         view_host_->QueueResize();
       }
@@ -1637,6 +1632,7 @@ ViewHostInterface *View::SwitchViewHost(ViewHostInterface *new_host) {
       impl_->graphics_ = new_host->NewGraphics();
     new_host->SetView(this);
     MarkRedraw();
+    new_host->QueueDraw();
   }
   return old_host;
 }

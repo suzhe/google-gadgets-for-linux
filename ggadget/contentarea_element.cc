@@ -31,6 +31,7 @@
 #include "scriptable_image.h"
 #include "view.h"
 #include "view_host_interface.h"
+#include "signals.h"
 
 namespace ggadget {
 
@@ -57,6 +58,7 @@ class ContentAreaElement::Impl {
         layout_canvas_(owner->GetView()->GetGraphics()->NewCanvas(5, 5)),
         content_flags_(CONTENT_FLAG_NONE),
         target_(Gadget::TARGET_SIDEBAR),
+        target_connection_(NULL),
         max_content_items_(kDefaultMaxContentItems),
         pin_image_max_width_(0), pin_image_max_height_(0),
         mouse_down_(false), mouse_over_pin_(false),
@@ -89,9 +91,19 @@ class ContentAreaElement::Impl {
     // to refresh the relative time stamps of the items.
     refresh_timer_ = owner->GetView()->SetInterval(
         NewSlot(this, &Impl::QueueDraw), kRefreshInterval);
+
+    Gadget *gadget = owner->GetView()->GetGadget();
+    if (gadget) {
+      target_connection_ = gadget->ConnectOnDisplayTargetChanged(
+          NewSlot(this, &Impl::DisplayTargetChangedHandler));
+      target_ = gadget->GetDisplayTarget();
+    }
   }
 
   ~Impl() {
+    if (target_connection_)
+      target_connection_->Disconnect();
+
     if (death_detector_) {
       // Inform the death detector that this element is dying.
       *death_detector_ = true;
@@ -101,6 +113,10 @@ class ContentAreaElement::Impl {
     refresh_timer_ = 0;
     RemoveAllContentItems();
     layout_canvas_->Destroy();
+  }
+
+  void DisplayTargetChangedHandler(int target) {
+    target_ = static_cast<Gadget::DisplayTarget>(target);
   }
 
   void QueueDraw() {
@@ -718,6 +734,7 @@ class ContentAreaElement::Impl {
   CanvasInterface *layout_canvas_; // Only used during Layout().
   int content_flags_;
   Gadget::DisplayTarget target_;
+  Connection *target_connection_;
   size_t max_content_items_;
   ContentItems content_items_;
   ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];

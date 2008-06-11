@@ -318,9 +318,31 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     DLOG("Initialized View(%p) size: %f x %f", main_view_->view(),
          main_view_->view()->GetWidth(), main_view_->view()->GetHeight());
 
+    // Connect signals to monitor display state change.
+    main_view_->view()->ConnectOnMinimizeEvent(
+        NewSlot(this, &Impl::OnDisplayStateChanged,
+                static_cast<int>(TILE_DISPLAY_STATE_MINIMIZED)));
+    main_view_->view()->ConnectOnRestoreEvent(
+        NewSlot(this, &Impl::OnDisplayStateChanged,
+                static_cast<int>(TILE_DISPLAY_STATE_RESTORED)));
+    main_view_->view()->ConnectOnPopOutEvent(
+        NewSlot(this, &Impl::OnDisplayStateChanged,
+                static_cast<int>(TILE_DISPLAY_STATE_POPPED_OUT)));
+    // FIXME: Is it correct to send RESTORED when popped in?
+    main_view_->view()->ConnectOnPopInEvent(
+        NewSlot(this, &Impl::OnDisplayStateChanged,
+                static_cast<int>(TILE_DISPLAY_STATE_RESTORED)));
+    main_view_->view()->ConnectOnSizeEvent(
+        NewSlot(this, &Impl::OnDisplayStateChanged,
+                static_cast<int>(TILE_DISPLAY_STATE_RESIZED)));
+
     // Let gadget know the initial display target.
     ondisplaytargetchange_signal_(display_target_);
     return true;
+  }
+
+  void OnDisplayStateChanged(int state) {
+    ondisplaystatechange_signal_(state);
   }
 
   // Register script extensions for a specified script context.
@@ -776,10 +798,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     details_view_ = NULL;
   }
 
-  Connection* ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
-    return onpluginflagschanged_signal_.Connect(handler);
-  }
-
   bool SetInUserInteraction(bool in_user_interaction) {
     bool old_value = in_user_interaction_;
     in_user_interaction_ = in_user_interaction;
@@ -940,7 +958,7 @@ int Gadget::GetPluginFlags() const {
   return impl_->plugin_flags_;
 }
 
-int Gadget::GetDisplayTarget() const {
+Gadget::DisplayTarget Gadget::GetDisplayTarget() const {
   return impl_->display_target_;
 }
 
@@ -1009,16 +1027,16 @@ void Gadget::OnCommand(Command command) {
   impl_->oncommand_signal_(command);
 }
 
-void Gadget::OnDisplayStateChange(DisplayState display_state) {
-  impl_->ondisplaystatechange_signal_(display_state);
+Connection *Gadget::ConnectOnDisplayStateChanged(Slot1<void, int> *handler) {
+  return impl_->ondisplaystatechange_signal_.Connect(handler);
 }
 
-void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
-  impl_->ondisplaytargetchange_signal_(display_target);
+Connection *Gadget::ConnectOnDisplayTargetChanged(Slot1<void, int> *handler) {
+  return impl_->ondisplaytargetchange_signal_.Connect(handler);
 }
 
 Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
-  return impl_->ConnectOnPluginFlagsChanged(handler);
+  return impl_->onpluginflagschanged_signal_.Connect(handler);
 }
 
 XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {

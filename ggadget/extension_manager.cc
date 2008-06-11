@@ -34,10 +34,9 @@ ElementExtensionRegister::ElementExtensionRegister(ElementFactory *factory)
 
 bool ElementExtensionRegister::RegisterExtension(const Module *extension) {
   ASSERT(extension);
-  RegisterElementExtensionFunc func =
-      reinterpret_cast<RegisterElementExtensionFunc>(
-          extension->GetSymbol(kElementExtensionSymbolName));
-
+  // reinterpret_cast<> doesn't work on gcc 3.x
+  RegisterElementExtensionFunc func = (RegisterElementExtensionFunc)(
+      extension->GetSymbol(kElementExtensionSymbolName));
   return func ? func(factory_) : false;
 }
 
@@ -47,10 +46,9 @@ ScriptExtensionRegister::ScriptExtensionRegister(ScriptContextInterface *context
 
 bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
   ASSERT(extension);
-  RegisterScriptExtensionFunc func =
-      reinterpret_cast<RegisterScriptExtensionFunc>(
-          extension->GetSymbol(kScriptExtensionSymbolName));
-
+  // reinterpret_cast<> doesn't work on gcc 3.x
+  RegisterScriptExtensionFunc func = (RegisterScriptExtensionFunc)(
+      extension->GetSymbol(kScriptExtensionSymbolName));
   return func ? func(context_) : false;
 }
 
@@ -63,10 +61,9 @@ FrameworkExtensionRegister::FrameworkExtensionRegister(
 
 bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {
   ASSERT(extension);
-  RegisterFrameworkExtensionFunc func =
-      reinterpret_cast<RegisterFrameworkExtensionFunc>(
-          extension->GetSymbol(kFrameworkExtensionSymbolName));
-
+  // reinterpret_cast<> doesn't work on gcc 3.x
+  RegisterFrameworkExtensionFunc func = (RegisterFrameworkExtensionFunc)(
+      extension->GetSymbol(kFrameworkExtensionSymbolName));
   return func ? func(framework_, gadget_) : false;
 }
 
@@ -78,10 +75,10 @@ ScriptRuntimeExtensionRegister::ScriptRuntimeExtensionRegister(
 bool
 ScriptRuntimeExtensionRegister::RegisterExtension(const Module *extension) {
   ASSERT(extension);
+  // reinterpret_cast<> doesn't work on gcc 3.x
   RegisterScriptRuntimeExtensionFunc func =
-      reinterpret_cast<RegisterScriptRuntimeExtensionFunc>(
+      (RegisterScriptRuntimeExtensionFunc)(
           extension->GetSymbol(kScriptRuntimeExtensionSymbolName));
-
   return func ? func(manager_) : false;
 }
 

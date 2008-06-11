@@ -136,7 +136,7 @@ class Gadget {
   /** Returns current plugin flags of the gadget. */
   int GetPluginFlags() const;
 
-  int GetDisplayTarget() const;
+  DisplayTarget GetDisplayTarget() const;
 
   void SetDisplayTarget(DisplayTarget target);
 
@@ -216,16 +216,20 @@ class Gadget {
   void OnCommand(Command command);
 
   /**
-   * Fires after a gadget's display state changes -- for example, when it's
-   * resized or minimized.
+   * Connects a slot to the DisplayStateChanged signal. The specified slot will
+   * be called when the gadget's main view's display state is changed.
+   *
+   * The slot accepts one int parameter which is the new display state value.
    */
-  void OnDisplayStateChange(DisplayState display_state);
+  Connection *ConnectOnDisplayStateChanged(Slot1<void, int> *handler);
 
   /**
-   * Fires just before the gadget's display location changes, such as from the
-   * Sidebar to a floating desktop window.
+   * Connects a slot to the DisplayTargetChanged signal. The specified slot will
+   * be called when the gadget's display target is changed.
+   *
+   * The slot accepts one int parameter which is the new display target value.
    */
-  void OnDisplayTargetChange(DisplayTarget display_target);
+  Connection *ConnectOnDisplayTargetChanged(Slot1<void, int> *handler);
 
   /**
    * Connects a slot to the PluginFlagsChanged signal. The specified slot will

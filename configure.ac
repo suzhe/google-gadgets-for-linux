@@ -317,6 +317,8 @@ case $host_os in
   *solaris* )
     ggl_host_type=solaris
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
+    GGL_PLATFORM_SHORT=\"solaris\"
+    GGL_PLATFORM=\"solaris\"
     ;;
   * )
     ggl_host_type=unknown
@@ -463,7 +465,8 @@ PKG_CHECK_MODULES(GTK2,
 		   pango  >= 1.10.0
 		   gtk+-2.0 >= 2.8.0
 		   gdk-2.0 >= 2.8.0
-		   gthread-2.0 >= 2.8.0],
+		   gthread-2.0 >= 2.8.0
+		   fontconfig >= 2.0.0],
 		   [has_gtk2=yes], [has_gtk2=no])
 
 # Check gstreamer-0.10 related libraries.

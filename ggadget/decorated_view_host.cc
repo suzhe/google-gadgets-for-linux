@@ -952,7 +952,7 @@ class DecoratedViewHost::Impl {
       View *child = GetChildView();
       Gadget *gadget = child ? child->GetGadget() : NULL;
       if (gadget) {
-        gadget->ConnectOnPluginFlagsChanged(
+        plugin_flags_connection_ = gadget->ConnectOnPluginFlagsChanged(
             NewSlot(this, &NormalMainViewDecorator::OnPluginFlagsChanged));
         OnPluginFlagsChanged(gadget->GetPluginFlags());
 

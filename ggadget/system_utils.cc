@@ -394,12 +394,15 @@ bool RemoveDirectory(const char *path) {
         strcmp(pfile->d_name, "..") != 0) {
       std::string file_path =
           BuildFilePath(dir_path.c_str(), pfile->d_name, NULL);
+      struct stat file_stat;
       bool result = false;
-      if (pfile->d_type == DT_DIR)
-        result = RemoveDirectory(file_path.c_str());
-      else
-        result = (::unlink(file_path.c_str()) == 0);
-
+      // Don't use dirent.d_type, it's a non-standard field.
+      if (lstat(file_path.c_str(), &file_stat) == 0) {
+        if (S_ISDIR(file_stat.st_mode))
+          result = RemoveDirectory(file_path.c_str());
+        else
+          result = (::unlink(file_path.c_str()) == 0);
+      }
       if (!result) {
         closedir(pdir);
         return false;
