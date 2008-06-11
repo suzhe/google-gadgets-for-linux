@@ -90,7 +90,7 @@ class SideBarGtkHost::Impl {
       details_view_host = NULL;
       floating_view_host = NULL;
       pop_out_view_host = NULL;
-      y_in_sidebar = 0;
+      index_in_sidebar = 0;
       undock_by_drag = false;
     }
 
@@ -102,7 +102,7 @@ class SideBarGtkHost::Impl {
     SingleViewHost *floating_view_host;
     SingleViewHost *pop_out_view_host;
 
-    double y_in_sidebar;
+    int  index_in_sidebar;
     bool undock_by_drag;
   };
 
@@ -348,7 +348,7 @@ class SideBarGtkHost::Impl {
                            NULL, NULL, gtk_get_current_event_time()) ==
           GDK_GRAB_SUCCESS) {
         draging_gadget_ = info->gadget;
-        sidebar_->InsertPlaceholder(info->y_in_sidebar, h);
+        sidebar_->InsertPlaceholder(info->index_in_sidebar, h);
         View *new_view = info->decorated_view_host->IsMinimized() ?
             down_cast<View *>(info->decorated_view_host->GetDecoratedView()) :
             down_cast<View *>(draging_gadget_->GetMainView());
@@ -412,7 +412,7 @@ class SideBarGtkHost::Impl {
       opt->PutInternalValue(kDisplayTarget,
                             Variant(it->second->gadget->GetDisplayTarget()));
       opt->PutInternalValue(kPositionInSideBar,
-                            Variant(it->second->y_in_sidebar));
+                            Variant(it->second->index_in_sidebar));
     }
 
     // save sidebar's information
@@ -618,7 +618,7 @@ class SideBarGtkHost::Impl {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     ASSERT(info);
     info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-    ViewHostInterface *view_host = sidebar_->NewViewHost(info->y_in_sidebar);
+    ViewHostInterface *view_host = sidebar_->NewViewHost(info->index_in_sidebar);
     DecoratedViewHost *dvh =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED,
                               transparent_);
@@ -644,7 +644,7 @@ class SideBarGtkHost::Impl {
     View *view = info->gadget->GetMainView();
     ViewElement *view_element = sidebar_->FindViewElementByView(view);
     view_element->SelfCoordToViewCoord(0, 0, &view_x, &view_y);
-    info->y_in_sidebar = view_y;
+    info->index_in_sidebar = sidebar_->GetIndexFromHeight(view_y);
     DecoratedViewHost *new_host = NewSingleViewHost(gadget_id);
     if (move_to_cursor)
       new_host->EnableAutoRestoreViewSize(false);
@@ -690,8 +690,9 @@ class SideBarGtkHost::Impl {
       SetPopoutPosition(gadget_id, info->details_view_host);
     if (IsOverlapWithSideBar(gadget_id, &h)) {
       sidebar_->InsertPlaceholder(
-          h, info->floating_view_host->GetView()->GetHeight());
-      info->y_in_sidebar = h;
+          sidebar_->GetIndexFromHeight(h),
+          info->floating_view_host->GetView()->GetHeight());
+      info->index_in_sidebar = sidebar_->GetIndexFromHeight(h);
     } else {
       sidebar_->ClearPlaceHolder();
     }
@@ -703,8 +704,10 @@ class SideBarGtkHost::Impl {
     ASSERT(info);
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
     if (IsOverlapWithSideBar(gadget_id, &h)) {
-      info->y_in_sidebar = h;
+      info->index_in_sidebar = sidebar_->GetIndexFromHeight(h);
       HandleDock(gadget_id);
+      // update the index for all elements in sidebar after dock by drag
+      sidebar_->UpdateElememtsIndex();
     } else {
       if (info->undock_by_drag) {
         info->decorated_view_host->EnableAutoRestoreViewSize(true);
@@ -867,7 +870,7 @@ class SideBarGtkHost::Impl {
     else  // default value is TARGET_SIDEBAR
       gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     value = opt->GetInternalValue(kPositionInSideBar);
-    value.ConvertToDouble(&gadgets_[gadget->GetInstanceID()]->y_in_sidebar);
+    value.ConvertToInt(&gadgets_[gadget->GetInstanceID()]->index_in_sidebar);
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget,
@@ -886,7 +889,7 @@ class SideBarGtkHost::Impl {
       case ViewHostInterface::VIEW_HOST_MAIN:
         LoadGadgetOptions(gadget);
         if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
-          view_host = sidebar_->NewViewHost(gadgets_[id]->y_in_sidebar);
+          view_host = sidebar_->NewViewHost(gadgets_[id]->index_in_sidebar);
           decorator = new DecoratedViewHost(view_host,
                                             DecoratedViewHost::MAIN_DOCKED,
                                             transparent_);
@@ -951,6 +954,11 @@ class SideBarGtkHost::Impl {
     switch (decorated->GetDecoratorType()) {
       case DecoratedViewHost::MAIN_STANDALONE:
       case DecoratedViewHost::MAIN_DOCKED:
+        if (details_view_opened_gadget_ == gadget) {
+          CloseDetailsView(gadget->GetInstanceID());
+          details_view_opened_gadget_ = NULL;
+          sidebar_->SetPopOutedView(NULL);
+        }
         gadget->RemoveMe(true);
         break;
       case DecoratedViewHost::MAIN_EXPANDED:

@@ -168,8 +168,6 @@ class BrowserElement::Impl {
   void Layout() {
     GtkWidget *container = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
     if (GTK_IS_FIXED(container) && GTK_IS_SOCKET(socket_)) {
-      (DLOG("Layout: %lf %lf %lf %lf", owner_->GetPixelX(), owner_->GetPixelY(),
-            owner_->GetPixelWidth(), owner_->GetPixelHeight()));
       bool force_layout = false;
       // check if the contain has changed.
       if (gtk_widget_get_parent(socket_) != container) {
