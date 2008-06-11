@@ -51,7 +51,7 @@ GGL_MAJOR_VERSION=0
 GGL_MINOR_VERSION=9
 GGL_MICRO_VERSION=2
 
-GGL_VERSION=$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION
+GGL_VERSION=\"$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION\"
 
 AC_SUBST(GGL_MAJOR_VERSION)
 AC_SUBST(GGL_MINOR_VERSION)
@@ -80,7 +80,7 @@ AC_SUBST(LIBGGADGET_AGE)
 # Define a string for the earliest version that this release has
 # binary compatibility with. This is used for module locations.
 #
-LIBGGADGET_BINARY_VERSION=1.0.0
+LIBGGADGET_BINARY_VERSION=\"1.0.0\"
 AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
 # This string is used in auto update request. It should be updated to the
@@ -95,17 +95,6 @@ GGL_API_VERSION=\"$GGL_API_MAJOR_VERSION.$GGL_API_MINOR_VERSION.0.0\"
 AC_SUBST(GGL_API_MAJOR_VERSION)
 AC_SUBST(GGL_API_MINOR_VERSION)
 AC_SUBST(GGL_API_VERSION)
-
-AC_DEFINE_UNQUOTED(LIBGGADGET_BINARY_VERSION, "$LIBGGADGET_BINARY_VERSION",
-		   [The binary version of Gadgets runtime library.])
-AC_DEFINE_UNQUOTED(GGL_VERSION, "$GGL_VERSION",
-		   [The release version of Google Gadgets for Linux.])
-AC_DEFINE_UNQUOTED(GGL_MAJOR_VERSION, $GGL_MAJOR_VERSION,
-		   [The Major version of Google Gadgets for Linux.])
-AC_DEFINE_UNQUOTED(GGL_MINOR_VERSION, $GGL_MINOR_VERSION,
-		   [The Minor version of Google Gadgets for Linux.])
-AC_DEFINE_UNQUOTED(GGL_MICRO_VERSION, $GGL_MICRO_VERSION,
-		   [The Micro version of Google Gadgets for Linux.])
 
 # Define a string for the earliest version that this release cannot
 # coexist with. This is used for directory hierarchies.
