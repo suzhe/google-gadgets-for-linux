@@ -57,12 +57,10 @@ class SideBar {
    * Creates a new ViewHost instance and of curse a new view element
    * hold in the side bar.
    *
-   * @param x The X-coordinate in sidebar of the new ViewHost instance.
-   *        Note this is only a hint, sidebar will choose the proper
-   *        position.
+   * @param index The index in sidebar of the new ViewHost instance.
    * @return a new Viewhost instance.
    */
-  ViewHostInterface *NewViewHost(double x);
+  ViewHostInterface *NewViewHost(int index);
 
   /**
    * @return the ViewHost instance associated with the sidebar instance.
@@ -80,14 +78,19 @@ class SideBar {
   /** Retrieves the height of side bar in pixels. */
   double GetHeight() const;
 
+  /** Retrieves the index of the element in the sidebar that is specified
+   *  by the height.
+   * @param height the Y-coordination in the sidebar system.
+   */
+  int GetIndexFromHeight(double height) const;
+
   /**
    * Insert a place holder in the side bar.
    *
-   * @param x The initial X-coordinate in the sidebar of the place hodler.
-   *        Note this is only a hint, sidebar will choose the proper position.
+   * @param index The index of position in the sidebar of the place hodler.
    * @param height The height of the position.
    */
-  void InsertPlaceholder(double x, double height);
+  void InsertPlaceholder(int index, double height);
 
   /**
    * Clear place holder(s)
@@ -98,6 +101,11 @@ class SideBar {
    * Explicitly let side bar reorganize the layout.
    */
   void Layout();
+
+  /**
+   * Explicitly update all elements' index in the sidebar
+   */
+  void UpdateElememtsIndex();
 
   /**
    * @return Return the element that is moused over. Return @c NULL if no
