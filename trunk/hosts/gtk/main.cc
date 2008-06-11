@@ -21,10 +21,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
 #include <ggadget/file_manager_factory.h>
