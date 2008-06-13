@@ -328,10 +328,12 @@ class SingleViewHost::Impl {
 
     if (record_states_)
       LoadWindowStates();
-    else
-      gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
 
     gtk_window_present(GTK_WINDOW(window_));
+
+    // gtk_window_stick() must be called everytime.
+    if (type_ == ViewHostInterface::VIEW_HOST_MAIN && !decorated_)
+      gtk_window_stick(GTK_WINDOW(window_));
 
     // Load window states again to make sure it's still correct
     // after the window is shown.
