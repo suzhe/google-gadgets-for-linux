@@ -16,14 +16,16 @@
 
 #include "perfmon.h"
 
+#include <algorithm>
+#include <map>
 #include <cmath>
+#include <cstring>
+#include <ggadget/common.h>
 #include <ggadget/main_loop_interface.h>
-#include <ggadget/string_utils.h>
 
 namespace ggadget {
 namespace framework {
 namespace linux_system {
-
 
 // Internal structure for holding real-time CPU statistics.
 // All fields in this structure are measured in units of USER_HZ.
@@ -51,28 +53,24 @@ struct CpuStat {
   int64_t worktime;
 };
 
-
-// the ZERO for comparing between double numbers
-static const double kThreshold = 1e-9;
+// the threshold for distinguish different cpu usage value.
+static const double kCpuUsageThreshold = 0.001;
 // the max length of a line
-static const int kMaxLength = 1024;
+static const int kMaxLineLength = 1024;
 // the time interval for time out watch (milliseconds)
 static const int kUpdateInterval = 2000;
 
-
 // the filename for CPU state in proc system
-static const char *kProcStatFile = "/proc/stat";
-// the cpu time operation
-static const char *kPerfmonCpuTime = "\\Processor(_Total)\\% Processor Time";
+static const char kProcStatFile[] = "/proc/stat";
+// the cpu usage operation
+static const char kPerfmonCpuUsage[] = "\\Processor(_Total)\\% Processor Time";
 // the cpu state head name
-static const char *kCpuHeader = "cpu";
-
+static const char kCpuHeader[] = "cpu";
 
 // the current cpu usage status
 static CpuStat current_cpu_status;
 // the last cpu usage status
 static CpuStat last_cpu_status;
-
 
 // Gets the current cpu usage
 static double GetCurrentCpuUsage() {
@@ -80,22 +78,20 @@ static double GetCurrentCpuUsage() {
   if (!fp)
     return 0.0;
 
-  char line[kMaxLength];
+  char line[kMaxLineLength];
 
-  if (!fgets(line, kMaxLength, fp)) {
+  if (!fgets(line, kMaxLineLength, fp)) {
     fclose(fp);
     return 0.0;
   }
 
   fclose(fp);
 
-  size_t head_length = strlen(kCpuHeader);
-
-  if (strlen(line) <= head_length)
+  if (strlen(line) < arraysize(kCpuHeader))
     return 0.0;
 
-  if (!GadgetStrNCmp(line, kCpuHeader, head_length)) {
-    sscanf(line + head_length + 1,
+  if (!strncmp(line, kCpuHeader, arraysize(kCpuHeader) - 1)) {
+    sscanf(line + arraysize(kCpuHeader),
            "%jd %jd %jd %jd %jd %jd %jd",
            &current_cpu_status.user,
            &current_cpu_status.nice,
@@ -136,98 +132,123 @@ static double GetCurrentCpuUsage() {
   return 0.0;
 }
 
-
-/**
- * A special WatchCallbackInterface implementation that calls a specified slot
- * when the CPU usage varies.
- *
- * Then if you want to add a slot into main loop, you can just call:
- * main_loop->AddTimeoutWatch(interval, new WatchCallbackSlot(
- *              new ProcessorUsageCallBackSlot(counter_path, slot)));
- *
- * You can refer to slot's type PerfmonInterface::CallbackSlot for its details.
- */
-class ProcessorUsageCallBackSlot : public WatchCallbackInterface {
+class CpuUsageWatch : public WatchCallbackInterface {
  public:
-
-  ProcessorUsageCallBackSlot(const char *counter_path,
-                             PerfmonInterface::CallbackSlot *slot)
-    : counter_path_(counter_path),
-      slot_(slot),
-      last_cpu_usage_(0.0),
+  CpuUsageWatch()
+    : watch_id_(-1),
       current_cpu_usage_(0.0) {
   }
 
+  ~CpuUsageWatch() {
+    for (SlotMap::iterator it = slots_.begin(); it != slots_.end(); ++it)
+      delete it->second;
+    if (watch_id_ >= 0)
+      GetGlobalMainLoop()->RemoveWatch(watch_id_);
+  }
+
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-    if (CpuUsageDiffer()) {
-      // if cpu usage varies, call the give function slot
-      (*slot_)(counter_path_.c_str(), Variant(current_cpu_usage_ * 100.0));
+    double last = current_cpu_usage_;
+    current_cpu_usage_ = GetCurrentCpuUsage();
+
+    if (std::abs(current_cpu_usage_ - last) >= kCpuUsageThreshold) {
+      Variant usage(current_cpu_usage_ * 100.0);
+      for (SlotMap::iterator it = slots_.begin(); it != slots_.end(); ++it)
+        (*it->second)(kPerfmonCpuUsage, usage);
     }
+
     return true;
   }
 
   virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-    delete slot_;
-    delete this;
+    // In case the main loop is destroyed before the watch.
+    watch_id_ = -1;
   }
 
-  // Checks whether the cpu usage varies
-  bool CpuUsageDiffer() {
+  void AddCounter(int index, PerfmonInterface::CallbackSlot *slot) {
+    SlotMap::iterator it = slots_.find(index);
+    if (it != slots_.end())
+      delete it->second;
 
-    current_cpu_usage_ = GetCurrentCpuUsage();
+    slots_[index] = slot;
 
-    if (fabs(current_cpu_usage_ - last_cpu_usage_) <= kThreshold) {
-      return false;
+    // Add timeout watch only when there is any counter added.
+    if (watch_id_ < 0)
+      watch_id_ = GetGlobalMainLoop()->AddTimeoutWatch(kUpdateInterval, this);
+  }
+
+  void RemoveCounter(int index) {
+    SlotMap::iterator it = slots_.find(index);
+    if (it != slots_.end()) {
+      delete it->second;
+      slots_.erase(it);
     }
 
-    // update the last cpu usage
-    last_cpu_usage_ = current_cpu_usage_;
+    // Remove watch if there is no more counter.
+    if (!slots_.size() && watch_id_ >= 0) {
+      GetGlobalMainLoop()->RemoveWatch(watch_id_);
+      watch_id_ = -1;
+    }
+  }
 
-    return true;
+  double GetCurrentValue() {
+    // If the timeout watch is added, then just return stored value.
+    if (watch_id_ >= 0)
+      return current_cpu_usage_ * 100.0;
+
+    return GetCurrentCpuUsage() * 100.0;
   }
 
  private:
-  std::string counter_path_;
-  PerfmonInterface::CallbackSlot *slot_;
-  double last_cpu_usage_;
+  int watch_id_;
   double current_cpu_usage_;
+
+  typedef std::map<int, PerfmonInterface::CallbackSlot *> SlotMap;
+  SlotMap slots_;
+};
+
+class Perfmon::Impl {
+ public:
+  Impl() : counter_index_(0) { }
+
+  int counter_index_;
+  CpuUsageWatch cpu_usage_watch_;
 };
 
 
-Variant Perfmon::GetCurrentValue(const char *counter_path) {
-  if (counter_path && !GadgetStrCmp(counter_path, kPerfmonCpuTime)) {
-    return Variant(GetCurrentCpuUsage() * 100.0);
-  }
-
-  return Variant(0.0);
+Perfmon::Perfmon()
+  : impl_(new Impl()) {
 }
 
+Perfmon::~Perfmon() {
+  delete impl_;
+}
+
+Variant Perfmon::GetCurrentValue(const char *counter_path) {
+  double value = 0;
+  if (counter_path && !strcmp(counter_path, kPerfmonCpuUsage)) {
+    value = impl_->cpu_usage_watch_.GetCurrentValue();
+  }
+
+  return Variant(value);
+}
 
 int Perfmon::AddCounter(const char *counter_path, CallbackSlot *slot) {
-  if (!slot)
-    return -1;
+  if (slot && counter_path && !strcmp(counter_path, kPerfmonCpuUsage)) {
+    // In case the counter_index_ is wrapped.
+    if (impl_->counter_index_ < 0) impl_->counter_index_ = 0;
 
-  if (counter_path && !GadgetStrCmp(counter_path, kPerfmonCpuTime)) {
-    // operations for CPU usage
-    MainLoopInterface *main_loop = GetGlobalMainLoop();
-
-    if (main_loop)
-      return main_loop->AddTimeoutWatch(kUpdateInterval,
-                          new ProcessorUsageCallBackSlot(counter_path, slot));
+    int index = impl_->counter_index_++;
+    impl_->cpu_usage_watch_.AddCounter(index, slot);
+    return index;
   }
 
   delete slot;
   return -1;
 }
 
-
 void Perfmon::RemoveCounter(int id) {
-  // remove the watch from global main loop
-  MainLoopInterface *main_loop = GetGlobalMainLoop();
-  if (main_loop)
-    main_loop->RemoveWatch(id);
+  impl_->cpu_usage_watch_.RemoveCounter(id);
 }
-
 
 } // namespace linux_system
 } // namespace framework

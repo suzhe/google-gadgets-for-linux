@@ -17,6 +17,7 @@
 #include <map>
 #include <cstdlib>
 #include <gtk/gtk.h>
+#include <glib/gthread.h>
 #include <locale.h>
 #include <signal.h>
 #include <unistd.h>

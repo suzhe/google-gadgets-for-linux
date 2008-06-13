@@ -27,6 +27,7 @@
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
+#include <ggadget/gtk/menu_builder.h>
 #include <ggadget/locales.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/messages.h>
@@ -139,7 +140,8 @@ class SideBarGtkHost::Impl {
 #if GTK_CHECK_VERSION(2,10,0)
       status_icon_(NULL),
 #endif
-      main_widget_(NULL) {
+      main_widget_(NULL),
+      status_icon_menu_(NULL) {
     workarea_.x = 0;
     workarea_.y = 0;
     workarea_.width = 0;
@@ -1306,8 +1308,16 @@ class SideBarGtkHost::Impl {
 
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
                                          guint activate_time, Impl *this_p) {
-    this_p->sidebar_->GetSideBarViewHost()->ShowContextMenu(
-        MouseEvent::BUTTON_LEFT);
+    if (this_p->status_icon_menu_)
+      gtk_widget_destroy(this_p->status_icon_menu_);
+
+    this_p->status_icon_menu_ = gtk_menu_new();
+    MenuBuilder menu_builder(GTK_MENU_SHELL(this_p->status_icon_menu_));
+
+    this_p->HandleMenuOpen(&menu_builder);
+    gtk_menu_popup(GTK_MENU(this_p->status_icon_menu_), NULL, NULL,
+                   gtk_status_icon_position_menu, this_p->status_icon_,
+                   button, activate_time);
   }
 #endif
 
@@ -1360,6 +1370,7 @@ class SideBarGtkHost::Impl {
   GtkStatusIcon *status_icon_;
 #endif
   GtkWidget *main_widget_;
+  GtkWidget *status_icon_menu_;
 };
 
 SideBarGtkHost::SideBarGtkHost(bool decorated, int view_debug_mode)

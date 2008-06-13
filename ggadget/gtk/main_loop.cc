@@ -51,50 +51,20 @@ class MainLoop::Impl {
     }
   };
 
-  class WakeUpWatchCallback : public WatchCallbackInterface {
-   public:
-    WakeUpWatchCallback(int fd) : fd_(fd) {}
-    virtual ~WakeUpWatchCallback() {}
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      char buf[10];
-      // Just read the data out, should be only one byte.
-      // The Call function will only be called by main loop when something
-      // has been occurred on the fd_, so read() won't be blocked. As we
-      // just want to clear the incoming buffer of fd_ here, we don't
-      // need to care about the return value.
-      read(fd_, buf, 10);
-      return true;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-
-   private:
-    int fd_;
-  };
-
  public:
   Impl(MainLoopInterface *main_loop)
     : main_loop_(main_loop), destroyed_(false) {
+    // Initialize the glib thread environment, otherwise the glib main loop
+    // will not be thread safe.
+    if (!g_thread_supported())
+      g_thread_init(NULL);
+
     g_static_mutex_init(&mutex_);
     watches_ = g_hash_table_new_full(g_direct_hash,
                                      g_direct_equal,
                                      NULL,
                                      NodeDestroyCallback);
     ASSERT(watches_);
-    wakeup_pipe_[0] = wakeup_pipe_[1] = -1;
-    // Add watch for waking up the main loop. Only useful in multi threads
-    // environment.
-    // pipe() seldom fails. But if it fails because of too many open
-    // files, then we can't add a wake up pipe. In this case, the main loop can
-    // still work in single thread environment. So it's safe to just ignore the
-    // failure of pipe().
-    if (pipe(wakeup_pipe_) == 0) {
-      fcntl(wakeup_pipe_[0], F_SETFL, O_NONBLOCK);
-      fcntl(wakeup_pipe_[1], F_SETFL, O_NONBLOCK);
-      WakeUpWatchCallback *callback = new WakeUpWatchCallback(wakeup_pipe_[0]);
-      AddIOWatch(IO_READ_WATCH, wakeup_pipe_[0], callback);
-    }
   }
 
   ~Impl() {
@@ -102,8 +72,6 @@ class MainLoop::Impl {
     destroyed_ = true;
     g_hash_table_foreach_remove(watches_, ForeachRemoveCallback, this);
     g_hash_table_destroy(watches_);
-    if (wakeup_pipe_[0] >= 0) close(wakeup_pipe_[0]);
-    if (wakeup_pipe_[1] >= 0) close(wakeup_pipe_[1]);
     g_static_mutex_unlock(&mutex_);
     g_static_mutex_free(&mutex_);
   }
@@ -127,7 +95,6 @@ class MainLoop::Impl {
     node->watch_id = g_io_add_watch(channel, cond, IOWatchCallback, node);
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
     g_io_channel_unref(channel);
-    WakeUp();
     g_static_mutex_unlock(&mutex_);
     return node->watch_id;
   }
@@ -154,7 +121,6 @@ class MainLoop::Impl {
          g_timeout_add_full(G_PRIORITY_DEFAULT_IDLE, interval, TimeoutCallback,
                             node, NULL));
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
-    WakeUp();
     g_static_mutex_unlock(&mutex_);
     return node->watch_id;
   }
@@ -225,13 +191,6 @@ class MainLoop::Impl {
   }
 
  private:
-  void WakeUp() {
-    if (!IsRunning()) return;
-    if (wakeup_pipe_[1] >= 0) {
-      write(wakeup_pipe_[1], "a", 1);
-    }
-  }
-
   void RemoveWatchNode(WatchNode *node) {
     g_static_mutex_lock(&mutex_);
     if (!node->removing) {
@@ -336,10 +295,6 @@ class MainLoop::Impl {
   GHashTable *watches_;
 
   GStaticMutex mutex_;
-  // pipe fds for waking up main loop.
-  // wakeup_pipe_[0] (for reading) will be added into main loop.
-  // wakeup_pipe_[1] (for writing) will be used by WakeUp() method.
-  int wakeup_pipe_[2];
   bool destroyed_;
 };
 

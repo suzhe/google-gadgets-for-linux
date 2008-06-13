@@ -38,19 +38,10 @@ static void MockFunctionCallSlot(const char *name, const Variant &id) {
   printf("%s\n", name);
 }
 
-// Test the constructor of class ProcessorUsageCallBackSlot
-TEST(ProcessorUsageCallBackSlot, Contructor) {
-  ProcessorUsageCallBackSlot *slot_ptr =
-    new ProcessorUsageCallBackSlot("CPU", NULL);
-  // no exception should occur
-  delete slot_ptr;
-}
-
-
 // Normal test.
 TEST(Perfmon, AddCounter_Success) {
   Perfmon perfmon;
-  int watch_id = perfmon.AddCounter(kPerfmonCpuTime,
+  int watch_id = perfmon.AddCounter(kPerfmonCpuUsage,
                                     NewSlot(MockFunctionCallSlot));
   EXPECT_TRUE(watch_id > 0);
 }
@@ -65,7 +56,7 @@ TEST(Perfmon, AddCounter_Failure_NullCounterPath) {
 // Failure test for AddCounter when the input call back slot is NULL
 TEST(Perfmon, AddCounter_Failure_NullCallBackSlot) {
   Perfmon perfmon;
-  int watch_id = perfmon.AddCounter(kPerfmonCpuTime, NULL);
+  int watch_id = perfmon.AddCounter(kPerfmonCpuUsage, NULL);
   EXPECT_EQ(kInvalidWatchId, watch_id);
 }
 
@@ -88,7 +79,7 @@ TEST(Perfmon, GetCurrentValue_Accuray) {
   Perfmon perfmon;
   Variant value;
   for (int i = 0; i < 10; ++i) {
-    value = perfmon.GetCurrentValue(kPerfmonCpuTime);
+    value = perfmon.GetCurrentValue(kPerfmonCpuUsage);
     EXPECT_EQ(Variant::TYPE_DOUBLE, value.type());
     double result = 0.0;
     value.ConvertToDouble(&result);
