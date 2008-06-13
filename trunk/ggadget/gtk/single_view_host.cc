@@ -18,6 +18,8 @@
 #include <gdk/gdk.h>
 #include <string>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/gadget.h>
@@ -163,11 +165,12 @@ class SingleViewHost::Impl {
       gtk_container_add(GTK_CONTAINER(window_), fixed_);
       no_background = true;
       DisableWidgetBackground(window_);
-      if (!decorated_)
+      if (!decorated_) {
         gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
-      widget_ = window_;
-      if (type_ == ViewHostInterface::VIEW_HOST_MAIN && !decorated_)
+        gtk_window_set_skip_pager_hint(GTK_WINDOW(window_), TRUE);
         gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
+      }
+      widget_ = window_;
     }
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
@@ -303,12 +306,33 @@ class SingleViewHost::Impl {
     tooltip_->Show(tooltip);
   }
 
+  void InitializeWindowIcon() {
+    ASSERT(view_);
+    ASSERT(window_);
+    Gadget *gadget = view_->GetGadget();
+    if (gadget && !gtk_window_get_icon(GTK_WINDOW(window_))) {
+      std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+      std::string data;
+      if (!gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data))
+        GetGlobalFileManager()->ReadFile(kGadgetsIcon, &data);
+      if (data.length()) {
+        GdkPixbuf *pixbuf = LoadPixbufFromData(data);
+        if (pixbuf) {
+          gtk_window_set_icon(GTK_WINDOW(window_), pixbuf);
+          g_object_unref(pixbuf);
+        }
+      }
+    }
+  }
+
   bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
     ASSERT(window_);
 
     delete feedback_handler_;
     feedback_handler_ = feedback_handler;
+
+    InitializeWindowIcon();
 
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       if (flags & ViewInterface::OPTIONS_VIEW_FLAG_OK)
@@ -332,7 +356,7 @@ class SingleViewHost::Impl {
     gtk_window_present(GTK_WINDOW(window_));
 
     // gtk_window_stick() must be called everytime.
-    if (type_ == ViewHostInterface::VIEW_HOST_MAIN && !decorated_)
+    if (!decorated_)
       gtk_window_stick(GTK_WINDOW(window_));
 
     // Load window states again to make sure it's still correct

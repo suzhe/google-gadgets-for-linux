@@ -26,9 +26,15 @@ namespace linux_system {
 
 class Perfmon : public PerfmonInterface {
  public:
+  Perfmon();
+  virtual ~Perfmon();
+
   virtual Variant GetCurrentValue(const char *counter_path);
   virtual int AddCounter(const char *counter_path, CallbackSlot *slot);
   virtual void RemoveCounter(int id);
+ private:
+  class Impl;
+  Impl *impl_;
 };
 
 

@@ -46,7 +46,7 @@ filesystem_file_test_SOURCES    = filesystem_file_test.cc
 filesystem_textstream_test_SOURCES    = filesystem_textstream_test.cc
 network_test_SOURCES		= network_test.cc
 power_test_SOURCES 		= power_test.cc
-perfmon_test_SOURCES   = perfmon_test.cc
+perfmon_test_SOURCES   = perfmon_test.cc $(top_srcdir)/ggadget/tests/native_main_loop.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

@@ -30,6 +30,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/file_manager_interface.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/view_interface.h>
 #include "utilities.h"
 
@@ -185,7 +186,12 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   GtkWidget *image = NULL;
   std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
   std::string data;
-  if (gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data)) {
+
+  // If the gadget has no icon, then use default icon.
+  if (!gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data))
+    GetGlobalFileManager()->ReadFile(kGadgetsIcon, &data);
+
+  if (data.length()) {
     GdkPixbuf *pixbuf = LoadPixbufFromData(data);
     if (pixbuf) {
       image = gtk_image_new_from_pixbuf(pixbuf);
@@ -197,7 +203,8 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   GtkWidget *vbox = gtk_vbox_new(FALSE, 12);
   gtk_box_pack_start(GTK_BOX(vbox), title, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(vbox), copyright, FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
+  if (image)
+    gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox,
                      FALSE, FALSE, 0);
