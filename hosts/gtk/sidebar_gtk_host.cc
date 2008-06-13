@@ -404,6 +404,13 @@ class SideBarGtkHost::Impl {
     if (corrupt_data) FlushGlobalOptions();
   }
 
+  bool FlushGadgetOrder(int index, ViewElement *view_element) {
+    Gadget *gadget = view_element->GetChildView()->GetGadget();
+    OptionsInterface *opt = gadget->GetOptions();
+    opt->PutInternalValue(kPositionInSideBar, Variant(index));
+    return true;
+  }
+
   void FlushGlobalOptions() {
     // save gadgets' information
     for (GadgetsMap::iterator it = gadgets_.begin();
@@ -411,9 +418,8 @@ class SideBarGtkHost::Impl {
       OptionsInterface *opt = it->second->gadget->GetOptions();
       opt->PutInternalValue(kDisplayTarget,
                             Variant(it->second->gadget->GetDisplayTarget()));
-      opt->PutInternalValue(kPositionInSideBar,
-                            Variant(it->second->index_in_sidebar));
     }
+    sidebar_->EnumerateViewElements(NewSlot(this, &Impl::FlushGadgetOrder));
 
     // save sidebar's information
     options_->PutInternalValue(kOptionAutoHide, Variant(option_auto_hide_));
