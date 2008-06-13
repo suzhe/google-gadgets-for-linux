@@ -22,7 +22,6 @@ ADD_SUBDIRECTORY(ggadget)
 ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
+ADD_SUBDIRECTORY(gadgets)
 
 ADD_DIR_TO_ZIP(resources output/bin/resources.gg)
-ADD_DIR_TO_ZIP(igoogle_gadget output/bin/igoogle-gadget.gg)
-ADD_DIR_TO_ZIP(rss_gadget output/bin/rss-gadget.gg)

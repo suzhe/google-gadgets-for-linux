@@ -13,25 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IGOOGLE_GADGET_FILES= en/strings.xml \
-		      zh-CN/strings.xml \
-		      gadget.gmanifest \
-		      igoogle_32.gif \
-		      main.js \
-		      main.xml \
-		      options.js \
-		      options.xml \
-		      shared.js
+RSS_GADGET_FILES= en/strings.xml \
+		  zh-CN/strings.xml \
+		  gadget.gmanifest \
+		  large_rss_icon.png \
+		  main.js \
+		  main.xml \
+		  rss_bkgnd.png \
+		  small_rss_icon.png
 
-EXTRA_DIST = $(IGOOGLE_GADGET_FILES)
+EXTRA_DIST = $(RSS_GADGET_FILES)
 
 if GGL_HAVE_ZIP
-igoogle_gadget_DATA = igoogle-gadget.gg
-igoogle_gadgetdir=$(GGL_RESOURCE_DIR)
+rss_gadget_DATA = rss.gg
+rss_gadgetdir=$(GGL_RESOURCE_DIR)
 
-igoogle-gadget.gg: $(IGOOGLE_GADGET_FILES)
-	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(IGOOGLE_GADGET_FILES))
+rss.gg: $(RSS_GADGET_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(RSS_GADGET_FILES))
 else
-nobase_igoogle_gadget_DATA = $(IGOOGLE_GADGET_FILES)
-igoogle_gadgetdir = $(GGL_RESOURCE_DIR)/igoogle-gadget
+nobase_rss_gadget_DATA = $(RSS_GADGET_FILES)
+rss_gadgetdir = $(GGL_RESOURCE_DIR)/rss
 endif

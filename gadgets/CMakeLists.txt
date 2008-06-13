@@ -1,5 +1,5 @@
 #
-# Copyright 2007 Google Inc.
+# Copyright 2008 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,22 +14,8 @@
 # limitations under the License.
 #
 
-ACLOCAL_AMFLAGS = -I autotools
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+INCLUDE(Configure)
 
-if GGL_BUILD_LIBLTDL
-LIBLTDL_DIR = libltdl
-endif
-
-SUBDIRS = $(LIBLTDL_DIR) \
-	  third_party \
-	  unittest \
-	  ggadget \
-	  extensions \
-	  resources \
-	  gadgets \
-	  hosts
-
-EXTRA_DIST = autotools
-
-dist-hook:
-	rm -rf `find $(distdir) -name '.svn'`
+ADD_DIR_TO_ZIP(igoogle ../output/bin/igoogle.gg)
+ADD_DIR_TO_ZIP(rss ../output/bin/rss.gg)

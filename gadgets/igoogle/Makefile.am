@@ -12,24 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-ACLOCAL_AMFLAGS = -I autotools
+IGOOGLE_GADGET_FILES= en/strings.xml \
+		      zh-CN/strings.xml \
+		      gadget.gmanifest \
+		      igoogle_32.gif \
+		      main.js \
+		      main.xml \
+		      options.js \
+		      options.xml \
+		      shared.js
 
-if GGL_BUILD_LIBLTDL
-LIBLTDL_DIR = libltdl
+EXTRA_DIST = $(IGOOGLE_GADGET_FILES)
+
+if GGL_HAVE_ZIP
+igoogle_gadget_DATA = igoogle.gg
+igoogle_gadgetdir=$(GGL_RESOURCE_DIR)
+
+igoogle.gg: $(IGOOGLE_GADGET_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(IGOOGLE_GADGET_FILES))
+else
+nobase_igoogle_gadget_DATA = $(IGOOGLE_GADGET_FILES)
+igoogle_gadgetdir = $(GGL_RESOURCE_DIR)/igoogle
 endif
-
-SUBDIRS = $(LIBLTDL_DIR) \
-	  third_party \
-	  unittest \
-	  ggadget \
-	  extensions \
-	  resources \
-	  gadgets \
-	  hosts
-
-EXTRA_DIST = autotools
-
-dist-hook:
-	rm -rf `find $(distdir) -name '.svn'`
