@@ -309,12 +309,16 @@ class SingleViewHost::Impl {
   void InitializeWindowIcon() {
     ASSERT(view_);
     ASSERT(window_);
-    Gadget *gadget = view_->GetGadget();
-    if (gadget && !gtk_window_get_icon(GTK_WINDOW(window_))) {
-      std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+    if (!gtk_window_get_icon(GTK_WINDOW(window_))) {
       std::string data;
-      if (!gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data))
+      Gadget *gadget = view_->GetGadget();
+      if (gadget) {
+        std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+        gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data);
+      }
+      if (!data.length()) {
         GetGlobalFileManager()->ReadFile(kGadgetsIcon, &data);
+      }
       if (data.length()) {
         GdkPixbuf *pixbuf = LoadPixbufFromData(data);
         if (pixbuf) {
