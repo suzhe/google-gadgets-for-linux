@@ -784,8 +784,8 @@ class SideBarGtkHost::Impl {
   void HideOrShowSideBar(bool show) {
 #if GTK_CHECK_VERSION(2,10,0)
     if (show) {
+      sidebar_host_->ShowView(false, 0, NULL);
       AdjustSideBar();
-      gtk_widget_show(main_widget_);
     } else {
       if (option_auto_hide_) {
         // TODO:
@@ -795,7 +795,7 @@ class SideBarGtkHost::Impl {
         //AdjustSideBarPositionAndSize(y, kSideBarMinimizedWidth,
         //                             static_cast<int>(sidebar_->GetHeight()));
       } else {
-        gtk_widget_hide(main_widget_);
+        sidebar_host_->CloseView();
       }
     }
 #else

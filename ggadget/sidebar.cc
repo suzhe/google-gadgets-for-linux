@@ -680,7 +680,7 @@ double SideBar::GetHeight() const {
 
 int SideBar::GetIndexFromHeight(double height) const {
   int i = 0;
-  BasicElement *e;
+  BasicElement *e = NULL;
   for (; i < impl_->main_div_->GetChildren()->GetCount(); ++i) {
     e = impl_->main_div_->GetChildren()->GetItemByIndex(i);
     ViewInterface *view = down_cast<ViewElement *>(e)->GetChildView();
@@ -690,8 +690,8 @@ int SideBar::GetIndexFromHeight(double height) const {
     if (height - impl_->main_div_->GetPixelY() < middle)
       return down_cast<Impl::SideBarViewHost *>(view->GetViewHost())->index();
   }
-  return down_cast<Impl::SideBarViewHost *>(down_cast<ViewElement *>(
-      e)->GetChildView()->GetViewHost())->index() + 1;
+  return e ? down_cast<Impl::SideBarViewHost *>(down_cast<ViewElement *>(
+      e)->GetChildView()->GetViewHost())->index() + 1 : 0;
 }
 
 void SideBar::InsertPlaceholder(int index, double height) {
