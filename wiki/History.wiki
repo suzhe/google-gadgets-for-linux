@@ -19,3 +19,7 @@ This page is dedicated for recording notable changes of each release.
     * Added Simplified Chinese translation of most messages.
     * Various other bug fixes.
     * Made sidebar mode the default in gtk host. Use `-ns` switch to disable sidebar mode.
+
+  * 0.9.3 -- Jun 13th 2008
+    * Fixed many issues, such as: 96, 122, 128, 133, 135, 137, 139, 142, 143, 145, 149, 152, 156, 157
+    * And now gadgets will show in all virtual desktops.
