@@ -135,6 +135,15 @@ class SideBar {
   ViewElement *SetPopOutedView(ViewInterface *view);
 
   /**
+   * Enumerate view elements in the sidebar.
+   * The callback will receive two parameters, first is the index of the
+   * view element and the second is the pointer point to the view element
+   * and should return true if it wants the enumeration to continue,
+   * or false to break the enumeration.
+   */
+  void EnumerateViewElements(Slot2<bool, int, ViewElement *> *slot);
+
+  /**
    * Event connection methods.
    */
   Connection *ConnectOnUndock(Slot2<void, double, double> *slot);

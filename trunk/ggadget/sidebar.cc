@@ -194,7 +194,8 @@ class SideBar::Impl : public View {
         hittest_(HT_CLIENT),
         background_(NULL),
         icon_(NULL),
-        main_div_(NULL) {
+        main_div_(NULL),
+        children_(NULL) {
     SetResizable(ViewInterface::RESIZABLE_TRUE);
     // EnableCanvasCache(false);
     SetupDecorator();
@@ -254,8 +255,8 @@ class SideBar::Impl : public View {
           case HT_BOTTOM:
             hit_element_bottom_ = true;
             // record the original height of each view elements
-            for (; index < main_div_->GetChildren()->GetCount(); ++index) {
-              element = main_div_->GetChildren()->GetItemByIndex(index);
+            for (; index < children_->GetCount(); ++index) {
+              element = children_->GetItemByIndex(index);
               elements_height_.push_back(element->GetPixelHeight());
             }
             if (element) {
@@ -387,6 +388,7 @@ class SideBar::Impl : public View {
     GetChildren()->InsertElement(main_div_, NULL);
     main_div_->SetPixelX(kBoderWidth);
     main_div_->SetPixelY(kBoderWidth + kIconHeight);
+    children_ = main_div_->GetChildren();
   }
   void SetupButtons() {
     icon_ = new ImgElement(NULL, this, NULL);
@@ -434,8 +436,8 @@ class SideBar::Impl : public View {
   }
   int GetIndex(const BasicElement *element) const {
     ASSERT(element->IsInstanceOf(ViewElement::CLASS_ID));
-    for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i)
-      if (element == main_div_->GetChildren()->GetItemByIndex(i)) return i;
+    for (int i = 0; i < children_->GetCount(); ++i)
+      if (element == children_->GetItemByIndex(i)) return i;
     return -1;
   }
   void InsertViewElement(int index, BasicElement *element) {
@@ -443,8 +445,8 @@ class SideBar::Impl : public View {
     ASSERT(index >= 0);
     // insert the element by the order of their SideBarViewHost
     int i = 0;
-    for (; i < main_div_->GetChildren()->GetCount(); ++i) {
-      BasicElement *e = main_div_->GetChildren()->GetItemByIndex(i);
+    for (; i < children_->GetCount(); ++i) {
+      BasicElement *e = children_->GetItemByIndex(i);
       int cur_index = i;
       ViewInterface *view = down_cast<ViewElement *>(e)->GetChildView();
       // for element that has not view, only judge by the element order
@@ -452,7 +454,7 @@ class SideBar::Impl : public View {
         cur_index = down_cast<SideBarViewHost *>(view->GetViewHost())->index();
       if (cur_index >= index) {
         if (e != element) {
-          main_div_->GetChildren()->InsertElement(element, e);
+          children_->InsertElement(element, e);
           if (element->IsEnabled()) Layout();
         }
         return;
@@ -460,22 +462,22 @@ class SideBar::Impl : public View {
     }
     // not find a proper position, append to the end
     if (down_cast<ViewElement *>(element)->GetChildView())
-      main_div_->GetChildren()->InsertElement(element, NULL);
+      children_->InsertElement(element, NULL);
     else
       ClearPlaceHolder();
   }
   bool RemoveViewElement(BasicElement *element) {
     ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
     bool enabled = element->IsEnabled();
-    bool r = main_div_->GetChildren()->RemoveElement(element);
+    bool r = children_->RemoveElement(element);
     if (enabled && r) Layout();
     return r;
   }
   void Layout() {
     double y = kGadgetSpacing;
-    for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
+    for (int i = 0; i < children_->GetCount(); ++i) {
       ViewElement *element =
-        down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
+        down_cast<ViewElement *>(children_->GetItemByIndex(i));
       if (!element->IsEnabled()) continue;
       double width = main_div_->GetPixelWidth();
       double height = ceil(element->GetPixelHeight());
@@ -489,9 +491,9 @@ class SideBar::Impl : public View {
     QueueDraw();
   }
   ViewElement *FindViewElementByView(ViewInterface *view) const {
-    for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
-      ViewElement *element = down_cast<ViewElement *>(
-          main_div_->GetChildren()->GetItemByIndex(i));
+    for (int i = 0; i < children_->GetCount(); ++i) {
+      ViewElement *element =
+          down_cast<ViewElement *>(children_->GetItemByIndex(i));
       // they may be not exactly the same view, but they should be owned by
       // the same gadget...
       if (element->GetChildView() &&
@@ -511,7 +513,7 @@ class SideBar::Impl : public View {
   }
   void ClearPlaceHolder() {
     if (null_element_) {
-      main_div_->GetChildren()->RemoveElement(null_element_);
+      children_->RemoveElement(null_element_);
       null_element_ = NULL;
       Layout();
     }
@@ -521,8 +523,8 @@ class SideBar::Impl : public View {
     double sign = *offset > 0 ? 1 : -1;
     double count = 0;
     while (*offset * sign > count * sign && index >= 0) {
-      ViewElement *element = down_cast<ViewElement *>(
-          main_div_->GetChildren()->GetItemByIndex(index));
+      ViewElement *element =
+          down_cast<ViewElement *>(children_->GetItemByIndex(index));
       double w = element->GetPixelWidth();
       double h = elements_height_[index] + count - *offset;
       // don't send non-positive resize request
@@ -544,8 +546,8 @@ class SideBar::Impl : public View {
     if (do_resize)
       // recover upmost elements' size
       while (index >= 0) {
-        ViewElement *element = down_cast<ViewElement *>(
-            main_div_->GetChildren()->GetItemByIndex(index));
+        ViewElement *element =
+            down_cast<ViewElement *>(children_->GetItemByIndex(index));
         element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
         index--;
       }
@@ -557,9 +559,9 @@ class SideBar::Impl : public View {
   bool DownResize(bool do_resize, int index, double *offset) {
     double count = 0;
     if (blank_height_ > 0) count = std::max(-blank_height_, *offset);
-    while (*offset < count && index < main_div_->GetChildren()->GetCount()) {
-      ViewElement *element = down_cast<ViewElement *>(
-          main_div_->GetChildren()->GetItemByIndex(index));
+    while (*offset < count && index < children_->GetCount()) {
+      ViewElement *element =
+          down_cast<ViewElement *>(children_->GetItemByIndex(index));
       double w = element->GetPixelWidth();
       double h = elements_height_[index] + *offset - count;
       // don't send non-positive resize request
@@ -579,9 +581,9 @@ class SideBar::Impl : public View {
     }
     if (do_resize) {
       // recover upmost elemnts' size
-      while (index < main_div_->GetChildren()->GetCount()) {
-        ViewElement *element = down_cast<ViewElement *>(
-            main_div_->GetChildren()->GetItemByIndex(index));
+      while (index < children_->GetCount()) {
+        ViewElement *element =
+            down_cast<ViewElement *>(children_->GetItemByIndex(index));
         element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
         index++;
       }
@@ -592,9 +594,9 @@ class SideBar::Impl : public View {
     return true;
   }
   inline double GetBlankHeight() const {
-    int index = main_div_->GetChildren()->GetCount();
+    int index = children_->GetCount();
     if (!index) return GetHeight();
-    BasicElement *element = main_div_->GetChildren()->GetItemByIndex(index - 1);
+    BasicElement *element = children_->GetItemByIndex(index - 1);
     return GetHeight() - element->GetPixelY() - element->GetPixelHeight();
   }
 
@@ -619,6 +621,7 @@ class SideBar::Impl : public View {
   ImgElement *background_;
   ImgElement *icon_;
   DivElement *main_div_;
+  Elements   *children_;
   ButtonElement *button_array_[3];
 
   EventSignal popin_event_;
@@ -655,6 +658,7 @@ SideBar::~SideBar() {
 }
 
 ViewHostInterface *SideBar::NewViewHost(int index) {
+  DLOG("sidebar: NewViewHost with index: %d", index);
   Impl::SideBarViewHost *vh =
       new Impl::SideBarViewHost(impl_, ViewHostInterface::VIEW_HOST_MAIN,
                                 impl_->view_host_, index);
@@ -681,8 +685,8 @@ double SideBar::GetHeight() const {
 int SideBar::GetIndexFromHeight(double height) const {
   int i = 0;
   BasicElement *e = NULL;
-  for (; i < impl_->main_div_->GetChildren()->GetCount(); ++i) {
-    e = impl_->main_div_->GetChildren()->GetItemByIndex(i);
+  for (; i < impl_->children_->GetCount(); ++i) {
+    e = impl_->children_->GetItemByIndex(i);
     ViewInterface *view = down_cast<ViewElement *>(e)->GetChildView();
     // ignore place holder
     if (!view) continue;
@@ -707,8 +711,8 @@ void SideBar::Layout() {
 }
 
 void SideBar::UpdateElememtsIndex() {
-  for (int i = 0; i < impl_->main_div_->GetChildren()->GetCount(); ++i) {
-    BasicElement *e = impl_->main_div_->GetChildren()->GetItemByIndex(i);
+  for (int i = 0; i < impl_->children_->GetCount(); ++i) {
+    BasicElement *e = impl_->children_->GetItemByIndex(i);
     ViewInterface *v = down_cast<ViewElement *>(e)->GetChildView();
     if (!v) continue;
     down_cast<Impl::SideBarViewHost* >(v->GetViewHost())->SetIndex(i);
@@ -728,7 +732,7 @@ ViewElement *SideBar::FindViewElementByView(ViewInterface *view) const {
 
 ViewElement *SideBar::GetViewElementByIndex(int index) const {
   return down_cast<ViewElement *>(
-      impl_->main_div_->GetChildren()->GetItemByIndex(index));
+      impl_->children_->GetItemByIndex(index));
 }
 
 ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
@@ -742,6 +746,20 @@ ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
     impl_->popout_element_ = NULL;
   }
   return impl_->popout_element_;
+}
+
+void SideBar::EnumerateViewElements(Slot2<bool, int, ViewElement *> *slot) {
+  for (int i = 0; i < impl_->children_->GetCount(); ++i) {
+    ViewElement *v =
+        down_cast<ViewElement *>(impl_->children_->GetItemByIndex(i));
+    if (!v || !v->IsEnabled() || !v->GetChildView())
+      continue;
+    if (!(*slot)(i, v)) {
+      delete slot;
+      return;
+    }
+  }
+  delete slot;
 }
 
 Connection *SideBar::ConnectOnUndock(Slot2<void, double, double> *slot) {
