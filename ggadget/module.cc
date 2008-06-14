@@ -117,10 +117,10 @@ class Module::Impl {
 
     NormalizeNameString(&module_name);
 
-    InitializeFunction new_initialize = reinterpret_cast<InitializeFunction>(
+    InitializeFunction new_initialize = (InitializeFunction)(
         GetModuleSymbol(new_handle, module_name.c_str(),
                         kModuleInitializeSymbol));
-    FinalizeFunction new_finalize = reinterpret_cast<FinalizeFunction>(
+    FinalizeFunction new_finalize = (FinalizeFunction)(
         GetModuleSymbol(new_handle, module_name.c_str(),
                         kModuleFinalizeSymbol));
 
