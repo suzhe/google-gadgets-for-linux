@@ -93,6 +93,7 @@ class SideBarGtkHost::Impl {
       pop_out_view_host = NULL;
       index_in_sidebar = 0;
       undock_by_drag = false;
+      old_keep_above = false;
     }
 
    public:
@@ -105,6 +106,7 @@ class SideBarGtkHost::Impl {
 
     int  index_in_sidebar;
     bool undock_by_drag;
+    bool old_keep_above;
   };
 
   Impl(SideBarGtkHost *owner, bool decorated, int view_debug_mode)
@@ -373,6 +375,8 @@ class SideBarGtkHost::Impl {
             x - static_cast<int>(floating_offset_x_),
             y - static_cast<int>(floating_offset_y_));
         info->floating_view_host->ShowView(false, 0, NULL);
+        info->old_keep_above = info->floating_view_host->IsKeepAbove();
+        info->floating_view_host->SetKeepAbove(true);
         gdk_window_raise(info->floating_view_host->GetWindow()->window);
       }
     }
@@ -701,6 +705,15 @@ class SideBarGtkHost::Impl {
       floating_offset_y_ = y;
       // make sure that the floating window can move on to the sidebar.
       info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
+      info->old_keep_above = info->floating_view_host->IsKeepAbove();
+      info->floating_view_host->SetKeepAbove(true);
+
+      // Raise the sidebar window to make sure that there is no other window on
+      // top of sidebar window.
+      gdk_window_raise(main_widget_->window);
+
+      // Raise gadget window after raising sidebar window, to make sure it's on
+      // top of sidebar window.
       gdk_window_raise(window->window);
     }
     return true;
@@ -731,22 +744,21 @@ class SideBarGtkHost::Impl {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     ASSERT(info);
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+    // The floating window must be normal window when not dragging,
+    // otherwise it'll always on top.
+    info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
+    info->floating_view_host->SetKeepAbove(info->old_keep_above);
     if (IsOverlapWithSideBar(gadget_id, &h)) {
       info->index_in_sidebar = sidebar_->GetIndexFromHeight(h);
       HandleDock(gadget_id);
       // update the index for all elements in sidebar after dock by drag
       sidebar_->UpdateElememtsIndex();
-    } else {
-      if (info->undock_by_drag) {
-        // In drag undock mode, Undock() will not set the display target.
-        info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-        info->decorated_view_host->EnableAutoRestoreViewSize(true);
-        info->decorated_view_host->RestoreViewSize();
-        info->undock_by_drag = false;
-      }
-      // The floating window must be normal window when not dragging,
-      // otherwise it'll always on top.
-      info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
+    } else if (info->undock_by_drag) {
+      // In drag undock mode, Undock() will not set the display target.
+      info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
+      info->decorated_view_host->EnableAutoRestoreViewSize(true);
+      info->decorated_view_host->RestoreViewSize();
+      info->undock_by_drag = false;
     }
     sidebar_->ClearPlaceHolder();
     draging_gadget_ = NULL;
@@ -773,7 +785,23 @@ class SideBarGtkHost::Impl {
   // not move with cursor
   void HandleFloatingUndock(int gadget_id) {
     Undock(gadget_id, false);
-    gadgets_[gadget_id]->floating_view_host->ShowView(false, 0, NULL);
+
+    SingleViewHost *vh = gadgets_[gadget_id]->floating_view_host;
+    vh->ShowView(false, 0, NULL);
+
+    // Move the floating gadget to the center of the monitor, if the gadget
+    // window overlaps with sidebar window.
+    if (IsOverlapWithSideBar(gadget_id, NULL)) {
+      GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
+      GdkRectangle rect;
+      gdk_screen_get_monitor_geometry(screen, option_sidebar_monitor_, &rect);
+      int width, height;
+      vh->GetWindowSize(&width, &height);
+      int x = (rect.x + (rect.width - width) / 2);
+      int y = (rect.y + (rect.height - height) / 2);
+
+      vh->SetWindowPosition(x, y);
+    }
   }
 
   void HideOrShowAllGadgets(bool show) {
@@ -884,10 +912,6 @@ class SideBarGtkHost::Impl {
     decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
     decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
     decorator->ConnectOnDock(NewSlot(this, &Impl::HandleDock, gadget_id));
-
-    // Make sure that the floating gadget will always on top of the sidebar.
-    gtk_window_set_transient_for(GTK_WINDOW(view_host->GetWindow()),
-                                 GTK_WINDOW(sidebar_host_->GetWindow()));
     return decorator;
   }
 
