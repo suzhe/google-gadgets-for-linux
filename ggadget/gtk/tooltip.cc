@@ -41,6 +41,7 @@ class Tooltip::Impl {
     gtk_label_set_line_wrap(GTK_LABEL(label_), TRUE);
     gtk_misc_set_alignment(GTK_MISC(label_), 0.5, 0.5);
     gtk_container_add(GTK_CONTAINER(window_), label_);
+    gtk_widget_show(label_);
 
     // TODO: Is there better way?
     GdkColor color = { 0, 0xffff, 0xffff, 0xb000 };
@@ -58,7 +59,21 @@ class Tooltip::Impl {
     GdkScreen *screen;
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
-    y += 20;
+    gint monitor = gdk_screen_get_monitor_at_point(screen, x, y);
+    GdkRectangle rect;
+    gdk_screen_get_monitor_geometry(screen, monitor, &rect);
+    GtkRequisition size;
+    gtk_widget_size_request(window_, &size);
+
+    // Adjust the position to display the whole tooltip window inside the
+    // monitor region.
+    if (size.width + x > rect.x + rect.width)
+      x = rect.x + rect.width - size.width;
+    if (size.height + y + 20 > rect.y + rect.height)
+      y -= size.height;
+    else
+      y += 20;
+
     gtk_window_set_screen(GTK_WINDOW(window_), screen);
     gtk_window_move(GTK_WINDOW(window_), x, y);
     gtk_widget_show_all(window_);
