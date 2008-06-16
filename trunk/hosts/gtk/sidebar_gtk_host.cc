@@ -139,9 +139,9 @@ class SideBarGtkHost::Impl {
       gadget_manager_(GetGadgetManager()),
 #if GTK_CHECK_VERSION(2,10,0)
       status_icon_(NULL),
+      status_icon_menu_(NULL),
 #endif
-      main_widget_(NULL),
-      status_icon_menu_(NULL) {
+      main_widget_(NULL) {
     workarea_.x = 0;
     workarea_.y = 0;
     workarea_.width = 0;
@@ -182,6 +182,8 @@ class SideBarGtkHost::Impl {
 
 #if GTK_CHECK_VERSION(2,10,0)
     g_object_unref(G_OBJECT(status_icon_));
+    if (status_icon_menu_)
+      gtk_widget_destroy(status_icon_menu_);
 #endif
   }
 
@@ -462,6 +464,7 @@ class SideBarGtkHost::Impl {
     } else {
       status_icon_ = gtk_status_icon_new_from_stock(GTK_STOCK_ABOUT);
     }
+    gtk_status_icon_set_tooltip(status_icon_, GM_("GOOGLE_GADGETS"));
     g_signal_connect(G_OBJECT(status_icon_), "activate",
                      G_CALLBACK(ToggleAllGadgetsHandler), this);
     g_signal_connect(G_OBJECT(status_icon_), "popup-menu",
@@ -1368,9 +1371,9 @@ class SideBarGtkHost::Impl {
   GadgetManagerInterface *gadget_manager_;
 #if GTK_CHECK_VERSION(2,10,0)
   GtkStatusIcon *status_icon_;
+  GtkWidget *status_icon_menu_;
 #endif
   GtkWidget *main_widget_;
-  GtkWidget *status_icon_menu_;
 };
 
 SideBarGtkHost::SideBarGtkHost(bool decorated, int view_debug_mode)
