@@ -29,7 +29,7 @@ namespace ggadget {
  * library for Windows uses Windows locale identifiers as the names of
  * subdirectories containing localized resources.
  *
- * @param name two-segment locale name in format of "lang" or "lang-TERRITORY",
+ * @param name locale name in format of "lang" or "lang-TERRITORY",
  *     such as "en" or "zh-CN".
  * @param[out] windows_id the corresponding Windows locale identifer.
  * @return @c true if @a windows_id found.

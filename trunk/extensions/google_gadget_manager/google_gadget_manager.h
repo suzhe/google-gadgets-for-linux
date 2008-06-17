@@ -107,6 +107,12 @@ const char kInstanceGadgetIdOption[] = "gadget_id";
  */
 const char kGadgetAddedTimeOptionPrefix[] = "added_time.";
 
+/**
+ * This option item is empty until the first run, and after each run, it's
+ * value will be incremented.
+ */
+const char kRunCountOption[] = "run_count";
+
 /** A hard limit of maximum number of active and inactive gadget instances. */
 const int kMaxNumGadgetInstances = 128;
 /** The maximum expiration score before an inactive instance expires. */
@@ -297,19 +303,10 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   void IncreseAndCheckExpirationScores();
   int GetNewInstanceId();
   bool GadgetIdIsFileLocation(const char *gadget_id);
+  bool GadgetIdIsSystemName(const char *gadget_id);
   bool NeedDownloadOrUpdateGadget(const char *gadget_id, bool failure_result);
   std::string GetDownloadedGadgetLocation(const char *gadget_id);
   bool InitInstanceOptions(const char *gadget_id, int instance_id);
-
-  /**
-   * Get the path of a gadget which was already installed into the system.
-   * Such as the path of rss_gadget.gg, etc.
-   *
-   * @param basename of the gadget, without ".gg" suffix.
-   * @return the full path of the gadget, or an empty string if the gadget is
-   *         not available.
-   */
-  std::string GetSystemGadgetPath(const char *basename);
 
   class GadgetBrowserScriptUtils;
 
@@ -336,6 +333,7 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
 
   GadgetsMetadata metadata_;
   Gadget *browser_gadget_;
+  bool first_run_;
 };
 
 } // namespace google

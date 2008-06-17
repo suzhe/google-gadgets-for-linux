@@ -32,6 +32,7 @@ var kPluginTypeSidebar = "sidebar";
 var kPluginTypeIGoogle = "igoogle";
 var kPluginTypeFeed = "feed";
 
+var kAnyLanguage = "any";
 var kCategoryAll = "all";
 var kCategoryNew = "new";
 var kCategoryRecommendations = "recommendations";
@@ -139,30 +140,24 @@ function GetPluginDescription(plugin, language) {
 function GetPluginOtherData(plugin) {
   if (!plugin) return "";
   var result = "";
+  var result_arr = new Array();
   var attrs = plugin.attributes;
-  if (attrs.version) {
-    result += strings.PLUGIN_VERSION;
-    result += attrs.version;
-  }
-  if (attrs.size_kilobytes) {
-    if (result) result += strings.PLUGIN_DATA_SEPARATOR;
-    result += attrs.size_kilobytes;
-    result += strings.PLUGIN_KILOBYTES;
-  }
-  if (plugin.updated_date.getTime()) {
-    if (result) result += strings.PLUGIN_DATA_SEPARATOR;
-    result += plugin.updated_date.toLocaleDateString();
-  }
-  if (attrs.author) {
-    if (result) result += strings.PLUGIN_DATA_SEPARATOR;
-    result += attrs.author;
-  }
-  if (result)
-    result = strings.PLUGIN_DATA_BULLET + result;
+  if (attrs.version)
+    result_arr.push(strings.PLUGIN_VERSION + attrs.version);
+  if (attrs.size_kilobytes)
+    result_arr.push(attrs.size_kilobytes + strings.PLUGIN_KILOBYTES);
+  if (plugin.updated_date.getTime())
+    result_arr.push(plugin.updated_date.toLocaleDateString());
+  if (attrs.author)
+    result_arr.push(attrs.author);
   // For debug:
-  // result += "/" + attrs.uuid;
-  // result += "/" + attrs.id;
-  // result += "/" + attrs.rank;
+  // result_arr.push(attrs.uuid);
+  // result_arr.push(attrs.id);
+  // result_arr.push(attrs.rank);
+  if (result_arr.length) {
+    result = strings.PLUGIN_DATA_BULLET +
+             result_arr.join(strings.PLUGIN_DATA_SEPARATOR);
+  }
   return result;
 }
 
@@ -349,6 +344,8 @@ function GetPluginsOfCategory(language, category) {
 
   var result = gPlugins[language][category];
   if (!result.sorted) {
+    if (gPlugins[kAnyLanguage] && gPlugins[kAnyLanguage][category])
+      Array.prototype.push.apply(result, gPlugins[kAnyLanguage][category]); 
     debug.trace("begin sorting");
     if (category == kCategoryRecentlyUsed) {
       GetRecentlyUsedPlugins(language, result);

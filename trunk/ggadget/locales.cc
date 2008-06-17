@@ -21,6 +21,7 @@
 #include <cstring>
 #include "common.h"
 #include "logger.h"
+#include "string_utils.h"
 #include "system_utils.h"
 
 namespace ggadget {
@@ -310,6 +311,7 @@ bool GetLocaleShortName(const char *name, std::string *short_name) {
 
   ASSERT(pos);
   if (strcmp(name, pos->name) == 0 && pos->short_name) {
+    // Found the name ==> short_name mapping.
     *short_name = pos->short_name;
     return true;
   }
@@ -318,6 +320,7 @@ bool GetLocaleShortName(const char *name, std::string *short_name) {
   for (; pos < kLocaleNames + arraysize(kLocaleNames); ++pos) {
     if (strncmp(name, pos->name, len) == 0) {
       if (pos->short_name && strcmp(name, pos->short_name) == 0) {
+        // The input name is already a short name.
         *short_name = name;
         return true;
       }
@@ -332,9 +335,9 @@ std::string GetSystemLocaleName() {
   std::string language, territory;
   if (GetSystemLocaleInfo(&language, &territory)) {
     if (territory.length()) {
-      std::string full_locale(language);
+      std::string full_locale(ToLower(language));
       full_locale.append("-");
-      full_locale.append(territory);
+      full_locale.append(ToUpper(territory));
       std::string short_locale;
       // To keep compatible with the Windows version, we must return the short
       // name for many locales.

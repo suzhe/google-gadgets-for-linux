@@ -18,9 +18,14 @@
 
 #include <cstdlib>
 #include <time.h>
+#include <ggadget/common.h>
 #include <ggadget/file_manager_factory.h>
+#include <ggadget/gadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/locales.h>
 #include <ggadget/scriptable_holder.h>
 #include <ggadget/slot.h>
+#include <ggadget/system_utils.h>
 #include <ggadget/xml_http_request_interface.h>
 #include <ggadget/xml_parser_interface.h>
 
@@ -34,6 +39,48 @@ static const char *kMonthNames[] = {
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 };
+
+std::string GetSystemGadgetPath(const char *basename) {
+  std::string path;
+#if !defined(GGL_RESOURCE_DIR) && defined(_DEBUG)
+#define GGL_RESOURCE_DIR "."
+#endif
+
+#ifdef GGL_RESOURCE_DIR
+  FileManagerInterface *file_manager = GetGlobalFileManager();
+  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL) + kGadgetFileSuffix;
+  if (file_manager->FileExists(path.c_str(), NULL) &&
+      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
+    return file_manager->GetFullPath(path.c_str());
+
+  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL);
+  if (file_manager->FileExists(path.c_str(), NULL) &&
+      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
+    return file_manager->GetFullPath(path.c_str());
+#endif
+  return std::string();
+}
+
+// Load gadget manifest and fill in GadgetInfo.
+static bool FillGadgetInfoFromManifest(const char *gadget_path,
+                                       GadgetInfo *info) {
+  StringMap manifest;
+  if (!Gadget::GetGadgetManifest(gadget_path, &manifest))
+    return false;
+
+  info->attributes["author"] = manifest[kManifestAuthor];
+  info->attributes["uuid"] = manifest[kManifestId];
+  info->attributes["name"] = manifest[kManifestName];
+  info->attributes["product_summary"] = manifest[kManifestDescription];
+  info->attributes["version"] = manifest[kManifestVersion];
+  info->attributes["rank"] = "1.0";
+  info->attributes["sidebar"] = "true";
+  info->attributes["type"] = "sidebar";
+  info->attributes["download_url"] = gadget_path;
+  // Let this gadget visible whatever language the user selects.
+  info->attributes["language"] = "any";
+  return true;
+}
 
 class GadgetsMetadata::Impl {
  public:
@@ -50,8 +97,12 @@ class GadgetsMetadata::Impl {
 
   void Init() {
     std::string contents;
-    if (file_manager_->ReadFile(kPluginsXMLLocation, &contents))
+    if (file_manager_->ReadFile(kPluginsXMLLocation, &contents)) {
       ParsePluginsXML(contents, true);
+      // ParsePluginsXML will also call LoadBuiltinGadgetsXML().
+    } else {
+      LoadBuiltinGadgetsXML();
+    }
   }
 
   ~Impl() {
@@ -135,6 +186,9 @@ class GadgetsMetadata::Impl {
     for (GadgetInfoMap::const_iterator it = plugins_.begin();
          it != plugins_.end(); ++ it) {
       const GadgetInfo &info = it->second;
+      if (info.source != SOURCE_PLUGINS_XML)
+        continue;
+
       contents += " <plugin";
       for (StringMap::const_iterator attr_it = info.attributes.begin();
            attr_it != info.attributes.end(); ++attr_it) {
@@ -170,6 +224,45 @@ class GadgetsMetadata::Impl {
     }
     contents += "</plugins>\n";
     return file_manager_->WriteFile(kPluginsXMLLocation, contents, true);
+  }
+
+  void ParseXMLGadgetInfo(const StringMap &plugins,
+                          StringMap::const_iterator it,
+                          const std::string &plugin_key,
+                          GadgetInfo *info) {
+    // Enumerate all attributes and sub elements of this plugin.
+    while (it != plugins.end()) {
+      const std::string &key = it->first;
+      if (GadgetStrNCmp(key.c_str(), plugin_key.c_str(),
+                        plugin_key.size()) != 0) {
+        // Finished parsing data of the current gadget.
+        break;
+      }
+  
+      char next_char = key[plugin_key.size()];
+      if (next_char == '@') {
+        info->attributes[key.substr(plugin_key.size() + 1)] = it->second;
+      } else if (next_char == '/') {
+        // Parse <title> and <description> sub-elements.
+        if (SimpleMatchXPath(key.c_str(), "plugin/title")) {
+          std::string locale = ToLower(GetValue(plugins, key + "@locale"));
+          if (locale.empty())
+            LOG("Missing 'locale' attribute in <title>");
+          else
+            info->titles[locale] = it->second;
+        } else if (SimpleMatchXPath(key.c_str(), "plugin/description")) {
+          std::string locale = ToLower(GetValue(plugins, key + "@locale"));
+          if (locale.empty())
+            LOG("Missing 'locale' attribute in <description>");
+          else
+            info->descriptions[locale] = it->second;
+        }
+      } else {
+        // Finished parsing data of the current gadget.
+        break;
+      }
+      ++it;
+    }
   }
 
   bool ParsePluginsXML(const std::string &contents, bool full_update) {
@@ -229,43 +322,55 @@ class GadgetsMetadata::Impl {
       if (info->updated_date > latest_plugin_time_)
         latest_plugin_time_ = info->updated_date;
 
-      // Enumerate all attributes and sub elements of this plugin.
-      while (it != new_plugins.end()) {
-        const std::string &key = it->first;
-        if (GadgetStrNCmp(key.c_str(), plugin_key.c_str(),
-                          plugin_key.size()) != 0) {
-          // Finished parsing data of the current gadget.
-          break;
-        }
-
-        char next_char = key[plugin_key.size()];
-        if (next_char == '@') {
-          info->attributes[key.substr(plugin_key.size() + 1)] = it->second;
-        } else if (next_char == '/') {
-          if (SimpleMatchXPath(key.c_str(), "plugin/title")) {
-            std::string locale =
-                ToLower(GetValue(new_plugins, key + "@locale"));
-            if (locale.empty())
-              LOG("Missing 'locale' attribute in <title>");
-            else
-              info->titles[locale] = it->second;
-          } else if (SimpleMatchXPath(key.c_str(), "plugin/description")) {
-            std::string locale =
-                ToLower(GetValue(new_plugins, key + "@locale"));
-            if (locale.empty())
-              LOG("Missing 'locale' attribute in <description>");
-            else
-              info->descriptions[locale] = it->second;
-          }
-        } else {
-          // Finished parsing data of the current gadget.
-          break;
-        }
-        ++it;
-      }
+      ParseXMLGadgetInfo(new_plugins, it, plugin_key, info);
     }
 
     plugins_.swap(temp_plugins);
+    LoadBuiltinGadgetsXML();
+    return true;
+  }
+
+  bool LoadBuiltinGadgetsXML() {
+    std::string contents;
+    if (!file_manager_->ReadFile(kBuiltinGadgetsXMLLocation, &contents))
+      return false;
+
+    StringMap gadgets;
+    if (!parser_->ParseXMLIntoXPathMap(contents, NULL, kPluginsXMLLocation,
+                                       "plugins", NULL, NULL, &gadgets))
+      return false;
+
+    StringMap::const_iterator it = gadgets.begin();
+    while (it != gadgets.end()) {
+      const std::string &plugin_key = it->first;
+      ++it;
+      if (!SimpleMatchXPath(plugin_key.c_str(), "plugin"))
+        continue;
+
+      std::string id = GetValue(gadgets, plugin_key + "@id");
+      if (id.empty())
+        continue;
+
+      // Otherwise, this is a full record.
+      GadgetInfo *info = &plugins_[id];
+      info->id = id;
+
+      std::string gadget_path = GetSystemGadgetPath(id.c_str());
+      if (gadget_path.empty() ||
+          !FillGadgetInfoFromManifest(gadget_path.c_str(), info)) {
+        DLOG("Failed to load manifest from built-in gadget: %s", id.c_str());
+        plugins_.erase(id);
+        continue;
+      }
+
+      ParseXMLGadgetInfo(gadgets, it, plugin_key, info);
+
+      std::string category = GetValue(gadgets, plugin_key + "@category");
+      if (category.empty()) category = "google";
+      else category += ",google";
+      info->attributes["category"] = category;
+      info->source = SOURCE_BUILTIN;
+    }
     return true;
   }
 
@@ -341,6 +446,19 @@ class GadgetsMetadata::Impl {
     return &plugins_;
   }
 
+  GadgetInfo *AddLocalGadgetInfo(const char *path) {
+    ASSERT(path);
+    std::string id(path);
+    GadgetInfo *info = &plugins_[id];
+    if (!FillGadgetInfoFromManifest(path, info)) {
+      plugins_.erase(id);
+      return NULL;
+    }
+    info->id = id;
+    info->source = SOURCE_LOCAL_FILE;
+    return info;
+  }
+
   XMLParserInterface *parser_;
   FileManagerInterface *file_manager_;
   ScriptableHolder<XMLHttpRequestInterface> request_;
@@ -379,6 +497,10 @@ GadgetInfoMap *GadgetsMetadata::GetAllGadgetInfo() {
 
 const GadgetInfoMap *GadgetsMetadata::GetAllGadgetInfo() const {
   return impl_->GetAllGadgetInfo();
+}
+
+const GadgetInfo *GadgetsMetadata::AddLocalGadgetInfo(const char *path) {
+  return impl_->AddLocalGadgetInfo(path);
 }
 
 } // namespace google

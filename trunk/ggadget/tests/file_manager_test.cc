@@ -17,6 +17,7 @@
 #include <iostream>
 #include <locale.h>
 
+#include "ggadget/logger.h"
 #include "ggadget/file_manager_interface.h"
 #include "ggadget/file_manager_wrapper.h"
 #include "ggadget/file_manager_factory.h"
@@ -155,35 +156,32 @@ void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
 }
 
 void TestFileManagerLocalized(FileManagerInterface *fm,
-                              const char *lang,
-                              const char *territory) {
+                              const std::string &locale,
+                              const std::string &alternative_locale) {
   std::string contents(" contents\n");
-  std::string locale(lang);
   std::string data;
   std::string filename;
 
-  locale.append("_");
-  locale.append(territory);
   filename = locale + "_file";
   ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
   EXPECT_STREQ((filename + contents).c_str(), data.c_str());
 
-  if (locale != "en_US") {
-    locale = "en";
-    filename = locale + "_file";
-    ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
-    EXPECT_STREQ((filename + contents).c_str(), data.c_str());
-
-    locale.append("_US");
-    filename = locale + "_file";
-    ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
-    EXPECT_STREQ((filename + contents).c_str(), data.c_str());
-  }
-
-  locale = "1033";
-  filename = locale + "_file";
+  filename = alternative_locale + "_file";
   ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
   EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+  filename = "en_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+  filename = "1033_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+  // Global files always have higher priority.
+  filename = "global_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + " at top\n").c_str(), data.c_str());
 }
 
 TEST(FileManager, DirRead) {
@@ -217,21 +215,21 @@ TEST(FileManager, ZipWrite) {
 }
 
 TEST(FileManager, LocalizedFile) {
-  static const char *locales[] = { "en_US", "zh_CN", NULL };
-  std::string lang, territory;
+  static const char *locales_full[] = { "en_US", "zh_CN.UTF8", NULL };
+  static const char *locales[] = { "en", "zh-CN", NULL };
+  static const char *alt_locales[] = { "1033", "2052", NULL };
 
   for (size_t i = 0; locales[i]; ++i) {
-    setlocale(LC_MESSAGES, locales[i]);
-    ASSERT_TRUE(GetSystemLocaleInfo(&lang, &territory));
+    setlocale(LC_MESSAGES, locales_full[i]);
 
     FileManagerInterface *fm = new LocalizedFileManager(new DirFileManager());
     ASSERT_TRUE(fm->Init(base_dir_path, false));
-    TestFileManagerLocalized(fm, lang.c_str(), territory.c_str());
+    TestFileManagerLocalized(fm, locales[i], alt_locales[i]);
     delete fm;
 
     fm = new LocalizedFileManager(new ZipFileManager());
     ASSERT_TRUE(fm->Init(base_gg_path, false));
-    TestFileManagerLocalized(fm, lang.c_str(), territory.c_str());
+    TestFileManagerLocalized(fm, locales[i], alt_locales[i]);
     delete fm;
   }
 }

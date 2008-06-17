@@ -70,7 +70,8 @@ GoogleGadgetManager::GoogleGadgetManager()
       update_timer_(0),
       full_download_(false),
       updating_metadata_(false),
-      browser_gadget_(NULL) {
+      browser_gadget_(NULL),
+      first_run_(false) {
   ASSERT(main_loop_);
   ASSERT(global_options_);
   ASSERT(file_manager_);
@@ -99,13 +100,6 @@ void GoogleGadgetManager::Init() {
       new WatchCallbackSlot(
           NewSlot(this, &GoogleGadgetManager::OnFreeMetadataTimer)));
 
-  if (metadata_.GetAllGadgetInfo()->size() == 0) {
-    // Schedule an immediate update if there is no cached metadata.
-    ScheduleUpdate(0);
-  } else {
-    ScheduleNextUpdate();
-  }
-
   int current_max_id = -1;
   global_options_->GetValue(kMaxInstanceIdOption).ConvertToInt(&current_max_id);
   if (current_max_id >= kMaxNumGadgetInstances)
@@ -125,10 +119,26 @@ void GoogleGadgetManager::Init() {
       active_gadgets_.insert(gadget_id);
   }
   TrimInstanceStatuses();
+
+  int run_count = 0;
+  global_options_->GetValue(kRunCountOption).ConvertToInt(&run_count);
+  // Also test if instances_statuses_ is empty to make old versions happy.
+  first_run_ = (run_count == 0 && instance_statuses_.empty());
+  global_options_->PutValue(kRunCountOption, Variant(run_count + 1));
+
+  if (first_run_) {
+    // Schedule an immediate update if it is first run.
+    ScheduleUpdate(0);
+  } else {
+    ScheduleNextUpdate();
+  }
 }
 
 bool GoogleGadgetManager::OnFreeMetadataTimer(int timer) {
-  metadata_.FreeMemory();
+  if (!browser_gadget_) {
+    // Only free metadata when the gadget browser is not active.
+    metadata_.FreeMemory();
+  }
   return true;
 }
 
@@ -288,8 +298,14 @@ void GoogleGadgetManager::ActuallyRemoveInstance(int instance_id,
   delete instance_options;
 
   if (remove_downloaded_file) {
+    // Don't use GadgetInfo::source to judge if this gadget is a downloaded
+    // sidebar gadget, because the gadget may be outdated so no longer exists
+    // in plugins.xml.
     std::string gadget_id = GetInstanceGadgetId(instance_id);
-    if (!GadgetIdIsFileLocation(gadget_id.c_str())) {
+    if (!gadget_id.empty() &&
+        !GadgetIdIsFileLocation(gadget_id.c_str()) &&
+        !GadgetIdIsSystemName(gadget_id.c_str())) {
+      // Try best to remove the gadget file, ignoring any errors.
       std::string downloaded_file =
           GetDownloadedGadgetLocation(gadget_id.c_str());
       file_manager_->RemoveFile(downloaded_file.c_str());
@@ -335,8 +351,11 @@ int GoogleGadgetManager::GetNewInstanceId() {
 }
 
 bool GoogleGadgetManager::GadgetIdIsFileLocation(const char *gadget_id) {
-  return GetGadgetInfo(gadget_id) == NULL &&
-         file_manager_->FileExists(gadget_id, NULL);
+  return file_manager_->FileExists(gadget_id, NULL);
+}
+
+bool GoogleGadgetManager::GadgetIdIsSystemName(const char *gadget_id) {
+  return !GetSystemGadgetPath(gadget_id).empty();
 }
 
 bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
@@ -361,8 +380,8 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
 
   instance_options->PutInternalValue(kInstanceGadgetIdOption,
                                      Variant(gadget_id));
-  if (!GadgetIdIsFileLocation(gadget_id)) {
-    const GadgetInfo *info = GetGadgetInfo(gadget_id);
+  const GadgetInfo *info = GetGadgetInfo(gadget_id);
+  if (info->source == SOURCE_PLUGINS_XML) {
     StringMap::const_iterator module_id =
         info->attributes.find(kModuleIDAttrib);
     if (module_id != info->attributes.end()) {
@@ -402,13 +421,11 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   if (!gadget_id || !*gadget_id)
     return -1;
 
-  if (!GadgetIdIsFileLocation(gadget_id)) {
-    if (GetGadgetInfo(gadget_id) == NULL)
-      return -1;
-    global_options_->PutValue(
-        (std::string(kGadgetAddedTimeOptionPrefix) + gadget_id).c_str(),
-        Variant(main_loop_->GetCurrentTime()));
-  }
+  if (GetGadgetInfo(gadget_id) == NULL)
+    return -1;
+  global_options_->PutValue(
+      (std::string(kGadgetAddedTimeOptionPrefix) + gadget_id).c_str(),
+      Variant(main_loop_->GetCurrentTime()));
 
   // First try to find the inactive instance of of this gadget.
   int size = static_cast<int>(instance_statuses_.size());
@@ -566,9 +583,18 @@ const GadgetInfo *GoogleGadgetManager::GetGadgetInfo(const char *gadget_id) {
   if (!gadget_id || !*gadget_id)
     return NULL;
 
+  if (GadgetIdIsFileLocation(gadget_id)) {
+    // Ensure metadata of the local gadget file is loaded.
+    return metadata_.AddLocalGadgetInfo(
+        file_manager_->GetFullPath(gadget_id).c_str());
+  }
+
   GadgetInfoMap *map = metadata_.GetAllGadgetInfo();
   GadgetInfoMap::const_iterator it = map->find(gadget_id);
-  return it == map->end() ? NULL : &it->second;
+  if (it != map->end())
+    return &it->second;
+
+  return NULL;
 }
 
 const GadgetInfo *GoogleGadgetManager::GetGadgetInfoOfInstance(
@@ -592,6 +618,8 @@ bool GoogleGadgetManager::NeedDownloadOrUpdateGadget(const char *gadget_id,
   const GadgetInfo *gadget_info = GetGadgetInfo(gadget_id);
   if (!gadget_info) // This should not happen.
     return failure_result;
+  if (gadget_info->source != SOURCE_PLUGINS_XML)
+    return false;
 
   StringMap::const_iterator attr_it = gadget_info->attributes.find("type");
   if (attr_it != gadget_info->attributes.end() &&
@@ -628,39 +656,21 @@ bool GoogleGadgetManager::NeedDownloadOrUpdateGadget(const char *gadget_id,
 
 std::string GoogleGadgetManager::GetDownloadedGadgetLocation(
     const char *gadget_id) {
-  ASSERT(!GadgetIdIsFileLocation(gadget_id));
+  ASSERT(!GadgetIdIsFileLocation(gadget_id) &&
+         !GadgetIdIsSystemName(gadget_id));
   std::string path(kDownloadedGadgetsDir);
   path += MakeGoodFileName(gadget_id);
   path += kGadgetFileSuffix;
   return path;
 }
 
-std::string GoogleGadgetManager::GetSystemGadgetPath(const char *basename) {
-  std::string path;
-#ifdef GGL_RESOURCE_DIR
-  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL) + kGadgetFileSuffix;
-  if (file_manager_->FileExists(path.c_str(), NULL) &&
-      file_manager_->IsDirectlyAccessible(path.c_str(), NULL))
-    return file_manager_->GetFullPath(path.c_str());
-
-  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL);
-  if (file_manager_->FileExists(path.c_str(), NULL) &&
-      file_manager_->IsDirectlyAccessible(path.c_str(), NULL))
-    return file_manager_->GetFullPath(path.c_str());
-#endif
-
-#ifdef _DEBUG
-  return BuildFilePath(".", basename, NULL) + kGadgetFileSuffix;
-#else
-  LOG("Failed to find system gadget %s", basename);
-  return basename;
-#endif
-}
-
 bool GoogleGadgetManager::IsGadgetInstanceTrusted(int instance_id) {
   const GadgetInfo *info = GetGadgetInfoOfInstance(instance_id);
-  if (info == NULL)
+  if (!info || info->source == SOURCE_LOCAL_FILE)
     return false;
+
+  if (info->source == SOURCE_BUILTIN)
+    return true;
 
   StringMap::const_iterator it = info->attributes.find("category");
   if (it != info->attributes.end()) {
@@ -676,27 +686,11 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
     std::string *author, std::string *download_url,
     std::string *title, std::string *description) {
   const GadgetInfo *info = GetGadgetInfoOfInstance(instance_id);
-  if (info == NULL) {
-    // Try to get manifest from the gadget if the gadget is added from local
-    // file system.
-    StringMap manifest;
-    std::string path = GetGadgetInstancePath(instance_id);
-    if (!Gadget::GetGadgetManifest(path.c_str(), &manifest))
-      return false;
+  if (info == NULL)
+    return false;
 
-    if (title)
-      *title = manifest[kManifestName];
-    if (download_url)
-      *download_url = path;
-    if (author)
-      *author = manifest[kManifestAuthor];
-    if (description)
-      *description = manifest[kManifestDescription];
-    return true;
-  }
-
-  if (!locale)
-    locale = "en";
+  std::string locale_str = locale ? locale : GetSystemLocaleName();
+  locale_str = ToLower(locale_str);
   StringMap::const_iterator it;
   if (author) {
     it = info->attributes.find("author");
@@ -708,9 +702,8 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
   }
 
   if (title) {
-    if (locale)
-      it = info->titles.find(ToLower(locale));
-    if (!locale || it == info->titles.end())
+    it = info->titles.find(locale_str);
+    if (it == info->titles.end())
       it = info->titles.find("en");
     if (it == info->titles.end()) {
       it = info->attributes.find("name");
@@ -720,9 +713,8 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
     }
   }
   if (description) {
-    if (locale)
-      it = info->descriptions.find(ToLower(locale));
-    if (!locale || it == info->descriptions.end())
+    it = info->descriptions.find(ToLower(locale_str));
+    if (it == info->descriptions.end())
       it = info->descriptions.find("en");
     if (it == info->descriptions.end()) {
       it = info->attributes.find("product_summary");
@@ -736,7 +728,13 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
 
 Connection *GoogleGadgetManager::ConnectOnNewGadgetInstance(
     Slot1<bool, int> *callback) {
-  return new_instance_signal_.Connect(callback);
+  Connection *connection = new_instance_signal_.Connect(callback);
+  if (first_run_) {
+    // Add some default built-in gadgets.
+    NewGadgetInstance("analog_clock");
+    NewGadgetInstance("todo");
+  }
+  return connection;
 }
 
 Connection *GoogleGadgetManager::ConnectOnRemoveGadgetInstance(
@@ -822,34 +820,37 @@ bool GoogleGadgetManager::SaveGadget(const char *gadget_id,
 }
 
 std::string GoogleGadgetManager::GetGadgetPath(const char *gadget_id) {
+  std::string result = GetSystemGadgetPath(gadget_id);
+  if (!result.empty())
+    return result;
+
   if (GadgetIdIsFileLocation(gadget_id))
     return file_manager_->GetFullPath(gadget_id);
 
+  const GadgetInfo *info = GetGadgetInfo(gadget_id);
+  if (!info) {
+    // This gadget has no metadata, maybe because it was removed from
+    // plugins.xml, or current plugins.xml is not complete. Still allow it
+    // to be opened.
+    return file_manager_->GetFullPath(
+        GetDownloadedGadgetLocation(gadget_id).c_str());
+  }
+
+  StringMap::const_iterator module_id = info->attributes.find(kModuleIDAttrib);
+  if (module_id != info->attributes.end()) {
+    if (module_id->second == kRSSModuleID) {
+      return GetSystemGadgetPath(kRSSGadgetName);
+    } else if (module_id->second == kIGoogleModuleID) {
+      return GetSystemGadgetPath(kIGoogleGadgetName);
+    }
+  }
   return file_manager_->GetFullPath(
       GetDownloadedGadgetLocation(gadget_id).c_str());
 }
 
 std::string GoogleGadgetManager::GetGadgetInstancePath(int instance_id) {
   std::string gadget_id = GetInstanceGadgetId(instance_id);
-  if (gadget_id.empty()) {
-    return std::string();
-  }
-
-  const GadgetInfo *info = GetGadgetInfo(gadget_id.c_str());
-
-  if (info) {
-    StringMap::const_iterator module_id =
-        info->attributes.find(kModuleIDAttrib);
-    if (module_id != info->attributes.end()) {
-      if (module_id->second == kRSSModuleID) {
-        return GetSystemGadgetPath(kRSSGadgetName);
-      } else if (module_id->second == kIGoogleModuleID) {
-        return GetSystemGadgetPath(kIGoogleGadgetName);
-      }
-    }
-  }
-
-  return GetGadgetPath(gadget_id.c_str());
+  return gadget_id.empty() ? std::string() : GetGadgetPath(gadget_id.c_str());
 }
 
 class ScriptableGadgetInfo : public ScriptableHelperDefault {
@@ -861,6 +862,7 @@ class ScriptableGadgetInfo : public ScriptableHelperDefault {
       // background update runs.
       : info_(info) {
     RegisterConstant("id", info_.id);
+    RegisterConstant("source", info_.source);
     RegisterConstant("attributes", NewScriptableMap(info_.attributes));
     RegisterConstant("titles", NewScriptableMap(info_.titles));
     RegisterConstant("descriptions", NewScriptableMap(info_.descriptions));
@@ -909,11 +911,30 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
   }
 
   ScriptableArray *GetGadgetMetadata() {
+    // Iterate all instances to refresh metadata for local gadgets.
+    int size = static_cast<int>(gadget_manager_->instance_statuses_.size());
+    for (int i = 0; i < size; i++)
+      gadget_manager_->GetGadgetInfoOfInstance(i);
+
     const GadgetInfoMap &map = gadget_manager_->GetAllGadgetInfo();
     Variant *array = new Variant[map.size()];
     size_t i = 0;
     for (GadgetInfoMap::const_iterator it = map.begin();
          it != map.end(); ++it) {
+      const GadgetInfo &info = it->second;
+      if (info.source != SOURCE_PLUGINS_XML) {
+        // Check if the local or builtin gadget is shadowed by a gadget from
+        // plugins.xml with the same uuid. If the gadget is shadowed, it won't
+        // be shown in the gadget browser.
+        StringMap::const_iterator uuid_it = info.attributes.find("uuid");
+        if (uuid_it != info.attributes.end() &&
+            map.find(uuid_it->second) != map.end()) {
+          DLOG("Local or builtin gadget %s is shadowed by a gadget from"
+               "plugins.xml with uuid %s",
+               info.id.c_str(), uuid_it->second.c_str());
+          continue;
+        }
+      }
       array[i++] = Variant(new ScriptableGadgetInfo(it->second));
     }
     return ScriptableArray::Create(array, i);

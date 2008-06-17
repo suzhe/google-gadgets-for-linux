@@ -94,8 +94,11 @@ function StartThumbnailTask(task) {
         var data = request.responseStream;
         task.thumbnail_element1.src = data;
         task.thumbnail_element2.src = data;
-        gadgetBrowserUtils.saveThumbnailToCache(task.thumbnail_url, data);
-        task.plugin.thumbnail_checked = true;
+        if (task.thumbnail_element1.srcWidth > 0) {
+          // Save the thumbnail only if the image is good.
+          gadgetBrowserUtils.saveThumbnailToCache(task.thumbnail_url, data);
+          task.plugin.thumbnail_checked = true;
+        }
       } else if (request.status == 304) {
         gadget.debug.trace("Thumbnail not modified: " +
                            task.full_thumbnail_url);

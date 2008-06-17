@@ -34,22 +34,30 @@ const char kPluginsXMLRequestPrefix[] =
     "https://clients2.google.com/desktop/plugins.xml?platform="
     GGL_PLATFORM_SHORT "&cv=" GGL_API_VERSION;
 
+const char kBuiltinGadgetsXMLLocation[] = "resource://builtin_gadgets.xml";
 const char kPluginsXMLLocation[] = "profile://plugins.xml";
 
-enum GadgetType {
-  GADGET_DESKTOP = 0,
-  GADGET_FEED = 25,
-  GADGET_IGOOGLE = 32
+enum GadgetSource {
+  SOURCE_LOCAL_FILE,
+  SOURCE_BUILTIN,
+  SOURCE_PLUGINS_XML
 };
 
 /** This structure contains the metadata for a single gadget. */
 struct GadgetInfo {
-  GadgetInfo() : updated_date(0), accessed_date(0) { }
+  GadgetInfo()
+      : source(SOURCE_PLUGINS_XML), updated_date(0), accessed_date(0) {
+  }
+
   /**
    * This id is used throughout this system to uniquely identifies a gadget.
-   * For now we use the shortname attribute in plugins.xml as this id.
+   * For now we use the guid attribute in plugins.xml for sidebar gadgets,
+   * the download_url attribute for igoogle gadgets, or the local path for
+   * pre-installed and local file gadgets.
    */
   std::string id;
+
+  GadgetSource source;
 
   /**
    * Maps from names to values for all attributes defined with the <plugin>
@@ -60,14 +68,16 @@ struct GadgetInfo {
   /**
    * Maps from locale names to localized titles defined with the <title>
    * subelement of the <plugin> element in plugins.xml for this gadget.
-   * Locale names are in lower case.
+   * This field is only applicable for gadgets from plugins.xml.
+   * The locale names are in lower case.
    */
   StringMap titles;
 
   /**
    * Maps from locale names to localized description defined with the
    * <description> subelement of the <plugin> element in plugins.xml
-   * for this gadget. The locale names are in lower case.
+   * for this gadget. This field is only applicable for gadgets from
+   * plugins.xml. The locale names are in lower case.
    */
   StringMap descriptions;
 
@@ -132,11 +142,30 @@ class GadgetsMetadata {
   GadgetInfoMap *GetAllGadgetInfo();
   const GadgetInfoMap *GetAllGadgetInfo() const;
 
+  /**
+   * Adds the metadata of a local gadget, so that the user can view and add
+   * the gadget in the gadget browser.
+   * Note: if FreeMemory() is called, the added local gadget info will be
+   * cleared and won't be refreshed by GetAllGadgetInfo(), so the caller must
+   * add them again to make them available.
+   */
+  const GadgetInfo *AddLocalGadgetInfo(const char *path);
+
  private:
   class Impl;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(GadgetsMetadata);
 };
+
+/**
+ * Get the path of a gadget which was pre-installed into the system.
+ * Such as the path of rss_gadget.gg, etc.
+ *
+ * @param basename of the gadget, without ".gg" suffix.
+ * @return the full path of the gadget, or an empty string if the gadget is
+ *     not available.
+ */
+std::string GetSystemGadgetPath(const char *basename);
 
 } // namespace google
 } // namespace ggadget

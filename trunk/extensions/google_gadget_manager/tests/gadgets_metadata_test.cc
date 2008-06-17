@@ -121,7 +121,8 @@ TEST(GadgetsMetadata, InitialLoadFail) {
   GadgetsMetadata gmd;
   EXPECT_EQ(0U, gmd.GetAllGadgetInfo()->size());
   g_mocked_fm.should_fail_ = false;
-  EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
+  EXPECT_EQ(std::string(kBuiltinGadgetsXMLLocation),
+            g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
 }
 
@@ -158,7 +159,8 @@ TEST(GadgetsMetadata, InitialLoadData) {
 TEST(GadgetsMetadata, IncrementalUpdateNULLCallback) {
   g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
+  EXPECT_EQ(std::string(kBuiltinGadgetsXMLLocation),
+            g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
   MockedXMLHttpRequest request(200, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
