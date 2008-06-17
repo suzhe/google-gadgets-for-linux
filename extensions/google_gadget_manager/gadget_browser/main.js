@@ -204,7 +204,12 @@ function AddPluginBox(plugin, index, row, column) {
 
   var thumbnail_element1 = box.children.item(2).children.item(0);
   var thumbnail_element2 = box.children.item(2).children.item(1);
-  AddThumbnailTask(plugin, index, thumbnail_element1, thumbnail_element2);
+  if (plugin.source == 1) { // built-in gadgets
+    thumbnail_element1.src = plugin.attributes.thumbnail_url;
+    thumbnail_element2.src = plugin.attributes.thumbnail_url;
+  } else if (plugin.source == 2) { // from plugins.xml
+    AddThumbnailTask(plugin, index, thumbnail_element1, thumbnail_element2);
+  }
 
   plugin.button = box.children.item(3);
   UpdateAddButtonVisualStatus(plugin);
@@ -278,7 +283,6 @@ function add_button_onclick(index) {
     plugin.button = event.srcElement;
     SetDownloadStatus(plugin, kDownloadStatusAdding);
     if (gadgetBrowserUtils.needDownloadGadget(plugin.id)) {
-      // TODO: non-binary plugin, whose download_url is url to a webpage.
       DownloadPlugin(plugin);
     } else {
       if (AddPlugin(plugin) >= 0)

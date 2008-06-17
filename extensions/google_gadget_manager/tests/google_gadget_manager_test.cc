@@ -344,12 +344,6 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
   CheckInstanceId(&g_updated_instances, 0);
   CheckInstanceId(&g_updated_instances, 1);
   CheckInstanceId(&g_updated_instances, 3);
-
-  ASSERT_EQ(gadget1_path, manager->GetGadgetPath(gadget1_path.c_str()));
-  ASSERT_EQ(4, manager->NewGadgetInstance(gadget1_path.c_str()));
-  CheckInstanceId(&g_added_instances, 4);
-  ASSERT_EQ(gadget1_path, manager->GetInstanceGadgetId(4));
-  ASSERT_TRUE(manager->GadgetHasInstance(gadget1_path.c_str()));
 }
 
 int main(int argc, char **argv) {

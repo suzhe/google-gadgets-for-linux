@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -45,8 +46,8 @@
   <LANGUAGE_DA>Danish</LANGUAGE_DA>
   <LANGUAGE_DE>German</LANGUAGE_DE>
   <LANGUAGE_EL>Greek</LANGUAGE_EL>
-  <LANGUAGE_EN>English</LANGUAGE_EN>
-  <LANGUAGE_EN_GB>UK English</LANGUAGE_EN_GB>
+  <LANGUAGE_EN>English (US)</LANGUAGE_EN>
+  <LANGUAGE_EN_GB>English (UK)</LANGUAGE_EN_GB>
   <LANGUAGE_ES>Spanish</LANGUAGE_ES>
   <LANGUAGE_FI>Finnish</LANGUAGE_FI>
   <LANGUAGE_FR>French</LANGUAGE_FR>

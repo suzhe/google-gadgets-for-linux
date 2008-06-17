@@ -1,5 +1,5 @@
 #
-# Copyright 2007 Google Inc.
+# Copyright 2008 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-RESOURCE_FILES= button_down.png \
+RESOURCE_FILES= builtin_gadgets.xml \
+		button_down.png \
 		button_over.png \
 		button_up.png \
 		checkbox_checked_down.png \
@@ -104,6 +105,13 @@ RESOURCE_FILES= button_down.png \
 		vd_unexpand_down.png \
 		vd_unexpand_normal.png \
 		vd_unexpand_over.png \
+		analog_clock_sm.jpg \
+    digital_alarm_clock_sm.jpg \
+		email_sm.jpg \
+		photos_sm.jpg \
+		rss_sm.jpg \
+		scratchpad_sm.jpg \
+		todo_sm.jpg \
 		en/strings.xml \
 		zh-CN/strings.xml
 

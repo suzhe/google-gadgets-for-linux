@@ -191,14 +191,15 @@ class SimpleGtkHost::Impl {
   }
 
   bool AddGadgetInstanceCallback(int id) {
+    bool result = false;
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
-      bool result = LoadGadget(path.c_str(), options.c_str(), id);
+      result = LoadGadget(path.c_str(), options.c_str(), id);
       LOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
-    return true;
+    return result;
   }
 
   void InitGadgets() {
