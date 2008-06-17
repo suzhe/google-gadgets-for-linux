@@ -106,7 +106,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		vd_unexpand_normal.png \
 		vd_unexpand_over.png \
 		analog_clock_sm.jpg \
-    digital_alarm_clock_sm.jpg \
+		digital_alarm_clock_sm.jpg \
 		email_sm.jpg \
 		photos_sm.jpg \
 		rss_sm.jpg \
