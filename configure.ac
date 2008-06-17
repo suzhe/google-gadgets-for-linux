@@ -1,5 +1,5 @@
 #
-# Copyright 2007 Google Inc.
+# Copyright 2008 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -806,8 +806,11 @@ AC_CONFIG_FILES([Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile
 		 gadgets/Makefile
-		 gadgets/rss/Makefile
+		 gadgets/analog_clock/Makefile
+		 gadgets/digital_alarm_clock/Makefile
 		 gadgets/igoogle/Makefile
+		 gadgets/rss/Makefile
+		 gadgets/todo/Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc
