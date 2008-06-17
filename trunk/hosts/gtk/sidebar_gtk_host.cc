@@ -233,7 +233,7 @@ class SideBarGtkHost::Impl {
   }
 
   bool HandleSideBarBeginMoveDrag(int button) {
-    if (button != MouseEvent::BUTTON_LEFT)
+    if (button != MouseEvent::BUTTON_LEFT || draging_gadget_)
       return true;
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
                          (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |

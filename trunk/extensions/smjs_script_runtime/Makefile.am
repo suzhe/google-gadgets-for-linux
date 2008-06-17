@@ -85,6 +85,6 @@ smjs_script_runtime_la_LDFLAGS = \
 			  @SPIDERMONKEY_LDFLAGS@
 
 jscript_massager.cc : jscript_massager.l
-	flex -o $@ $<
+	$(LEX) -o $@ $<
 
 endif
