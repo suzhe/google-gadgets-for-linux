@@ -38,8 +38,7 @@ namespace ggadget {
 namespace curl {
 
 static const long kMaxRedirections = 10;
-static const long kTimeoutSec = 60;
-static const long kConnectTimeoutSec = 10;
+static const long kConnectTimeoutSec = 20;
 
 // The name of the options to store backoff data.
 static const char kBackoffOptions[] = "backoff";
@@ -338,7 +337,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_easy_setopt(curl_, CURLOPT_AUTOREFERER, 1);
     curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(curl_, CURLOPT_MAXREDIRS, kMaxRedirections);
-    curl_easy_setopt(curl_, CURLOPT_TIMEOUT, kTimeoutSec);
     curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT, kConnectTimeoutSec);
 
     curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, WriteHeaderCallback);
