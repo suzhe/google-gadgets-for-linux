@@ -44,4 +44,9 @@ TARGET_LINK_LIBRARIES(smjs-script-runtime
   ggadget-smjs)
 OUTPUT_MODULE(smjs-script-runtime)
 
+ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
+  COMMAND flex -o $@ $<
+  MAIN_DEPENDENCY jscript_massager.l
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 ENDIF(GGL_BUILD_SMJS_SCRIPT_RUNTIME)

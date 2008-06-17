@@ -5,7 +5,7 @@
 %option pointer
 %top{
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -234,9 +234,9 @@ static void CloseParen();
 COMMENT \/((\*[^*]*\*+([^*/][^*]*\*+)*\/)|(\/.*\n))
 WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
-STRING \"([^\n\\\"]|\\.)*[\"\n]
-SSTRING \'([^\n\\\']|\\.)*[\'\n]
-REGEXP \/([^\n\\\/\*]|\\.)([^\n\\\/]|\\.)*[\/\n]
+STRING \"([^\n\\\"]|\\(.|\n))*[\"\n]
+SSTRING \'([^\n\\\']|\\(.|\n))*[\'\n]
+REGEXP \/([^\n\\\/\*]|\\(.|\n))([^\n\\\/]|\\(.|\n))*[\/\n]
 FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 
 %x OPTIONS
@@ -263,6 +263,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
       input_filename, yylineno);
   give_up = true;
   PopAllStates();
+  YY_FLUSH_BUFFER;
   yyterminate();
 }
 
@@ -270,6 +271,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 
 [Oo][Pp][Tt][Ii][Oo][Nn][Ss] |
 [Dd][Ee][Tt][Aa][Ii][Ll][Ss][Vv][Ii][Ee][Ww][Dd][Aa][Tt][Aa] {
+  // options or detailsViewData
   BEGIN(OPTIONS);
   yymore();
 }
@@ -282,7 +284,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 }
 
 <OPTIONS>{WS}\.{WS}[Ii][Tt][Ee][Mm]{WS}\( {
-  // "item" is case-insensitive.
+  // options.item or detailsViewData.item
   BEGIN(INITIAL);
   PushState(OPTIONS_ITEM);
   ECHO;
@@ -290,6 +292,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 }
 
 <OPTIONS>{WS}\.{WS}[Dd][Ee][Ff][Aa][Uu][Ll][Tt][Vv][Aa][Ll][Uu][Ee]{WS}\( {
+  // options.defaultValue or detailsViewData.defaultValue
   BEGIN(INITIAL);
   PushState(OPTIONS_DEFAULT_VALUE);
   ECHO;
@@ -391,6 +394,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
         input_filename);
   }
   PopAllStates();
+  YY_FLUSH_BUFFER;
   yyterminate();
 }
 
