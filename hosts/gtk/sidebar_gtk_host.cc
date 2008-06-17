@@ -60,12 +60,12 @@ const char *kDisplayTarget      = "display_target";
 const char *kPositionInSideBar  = "position_in_sidebar";
 
 const int kAutoHideTimeout         = 200;
-const int kAutoShowTimeout         = 1000;
+const int kAutoShowTimeout         = 500;
 const int kDefaultFontSize         = 14;
 const int kDefaultSideBarWidth     = 200;
 const int kDefaultMonitor          = 0;
 const int kSideBarMinimizedHeight  = 28;
-const int kSideBarMinimizedWidth   = 2;
+const int kSideBarMinimizedWidth   = 3;
 const int kDefaultRulerHeight      = 1;
 const int kDefaultRulerWidth       = 1;
 
@@ -211,7 +211,7 @@ class SideBarGtkHost::Impl {
 
     if (old.x != workarea_.x || old.y != workarea_.y ||
         old.width != workarea_.width || old.height != workarea_.height)
-      AdjustSideBar();
+      AdjustSideBar(option_sidebar_width_);
   }
 
   // SideBar handlers
@@ -228,18 +228,19 @@ class SideBarGtkHost::Impl {
   }
 
   void HandleSideBarEndResizeDrag() {
-    if (option_always_on_top_)
-      AdjustSideBar();
+    if (has_strut_)
+      AdjustSideBar(option_sidebar_width_);
   }
 
   bool HandleSideBarBeginMoveDrag(int button) {
-    if (button != MouseEvent::BUTTON_LEFT || !gadgets_shown_)
+    if (button != MouseEvent::BUTTON_LEFT)
       return true;
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
                          (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
                                         GDK_POINTER_MOTION_MASK),
                          NULL, NULL, gtk_get_current_event_time()) ==
         GDK_GRAB_SUCCESS) {
+      DLOG("HandleSideBarBeginMoveDrag");
       int x, y;
       gtk_widget_get_pointer(main_widget_, &x, &y);
       sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
@@ -258,6 +259,7 @@ class SideBarGtkHost::Impl {
   }
 
   void HandleSideBarEndMoveDrag() {
+    DLOG("HandleSideBarEndMoveDrag, sidebar_shown_: %d", sidebar_shown_);
     GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
     option_sidebar_monitor_ =
         gdk_screen_get_monitor_at_window(screen, main_widget_->window);
@@ -270,11 +272,12 @@ class SideBarGtkHost::Impl {
     else
       option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
     sidebar_moving_ = false;
-    AdjustSideBar();
+    if (sidebar_shown_)
+      AdjustSideBar(option_sidebar_width_);
   }
 
   void HandleSideBarShow(bool show) {
-    if (show) AdjustSideBar();
+    if (show) AdjustSideBar(option_sidebar_width_);
   }
 
   void HandleAddGadget() {
@@ -288,11 +291,14 @@ class SideBarGtkHost::Impl {
     menu->AddItem(NULL, 0, NULL, priority);
     if (!gadgets_shown_)
       menu->AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
-                    NewSlot(this, &Impl::HandleMenuShowAll), priority);
-    // TODO: Auto hide feature is not ready yet.
-    //menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
-    //              option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-    //              NewSlot(this, &Impl::HandleMenuAutoHide), priority);
+                    NewSlot(this, &Impl::HandleMenuHideOrShowAll), priority);
+    else
+      menu->AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0,
+                    NewSlot(this, &Impl::HandleMenuHideOrShowAll), priority);
+
+    menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
+                  option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                  NewSlot(this, &Impl::HandleMenuAutoHide), priority);
     menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), option_always_on_top_ ?
                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAlwaysOnTop), priority);
@@ -325,13 +331,15 @@ class SideBarGtkHost::Impl {
   }
 
   void HandleClose() {
-    HideOrShowAllGadgets(!gadgets_shown_);
+    HideOrShowSideBar(!sidebar_shown_);
   }
 
   void HandleSizeEvent() {
-    // ignore width changes when the sidebar is auto hided
-    if (!option_auto_hide_)
+    // ignore width changes when the sidebar is hiden
+    if (sidebar_shown_) {
       option_sidebar_width_ = static_cast<int>(sidebar_->GetWidth());
+      DLOG("set option_sidebar_width_ to %d", option_sidebar_width_);
+    }
   }
 
   void HandleUndock(double offset_x, double offset_y) {
@@ -534,7 +542,9 @@ class SideBarGtkHost::Impl {
     return result;
   }
 
-  void AdjustSideBar() {
+  void AdjustSideBar(int width) {
+    sidebar_host_->SetKeepAbove(option_always_on_top_);
+
     GdkRectangle monitor_geometry;
     // got monitor information
     GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
@@ -552,22 +562,22 @@ class SideBarGtkHost::Impl {
          monitor_geometry.x, monitor_geometry.y,
          monitor_geometry.width, monitor_geometry.height);
 
-    DLOG("Set SideBar size: %dx%d", option_sidebar_width_, workarea_.height);
-    sidebar_->SetSize(option_sidebar_width_, workarea_.height);
-
     int x = 0;
     if (option_sidebar_position_ == SIDEBAR_POSITION_LEFT) {
       x = std::max(monitor_geometry.x, workarea_.x);
     } else {
       x = std::min(monitor_geometry.x + monitor_geometry.width,
-                   workarea_.x + workarea_.width) - option_sidebar_width_;
+                   workarea_.x + workarea_.width) - width;
     }
 
     DLOG("move sidebar to %dx%d", x, workarea_.y);
     sidebar_host_->SetWindowPosition(x, workarea_.y);
 
+    DLOG("Set SideBar size: %dx%d", width, workarea_.height);
+    sidebar_->SetSize(width, workarea_.height);
+
     // if sidebar is on the edge, do strut
-    if (option_always_on_top_ &&
+    if (option_always_on_top_ && !option_auto_hide_ &&
         ((monitor_geometry.x <= 0 &&
           option_sidebar_position_ == SIDEBAR_POSITION_LEFT) ||
          (monitor_geometry.x + monitor_geometry.width >= screen_width &&
@@ -585,7 +595,7 @@ class SideBarGtkHost::Impl {
       gulong struts[12];
       memset(struts, 0, sizeof(struts));
       if (option_sidebar_position_ == SIDEBAR_POSITION_LEFT) {
-        struts[0] = x + option_sidebar_width_;
+        struts[0] = x + width;
         struts[4] = workarea_.y;
         struts[5] = workarea_.y + workarea_.height;
       } else {
@@ -602,14 +612,15 @@ class SideBarGtkHost::Impl {
                           32, GDK_PROP_MODE_REPLACE,
                           reinterpret_cast<guchar *>(&struts), 12);
     } else {
-      has_strut_ = false;
-      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
-
-      // delete the properties
-      gdk_property_delete(main_widget_->window, net_wm_strut_);
-      gdk_property_delete(main_widget_->window, net_wm_strut_partial_);
+      if (has_strut_) {
+        has_strut_ = false;
+        gdk_property_delete(main_widget_->window, net_wm_strut_);
+        gdk_property_delete(main_widget_->window, net_wm_strut_partial_);
+      }
+      if (!option_always_on_top_) {
+        sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
+      }
     }
-    sidebar_host_->SetKeepAbove(option_always_on_top_);
 
     // adjust the orientation of the arrow of each gadget in the sidebar
     for (GadgetsMap::iterator it = gadgets_.begin();
@@ -772,7 +783,7 @@ class SideBarGtkHost::Impl {
     int sx, sy, sw, sh;
     sidebar_host_->GetWindowPosition(&sx, &sy);
     sidebar_host_->GetWindowSize(&sw, &sh);
-    if ((x + w >= sx) && (sx + sw >= x)) {
+    if ((x + w >= sx) && (sx + sw >= x) && (y + h >= sy) && (sy + sh >= y)) {
       if (height) {
         int dummy;
         gtk_widget_get_pointer(main_widget_, &dummy, height);
@@ -806,6 +817,7 @@ class SideBarGtkHost::Impl {
   }
 
   void HideOrShowAllGadgets(bool show) {
+    DLOG("HideOrShowAllGadgets");
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       Gadget *gadget = it->second->gadget;
@@ -817,30 +829,27 @@ class SideBarGtkHost::Impl {
       }
     }
 
-    HideOrShowSideBar(show);
+    if (sidebar_shown_ != show)
+      HideOrShowSideBar(show);
     gadgets_shown_ = show;
   }
 
   void HideOrShowSideBar(bool show) {
+    sidebar_shown_ = show;
 #if GTK_CHECK_VERSION(2,10,0)
     if (show) {
+      AdjustSideBar(option_sidebar_width_);
       sidebar_host_->ShowView(false, 0, NULL);
-      AdjustSideBar();
     } else {
       if (option_auto_hide_) {
-        // TODO:
-        //int x, y;
-        //sidebar_host_->GetWindowPosition(&x, &y);
-        // adjust to the edge of screen
-        //AdjustSideBarPositionAndSize(y, kSideBarMinimizedWidth,
-        //                             static_cast<int>(sidebar_->GetHeight()));
+        AdjustSideBar(kSideBarMinimizedWidth);
       } else {
         sidebar_host_->CloseView();
       }
     }
 #else
     if (show) {
-      AdjustSideBar();
+      AdjustSideBar(option_sidebar_width_);
     } else {
       sidebar_->SetSize(option_sidebar_width_, kSideBarMinimizedHeight);
       if (option_always_on_top_) {
@@ -849,7 +858,6 @@ class SideBarGtkHost::Impl {
       }
     }
 #endif
-    sidebar_shown_ = show;
   }
 
   void InitGadgets() {
@@ -1148,19 +1156,34 @@ class SideBarGtkHost::Impl {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
-  void HandleMenuShowAll(const char *str) {
-    HideOrShowAllGadgets(true);
+  void HandleMenuHideOrShowAll(const char *str) {
+    HideOrShowAllGadgets(!gadgets_shown_);
   }
 
   void HandleMenuAutoHide(const char *str) {
     option_auto_hide_ = !option_auto_hide_;
     options_->PutInternalValue(kOptionAutoHide, Variant(option_auto_hide_));
+
+    // always on top if auto hide is chosen. Since the sidebar could not
+    // "autoshow" if it is not always on top
+    if (option_auto_hide_) {
+      option_always_on_top_ = true;
+      options_->PutInternalValue(kOptionAlwaysOnTop,
+                                 Variant(option_always_on_top_));
+    }
+    AdjustSideBar(option_sidebar_width_);
   }
 
   void HandleMenuAlwaysOnTop(const char *str) {
     option_always_on_top_ = !option_always_on_top_;
     options_->PutInternalValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
-    AdjustSideBar();
+
+    // uncheck auto hide too if "always on top" is unchecked.
+    if (!option_always_on_top_) {
+      option_auto_hide_ = false;
+      options_->PutInternalValue(kOptionAutoHide, Variant(option_auto_hide_));
+    }
+    AdjustSideBar(option_sidebar_width_);
   }
 
   void HandleMenuReplaceSideBar(const char *str) {
@@ -1169,7 +1192,7 @@ class SideBarGtkHost::Impl {
     else
       option_sidebar_position_ = SIDEBAR_POSITION_RIGHT;
     options_->PutInternalValue(kOptionPosition, Variant(option_sidebar_position_));
-    AdjustSideBar();
+    AdjustSideBar(option_sidebar_width_);
   }
 
   void HandleMenuFontSizeChange(const char *str) {
@@ -1274,6 +1297,11 @@ class SideBarGtkHost::Impl {
 
   static gboolean HandleAutoHideTimeout(gpointer user_data) {
     Impl *this_p = reinterpret_cast<Impl *>(user_data);
+    if (!this_p->option_auto_hide_) {
+      // user unchecked "auto hide" option
+      this_p->auto_hide_source_ = 0;
+      return FALSE;
+    }
     if (this_p->ShouldHideSideBar()) {
       this_p->HideOrShowSideBar(false);
       this_p->auto_hide_source_ = 0;
@@ -1288,7 +1316,7 @@ class SideBarGtkHost::Impl {
       g_source_remove(this_p->auto_hide_source_);
       this_p->auto_hide_source_ = 0;
     }
-    if (!this_p->sidebar_shown_)
+    if (this_p->option_auto_hide_ && !this_p->sidebar_shown_)
       this_p->HideOrShowSideBar(true);
     return FALSE;
   }
@@ -1302,8 +1330,13 @@ class SideBarGtkHost::Impl {
 
   static gboolean HandleAutoShowTimeout(gpointer user_data) {
     Impl *this_p = reinterpret_cast<Impl *>(user_data);
-    if (!this_p->ShouldHideSideBar())
+    if (!this_p->ShouldHideSideBar()) {
       this_p->HideOrShowSideBar(true);
+      if (!gtk_window_has_toplevel_focus(GTK_WINDOW(this_p->main_widget_))) {
+        this_p->auto_hide_source_ =
+            g_timeout_add(kAutoHideTimeout, HandleAutoHideTimeout, this_p);
+      }
+    }
     return FALSE;
   }
 
