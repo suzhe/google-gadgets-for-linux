@@ -50,7 +50,7 @@ function AddThumbnailTask(plugin, index, thumbnail_element1, thumbnail_element2)
     thumbnail_url: thumbnail_url,
     full_thumbnail_url: full_thumbnail_url,
     thumbnail_element1: thumbnail_element1,
-    thumbnail_element2: thumbnail_element2,
+    thumbnail_element2: thumbnail_element2
   };
   if (gWorkingTasks.length < kMaxWorkingTasks)
     StartThumbnailTask(new_task);

@@ -66,7 +66,6 @@ static const char *kGlobalExtensions[] = {
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
-  "smjs-script-runtime",
   "qt-xml-http-request",
   "google-gadget-manager",
   "gadget-browser-script-utils",
@@ -132,6 +131,11 @@ static const char *g_help_string =
   "             2 - Draw bounding boxes around all elements.\n"
   "             4 - Draw bounding boxes around clip region.\n"
 #endif
+#if QT_VERSION >= 0x040400
+  "  -s script_runtime  Specify which script runtime to use\n"
+  "             smjs - spidermonkey js runtime\n"
+  "             qt   - QtScript js runtime(experimental)\n"
+#endif
   "  -h, --help Print this message and exit.\n"
   "\n"
   "Gadgets:\n"
@@ -182,6 +186,7 @@ int main(int argc, char* argv[]) {
   setlocale(LC_ALL, "");
 
   int debug_mode = 0;
+  const char* js_runtime = "smjs-script-runtime";
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
@@ -195,6 +200,15 @@ int main(int argc, char* argv[]) {
         debug_mode = atoi(argv[i]);
       } else {
         debug_mode = 1;
+      }
+#endif
+#if QT_VERSION >= 0x040400
+    } else if (strcmp("-s", argv[i]) == 0) {
+      if (++i < argc) {
+        if (strcmp(argv[i], "qt") == 0) {
+          js_runtime = "qt-script-runtime";
+          printf("QtScript runtime is chosen. It's still incomplete\n"); 
+        }
       }
 #endif
     } else {
@@ -257,6 +271,7 @@ int main(int argc, char* argv[]) {
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)
     ext_manager->LoadExtension(kGlobalExtensions[i], false);
+  ext_manager->LoadExtension(js_runtime, false);
 
   // Register JavaScript runtime.
   ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
