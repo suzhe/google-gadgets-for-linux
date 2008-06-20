@@ -133,6 +133,8 @@ class Elements::Impl {
         return GetItemByIndex(VariantValue<int>()(index_or_name));
       case Variant::TYPE_STRING:
         return GetItemByName(VariantValue<const char *>()(index_or_name));
+      case Variant::TYPE_DOUBLE:
+        return GetItemByIndex(static_cast<int>(VariantValue<double>()(index_or_name)));
       default:
         return NULL;
     }
