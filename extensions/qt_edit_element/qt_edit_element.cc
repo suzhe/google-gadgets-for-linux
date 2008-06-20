@@ -276,7 +276,7 @@ void QtEditElement::SetUnderline(bool underline) {
 }
 
 std::string QtEditElement::GetValue() const {
-  return doc_.toPlainText().toStdString();
+  return doc_.toPlainText().toUtf8().data();
 }
 
 void QtEditElement::SetValue(const char *value) {
