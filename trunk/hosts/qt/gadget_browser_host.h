@@ -32,7 +32,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type) {
-    return new ggadget::qt::QtViewHost(type, 1.0, true, false,
+    return new ggadget::qt::QtViewHost(type, 1.0, false, true, false,
                                        view_debug_mode_);
   }
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {

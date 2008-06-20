@@ -45,6 +45,7 @@ class QtViewHost::Impl {
  public:
   Impl(ViewHostInterface::Type type,
        double zoom,
+       bool composite,
        bool decorated,
        bool record_states,
        int debug_mode)
@@ -59,13 +60,13 @@ class QtViewHost::Impl {
       record_states_(record_states),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
-      composite_(false),
+      composite_(composite),
       input_shape_mask_(true),
       keep_above_(false),
       qt_obj_(new QtViewHostObject(this)) {
-    if (type == ViewHostInterface::VIEW_HOST_MAIN)
-      composite_ = true;
-    // debug_mode_ = ViewInterface::DEBUG_ALL;
+    if (type != ViewHostInterface::VIEW_HOST_MAIN) {
+      composite_ = false;
+    }
   }
 
   ~Impl() {
@@ -315,9 +316,9 @@ void QtViewHostObject::OnShow(bool flag) {
 }
 
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
-                       double zoom, bool decorated,
+                       double zoom, bool composite, bool decorated,
                        bool record_states, int debug_mode)
-  : impl_(new Impl(type, zoom, decorated, record_states, debug_mode)) {
+  : impl_(new Impl(type, zoom, composite, decorated, record_states, debug_mode)) {
 }
 
 QtViewHost::~QtViewHost() {

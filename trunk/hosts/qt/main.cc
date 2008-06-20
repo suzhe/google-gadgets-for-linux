@@ -46,6 +46,8 @@
 #include <ggadget/xml_parser_interface.h>
 #include "qt_host.h"
 #if defined(Q_WS_X11) && defined(HAVE_X11)
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/extensions/Xrender.h>
 #endif
 
@@ -68,7 +70,6 @@ static const char *kGlobalExtensions[] = {
 #endif
   "qt-xml-http-request",
   "google-gadget-manager",
-  "gadget-browser-script-utils",
   NULL
 };
 
@@ -147,7 +148,7 @@ static const char *g_help_string =
 static Display *dpy;
 static Colormap colormap = 0;
 static Visual *visual = 0;
-static void init_argb() {
+static bool InitArgb() {
   dpy = XOpenDisplay(0); // open default display
   if (!dpy) {
     qWarning("Cannot connect to the X server");
@@ -174,10 +175,15 @@ static void init_argb() {
         visual = xvi[i].visual;
         colormap = XCreateColormap(dpy, RootWindow(dpy, screen),
                                    visual, AllocNone);
-        break;
+        return true;
       }
     }
   }
+  return false;
+}
+static bool CheckCompositingManager(Display *dpy) {
+  Atom net_wm_state = XInternAtom(dpy, "_NET_WM_CM_S0", False);
+  return XGetSelectionOwner(dpy, net_wm_state);
 }
 #endif
 
@@ -185,6 +191,7 @@ int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
+  bool composite = false;
   int debug_mode = 0;
   const char* js_runtime = "smjs-script-runtime";
 
@@ -217,7 +224,15 @@ int main(int argc, char* argv[]) {
   }
 
 #if defined(Q_WS_X11) && defined(HAVE_X11)
-  init_argb();
+  if (InitArgb() && CheckCompositingManager(dpy)) {
+    composite = true;
+  } else {
+    visual = NULL;
+    if (colormap) {
+      XFreeColormap(dpy, colormap);
+      colormap = 0;
+    }
+  }
   QApplication app(dpy, argc, argv,
                    Qt::HANDLE(visual), Qt::HANDLE(colormap));
 #else
@@ -282,7 +297,7 @@ int main(int argc, char* argv[]) {
     return 1;
 
   ext_manager->SetReadonly();
-  hosts::qt::QtHost host = hosts::qt::QtHost(debug_mode);
+  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode);
 
   // Load gadget files.
   if (gadget_paths.size()) {
