@@ -42,7 +42,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
      : view_(view),
        drag_files_(NULL),
        composite_(composite),
-       enable_input_mask_(true),
+       enable_input_mask_(composite),
        offscreen_pixmap_(NULL),
        mouse_drag_moved_(false),
        child_(NULL),
@@ -87,7 +87,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.restore();
   }
 
-  if (enable_input_mask_){
+  if (enable_input_mask_) {
     if (!offscreen_pixmap_ || offscreen_pixmap_->width() != int_width
         || offscreen_pixmap_->height() != int_height) {
       if (offscreen_pixmap_) delete offscreen_pixmap_;
@@ -369,6 +369,7 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
 }
 
 void QtViewWidget::EnableInputShapeMask(bool enable) {
+  if (!composite_) return;
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;
     if (!enable) SetInputMask(NULL);

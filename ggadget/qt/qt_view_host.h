@@ -33,7 +33,7 @@ class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
-             double zoom, bool decorated,
+             double zoom, bool composite, bool decorated,
              bool record_states, int debug_mode);
   virtual ~QtViewHost();
 
