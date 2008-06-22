@@ -48,6 +48,8 @@
 
 static ggadget::gtk::MainLoop g_main_loop;
 
+static const char kOptionsName[] = "gtk-host-options";
+
 static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
 // be overrode.
@@ -72,7 +74,7 @@ static const char *kGlobalExtensions[] = {
 
 static bool CheckRequiredExtensions() {
   if (!ggadget::GetGlobalFileManager()->FileExists(ggadget::kCommonJS, NULL)) {
-    // We can't use localized message here because resource failed to load. 
+    // We can't use localized message here because resource failed to load.
     ggadget::gtk::ShowAlertDialog(
         "Google Gadgets",
         "Program can't start because it failed to load resources");
@@ -253,11 +255,12 @@ int main(int argc, char* argv[]) {
   ext_manager->SetReadonly();
 
   ggadget::HostInterface *host;
+  ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);
 
   if (sidebar)
-    host = new hosts::gtk::SideBarGtkHost(decorated, debug_mode);
+    host = new hosts::gtk::SideBarGtkHost(options, decorated, debug_mode);
   else
-    host = new hosts::gtk::SimpleGtkHost(zoom, decorated, debug_mode);
+    host = new hosts::gtk::SimpleGtkHost(options, zoom, decorated, debug_mode);
 
 #ifdef _DEBUG
   std::vector<ggadget::Gadget *> temp_gadgets;
@@ -279,6 +282,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   delete host;
+  delete options;
 
   return 0;
 }

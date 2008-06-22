@@ -291,8 +291,7 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     if (expanded) {
       crop_height += impl_->listbox_->GetPixelHeight();
     }
-    canvas->IntersectRectClipRegion(0, 0, elem_width, crop_height);
-    impl_->background_->Draw(canvas);
+    impl_->background_->Draw(canvas, 0, 0, elem_width, crop_height);
   }
 
   if (impl_->edit_) {

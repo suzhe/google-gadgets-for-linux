@@ -19,6 +19,7 @@
 
 #include <string>
 #include <ggadget/host_interface.h>
+#include <ggadget/options_interface.h>
 
 namespace hosts {
 namespace gtk {
@@ -26,10 +27,12 @@ namespace gtk {
 using ggadget::Gadget;
 using ggadget::HostInterface;
 using ggadget::ViewHostInterface;;
+using ggadget::OptionsInterface;
 
 class SimpleGtkHost : public ggadget::HostInterface {
  public:
-  SimpleGtkHost(double zoom, bool decorated, int view_debug_mode);
+  SimpleGtkHost(OptionsInterface *options, double zoom,
+                bool decorated, int view_debug_mode);
   virtual ~SimpleGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);

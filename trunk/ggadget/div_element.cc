@@ -101,7 +101,8 @@ void DivElement::DoDraw(CanvasInterface *canvas) {
     const ImageInterface *texture_image =
         impl_->background_texture_->GetImage();
     if (!texture_image || impl_->background_mode_ == BACKGROUND_MODE_TILE) {
-      impl_->background_texture_->Draw(canvas);
+      impl_->background_texture_->Draw(canvas, 0, 0, GetPixelWidth(),
+                                       GetPixelHeight());
     } else if (impl_->background_mode_ == BACKGROUND_MODE_STRETCH) {
       texture_image->StretchDraw(canvas, 0, 0,
                                  GetPixelWidth(), GetPixelHeight());

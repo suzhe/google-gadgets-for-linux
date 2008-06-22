@@ -28,6 +28,7 @@
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
 #include <ggadget/gtk/menu_builder.h>
+#include <ggadget/gtk/hotkey.h>
 #include <ggadget/locales.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/messages.h>
@@ -40,6 +41,7 @@
 #include <ggadget/view_element.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/file_manager_interface.h>
+#include <ggadget/slot.h>
 
 #include "gadget_browser_host.h"
 
@@ -49,25 +51,27 @@ using namespace ggadget::gtk;
 namespace hosts {
 namespace gtk {
 
-const char *kOptionName         = "sidebar-gtk-host";
-const char *kOptionAutoHide     = "auto-hide";
-const char *kOptionAlwaysOnTop  = "always-on-top";
-const char *kOptionPosition     = "position";
-const char *kOptionFontSize     = "font-size";
-const char *kOptionWidth        = "width";
-const char *kOptionMonitor      = "monitor";
-const char *kDisplayTarget      = "display_target";
-const char *kPositionInSideBar  = "position_in_sidebar";
+static const char kOptionAutoHide[]       = "auto_hide";
+static const char kOptionAlwaysOnTop[]    = "always_on_top";
+static const char kOptionPosition[]       = "position";
+static const char kOptionFontSize[]       = "font_size";
+static const char kOptionWidth[]          = "width";
+static const char kOptionMonitor[]        = "monitor";
+static const char kOptionHotKey[]         = "hotkey";
+static const char kOptionSideBarShown[]   = "sidebar_shown";
 
-const int kAutoHideTimeout         = 200;
-const int kAutoShowTimeout         = 500;
-const int kDefaultFontSize         = 14;
-const int kDefaultSideBarWidth     = 200;
-const int kDefaultMonitor          = 0;
-const int kSideBarMinimizedHeight  = 28;
-const int kSideBarMinimizedWidth   = 3;
-const int kDefaultRulerHeight      = 1;
-const int kDefaultRulerWidth       = 1;
+static const char kOptionDisplayTarget[]  = "display_target";
+static const char kOptionPositionInSideBar[] = "position_in_sidebar";
+
+static const int kAutoHideTimeout         = 200;
+static const int kAutoShowTimeout         = 500;
+static const int kDefaultFontSize         = 14;
+static const int kDefaultSideBarWidth     = 200;
+static const int kDefaultMonitor          = 0;
+static const int kSideBarMinimizedHeight  = 28;
+static const int kSideBarMinimizedWidth   = 3;
+static const int kDefaultRulerHeight      = 1;
+static const int kDefaultRulerWidth       = 1;
 
 enum SideBarPosition {
   SIDEBAR_POSITION_LEFT,
@@ -109,7 +113,8 @@ class SideBarGtkHost::Impl {
     bool old_keep_above;
   };
 
-  Impl(SideBarGtkHost *owner, bool decorated, int view_debug_mode)
+  Impl(SideBarGtkHost *owner, OptionsInterface *options,
+       bool decorated, int view_debug_mode)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       decorated_(decorated),
@@ -127,7 +132,7 @@ class SideBarGtkHost::Impl {
       sidebar_moving_(false),
       has_strut_(false),
       sidebar_(NULL),
-      options_(GetGlobalOptions()),
+      options_(options),
       option_auto_hide_(false),
       option_always_on_top_(false),
       option_font_size_(kDefaultFontSize),
@@ -138,17 +143,23 @@ class SideBarGtkHost::Impl {
       net_wm_strut_(GDK_NONE),
       net_wm_strut_partial_(GDK_NONE),
       gadget_manager_(GetGadgetManager()),
-#if GTK_CHECK_VERSION(2,10,0)
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
       status_icon_(NULL),
       status_icon_menu_(NULL),
 #endif
-      main_widget_(NULL) {
+      main_widget_(NULL),
+      hotkey_grabber_(NULL) {
+    ASSERT(gadget_manager_);
+    ASSERT(options_);
+
+    hotkey_grabber_.ConnectOnHotKeyPressed(
+        NewSlot(this, &Impl::ToggleAllGadgets));
+
     workarea_.x = 0;
     workarea_.y = 0;
     workarea_.width = 0;
     workarea_.height = 0;
 
-    ASSERT(gadget_manager_);
     sidebar_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
                                      decorated, false, false, view_debug_mode_);
     sidebar_host_->ConnectOnBeginResizeDrag(
@@ -181,7 +192,7 @@ class SideBarGtkHost::Impl {
 
     delete sidebar_;
 
-#if GTK_CHECK_VERSION(2,10,0)
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     g_object_unref(G_OBJECT(status_icon_));
     if (status_icon_menu_)
       gtk_widget_destroy(status_icon_menu_);
@@ -301,17 +312,20 @@ class SideBarGtkHost::Impl {
     menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), option_always_on_top_ ?
                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAlwaysOnTop), priority);
+    menu->AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
+                  NewSlot(this, &Impl::HandleChangeHotKey), priority);
+
     {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_DOCK_SIDEBAR"),
                                           priority);
       sub->AddItem(GM_("MENU_ITEM_LEFT"),
                    option_sidebar_position_ == SIDEBAR_POSITION_LEFT ?
                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                   NewSlot(this, &Impl::HandleMenuReplaceSideBar), priority);
+                   NewSlot(this, &Impl::HandleMenuPositionSideBar), priority);
       sub->AddItem(GM_("MENU_ITEM_RIGHT"),
                    option_sidebar_position_ == SIDEBAR_POSITION_RIGHT ?
                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                   NewSlot(this, &Impl::HandleMenuReplaceSideBar), priority);
+                   NewSlot(this, &Impl::HandleMenuPositionSideBar), priority);
     }
   /* comment since font size change is not supported yet. {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"),
@@ -396,34 +410,34 @@ class SideBarGtkHost::Impl {
 
   // option load / save methods
   void LoadGlobalOptions() {
-    // in first time only save default valus
-    if (!options_->GetCount()) {
-      FlushGlobalOptions();
-      return;
-    }
-
-    bool corrupt_data = false;
     Variant value;
     value = options_->GetInternalValue(kOptionAutoHide);
-    if (!value.ConvertToBool(&option_auto_hide_)) corrupt_data = true;
+    value.ConvertToBool(&option_auto_hide_);
     value = options_->GetInternalValue(kOptionAlwaysOnTop);
-    if (!value.ConvertToBool(&option_always_on_top_)) corrupt_data = true;
+    value.ConvertToBool(&option_always_on_top_);
     value = options_->GetInternalValue(kOptionPosition);
-    if (!value.ConvertToInt(&option_sidebar_position_)) corrupt_data = true;
+    value.ConvertToInt(&option_sidebar_position_);
     value = options_->GetInternalValue(kOptionWidth);
-    if (!value.ConvertToInt(&option_sidebar_width_)) corrupt_data = true;
+    value.ConvertToInt(&option_sidebar_width_);
     value = options_->GetInternalValue(kOptionMonitor);
-    if (!value.ConvertToInt(&option_sidebar_monitor_)) corrupt_data = true;
+    value.ConvertToInt(&option_sidebar_monitor_);
     value = options_->GetInternalValue(kOptionFontSize);
-    if (!value.ConvertToInt(&option_font_size_)) corrupt_data = true;
+    value.ConvertToInt(&option_font_size_);
 
-    if (corrupt_data) FlushGlobalOptions();
+    std::string hotkey;
+    if (options_->GetInternalValue(kOptionHotKey).ConvertToString(&hotkey) &&
+        hotkey.length()) {
+      hotkey_grabber_.SetHotKey(hotkey);
+      hotkey_grabber_.SetEnableGrabbing(true);
+    }
+    options_->GetInternalValue(
+        kOptionSideBarShown).ConvertToBool(&sidebar_shown_);
   }
 
   bool FlushGadgetOrder(int index, ViewElement *view_element) {
     Gadget *gadget = view_element->GetChildView()->GetGadget();
     OptionsInterface *opt = gadget->GetOptions();
-    opt->PutInternalValue(kPositionInSideBar, Variant(index));
+    opt->PutInternalValue(kOptionPositionInSideBar, Variant(index));
     return true;
   }
 
@@ -432,7 +446,7 @@ class SideBarGtkHost::Impl {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       OptionsInterface *opt = it->second->gadget->GetOptions();
-      opt->PutInternalValue(kDisplayTarget,
+      opt->PutInternalValue(kOptionDisplayTarget,
                             Variant(it->second->gadget->GetDisplayTarget()));
     }
     sidebar_->EnumerateViewElements(NewSlot(this, &Impl::FlushGadgetOrder));
@@ -447,6 +461,9 @@ class SideBarGtkHost::Impl {
     options_->PutInternalValue(kOptionMonitor,
                                Variant(option_sidebar_monitor_));
     options_->PutInternalValue(kOptionFontSize, Variant(option_font_size_));
+    options_->PutInternalValue(kOptionSideBarShown, Variant(sidebar_shown_));
+    options_->PutInternalValue(kOptionHotKey,
+                               Variant(hotkey_grabber_.GetHotKey()));
     options_->Flush();
   }
 
@@ -467,7 +484,7 @@ class SideBarGtkHost::Impl {
     // AdjustSideBar() will be called by this function.
     HandleWorkAreaChange();
 
-#if GTK_CHECK_VERSION(2,10,0)
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     std::string icon_data;
     if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
       GdkPixbuf *icon_pixbuf = LoadPixbufFromData(icon_data);
@@ -495,6 +512,18 @@ class SideBarGtkHost::Impl {
     g_signal_connect(G_OBJECT(drag_observer_), "button-release-event",
                      G_CALLBACK(HandleDragEnd), this);
   }
+
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
+  void UpdateStatusIconTooltip() {
+    if (hotkey_grabber_.IsGrabbing()) {
+      gtk_status_icon_set_tooltip(status_icon_,
+          StringPrintf(GM_("STATUS_ICON_TOOLTIP_WITH_HOTKEY"),
+                       hotkey_grabber_.GetHotKey().c_str()).c_str());
+    } else {
+      gtk_status_icon_set_tooltip(status_icon_, GM_("STATUS_ICON_TOOLTIP"));
+    }
+  }
+#endif
 
   bool ConfirmGadget(int id) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
@@ -855,7 +884,7 @@ class SideBarGtkHost::Impl {
 
   void HideOrShowSideBar(bool show) {
     sidebar_shown_ = show;
-#if GTK_CHECK_VERSION(2,10,0)
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     if (show) {
       AdjustSideBar(false);
       sidebar_host_->ShowView(false, 0, NULL);
@@ -869,6 +898,7 @@ class SideBarGtkHost::Impl {
 #else
     if (show) {
       AdjustSideBar(false);
+      sidebar_host_->ShowView(false, 0, NULL);
     } else {
       sidebar_->SetSize(option_sidebar_width_, kSideBarMinimizedHeight);
       if (has_strut_) {
@@ -909,16 +939,8 @@ class SideBarGtkHost::Impl {
       return false;
     }
 
-    if (!gadget->ShowMainView()) {
-      LOG("Failed to show main view of gadget %s", path);
-      if (it != gadgets_.end()) {
-        delete it->second;
-        gadgets_.erase(it);
-      } else {
-        delete gadget;
-      }
-      return false;
-    }
+    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR || sidebar_shown_)
+      gadget->ShowMainView();
 
     if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR)
       it->second->decorated_view_host->SetDockEdge(
@@ -945,13 +967,13 @@ class SideBarGtkHost::Impl {
 
   void LoadGadgetOptions(Gadget *gadget) {
     OptionsInterface *opt = gadget->GetOptions();
-    Variant value = opt->GetInternalValue(kDisplayTarget);
+    Variant value = opt->GetInternalValue(kOptionDisplayTarget);
     int target;
     if (value.ConvertToInt(&target) && target < Gadget::TARGET_INVALID)
       gadget->SetDisplayTarget(static_cast<Gadget::DisplayTarget>(target));
     else  // default value is TARGET_SIDEBAR
       gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-    value = opt->GetInternalValue(kPositionInSideBar);
+    value = opt->GetInternalValue(kOptionPositionInSideBar);
     value.ConvertToInt(&gadgets_[gadget->GetInstanceID()]->index_in_sidebar);
   }
 
@@ -1205,7 +1227,22 @@ class SideBarGtkHost::Impl {
     HideOrShowSideBar(true);
   }
 
-  void HandleMenuReplaceSideBar(const char *str) {
+  void HandleChangeHotKey(const char *) {
+    HotKeyDialog dialog;
+    dialog.SetHotKey(hotkey_grabber_.GetHotKey());
+    hotkey_grabber_.SetEnableGrabbing(false);
+    if (dialog.Show()) {
+      std::string hotkey = dialog.GetHotKey();
+      hotkey_grabber_.SetHotKey(hotkey);
+      // The hotkey will not be enabled if it's invalid.
+      hotkey_grabber_.SetEnableGrabbing(true);
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
+      UpdateStatusIconTooltip();
+#endif
+    }
+  }
+
+  void HandleMenuPositionSideBar(const char *str) {
     if (!strcmp(GM_("MENU_ITEM_LEFT"), str))
       option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
     else
@@ -1381,7 +1418,11 @@ class SideBarGtkHost::Impl {
     return FALSE;
   }
 
-#if GTK_CHECK_VERSION(2,10,0)
+  void ToggleAllGadgets() {
+    HideOrShowAllGadgets(!sidebar_shown_);
+  }
+
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   static void ToggleAllGadgetsHandler(GtkWidget *widget, Impl *this_p) {
     this_p->HideOrShowAllGadgets(!this_p->sidebar_shown_);
   }
@@ -1445,18 +1486,24 @@ class SideBarGtkHost::Impl {
   GdkAtom net_wm_strut_partial_;
 
   GadgetManagerInterface *gadget_manager_;
-#if GTK_CHECK_VERSION(2,10,0)
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   GtkStatusIcon *status_icon_;
   GtkWidget *status_icon_menu_;
 #endif
   GtkWidget *main_widget_;
+
+  HotKeyGrabber hotkey_grabber_;
 };
 
-SideBarGtkHost::SideBarGtkHost(bool decorated, int view_debug_mode)
-  : impl_(new Impl(this, decorated, view_debug_mode)) {
+SideBarGtkHost::SideBarGtkHost(OptionsInterface *options,
+                               bool decorated, int view_debug_mode)
+  : impl_(new Impl(this, options, decorated, view_debug_mode)) {
   impl_->SetupUI();
   impl_->InitGadgets();
+#if !GTK_CHECK_VERSION(2,10,0) || !defined(GGL_HOST_LINUX)
   impl_->sidebar_host_->ShowView(false, 0, NULL);
+#endif
+  impl_->HideOrShowSideBar(impl_->sidebar_shown_);
 }
 
 SideBarGtkHost::~SideBarGtkHost() {

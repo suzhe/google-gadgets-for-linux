@@ -130,7 +130,7 @@ void GtkEditImpl::Draw(CanvasInterface *canvas) {
   }
 
   if (background_)
-    background_->Draw(canvas);
+    background_->Draw(canvas, 0, 0, width_, height_);
   canvas->PushState();
   canvas->IntersectRectClipRegion(kInnerBorderX,
                                   kInnerBorderY,
