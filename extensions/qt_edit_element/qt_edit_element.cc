@@ -376,10 +376,9 @@ void QtEditElement::DoDraw(CanvasInterface *canvas) {
   canvas->PushState();
   QtCanvas *c = down_cast<QtCanvas*>(canvas);
   if (background_) {
-    background_->Draw(canvas);
+    background_->Draw(canvas, 0, 0, width_, height_);
   } else {
-    canvas->DrawFilledRect(0, 0, c->GetWidth(), c->GetHeight(),
-                           kDefaultBackgroundColor);
+    canvas->DrawFilledRect(0, 0, width_, height_, kDefaultBackgroundColor);
   }
   QPainter *p = c->GetQPainter();
 

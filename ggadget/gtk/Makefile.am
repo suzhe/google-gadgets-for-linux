@@ -35,6 +35,7 @@ noinst_HEADERS		= cairo_canvas.h \
 
 gtkincludedir		= $(GGL_INCLUDE_DIR)/ggadget/gtk
 gtkinclude_HEADERS	= cairo_graphics.h \
+			  hotkey.h \
 			  key_convert.h \
 			  main_loop.h \
 			  menu_builder.h \
@@ -50,6 +51,7 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_font.cc \
 			  cairo_graphics.cc \
 			  cairo_image_base.cc \
+			  hotkey.cc \
 			  key_convert.cc \
 			  main_loop.cc \
 			  menu_builder.cc \

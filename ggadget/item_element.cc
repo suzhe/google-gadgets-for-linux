@@ -88,7 +88,7 @@ ItemElement::~ItemElement() {
 
 void ItemElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->background_) {
-    impl_->background_->Draw(canvas);
+    impl_->background_->Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
   }
 
   if (impl_->drawoverlay_ && (impl_->selected_ || impl_->mouseover_)) {
@@ -100,7 +100,7 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
         overlay = impl_->parent_->GetItemOverTexture();
       }
       if (overlay) {
-        overlay->Draw(canvas);
+        overlay->Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
       }
     }
   }
@@ -110,18 +110,8 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->drawoverlay_ && impl_->parent_->HasItemSeparator()) {
     const Texture *item_separator = impl_->parent_->GetItemSeparatorTexture();
     if (item_separator) {
-      const GraphicsInterface *gfx = GetView()->GetGraphics();
-      CanvasInterface *separator = gfx->NewCanvas(canvas->GetWidth(), 2);
-      if (!separator) {
-        DLOG("Error: unable to create separator canvas.");
-        return;
-      }
-
-      item_separator->Draw(separator);
-      canvas->DrawCanvas(0, GetPixelHeight() - 2, separator);
-
-      separator->Destroy();
-      separator = NULL;
+      item_separator->Draw(canvas, 0, GetPixelHeight() - 2,
+                           GetPixelWidth(), 2);
     }
   }
 }

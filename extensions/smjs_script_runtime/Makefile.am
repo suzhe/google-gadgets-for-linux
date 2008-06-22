@@ -17,6 +17,8 @@
 if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
+EXTRA_DIST		= jscript_massager.l
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 

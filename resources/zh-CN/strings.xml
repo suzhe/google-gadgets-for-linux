@@ -105,6 +105,7 @@ even in the middle of a word. -->
 <MENU_ITEM_200P>200%</MENU_ITEM_200P>
 <MENU_ITEM_50P>50%</MENU_ITEM_50P>
 <MENU_ITEM_75P>75%</MENU_ITEM_75P>
+<MENU_ITEM_CHANGE_HOTKEY>更改热键(&amp;H)...</MENU_ITEM_CHANGE_HOTKEY>
 
 <!-- Title of the confirm dialog of third party gadget installation. -->
 <GADGET_CONFIRM_TITLE>安装第三方小工具</GADGET_CONFIRM_TITLE>
@@ -117,4 +118,24 @@ even in the middle of a word. -->
   runs too long and may blocks UI. The first %s parameter is the filename,
   the second %d parameteris the current line number. -->
 <SCRIPT_BLOCKED_MESSAGE>此小工具执行的脚本(%s:%d)可能正忙或者已停止响应。中断它吗？</SCRIPT_BLOCKED_MESSAGE>
+
+<!-- The default title for change hotkey dialog. -->
+<DEFAULT_HOTKEY_DIALOG_TITLE>更改热键</DEFAULT_HOTKEY_DIALOG_TITLE>
+
+<!-- The default prompt displayed in change hotkey dialog. -->
+<DEFAULT_HOTKEY_DIALOG_PROMPT>点击以输入新的热键：</DEFAULT_HOTKEY_DIALOG_PROMPT>
+
+<!-- The message displayed inside the hotkey entry. -->
+<HOTKEY_ENTRY_PROMPT>按下新的热键</HOTKEY_ENTRY_PROMPT>
+
+<!-- Text of the clear hotkey button in the change hotkey dialog. -->
+<CLEAR_HOTKEY>清除</CLEAR_HOTKEY>
+
+<!-- The message displayed inside the hotkey entry when there is no hotkey. -->
+<HOTKEY_DISABLED>已禁止</HOTKEY_DISABLED>
+
+<!-- Tooltip text for the status icon. The %s parameter is the hotkey string. -->
+<STATUS_ICON_TOOLTIP>Google 小工具</STATUS_ICON_TOOLTIP>
+<STATUS_ICON_TOOLTIP_WITH_HOTKEY>Google 小工具，按下 %s 以显示或隐藏小工具。</STATUS_ICON_TOOLTIP_WITH_HOTKEY>
+
 </strings>

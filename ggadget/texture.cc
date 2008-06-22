@@ -52,20 +52,18 @@ class Texture::Impl {
     image_ = NULL;
   }
 
-  void Draw(CanvasInterface *canvas) const {
-    double canvas_width = canvas->GetWidth();
-    double canvas_height = canvas->GetHeight();
-
+  void Draw(CanvasInterface *canvas, double x, double y,
+            double width, double height) const {
     if (image_) {
       // Don't apply opacity_ here because it is only applicable with color_.
-      canvas->DrawFilledRectWithCanvas(0, 0, canvas_width, canvas_height,
+      canvas->DrawFilledRectWithCanvas(x, y, width, height,
                                        image_->GetCanvas());
     } else if (opacity_ > 0) {
       if (opacity_ != 1.0) {
         canvas->PushState();
         canvas->MultiplyOpacity(opacity_);
       }
-      canvas->DrawFilledRect(0, 0, canvas_width, canvas_height, color_);
+      canvas->DrawFilledRect(x, x, width, height, color_);
       if (opacity_ != 1.0)
         canvas->PopState();
     }
@@ -120,9 +118,10 @@ Texture::~Texture() {
   impl_ = NULL;
 }
 
-void Texture::Draw(CanvasInterface *canvas) const {
+void Texture::Draw(CanvasInterface *canvas, double x, double y,
+                   double width, double height) const {
   ASSERT(canvas);
-  impl_->Draw(canvas);
+  impl_->Draw(canvas, x, y, width, height);
 }
 
 void Texture::DrawText(CanvasInterface *canvas, double x, double y,

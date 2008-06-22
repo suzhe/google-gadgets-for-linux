@@ -28,6 +28,7 @@
 #include <ggadget/gtk/menu_builder.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
+#include <ggadget/gtk/hotkey.h>
 #include <ggadget/locales.h>
 #include <ggadget/messages.h>
 #include <ggadget/logger.h>
@@ -35,6 +36,8 @@
 #include <ggadget/view.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/file_manager_factory.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/string_utils.h>
 
 #include "gadget_browser_host.h"
 
@@ -47,6 +50,9 @@ DECLARE_VARIANT_PTR_TYPE(DecoratedViewHost);
 
 namespace hosts {
 namespace gtk {
+
+static const char kOptionHotKey[] = "hotkey";
+static const char kOptionGadgetsShown[] = "gadgets_shown";
 
 class SimpleGtkHost::Impl {
   struct GadgetInfo {
@@ -67,9 +73,11 @@ class SimpleGtkHost::Impl {
   };
 
  public:
-  Impl(SimpleGtkHost *owner, double zoom, bool decorated, int view_debug_mode)
+  Impl(SimpleGtkHost *owner, OptionsInterface *options,
+       double zoom, bool decorated, int view_debug_mode)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
+      options_(options),
       zoom_(zoom),
       decorated_(decorated),
       view_debug_mode_(view_debug_mode),
@@ -77,8 +85,24 @@ class SimpleGtkHost::Impl {
       transparent_(SupportsComposite(NULL)),
       gadget_manager_(GetGadgetManager()),
       expanded_original_(NULL),
-      expanded_popout_(NULL) {
+      expanded_popout_(NULL),
+      hotkey_grabber_(NULL) {
     ASSERT(gadget_manager_);
+    ASSERT(options_);
+
+    hotkey_grabber_.ConnectOnHotKeyPressed(
+        NewSlot(this, &Impl::ToggleAllGadgets));
+
+    if (options_) {
+      std::string hotkey;
+      if (options_->GetInternalValue(kOptionHotKey).ConvertToString(&hotkey) &&
+          hotkey.length()) {
+        hotkey_grabber_.SetHotKey(hotkey);
+        hotkey_grabber_.SetEnableGrabbing(true);
+      }
+      options_->GetInternalValue(
+          kOptionGadgetsShown).ConvertToBool(&gadgets_shown_);
+    }
   }
 
   ~Impl() {
@@ -113,6 +137,11 @@ class SimpleGtkHost::Impl {
         NewSlot(this, &Impl::HideAllMenuCallback),
         MenuInterface::MENU_ITEM_PRI_HOST);
 
+    menu_builder.AddItem(
+        GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
+        NewSlot(this, &Impl::ChangeHotKeyMenuCallback),
+        MenuInterface::MENU_ITEM_PRI_HOST);
+
     // Separator
     menu_builder.AddItem(NULL, 0, 0, MenuInterface::MENU_ITEM_PRI_HOST);
 
@@ -133,12 +162,11 @@ class SimpleGtkHost::Impl {
       status_icon_ = gtk_status_icon_new_from_stock(GTK_STOCK_ABOUT);
     }
 
-    gtk_status_icon_set_tooltip(status_icon_, GM_("GOOGLE_GADGETS"));
-
     g_signal_connect(G_OBJECT(status_icon_), "activate",
                      G_CALLBACK(ToggleAllGadgetsHandler), this);
     g_signal_connect(G_OBJECT(status_icon_), "popup-menu",
                      G_CALLBACK(StatusIconPopupMenuHandler), this);
+    UpdateStatusIconTooltip();
 #else
     GtkWidget *menu_bar = gtk_menu_bar_new();
     gtk_widget_show(menu_bar);
@@ -155,6 +183,18 @@ class SimpleGtkHost::Impl {
                      G_CALLBACK(DeleteEventHandler), NULL);
 #endif
   }
+
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
+  void UpdateStatusIconTooltip() {
+    if (hotkey_grabber_.IsGrabbing()) {
+      gtk_status_icon_set_tooltip(status_icon_,
+          StringPrintf(GM_("STATUS_ICON_TOOLTIP_WITH_HOTKEY"),
+                       hotkey_grabber_.GetHotKey().c_str()).c_str());
+    } else {
+      gtk_status_icon_set_tooltip(status_icon_, GM_("STATUS_ICON_TOOLTIP"));
+    }
+  }
+#endif
 
   bool ConfirmGadget(int id) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
@@ -226,11 +266,8 @@ class SimpleGtkHost::Impl {
       return false;
     }
 
-    if (!gadget->ShowMainView()) {
-      LOG("Failed to show main view of gadget %s", path);
-      delete gadget;
-      return false;
-    }
+    if (gadgets_shown_)
+      gadget->ShowMainView();
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     gadgets_[instance_id].gadget_ = gadget;
@@ -338,6 +375,8 @@ class SimpleGtkHost::Impl {
       it->second.main_->ShowView(false, 0, NULL);
     }
     gadgets_shown_ = true;
+    if (options_)
+      options_->PutInternalValue(kOptionGadgetsShown, Variant(gadgets_shown_));
   }
 
   void HideAllMenuCallback(const char *) {
@@ -346,6 +385,32 @@ class SimpleGtkHost::Impl {
       it->second.main_->CloseView();
     }
     gadgets_shown_ = false;
+    if (options_)
+      options_->PutInternalValue(kOptionGadgetsShown, Variant(gadgets_shown_));
+  }
+
+  void ChangeHotKeyMenuCallback(const char *) {
+    HotKeyDialog dialog;
+    dialog.SetHotKey(hotkey_grabber_.GetHotKey());
+    hotkey_grabber_.SetEnableGrabbing(false);
+    if (dialog.Show()) {
+      std::string hotkey = dialog.GetHotKey();
+      hotkey_grabber_.SetHotKey(hotkey);
+      // The hotkey will not be enabled if it's invalid.
+      hotkey_grabber_.SetEnableGrabbing(true);
+      if (options_)
+        options_->PutInternalValue(kOptionHotKey, Variant(hotkey));
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
+      UpdateStatusIconTooltip();
+#endif
+    }
+  }
+
+  void ToggleAllGadgets() {
+    if (gadgets_shown_)
+      HideAllMenuCallback(NULL);
+    else
+      ShowAllMenuCallback(NULL);
   }
 
   void ExitMenuCallback(const char *) {
@@ -652,10 +717,7 @@ class SimpleGtkHost::Impl {
 
   static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->gadgets_shown_)
-      impl->HideAllMenuCallback(NULL);
-    else
-      impl->ShowAllMenuCallback(NULL);
+    impl->ToggleAllGadgets();
   }
 
   typedef std::map<int, GadgetInfo> GadgetInfoMap;
@@ -663,6 +725,7 @@ class SimpleGtkHost::Impl {
 
   GadgetBrowserHost gadget_browser_host_;
   SimpleGtkHost *owner_;
+  OptionsInterface *options_;
 
   double zoom_;
   bool decorated_;
@@ -680,10 +743,13 @@ class SimpleGtkHost::Impl {
 
   DecoratedViewHost *expanded_original_;
   DecoratedViewHost *expanded_popout_;
+
+  HotKeyGrabber hotkey_grabber_;
 };
 
-SimpleGtkHost::SimpleGtkHost(double zoom, bool decorated, int view_debug_mode)
-  : impl_(new Impl(this, zoom, decorated, view_debug_mode)) {
+SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
+                             bool decorated, int view_debug_mode)
+  : impl_(new Impl(this, options, zoom, decorated, view_debug_mode)) {
   impl_->SetupUI();
   impl_->InitGadgets();
 }

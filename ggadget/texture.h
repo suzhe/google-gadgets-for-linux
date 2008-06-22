@@ -43,9 +43,11 @@ class Texture {
 
   /**
    * Draws the texture onto a canvas.
-   * If the texture is an image, the image is repeated to fill the canvas.
+   * If the texture is an image, the image is repeated to fill the specified
+   * area.
    */
-  void Draw(CanvasInterface *canvas) const;
+  void Draw(CanvasInterface *canvas, double x, double y,
+            double width, double height) const;
 
   /**
    * Draws the specified text on canvas.
