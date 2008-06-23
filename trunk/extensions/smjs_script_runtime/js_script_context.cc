@@ -89,6 +89,56 @@ static JSLocaleCallbacks gLocaleCallbacks = {
   LocaleCompare, LocaleToUnicode,
 };
 
+// For each native classes registered to each JSScriptContext with
+// RegisterClass(), a JSClassWithNativeCtor object will be created.
+class JSScriptContext::JSClassWithNativeCtor {
+ public:
+  JSClassWithNativeCtor(const char *name, Slot *constructor)
+      : constructor_(constructor), ref_count_(0) {
+    js_class_ = *NativeJSWrapper::GetWrapperJSClass();
+    ASSERT(js_class_.addProperty == JS_PropertyStub);
+    // Use unique address of addProperty callback to indicate this is a
+    // valid JSClassWithNativeCtor structure.
+    js_class_.addProperty = TagAddProperty;
+    js_class_.name = name;
+  }
+
+  static JSBool TagAddProperty(JSContext *cx, JSObject *obj,
+                               jsval id, jsval *vp) {
+    return JS_PropertyStub(cx, obj, id, vp);
+  }
+
+  void Ref() {
+    ++ref_count_;
+  }
+
+  void Unref() {
+    if (--ref_count_ == 0)
+      delete this;
+  }
+
+  static JSClassWithNativeCtor *CastFrom(JSClass *cls) {
+    return cls->addProperty == TagAddProperty ?
+           reinterpret_cast<JSClassWithNativeCtor *>(cls) : NULL;
+  }
+
+  // This field must be placed first so that JSClass * can be cast to
+  // JSClassWithNativeCtor *.
+  JSClass js_class_;
+  Slot *constructor_;
+
+ private:
+  ~JSClassWithNativeCtor() {
+    memset(&js_class_, 0, sizeof(js_class_));
+    ASSERT(ref_count_ == 0);
+    delete constructor_;
+    constructor_ = NULL;
+  }
+
+  int ref_count_;
+  DISALLOW_EVIL_CONSTRUCTORS(JSClassWithNativeCtor);
+};
+
 JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContext *context)
     : runtime_(runtime),
       context_(context),
@@ -119,8 +169,17 @@ JSScriptContext::~JSScriptContext() {
   JS_SetErrorReporter(context_, NULL);
   // Remove the return value protection reference.
   // See comments in WrapJSObjectToNative() for details.
-  JS_DeleteProperty(context_, JS_GetGlobalObject(context_),
-                    kGlobalReferenceName);
+  JSObject *global_object = JS_GetGlobalObject(context_);
+  JS_DeleteProperty(context_, global_object, kGlobalReferenceName);
+
+  // Unregister global classes, to avoid them from being marked (causing crash)
+  // if there is live js object after this context is destroyed.
+  for (ClassVector::iterator it = registered_classes_.begin();
+       it != registered_classes_.end(); ++it) {
+    // ClassName.prototype also hold a reference to the class, so deleting
+    // the global class will automatically unref.
+    JS_DeleteProperty(context_, global_object, (*it)->js_class_.name);
+  }
 
   // Force a GC to make it possible to check if there are leaks.
   JS_GC(context_);
@@ -145,11 +204,6 @@ JSScriptContext::~JSScriptContext() {
 
   JS_DestroyContext(context_);
   context_ = NULL;
-
-  for (ClassVector::iterator it = registered_classes_.begin();
-       it != registered_classes_.end(); ++it)
-    delete *it;
-  registered_classes_.clear();
 }
 
 // As we want to depend on only the public SpiderMonkey APIs, the only
@@ -266,7 +320,7 @@ JSNativeWrapper *JSScriptContext::WrapJSToNativeInternal(JSObject *obj) {
   // If this object is passed via native slot parameters, because the objects
   // are also protected by the JS stack, there is no problem of property
   // overwriting.
-  // The native side can call Attach() if it wants to hold the wrapper object.
+  // The native side can call Ref() if it wants to hold the wrapper object.
   JS_DefineProperty(context_, JS_GetGlobalObject(context_),
                     kGlobalReferenceName, js_val, NULL, NULL, 0);
   return wrapper;
@@ -292,6 +346,12 @@ void JSScriptContext::FinalizeJSNativeWrapper(JSContext *cx,
   ASSERT(context_wrapper);
   if (context_wrapper)
     context_wrapper->FinalizeJSNativeWrapperInternal(wrapper);
+}
+
+void JSScriptContext::UnrefJSObjectClass(JSContext *cx, JSObject *object) {
+  JSClassWithNativeCtor *c =
+      JSClassWithNativeCtor::CastFrom(JS_GET_CLASS(cx, object));
+  if (c) c->Unref();
 }
 
 void JSScriptContext::Destroy() {
@@ -364,18 +424,6 @@ bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
   return true;
 }
 
-JSScriptContext::JSClassWithNativeCtor::JSClassWithNativeCtor(
-    const char *name, Slot *constructor)
-    : constructor_(constructor) {
-  js_class_ = *NativeJSWrapper::GetWrapperJSClass();
-  js_class_.name = name;
-}
-
-JSScriptContext::JSClassWithNativeCtor::~JSClassWithNativeCtor() {
-  delete constructor_;
-  constructor_ = NULL;
-}
-
 JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv, jsval *rval) {
   AutoLocalRootScope local_root_scope(cx);
@@ -408,6 +456,8 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   if (context_wrapper)
     context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
   delete [] params;
+  // Count the reference from ClassName.prototype.
+  cls->Ref();
   return JS_TRUE;
 }
 
@@ -417,11 +467,12 @@ bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {
   ASSERT_M(JS_GetGlobalObject(context_), ("Global object should be set first"));
 
   JSClassWithNativeCtor *cls = new JSClassWithNativeCtor(name, constructor);
+  cls->Ref();
   if (!JS_InitClass(context_, JS_GetGlobalObject(context_), NULL,
                     &cls->js_class_, &ConstructObject,
                     constructor->GetArgCount(),
                     NULL, NULL, NULL, NULL)) {
-    delete cls;
+    cls->Unref();
     return false;
   }
 
@@ -620,6 +671,10 @@ bool JSScriptContext::OnClearOperationTimeTimer(int watch_id) {
 Connection *JSScriptContext::ConnectScriptBlockedFeedback(
     ScriptBlockedFeedback *feedback) {
   return script_blocked_signal_.Connect(feedback);
+}
+
+void JSScriptContext::CollectGarbage() {
+  JS_GC(context_);
 }
 
 } // namespace smjs

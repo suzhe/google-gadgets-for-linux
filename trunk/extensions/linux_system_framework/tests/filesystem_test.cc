@@ -276,6 +276,12 @@ TEST(FileSystem, GetExtensionName_Accuracy1) {
   EXPECT_EQ("cc", filesystem.GetExtensionName(path));
 }
 
+TEST(FileSystem, GetExtensionName_Accuracy1a) {
+  FileSystem filesystem;
+  char path[] = "file.cc";
+  EXPECT_EQ("cc", filesystem.GetExtensionName(path));
+}
+
 TEST(FileSystem, GetExtensionName_Accuracy2) {
   FileSystem filesystem;
   char path[] = "/tmp/GGL_FileSystem_Test/file";

@@ -18,9 +18,37 @@
 #include <set>
 #include "memory_options.h"
 #include "logger.h"
+#include "scriptable_holder.h"
 #include "string_utils.h"
 
 namespace ggadget {
+
+class OptionsItem {
+ public:
+  OptionsItem() {
+  }
+
+  explicit OptionsItem(const Variant &value) {
+    SetValue(value);
+  }
+
+  void SetValue(const Variant &value) {
+    value_ = value;
+    if (value.type() == Variant::TYPE_SCRIPTABLE)
+      holder_.Reset(VariantValue<ScriptableInterface *>()(value));
+    else
+      holder_.Reset(NULL);
+  }
+
+  Variant GetValue() const {
+    return value_.type() == Variant::TYPE_SCRIPTABLE ?
+           Variant(holder_.Get()) : value_;
+  }
+
+ private:
+  Variant value_;
+  ScriptableHolder<ScriptableInterface> holder_;
+};
 
 class MemoryOptions::Impl {
  public:
@@ -33,7 +61,7 @@ class MemoryOptions::Impl {
     onoptionchanged_signal_(name);
   }
 
-  typedef std::map<std::string, Variant, GadgetStringComparator> OptionsMap;
+  typedef std::map<std::string, OptionsItem, GadgetStringComparator> OptionsMap;
   typedef std::set<std::string, GadgetStringComparator> EncryptedSet;
   OptionsMap values_;
   OptionsMap defaults_;
@@ -94,7 +122,7 @@ void MemoryOptions::Add(const char *name, const Variant &value) {
       LOG("Options exceeds size limit %zu.", impl_->size_limit_);
     } else {
       impl_->total_size_ = new_total_size;
-      impl_->values_[name_str] = value;
+      impl_->values_[name_str].SetValue(value);
       impl_->FireChangedEvent(name, value);
     }
   }
@@ -106,16 +134,17 @@ bool MemoryOptions::Exists(const char *name) {
 
 Variant MemoryOptions::GetDefaultValue(const char *name) {
   Impl::OptionsMap::const_iterator it = impl_->defaults_.find(name);
-  return it == impl_->defaults_.end() ? Variant() : it->second;
+  return it == impl_->defaults_.end() ? Variant() : it->second.GetValue();
 }
 
 void MemoryOptions::PutDefaultValue(const char *name, const Variant &value) {
-  impl_->defaults_[name] = value;
+  impl_->defaults_[name].SetValue(value);
 }
 
 Variant MemoryOptions::GetValue(const char *name) {
   Impl::OptionsMap::const_iterator it = impl_->values_.find(name);
-  return it == impl_->values_.end() ? GetDefaultValue(name) : it->second;
+  return it == impl_->values_.end() ?
+         GetDefaultValue(name) : it->second.GetValue();
 }
 
 void MemoryOptions::PutValue(const char *name, const Variant &value) {
@@ -124,16 +153,16 @@ void MemoryOptions::PutValue(const char *name, const Variant &value) {
   if (it == impl_->values_.end()) {
     Add(name, value);
   } else {
-    Variant *last_value = &it->second;
-    if (!(*last_value == value)) {
-      ASSERT(impl_->total_size_ >= GetVariantSize(*last_value));
+    Variant last_value = it->second.GetValue();
+    if (last_value != value) {
+      ASSERT(impl_->total_size_ >= GetVariantSize(last_value));
       size_t new_total_size = impl_->total_size_ + GetVariantSize(value) -
-                              GetVariantSize(*last_value);
+                              GetVariantSize(last_value);
       if (new_total_size > impl_->size_limit_) {
         LOG("Options exceeds size limit %zu.", impl_->size_limit_);
       } else {
         impl_->total_size_ = new_total_size;
-        *last_value = value;
+        it->second.SetValue(value);
         impl_->FireChangedEvent(name, value);
       }
     }
@@ -146,8 +175,9 @@ void MemoryOptions::Remove(const char *name) {
   std::string name_str(name); // Avoid multiple std::string construction.
   Impl::OptionsMap::iterator it = impl_->values_.find(name_str);
   if (it != impl_->values_.end()) {
-    ASSERT(impl_->total_size_ >= name_str.size() + GetVariantSize(it->second));
-    impl_->total_size_ -= name_str.size() + GetVariantSize(it->second);
+    size_t last_value_size = GetVariantSize(it->second.GetValue());
+    ASSERT(impl_->total_size_ >= name_str.size() + last_value_size);
+    impl_->total_size_ -= name_str.size() + last_value_size;
     impl_->values_.erase(it);
     impl_->encrypted_.erase(name_str);
     impl_->FireChangedEvent(name, Variant());
@@ -175,12 +205,13 @@ bool MemoryOptions::IsEncrypted(const char *name) {
 
 Variant MemoryOptions::GetInternalValue(const char *name) {
   Impl::OptionsMap::const_iterator it = impl_->internal_values_.find(name);
-  return it == impl_->internal_values_.end() ? Variant() : it->second;
+  return it == impl_->internal_values_.end() ?
+         Variant() : it->second.GetValue();
 }
 
 void MemoryOptions::PutInternalValue(const char *name, const Variant &value) {
   // Internal values are not counted in total_size_.
-  impl_->internal_values_[name] = value;
+  impl_->internal_values_[name].SetValue(value);
 }
 
 bool MemoryOptions::Flush() {
@@ -200,7 +231,7 @@ bool MemoryOptions::EnumerateItems(
   for (Impl::OptionsMap::const_iterator it = impl_->values_.begin();
        it != impl_->values_.end(); ++it) {
     const char *name = it->first.c_str();
-    if (!(*callback)(name, it->second, IsEncrypted(name))) {
+    if (!(*callback)(name, it->second.GetValue(), IsEncrypted(name))) {
       delete callback;
       return false;
     }
@@ -214,7 +245,7 @@ bool MemoryOptions::EnumerateInternalItems(
   ASSERT(callback);
   for (Impl::OptionsMap::const_iterator it = impl_->internal_values_.begin();
        it != impl_->internal_values_.end(); ++it) {
-    if (!(*callback)(it->first.c_str(), it->second)) {
+    if (!(*callback)(it->first.c_str(), it->second.GetValue())) {
       delete callback;
       return false;
     }

@@ -879,12 +879,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                ": " + message).c_str());
   }
 
-  NativeOwnedScriptable global_;
-  NativeOwnedScriptable debug_;
-  NativeOwnedScriptable storage_;
-  NativeOwnedScriptable plugin_;
-  NativeOwnedScriptable framework_;
-  NativeOwnedScriptable strings_;
+  NativeOwnedScriptable<UINT64_C(0x4edfd94b70f04da6)> global_;
+  NativeOwnedScriptable<UINT64_C(0xb13b9595da304041)> debug_;
+  NativeOwnedScriptable<UINT64_C(0xaf77f40a271f41d4)> storage_;
+  NativeOwnedScriptable<UINT64_C(0x3f7cd747988f4ad0)> plugin_;
+  NativeOwnedScriptable<UINT64_C(0x50bbf15b460e48c5)> framework_;
+  NativeOwnedScriptable<UINT64_C(0x8ef87d420c384a46)> strings_;
 
   Signal1<Variant, DisplayWindow *> onshowoptionsdlg_signal_;
   Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;

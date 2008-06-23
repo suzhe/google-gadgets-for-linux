@@ -267,7 +267,7 @@ class ScriptableView::Impl {
   View *view_;
   ScriptContextInterface *script_context_;
 
-  NativeOwnedScriptable utils_;
+  NativeOwnedScriptable<UINT64_C(0x364d74f3646848ce)> utils_;
   GlobalObject global_object_;
 };
 

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-EXTRA_DIST		= dbus_object_test_shell.js \
+EXTRA_DIST		= dbus_object_test.js \
 			  dom1_test.js \
 			  json_test.js \
 			  wrapper_test.js
@@ -36,16 +36,18 @@ LDADD			= @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/editline/libeditline.la
 
-check_PROGRAMS		= js_shell \
-			  wrapper_test_shell \
+check_PROGRAMS		= cross_context_test \
 			  dom_test_shell \
+			  js_shell \
 			  jscript_massager_test \
-			  massager
+			  massager \
+			  wrapper_test_shell
 
 if GGL_BUILD_LIBGGADGET_DBUS
 check_PROGRAMS += dbus_object_test_shell
 dbus_object_test_shell_SOURCES = js_shell.cc \
-				 dbus_object_test_shell.cc
+				 dbus_object_test_shell.cc \
+				 $(top_srcdir)/ggadget/tests/native_main_loop.cc
 dbus_object_test_shell_LDADD = $(LDADD) \
 			 $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 endif
@@ -64,13 +66,17 @@ wrapper_test_shell_SOURCES = js_shell.cc \
 
 massager_SOURCES	= massager.cc
 
+cross_context_test_SOURCES = cross_context_test.cc
+
 TESTS_ENVIRONMENT	= $(SHELL)
-TESTS			= dom_test_shell.sh \
+TESTS			= cross_context_test.sh \
+			  dom_test_shell.sh \
 			  js_shell.sh \
 			  jscript_massager_test.sh \
 			  wrapper_test_shell.sh
 
-.PHONY: dbus_object_test_shell.sh \
+.PHONY: cross_context_test.sh \
+	dbus_object_test_shell.sh \
 	dom_test_shell.sh \
 	js_shell.sh \
 	jscript_massager_test.sh \
@@ -84,8 +90,12 @@ dbus_object_test_shell.sh:
 	      $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/dbus_object_test_shell \
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
-	      $(abs_srcdir)/dbus_object_test_shell.js > $@)
+	      $(abs_srcdir)/dbus_object_test.js > $@)
 endif
+
+cross_context_test.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/cross_context_test > $@)
 
 dom_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \

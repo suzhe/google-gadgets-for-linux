@@ -897,7 +897,7 @@ void * FixedAllocator::Allocate( void )
     assert( CountEmptyChunks() < 2 );
 
 #ifdef _DEBUG
-    if (++allocCount_ % 1000 == 0)
+    if (++allocCount_ % 10000 == 0)
         ReportStat();
 #endif
 
@@ -937,7 +937,7 @@ bool FixedAllocator::Deallocate( void * p, Chunk * hint )
     assert( CountEmptyChunks() < 2 );
 
 #ifdef _DEBUG
-    if (++deallocCount_ % 1000 == 0)
+    if (++deallocCount_ % 10000 == 0)
         ReportStat();
 #endif
     return true;

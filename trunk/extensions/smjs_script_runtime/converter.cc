@@ -183,7 +183,7 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
     // This object may be a JS wrapped native object.
     // If it is not, NativeJSWrapper::Unwrap simply fails.
     if (!NativeJSWrapper::Unwrap(cx, object, &scriptable)) {
-      // NativeJSWrapper::Unwrap failed, this object is a origin JS object.
+      // NativeJSWrapper::Unwrap failed, this object is an origin JS object.
       scriptable = JSScriptContext::WrapJSToNative(cx, object);
     }
   } else {

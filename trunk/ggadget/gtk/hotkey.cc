@@ -25,6 +25,10 @@
 #ifdef GDK_WINDOWING_X11
 #include <X11/Xutil.h>
 #include <X11/Xlib.h>
+#ifndef XK_MISCELLANY
+// On some platforms, keysym.h is not included by Xutil.h.
+#include <X11/keysym.h>
+#endif
 #include <gdk/gdkx.h>
 #endif
 

@@ -61,7 +61,7 @@ void JSNativeWrapper::Ref() {
   if (GetRefCount() == 2) {
     // There must be a new native reference, let JavaScript know it by adding
     // the object to root.
-    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+    JS_AddNamedRootRT(JS_GetRuntime(js_context_), &js_object_, name_.c_str());
   }
 }
 
@@ -69,7 +69,7 @@ void JSNativeWrapper::Unref(bool transient) {
   if (GetRefCount() == 2) {
     // The last native reference is about to be released, let JavaScript know
     // it by removing the root reference.
-    JS_RemoveRoot(js_context_, &js_object_);
+    JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
   }
   ScriptableHelperDefault::Unref(transient);
 }

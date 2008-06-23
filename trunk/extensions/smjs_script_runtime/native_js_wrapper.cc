@@ -27,6 +27,7 @@
 #ifdef _DEBUG
 // Uncomment the following to debug wrapper memory.
 // #define DEBUG_JS_WRAPPER_MEMORY
+// #define DEBUG_JS_ROOTS
 // #define DEBUG_FORCE_GC
 #endif
 
@@ -77,13 +78,21 @@ NativeJSWrapper::~NativeJSWrapper() {
 #endif
     DetachJS(false);
   }
+  JS_SetPrivate(js_context_, js_object_, NULL);
 }
 
-#ifdef DEBUG_JS_WRAPPER_MEMORY
+#ifdef DEBUG_JS_ROOTS
+// This struct is private since JS170. Must defined same as JS structure.
+struct MyJSGCRootHashEntry {
+  JSDHashEntryHdr hdr;
+  void *root;
+  const char *name;
+};
+
 JS_STATIC_DLL_CALLBACK(JSDHashOperator) PrintRoot(JSDHashTable *table,
                                                   JSDHashEntryHdr *hdr,
                                                   uint32 number, void *arg) {
-  JSGCRootHashEntry *rhe = reinterpret_cast<JSGCRootHashEntry *>(hdr);
+  MyJSGCRootHashEntry *rhe = reinterpret_cast<MyJSGCRootHashEntry *>(hdr);
   jsval *rp = reinterpret_cast<jsval *>(rhe->root);
   DLOG("%d: name=%s address=%p value=%p",
        number, rhe->name, rp, JSVAL_TO_OBJECT(*rp));
@@ -113,7 +122,7 @@ void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
     DLOG("AddRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
          js_context_, &js_object_, js_object_, this, name_.c_str());
 #endif
-    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+    JS_AddNamedRootRT(JS_GetRuntime(js_context_), &js_object_, name_.c_str());
     DebugRoot(js_context_);
   }
   scriptable->Ref();
@@ -258,6 +267,8 @@ JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
+  JSScriptContext::UnrefJSObjectClass(cx, obj);
+
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
@@ -298,7 +309,7 @@ void NativeJSWrapper::DetachJS(bool caused_by_native) {
   scriptable_->Unref(caused_by_native);
   scriptable_ = NULL;
 
-  JS_RemoveRoot(js_context_, &js_object_);
+  JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
   DebugRoot(js_context_);
 }
 
@@ -333,7 +344,7 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
       DLOG("AddRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
            js_context_, &js_object_, js_object_, this, name_.c_str());
 #endif
-      JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+      JS_AddNamedRootRT(JS_GetRuntime(js_context_), &js_object_, name_.c_str());
       DebugRoot(js_context_);
     } else if (change == -1 && ref_count == 2) {
       // The last native reference is about to be released, let JavaScript know
@@ -342,7 +353,7 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
       DLOG("RemoveRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
            js_context_, &js_object_, js_object_, this, name_.c_str());
 #endif
-      JS_RemoveRoot(js_context_, &js_object_);
+      JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
       DebugRoot(js_context_);
     }
   }

@@ -1154,7 +1154,8 @@ std::string FileSystem::GetExtensionName(const char *path) {
   size_t start_index = str_path.find_last_of('/');
   size_t end_index = str_path.find_last_of('.');
 
-  if (start_index >= end_index)
+  if (end_index == std::string::npos ||
+      (start_index != std::string::npos && start_index >= end_index))
     return "";
 
   return str_path.substr(end_index + 1, str_path.size() - end_index - 1);

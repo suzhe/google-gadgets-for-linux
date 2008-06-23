@@ -55,7 +55,7 @@ function Detail_OnOpen() {
   debug.trace("Detail_OnOpen");
 
   // set the view based on the selected todo item data
-  var todoItem = detailsViewData(TODODETAILS_DATA_STRING);
+  var todoItem = detailsViewData.getValue(TODODETAILS_DATA_STRING);
   if (todoItem != undefined) {
     Description.value = todoItem.name_;
     Completed.value = todoItem.completed_;
@@ -100,24 +100,24 @@ function getPriority() {
 }
 
 function Priority_OnChange() {
-  detailsViewData(TODODETAILS_DATA_STRING).priority_ = getPriority();
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).priority_ = getPriority();
 }
 
 function Priority_OnChange() {
-  detailsViewData(TODODETAILS_DATA_STRING).priority_ = getPriority();
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).priority_ = getPriority();
 }
 
 function Priority_OnChange() {
-  detailsViewData(TODODETAILS_DATA_STRING).priority_ = getPriority();
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).priority_ = getPriority();
 }
 
 function Completed_OnClick() {
-  detailsViewData(TODODETAILS_DATA_STRING).completed_ =
-    !detailsViewData(TODODETAILS_DATA_STRING).completed_;
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).completed_ =
+    !detailsViewData.getValue(TODODETAILS_DATA_STRING).completed_;
 }
 
 function Description_OnChange() {
-  detailsViewData(TODODETAILS_DATA_STRING).name_ = Description.value;
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).name_ = Description.value;
 }
 
 function Date_OnClick(year, month, date, weekIndex, dayIndex) {
@@ -125,7 +125,7 @@ function Date_OnClick(year, month, date, weekIndex, dayIndex) {
               dayIndex)
   dueDateCalendar.setSelectedDate(new Date(year, month, date));
 
-  detailsViewData(TODODETAILS_DATA_STRING).duedate_ =
+  detailsViewData.getValue(TODODETAILS_DATA_STRING).duedate_ =
     dueDateCalendar.selectedDate_;
 }
 
@@ -344,6 +344,7 @@ Calendar.prototype.getDayDisplayName = function(day) {
 }
 
 Calendar.prototype.getDateDisplay = function(date) {
+  // TODO: i18n
   return ((date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear());
 }
 

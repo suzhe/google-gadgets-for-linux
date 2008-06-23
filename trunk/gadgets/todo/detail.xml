@@ -25,36 +25,36 @@
       overImage="todo_chk_unsel_over.png" checkedDownImage="todo_chk_sel_down.png"
       checkedImage="todo_chk_sel_up.png" checkedOverImage="todo_chk_sel_over.png"
       value="false"/>
-    <label height="16" name="DueDate" width="55" x="1" y="45" bold="true"
+    <label height="16" name="DueDate" width="65" x="1" y="45" bold="true"
       color="#336600" font="Tahoma" size="8">&DETAILS_DUE_DATE_LABEL;
     </label>
-    <label height="16" name="Priority" width="55" x="6" y="182" bold="true"
+    <label height="16" name="Priority" width="65" x="6" y="182" bold="true"
       color="#336600" font="Tahoma" size="8">&DETAILS_PRIORITY_LABEL;
     </label>
-    <radio height="12" name="Priority_Low" width="12" x="60" y="183" downImage="todo_rad_unsel_down.png"
+    <radio height="12" name="Priority_Low" width="12" x="63" y="183" downImage="todo_rad_unsel_down.png"
       image="todo_rad_unsel_up.png" overImage="todo_rad_unsel_over.png"
       checkedDownImage="todo_rad_sel_down.png" checkedImage="todo_rad_sel_up.png"
       checkedOverImage="todo_rad_sel_over.png" onchange="Priority_OnChange()"/>
-    <radio height="12" name="Priority_Medium" width="12" x="60" y="201"
+    <radio height="12" name="Priority_Medium" width="12" x="63" y="201"
       downImage="todo_rad_unsel_down.png" image="todo_rad_unsel_up.png"
       overImage="todo_rad_unsel_over.png" checkedDownImage="todo_rad_sel_down.png"
       checkedImage="todo_rad_sel_up.png" checkedOverImage="todo_rad_sel_over.png"
       onchange="Priority_OnChange()"/>
-    <radio height="12" name="Priority_High" width="12" x="60" y="219" downImage="todo_rad_unsel_down.png"
+    <radio height="12" name="Priority_High" width="12" x="63" y="219" downImage="todo_rad_unsel_down.png"
       image="todo_rad_unsel_up.png" overImage="todo_rad_unsel_over.png"
       checkedDownImage="todo_rad_sel_down.png" checkedImage="todo_rad_sel_up.png"
       checkedOverImage="todo_rad_sel_over.png" onchange="Priority_OnChange()"/>
-    <img height="16" name="Priority_Medium_Image" width="9" x="75" y="199"
+    <img height="16" name="Priority_Medium_Image" width="9" x="78" y="199"
       src="todo_priority_medium.png"/>
-    <img height="16" name="Priority_High_Image" width="9" x="75" y="217"
+    <img height="16" name="Priority_High_Image" width="9" x="78" y="217"
       src="todo_priority_high.png"/>
-    <label height="16" name="Priority_Low_Label" width="60" x="86" y="182"
+    <label height="16" name="Priority_Low_Label" width="57" x="89" y="182"
       font="Tahoma" size="8">&DETAILS_LOW_PRIORITY_LABEL;
     </label>
-    <label height="16" name="Priority_Medium_Label" width="60" x="86" y="200"
+    <label height="16" name="Priority_Medium_Label" width="57" x="89" y="200"
       font="Tahoma" size="8">&DETAILS_MEDIUM_PRIORITY_LABEL;
     </label>
-    <label height="16" name="Priority_High_Label" width="60" x="86" y="218"
+    <label height="16" name="Priority_High_Label" width="57" x="89" y="218"
       font="Tahoma" size="8">&DETAILS_HIGH_PRIORITY_LABEL;
     </label>
     <div height="14" name="Days" width="157" x="1" y="84" background="#00C0C0E0"/>
@@ -67,8 +67,8 @@
       overImage="todo_front_over.png"/>
     <label height="16" name="Calendar_Month" width="73" x="43" y="69" align="center"
       bold="true" color="#FFFFFF" font="Tahoma" size="8"/>
-    <label height="15" name="Calendar_DueDate" opacity="150" width="89"
-      x="60" y="45" font="Tahoma" size="8"/>
+    <label height="15" name="Calendar_DueDate" opacity="150" width="79"
+      x="70" y="45" font="Tahoma" size="8"/>
     <script src="common.js" />
     <script src="detail.js" />
 </view>
