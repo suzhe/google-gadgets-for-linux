@@ -16,6 +16,8 @@
 
 ADD_DEFINITIONS(-DUNIT_TEST)
 
+APPLY_CONFIG(X11)
+
 MACRO(UNIT_TEST TEST_NAME)
   IF(${ARGC} GREATER 1)
     SET(FILES ${ARGV})
@@ -24,8 +26,19 @@ MACRO(UNIT_TEST TEST_NAME)
   ELSE(${ARGC} GREATER 1)
     ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
   ENDIF(${ARGC} GREATER 1)
-  TARGET_LINK_LIBRARIES(${TEST_NAME} gtest ggadget ggadget-linux ggadget-dbus)
+  TARGET_LINK_LIBRARIES(${TEST_NAME}
+    gtest ggadget ggadget-linux ggadget-dbus
+    ${X11_LIBRARIES})
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)
 
+UNIT_TEST(filesystem_test)
+UNIT_TEST(filesystem_folder_test)
+UNIT_TEST(filesystem_file_test)
+UNIT_TEST(filesystem_textstream_test)
 UNIT_TEST(machine_test)
+UNIT_TEST(memory_test)
+UNIT_TEST(network_test)
+UNIT_TEST(perfmon_test ${CMAKE_SOURCE_DIR}/ggadget/tests/native_main_loop.cc)
+UNIT_TEST(power_test)
+UNIT_TEST(process_test)

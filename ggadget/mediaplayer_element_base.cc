@@ -354,8 +354,8 @@ class MediaPlayerElementBase::Impl {
   MediaPlayerElementBase *owner_;
   View *view_;
 
-  NativeOwnedScriptable controls_;
-  NativeOwnedScriptable settings_;
+  NativeOwnedScriptable<UINT64_C(0x42a88e66ff444ba1)> controls_;
+  NativeOwnedScriptable<UINT64_C(0xde2169669ebf4b61)> settings_;
 
   // Platform-independent settings.
   bool auto_start_;

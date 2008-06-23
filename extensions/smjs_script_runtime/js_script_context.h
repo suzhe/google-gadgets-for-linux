@@ -90,6 +90,12 @@ class JSScriptContext : public ScriptContextInterface {
    */
   static void FinalizeJSNativeWrapper(JSContext *cx, JSNativeWrapper *wrapper);
 
+  /**
+   * When a JSObject is to be finalized, unref its class structure if the
+   * class is a registered native class.
+   */
+  static void UnrefJSObjectClass(JSContext *cx, JSObject *object);
+
   JSContext *context() const { return context_; }
 
   /** @see ScriptContextInterface::Destroy() */
@@ -125,6 +131,8 @@ class JSScriptContext : public ScriptContextInterface {
   /** @see ScriptContextInterface::ConnectScriptBlockedFeedback() */
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback);
+  /** @see ScriptContextInterface::CollectGarbage() */
+  virtual void CollectGarbage();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
@@ -164,15 +172,7 @@ class JSScriptContext : public ScriptContextInterface {
 #endif
   static bool OnClearOperationTimeTimer(int watch_id);
 
-  class JSClassWithNativeCtor {
-   public:
-    JSClassWithNativeCtor(const char *name, Slot *constructor);
-    ~JSClassWithNativeCtor();
-    JSClass js_class_;
-    Slot *constructor_;
-   private:
-    DISALLOW_EVIL_CONSTRUCTORS(JSClassWithNativeCtor);
-  };
+  class JSClassWithNativeCtor;
 
   JSScriptRuntime *runtime_;
   JSContext *context_;

@@ -50,7 +50,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
     owner->AddJSFunctionSlot(this);
   } else {
     // Otherwise, it's safe to add this function to root.
-    JS_AddNamedRoot(context, &function_, function_info_.c_str());
+    JS_AddNamedRootRT(JS_GetRuntime(context),
+                      &function_, function_info_.c_str());
   }
 }
 
@@ -59,20 +60,20 @@ JSFunctionSlot::~JSFunctionSlot() {
     if (owner_)
       owner_->RemoveJSFunctionSlot(this);
     else
-      JS_RemoveRoot(context_, &function_);
+      JS_RemoveRootRT(JS_GetRuntime(context_), &function_);
   }
 }
 
 ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   Variant return_value(GetReturnType());
-  if (JS_IsExceptionPending(context_))
-    return ResultVariant(return_value);
-
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.
     LOG("Finalized JavaScript function still be called");
     return ResultVariant(return_value);
   }
+
+  if (JS_IsExceptionPending(context_))
+    return ResultVariant(return_value);
 
   AutoLocalRootScope local_root_scope(context_);
   if (!local_root_scope.good())

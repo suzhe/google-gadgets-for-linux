@@ -113,7 +113,7 @@ extern "C" {
       // with correct type.
       // Using SharedScriptable here, so that it can be destroyed correctly
       // when framework is destroyed.
-      system = new SharedScriptable();
+      system = new SharedScriptable<UINT64_C(0xa5cc5f6479d1441f)>();
       reg_framework->RegisterVariantConstant("system", Variant(system));
     } else {
       system = VariantValue<ScriptableInterface *>()(prop.v());

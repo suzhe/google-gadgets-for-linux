@@ -29,6 +29,7 @@ SET(SRCS
   cairo_font.cc
   cairo_graphics.cc
   cairo_image_base.cc
+  hotkey.cc
   key_convert.cc
   main_loop.cc
   menu_builder.cc

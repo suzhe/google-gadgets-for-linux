@@ -170,6 +170,13 @@ class ScriptContextInterface {
    */
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback) = 0;
+
+  /**
+   * Forces a garbage collection. For debugging issues related to JS garbage
+   * collection.
+   */ 
+  virtual void CollectGarbage() = 0;
+
 };
 
 } // namespace ggadget

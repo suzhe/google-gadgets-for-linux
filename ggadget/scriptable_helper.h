@@ -330,17 +330,27 @@ typedef ScriptableHelperNativeOwned<ScriptableInterface>
 /**
  * A handy class that can be used as simple native owned scriptable object.
  */
+template <uint64_t ClassId>
 class NativeOwnedScriptable : public ScriptableHelperNativeOwnedDefault {
  public:
-  DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
+  static const uint64_t CLASS_ID = ClassId;
+  virtual bool IsInstanceOf(uint64_t class_id) const {
+    return class_id == ClassId || ScriptableInterface::IsInstanceOf(class_id);
+  }
+  virtual uint64_t GetClassId() const { return ClassId; }
 };
 
 /**
  * A handy class that can be used as simple shared scriptable object.
  */
+template <uint64_t ClassId>
 class SharedScriptable : public ScriptableHelperDefault {
  public:
-  DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
+  static const uint64_t CLASS_ID = ClassId;
+  virtual bool IsInstanceOf(uint64_t class_id) const {
+    return class_id == ClassId || ScriptableInterface::IsInstanceOf(class_id);
+  }
+  virtual uint64_t GetClassId() const { return ClassId; }
 };
 
 } // namespace ggadget

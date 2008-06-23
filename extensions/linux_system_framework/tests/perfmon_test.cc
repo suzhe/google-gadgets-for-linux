@@ -43,7 +43,7 @@ TEST(Perfmon, AddCounter_Success) {
   Perfmon perfmon;
   int watch_id = perfmon.AddCounter(kPerfmonCpuUsage,
                                     NewSlot(MockFunctionCallSlot));
-  EXPECT_TRUE(watch_id > 0);
+  EXPECT_GE(watch_id, 0);
 }
 
 // Failure test for AddCounter when the input count path is NULL

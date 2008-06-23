@@ -41,7 +41,7 @@ var TODO_MINIMUM_HEIGHT = 80;
 
 // default options
 options.putDefaultValue(TODO_OPTIONS_SORT, true);
-options.putDefaultValue(TODO_OPTIONS_SHOW_COMPLETED);
+options.putDefaultValue(TODO_OPTIONS_SHOW_COMPLETED, true);
 
 
 function view_onOpen() {
@@ -57,9 +57,8 @@ function view_onOpen() {
 
   // display the current todo items
   todoListDisplay = new TodoListDisplay(TodoItems);
-  var e = new Enumerator(todoList.todoList_);
-  for( ; !e.atEnd(); e.moveNext()) {
-    todoListDisplay.addTodoItemDisplay(e.item());
+  for (var i in todoList.todoList_) {
+    todoListDisplay.addTodoItemDisplay(todoList.todoList_[i]);
   }
 }
 
@@ -110,7 +109,7 @@ function TodoItemDiv_OnClick(index) {
   debug.trace("TodoItemDiv_OnClick: " + todoList.todoList_[index].name_)
   
   var openDetailsView = (todoDetails == null ||
-    todoDetails.detailsViewData(TODODETAILS_INDEX_STRING) != index);
+    todoDetails.detailsViewData.getValue(TODODETAILS_INDEX_STRING) != index);
 
   EnsureDetailsViewIsClosed();
 
@@ -358,8 +357,8 @@ function EnsureDetailsViewIsClosed() {
 
 // called when the details view is closed
 function ProcessDetailsViewFeedback() {
-  var todoItem = todoDetails.detailsViewData(TODODETAILS_DATA_STRING);
-  var index = todoDetails.detailsViewData(TODODETAILS_INDEX_STRING);
+  var todoItem = todoDetails.detailsViewData.getValue(TODODETAILS_DATA_STRING);
+  var index = todoDetails.detailsViewData.getValue(TODODETAILS_INDEX_STRING);
   debug.trace("ProcessDetailsViewFeedback:" + todoList.todoList_[index].name_)
 
   // update the main list with the edited data
@@ -367,6 +366,7 @@ function ProcessDetailsViewFeedback() {
   todoList.todoList_[index] = todoItem;
   todoListDisplay.updateItemDisplay(index, todoItem, true);
   todoList.refreshItemPosition(index, false);
+  todoDetails.detailsViewData.removeAll();
   todoDetails = null;
 }
 
@@ -415,9 +415,8 @@ TodoList.prototype.save = function() {
   debug.trace("TodoList.save()");
 
   var todoListString = "";
-  var e = new Enumerator(this.todoList_);
-  for( ; !e.atEnd(); e.moveNext()) {
-    todoListString += e.item().save();
+  for (var i in this.todoList_) {
+    todoListString += this.todoList_[i].save();
     todoListString += TODOLIST_ITEMS_SEPARATOR; // '|' is the separator we use
   }
   options.putValue(TODOLIST_OPTIONS_STRING, todoListString);
@@ -432,12 +431,12 @@ TodoList.prototype.restore = function() {
   if (oldTodoListString != null) {
     var oldTodoItemStrings = oldTodoListString.split(
       TODOLIST_ITEMS_SEPARATOR);
-    var e = new Enumerator(oldTodoItemStrings);
-    for( ; !e.atEnd(); e.moveNext()) {
-      debug.trace(e.item());
+    for (var i in oldTodoItemStrings) {
+      var item = oldTodoItemStrings[i];
+      debug.trace(item);
       var newTodoItem = new TodoItem();
-      if (e.item() != "") {
-        newTodoItem.restore(e.item());
+      if (item != "") {
+        newTodoItem.restore(item);
         this.add(newTodoItem);
       }
     }
@@ -464,9 +463,9 @@ TodoList.prototype.refreshItemPosition = function(index, newItem) {
     if (sort) {
       todoList.todoList_.sort(TodoItemCompare);
 
-      var e = new Enumerator(todoList.todoList_);
-      while(TodoItemCompare(e.item(), todoItem) < 0) {
-        e.moveNext();
+      for (var i in todoList.todoList_) {
+        if (TodoItemCompare(todoList.todoList_[i], todoItem) >= 0)
+          break;
         ++newIndex;
       }
     } else if (newItem){
@@ -554,11 +553,11 @@ TodoListDisplay.prototype.addTodoItemDisplay = function(todoItem) {
           "checkedImage='todo_chk_sel_up.png' " +
           "checkedOverImage='todo_chk_sel_over.png' " +
           "x='10' y='5' />";
-  var n = "<label font='Tahoma' size='8' align='left' x='30' y='5' />";
+  var n = "<label size='8' font='Tahoma' align='left' x='30' y='5' " +
+          "height='14' trimming='character-ellipsis'/>";
   var e = "<edit font='Tahoma' size='8' align='left' x='28' y='5' " +
           "visible='false' />";
-  var d = "<label font='Tahoma' size='8' align='right' y='5' opacity='150' " +
-          "width='60' />";
+  var d = "<label font='Tahoma' size='8' align='right' y='5' opacity='150'/>";
   var dv = "<img opacity='80' src='todo_divider.png' />";
 
   var item = this.listArea_.appendElement(i);
@@ -573,10 +572,14 @@ TodoListDisplay.prototype.addTodoItemDisplay = function(todoItem) {
   this.setEventHandlers(item, completed, nameEdit, index);
 
   item.y = this.currentY_;
-  item.width = this.area_.width;
-  nameEdit.width = item.width - nameEdit.x;
+  item.width = this.listArea_.width;
+  name.width = item.width - name.x;
   duedate.x = item.width - duedate.width;
   divider.width = item.width;
+  duedate.onsize = function() {
+    duedate.x = item.width - duedate.offsetWidth;
+    name.width = item.width - name.x - duedate.offsetWidth - 3;
+  };
 
   var itemDisplay = new TodoItemDisplay(item, priority, completed, name,
                                         nameEdit, duedate, divider);

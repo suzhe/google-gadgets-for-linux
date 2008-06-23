@@ -526,12 +526,6 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
       [has_gtkmozembed=no])])])])
 
 if test x$has_dbus = xyes; then
-  if test -z "$DBUS_SYSTEM_BUS_SOCKET"; then
-    # use default
-    DBUS_SYSTEM_BUS_SOCKET="unix:path=/var/run/dbus/system_bus_socket"
-  fi
-  AC_DEFINE_UNQUOTED(DBUS_SYSTEM_BUS_SOCKET, ["$DBUS_SYSTEM_BUS_SOCKET"],
-                     [dbus system bus socket path])
   AC_DEFINE(HAVE_DBUS_LIBRARY,1,[Have dbus library])
 fi
 
