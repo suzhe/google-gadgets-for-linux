@@ -20,18 +20,13 @@
 #include <ggadget/common.h>
 #include <ggadget/variant.h>
 #include <ggadget/view_host_interface.h>
+#include <ggadget/menu_interface.h>
+#include <ggadget/view.h>
 
 namespace ggadget {
 
 class HostInterface;
-class MenuInterface;
 class ViewElement;
-class ViewInterface;
-
-#ifndef DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
-#define DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
-DECLARE_VARIANT_PTR_TYPE(MenuInterface);
-#endif
 
 /*
  * Object that represent the side bar.

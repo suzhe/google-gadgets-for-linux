@@ -1379,6 +1379,10 @@ FileManagerInterface *View::GetFileManager() const {
   return gadget ? gadget->GetFileManager() : NULL;
 }
 
+void View::Layout() {
+  impl_->children_.Layout();
+}
+
 GraphicsInterface *View::GetGraphics() const {
   return impl_->graphics_;
 }

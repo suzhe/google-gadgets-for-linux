@@ -23,8 +23,8 @@
 #include <gdk/gdkkeysyms.h>
 
 #ifdef GDK_WINDOWING_X11
-#include <X11/Xutil.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #ifndef XK_MISCELLANY
 // On some platforms, keysym.h is not included by Xutil.h.
 #include <X11/keysym.h>
@@ -704,6 +704,7 @@ class HotKeyDialog::Impl {
     gtk_widget_grab_focus(widget);
     impl->UpdateEntryText(true);
     impl->recorder_.Reset();
+    impl->hotkey_.Reset();
     return TRUE;
   }
 

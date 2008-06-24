@@ -1472,7 +1472,6 @@ class SideBarGtkHost::Impl {
   SideBar *sidebar_;
 
   OptionsInterface *options_;
-  //TODO: add another option for visible in all workspace?
   bool option_auto_hide_;
   bool option_always_on_top_;
   int  option_font_size_;
