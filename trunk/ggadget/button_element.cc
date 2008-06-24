@@ -95,8 +95,8 @@ void ButtonElement::DoRegister() {
                    NewSlot(this, &ButtonElement::IsStretchMiddle),
                    NewSlot(this, &ButtonElement::SetStretchMiddle));
 
-  // iconImage, iconDisabledImage and iconPosition are currently only supported
-  // by GGL.
+  // iconImage, iconDisabledImage and iconPosition 
+  // are currently only supported by GGL.
   RegisterProperty("iconImage",
                    NewSlot(this, &ButtonElement::GetIconImage),
                    NewSlot(this, &ButtonElement::SetIconImage));

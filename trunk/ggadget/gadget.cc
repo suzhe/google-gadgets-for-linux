@@ -118,7 +118,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       ViewHostInterface *view_host = view_->GetViewHost();
       if (!view_host)
         return true; // Maybe in test environment, let the script continue.
- 
+
       return !view_host->Confirm(StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
                                               filename, lineno).c_str());
     }
@@ -252,7 +252,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     RegisterStrings(&strings_map_, &global_);
     RegisterStrings(&strings_map_, &strings_);
 
-    // load fonts and objects
+    // load fonts and objects and check platform
     for (StringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
@@ -276,6 +276,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
         if (i->second == "no") {
           LOG("Gadget doesn't support platform %s", GGL_PLATFORM);
+          return false;
+        }
+      } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformMinVersion)) {
+        if (!CompareVersion(i->second.c_str(), GGL_VERSION, 
+                            &compare_result)
+            || compare_result > 0) {
+          LOG("Gadget required platform version %s higher than supported version %s",
+              i->second.c_str(), GGL_VERSION);
           return false;
         }
       }

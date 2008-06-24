@@ -25,4 +25,9 @@
 <GADGET_LOADING>Loading...</GADGET_LOADING>
 <GADGET_ERROR>Error reading feed</GADGET_ERROR>
 <GADGET_UNKNOWN>Unknown feed format</GADGET_UNKNOWN>
+<GADGET_OPTIONS>Web Clips Options</GADGET_OPTIONS>
+<GADGET_ADDLABEL>Add a clip by entering its Atom or RSS URL</GADGET_ADDLABEL>
+<GADGET_ADD>Add</GADGET_ADD>
+<GADGET_REMOVE>Remove</GADGET_REMOVE>
+<GADGET_MAXSHOW>Maximum number of entries to show for a clip:</GADGET_MAXSHOW>
 </strings>
