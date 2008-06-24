@@ -289,9 +289,10 @@ function ParseRawXML() {
       var name = g_user_pref_names[i] =
           kUserPrefPrefix + GetElementAttrib(pref, "name");
       var required = GetElementAttrib(pref, "required");
-      // Assume required if not set explicitly to false.
-      g_user_pref_required[i] =
-        (required != "false" && required != "FALSE" && required != "0");
+      // According to Gadgets API reference, the value of required attribute is
+      // false by default.
+      g_user_pref_required[i] = (required == "true" || required == "True" ||
+                                 required == "TRUE" || required == "1");
       var def_node = pref.getAttributeNode("default_value");
       if (def_node == null) {
         options.putDefaultValue(name, null);
