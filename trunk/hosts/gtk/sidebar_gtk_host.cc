@@ -430,8 +430,11 @@ class SideBarGtkHost::Impl {
       hotkey_grabber_.SetHotKey(hotkey);
       hotkey_grabber_.SetEnableGrabbing(true);
     }
-    options_->GetInternalValue(
-        kOptionSideBarShown).ConvertToBool(&sidebar_shown_);
+
+    // The default value of sidebar_shown_ is true.
+    value = options_->GetInternalValue(kOptionSideBarShown);
+    if (value.type() == Variant::TYPE_BOOL)
+      sidebar_shown_ = VariantValue<bool>(value);
   }
 
   bool FlushGadgetOrder(int index, ViewElement *view_element) {
