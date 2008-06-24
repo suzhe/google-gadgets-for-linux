@@ -434,7 +434,7 @@ class SideBarGtkHost::Impl {
     // The default value of sidebar_shown_ is true.
     value = options_->GetInternalValue(kOptionSideBarShown);
     if (value.type() == Variant::TYPE_BOOL)
-      sidebar_shown_ = VariantValue<bool>(value);
+      sidebar_shown_ = VariantValue<bool>()(value);
   }
 
   bool FlushGadgetOrder(int index, ViewElement *view_element) {
