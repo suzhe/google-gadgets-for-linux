@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+/*
   Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +12,19 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
--->
+*/
 
-<view width="200" height="300" resizable="true" showCaptionAlways="true"
-      onsize="OnSize()" caption="&GADGET_NAME;" 
-      onoptionchanged="FeedListUpdated()">
-  <img stretchMiddle="true" src="rss_bkgnd.png" width="100%" height="100%"/>
-  <contentArea name="contents" width="188" height="277" downColor="#001821"
-    backgroundColor="#00000000" overColor="#31596b" x="6" y="15"/>
-  <script src="shared.js"/>
-  <script src="main.js"/>
-</view>
+var kFeedListOption = "feed_list";
+var kMaxItemsOption = "max_items";
+var kPrefsOption = "user_prefs";
+
+function NormalizeURL(url) {
+  if (null == url) {
+    return "";
+  }
+  return url.replace(/^feed:\/\//, "http://");
+}
+
+function TrimString(s) {
+  return s.replace(/\s+$/gm, "").replace(/^\s+/gm, "");
+}

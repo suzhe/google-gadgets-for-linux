@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2008 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<view width="350" height="400" resizable="false"
+      onok="OKClicked()" onopen="OnOpen()" caption="&GADGET_OPTIONS;">
+  <label y="5">&GADGET_ADDLABEL;</label>
+  <edit width="295" height="20" y="25" name="feedname" 
+    onchange="FeedBoxChanged()"/>
+  <button x="300" y="25" width="50" name="addbutton" onclick="AddFeed()" 
+    caption="&GADGET_ADD;" downImage="button_down.png" image="button_up.png"
+    overImage="button_over.png" stretchMiddle="true"/>
+  <listbox name="feeds" width="100%" height="300" y="50" background="#ffffff"
+    autoscroll="true" itemHeight="35" onchange="SelectedFeedChanged();"/>
+  <button x="250" y="355" width="100" name="removebutton" onclick="RemoveFeed()"
+    caption="&GADGET_REMOVE;" downImage="button_down.png" image="button_up.png"
+    overImage="button_over.png" stretchMiddle="true"/>
+  <label y="380">&GADGET_MAXSHOW;</label>
+  <edit x="320" y="380" width="30" align="right" name="maxitems"/>
+  <script src="shared.js"/>
+  <script src="options.js"/>
+</view>
