@@ -393,7 +393,11 @@ AC_SUBST(GGL_SIZEOF_SIZE_T)
 AC_SUBST(GGL_SIZEOF_DOUBLE)
 
 if test x$ac_cv_type_size_t != xyes; then
-  AC_MSG_ERROR([No type size_t, but google Gadgets for Linux needs it!])
+  AC_MSG_ERROR([
+No type size_t, but google Gadgets for Linux needs it!
+This problem might be caused by missing C++ compiler, please make sure there is
+an usable C++ compiler installed, for example the g++ compiler.
+])
 fi
 
 # check for bytesex stuff

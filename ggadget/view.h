@@ -19,25 +19,20 @@
 
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
+#include <ggadget/variant.h>
 #include <ggadget/view_interface.h>
+#include <ggadget/menu_interface.h>
 
 namespace ggadget {
-
-#ifndef DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
-#define DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
-DECLARE_VARIANT_PTR_TYPE(MenuInterface);
-#endif
 
 class BasicElement;
 class Elements;
 class ContentAreaElement;
 class ElementFactory;
-class MenuInterface;
 class GraphicsInterface;
 class ScriptableInterface;
 class ScriptContextInterface;
 class RegisterableInterface;
-class Slot;
 class MainLoopInterface;
 class ViewHostInterface;
 class ImageInterface;
@@ -83,6 +78,13 @@ class View : public ViewInterface {
    * @return the FileManagerInterface object associated with this view's gadget.
    */
   FileManagerInterface *GetFileManager() const;
+
+  /**
+   * Force layout its children.
+   *
+   * It'll only be called by ViewElement to propagate layout request.
+   */
+  void Layout();
 
   /**
    * Registers all properties of the View instance to specified Scriptable
@@ -480,6 +482,12 @@ class View : public ViewInterface {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
 };
+
+/**
+ * Make sure that View pointer can be transfered through signal-slot.
+ * Some code depends on it.
+ */
+DECLARE_VARIANT_PTR_TYPE(View);
 
 } // namespace ggadget
 

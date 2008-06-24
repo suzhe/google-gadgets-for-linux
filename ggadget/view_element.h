@@ -98,6 +98,7 @@ class ViewElement : public BasicElement {
    */
   virtual ViewInterface::HitTest GetHitTest(double x, double y) const;
 
+  virtual void Layout();
   virtual void MarkRedraw();
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
 

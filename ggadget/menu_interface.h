@@ -17,6 +17,8 @@
 #ifndef GGADGET_MENU_INTERFACE_H__
 #define GGADGET_MENU_INTERFACE_H__
 
+#include <ggadget/variant.h>
+
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
@@ -77,6 +79,12 @@ class MenuInterface {
    */
   virtual MenuInterface *AddPopup(const char *popup_text, int priority) = 0;
 };
+
+/**
+ * Make sure that MenuInterface pointer can be transfered through
+ * signal-slot. Some code depends on it.
+ */
+DECLARE_VARIANT_PTR_TYPE(MenuInterface);
 
 } // namespace ggadget
 

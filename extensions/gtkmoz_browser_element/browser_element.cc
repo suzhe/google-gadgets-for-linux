@@ -138,7 +138,8 @@ class BrowserElement::Impl {
       return;
 
     socket_ = gtk_socket_new();
-    g_signal_connect(socket_, "realize", G_CALLBACK(OnSocketRealize), this);
+    g_signal_connect_after(socket_, "realize",
+                           G_CALLBACK(OnSocketRealize), this);
 
     container_ = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
     if (!GTK_IS_FIXED(container_)) {
@@ -153,6 +154,7 @@ class BrowserElement::Impl {
     gtk_fixed_put(GTK_FIXED(container_), socket_, x_, y_);
     gtk_widget_set_size_request(socket_, width_, height_);
     gtk_widget_show(socket_);
+    gtk_widget_realize(socket_);
   }
 
   static void OnSocketRealize(GtkWidget *widget, gpointer user_data) {

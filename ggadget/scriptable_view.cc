@@ -39,8 +39,6 @@
 
 namespace ggadget {
 
-DECLARE_VARIANT_PTR_TYPE(View);
-
 class ScriptableView::Impl {
  public:
   class GlobalObject : public ScriptableHelperNativeOwnedDefault {
