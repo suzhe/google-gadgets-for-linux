@@ -198,6 +198,7 @@ void ContentItem::DoRegister() {
   RegisterProperty("snippet",
                    NewSlot(this, &ContentItem::GetSnippet),
                    NewSlot(this, &ContentItem::SetSnippet));
+  // Don't use the xxxColor properties until they are in the public API. 
   RegisterProperty("headingColor",
                    NewSlot(&impl_->heading_text_, &TextFrame::GetColor),
                    NewSlot<void, const Variant &>(

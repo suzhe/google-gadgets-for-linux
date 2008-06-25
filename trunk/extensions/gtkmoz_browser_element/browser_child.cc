@@ -32,6 +32,7 @@
 
 #include <nsCOMPtr.h>
 #include <nsCRT.h>
+#include <nsEvent.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
 #include <nsIContentPolicy.h>
@@ -42,8 +43,11 @@
 #include <nsIDOMWindow.h>
 #include <nsIGenericFactory.h>
 #include <nsIInterfaceRequestor.h>
+#include <nsIInterfaceRequestorUtils.h>
+#include <nsIScriptGlobalObject.h>
 #include <nsIScriptNameSpaceManager.h>
 #include <nsIURI.h>
+#include <nsIWebProgress.h>
 #include <nsIXPConnect.h>
 #include <nsIXPCScriptable.h>
 #include <nsServiceManagerUtils.h>
@@ -83,6 +87,16 @@ extern "C" {
 static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
 static std::vector<GtkMozEmbed *> g_embeds;
 
+// The singleton GtkMozEmbed instance for temporary use when a new window
+// is requested. Though we don't actually allow new window, we still need
+// this widget to allow us get the url of the window and open it in the
+// browser.
+static GtkMozEmbed *g_embed_for_new_window = NULL;
+// The parent window of the above widget.
+static GtkWidget *g_popup_for_new_window = NULL;
+// The GtkMozEmbed instance which just fired the new window request.
+static GtkMozEmbed *g_main_embed_for_new_window = NULL;
+
 static const size_t kMaxBrowserId = 256;
 
 #define EXTOBJ_CLASSNAME  "ExternalObject"
@@ -102,12 +116,7 @@ static const size_t kMaxBrowserId = 256;
 
 static const char kDataURLPrefix[] = "data:";
 
-// We can't include "nsIScriptGlobalObject.h" because it requires
-// MOZILLA_INTERAL_API defined.
-static const nsIID kIScriptGlobalObjectIID = {
-    0xd326a211, 0xdc31, 0x45c6,
-    { 0x98, 0x97, 0x22, 0x11, 0xea, 0xbc, 0xd0, 0x1c }
-};
+static const nsIID kIScriptGlobalObjectIID = NS_ISCRIPTGLOBALOBJECT_IID;
 
 static int FindBrowserIdByJSContext(JSContext *cx) {
   JSObject *js_global = JS_GetGlobalObject(cx);
@@ -404,7 +413,8 @@ static bool DecodeJSONString(const char *json_string, nsString *result) {
   return true;
 }
 
-static int FindBrowserIdByContentPolicyContext(nsISupports *context) {
+static int FindBrowserIdByContentPolicyContext(nsISupports *context,
+                                               PRBool *is_loading) {
   nsCOMPtr<nsIDOMWindow> window(do_QueryInterface(context));
   nsresult rv = NS_OK;
   if (!window) {
@@ -422,6 +432,7 @@ static int FindBrowserIdByContentPolicyContext(nsISupports *context) {
     window = do_QueryInterface(view);
   }
 
+  *is_loading = PR_FALSE;
   for (std::vector<GtkMozEmbed *>::const_iterator it = g_embeds.begin();
        it != g_embeds.end(); ++it) {
     if (*it) {
@@ -430,8 +441,12 @@ static int FindBrowserIdByContentPolicyContext(nsISupports *context) {
       nsCOMPtr<nsIDOMWindow> window1;
       rv = browser->GetContentDOMWindow(getter_AddRefs(window1));
       NS_ENSURE_SUCCESS(rv, -1);
-      if (window == window1)
+      if (window == window1) {
+        nsCOMPtr<nsIWebProgress> progress(do_GetInterface(browser));
+        if (progress)
+          progress->GetIsLoadingDocument(is_loading);
         return static_cast<int>(it - g_embeds.begin());
+      }
     }
   }
   fprintf(stderr, "browser_child: Can't find GtkMozEmbed from "
@@ -447,18 +462,38 @@ class ContentPolicy : public nsIContentPolicy {
                         nsIURI *request_origin, nsISupports *context,
                         const nsACString &mime_type_guess, nsISupports *extra,
                         PRInt16 *retval) {
+    nsCString url_spec, origin_spec;
+    content_location->GetSpec(url_spec);
+    if (content_type == TYPE_DOCUMENT && g_embed_for_new_window) {
+      // Handle a new window request.
+      gtk_widget_destroy(g_popup_for_new_window);
+      g_popup_for_new_window = NULL;
+      g_embed_for_new_window = NULL;
+      std::vector<GtkMozEmbed *>::const_iterator it = std::find(
+          g_embeds.begin(), g_embeds.end(), g_main_embed_for_new_window);
+      if (it != g_embeds.end()) {
+        SendFeedbackWithBrowserId(kOpenURLFeedback,
+                                  static_cast<int>(it - g_embeds.begin()),
+                                  url_spec.get(), NULL);
+      }
+      // Reject this URL no matter if the controler has opened it.
+      *retval = REJECT_OTHER;
+      return NS_OK;
+    }
+
     *retval = ACCEPT;
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       // If the URL is opened the first time in a blank window or frame,
       // request_origin is NULL or "about:blank".
       if (content_location && request_origin) {
-        nsCString url_spec, origin_spec;
-        content_location->GetSpec(url_spec);
         request_origin->GetSpec(origin_spec);
         if (!origin_spec.Equals(nsCString("about:blank")) &&
             !origin_spec.Equals(url_spec)) {
-          int browser_id = FindBrowserIdByContentPolicyContext(context);
-          if (browser_id != -1) {
+          PRBool is_loading = PR_FALSE;
+          int browser_id = FindBrowserIdByContentPolicyContext(context,
+                                                               &is_loading);
+          // Allow URLs opened during page loading to be opened in place.
+          if (browser_id != -1 && !is_loading) {
             std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback,
                                                       browser_id,
                                                       url_spec.get(), NULL);
@@ -495,6 +530,24 @@ static const nsModuleComponentInfo kContentPolicyComponentInfo = {
   CONTENT_POLICY_CLASSNAME, CONTENT_POLICY_CID, CONTENT_POLICY_CONTRACTID,
   ContentPolicyConstructor
 };
+
+static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
+                        gint chrome_mask, gpointer data) {
+  if (!GTK_IS_WIDGET(g_embed_for_new_window)) {
+    // Create a hidden GtkMozEmbed widget.
+    g_embed_for_new_window = GTK_MOZ_EMBED(gtk_moz_embed_new());
+    // The GtkMozEmbed widget needs a parent window.
+    g_popup_for_new_window = gtk_window_new(GTK_WINDOW_POPUP);
+    gtk_container_add(GTK_CONTAINER(g_popup_for_new_window),
+                      GTK_WIDGET(g_embed_for_new_window));
+    gtk_window_resize(GTK_WINDOW(g_popup_for_new_window), 1, 1);
+    gtk_window_move(GTK_WINDOW(g_popup_for_new_window), -10000, -10000);
+    gtk_widget_realize(GTK_WIDGET(g_embed_for_new_window));
+  }
+  // Use the widget temporarily to let our ContentPolicy handle the request.
+  *retval = g_embed_for_new_window;
+  g_main_embed_for_new_window = embed;
+}
 
 static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
   size_t id = reinterpret_cast<size_t>(user_data);
@@ -549,6 +602,7 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   GtkMozEmbed *embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
   g_embeds[id] = embed;
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
+  g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
   gtk_widget_show_all(window);
 }
 
@@ -588,7 +642,8 @@ static void SetContent(int param_count, const char **params, size_t id) {
   std::string url(utf8.get(), utf8.Length());
   std::string data;
   if (!ggadget::EncodeBase64(url, false, &data)) {
-    fprintf(stderr, "browser_child: Unable to convert to base64: %s\n", url.c_str());
+    fprintf(stderr, "browser_child: Unable to convert to base64: %s\n",
+            url.c_str());
     return;
   }
 

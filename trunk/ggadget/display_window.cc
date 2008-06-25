@@ -309,6 +309,10 @@ class DisplayWindow::Impl {
       }
     }
 
+    void OnSize(DivElement *div) {
+      div->SetPixelHeight(element_->GetPixelHeight() + 2);
+    }
+
     DisplayWindow *window_;
     BasicElement *element_;
     bool checkbox_clicked_;
@@ -392,6 +396,8 @@ class DisplayWindow::Impl {
             element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
+            element->ConnectOnSizeEvent(NewSlot(control, &Control::OnSize,
+                                                div));
             break;
           }
         }
