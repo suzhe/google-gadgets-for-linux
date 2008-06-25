@@ -55,6 +55,7 @@ DIGITAL_ALARM_CLOCK_GADGET_FILES= en/strings.xml \
 		  time_display.js
 
 EXTRA_DIST = $(DIGITAL_ALARM_CLOCK_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
 digital_alarm_clock_gadget_DATA = digital_alarm_clock.gg
