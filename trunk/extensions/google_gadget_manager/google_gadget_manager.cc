@@ -732,7 +732,7 @@ Connection *GoogleGadgetManager::ConnectOnNewGadgetInstance(
   if (first_run_) {
     // Add some default built-in gadgets.
     NewGadgetInstance("analog_clock");
-    NewGadgetInstance("todo");
+    NewGadgetInstance("rss");
   }
   return connection;
 }
