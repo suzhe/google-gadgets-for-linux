@@ -16,15 +16,15 @@
 
 <view height="555" width="714" resizable="false"
   onopen="view_onopen()" onclose="view_onclose()">
-  <div height="100%" width="100%" background="images/background.png"
-    backgroundMode="stretchMiddle">
-   <div x="100" y="200" width="514" height="155" name="updating" visible="false"
-     background="images/status_adding_default.png" backgroundMode="stretchMiddle">
+  <div height="100%" width="100%">
+   <img width="100%" height="100%" src="images/background.png" stretchMiddle="true"/>
+   <div x="100" y="200" width="514" height="155" name="updating" visible="false">
+     <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
      <label width="100%" height="100%" align="center" valign="middle" bold="true"
        color="#FFFFFF" size="12" wordwrap="true">&UPDATING_METADATA;</label>
    </div>
-   <div x="100" y="200" width="514" height="155" name="update_fail" visible="false"
-     background="images/status_adding_default.png" backgroundMode="stretchMiddle">
+   <div x="100" y="200" width="514" height="155" name="update_fail" visible="false">
+     <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
      <label width="100%" height="100%" align="center" valign="middle" bold="true"
        color="#D04040" size="12" wordwrap="true">&UPDATE_METADATA_FAILED;</label>
    </div>
@@ -33,14 +33,14 @@
       onsize="language_label_onsize()" color="#FFFFFF"
       valign="middle">&SHOW_ONLY_LABEL;
     </label>
-    <div height="23" name="language_box_div" width="166" x="82" y="17"
-      background="images/control_border.png" backgroundMode="stretchMiddle">
+    <div height="23" name="language_box_div" width="166" x="82" y="17">
+      <img width="100%" height="100%" src="images/control_border.png" stretchMiddle="true"/>
       <combobox height="440" name="language_box" width="160" x="3" y="2" background="#FFFFFF"
         itemWidth="100%" itemHeight="19" onchange="language_box_onchange()"
         maxDroplistItems="30" type="droplist"/>
     </div>
-    <div height="23" width="158" x="507" y="17" background="images/control_border.png"
-      backgroundMode="stretchMiddle">
+    <div height="23" width="158" x="507" y="17">
+      <img width="100%" height="100%" src="images/control_border.png" stretchMiddle="true"/>
       <edit height="19" name="search_box" width="152" x="3" y="2" onfocusin="search_box_onfocusin()"
         onfocusout="search_box_onfocusout()" onchange="search_box_onchange()" color="#808080"
         value="&SEARCH_GADGETS;"/>

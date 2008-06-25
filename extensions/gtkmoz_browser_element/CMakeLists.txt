@@ -35,7 +35,7 @@ ENDFOREACH(I)
 
 # Add additional include dirs.
 IF(DEFINED GECKO_BASE_INCLUDE_DIR)
-  FOREACH(I content dom xpconnect)
+  FOREACH(I content dom xpconnect widget)
     LIST(APPEND GTKMOZEMBED_INCLUDE_DIR ${GECKO_BASE_INCLUDE_DIR}/${I})
   ENDFOREACH(I)
 ENDIF(DEFINED GECKO_BASE_INCLUDE_DIR)

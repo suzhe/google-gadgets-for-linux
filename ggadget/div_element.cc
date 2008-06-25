@@ -25,8 +25,6 @@
 
 namespace ggadget {
 
-static const char *kBackgroundModes[] = { "tile", "stretch", "stretchMiddle" };
-
 class DivElement::Impl {
  public:
   Impl(DivElement *owner)
@@ -65,10 +63,8 @@ void DivElement::DoRegister() {
   RegisterProperty("background",
                    NewSlot(this, &DivElement::GetBackground),
                    NewSlot(this, &DivElement::SetBackground));
-  RegisterStringEnumProperty("backgroundMode",
-                             NewSlot(this, &DivElement::GetBackgroundMode),
-                             NewSlot(this, &DivElement::SetBackgroundMode),
-                             kBackgroundModes, arraysize(kBackgroundModes));
+  // "backgroundMode" is for native use only.
+  // JS can use <img stretchMode="true" to get the similar effect.
 }
 
 DivElement::~DivElement() {

@@ -92,11 +92,11 @@ class ComboBoxElement::Impl {
         listbox_->ScrollToIndex(listbox_->GetSelectedIndex());
         listbox_->SetVisible(true);
         owner_->GetView()->SetPopupElement(owner_);
-        owner_->PostSizeEvent();
       } else {
         // popup_out handler will turn off listbox
         owner_->GetView()->SetPopupElement(NULL);
       }
+      owner_->PostSizeEvent();
     }
   }
 

@@ -1124,9 +1124,8 @@ void BasicElement::DoRegister() {
                    NewSlot(impl_, &Impl::GetIntOpacity),
                    NewSlot(impl_, &Impl::SetIntOpacity));
   RegisterConstant("parentElement", impl_->parent_);
-  // Though we support relative pinX and pinY, this feature is not published
-  // in the current public API, so pinX and pinY are still exposed to
-  // script in pixels.
+
+  // Note: don't use relative pinX/pinY until they are in the public API.
   RegisterProperty("pinX",
                    NewSlot(impl_, &Impl::GetPinX),
                    NewSlot(impl_, &Impl::SetPinX));
@@ -1142,12 +1141,14 @@ void BasicElement::DoRegister() {
   RegisterProperty("visible",
                    NewSlot(this, &BasicElement::IsVisible),
                    NewSlot(this, &BasicElement::SetVisible));
+  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
+  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
+
+  // Note: don't use 'flip' property until it is in the public API.
   RegisterStringEnumProperty("flip",
                              NewSlot(this, &BasicElement::GetFlip),
                              NewSlot(this, &BasicElement::SetFlip),
                              kFlipNames, arraysize(kFlipNames));
-  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
-  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
   // Use GetChildren() instead of impl_->children_ because GetChildren()
   // may be overriden.

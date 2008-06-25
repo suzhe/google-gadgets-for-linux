@@ -106,12 +106,6 @@ function OnOptionChanged() {
 
 /// Main view
 
-function OnOpenURL(url) {
-  // The frame containing the gadget URL will also trigger onOpenURL signal,
-  // so return false to let it be opened in place.
-  return url != GetGadgetURL();
-}
-
 function RefreshGadget() {
   if (HasUnsetUserPrefs()) {
     // Must show options dialog before showing gadget.
@@ -131,7 +125,6 @@ function RefreshGadget() {
       + GetGadgetURL() + "\" marginheight=\"0\" marginwidth=\"0\"/>"
       + "</frameset></html>";
     browser.innerText = html;
-    browser.onOpenURL = OnOpenURL;
   }
 }
 

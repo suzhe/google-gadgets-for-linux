@@ -179,10 +179,10 @@ function SelectCategory(category) {
 function AddPluginBox(plugin, index, row, column) {
   var box = plugins_div.appendElement(
     "<div x='" + (column * kPluginWidth) + "' y='" + (row * kPluginHeight) +
-    "' width='" + kPluginWidth + "' height='" + kPluginHeight +
-    "' enabled='true' backgroundMode='stretchMiddle'" +
+    "' width='" + kPluginWidth + "' height='" + kPluginHeight + "' enabled='true'" +
     " onmouseover='pluginbox_onmouseover(" + index + ")'" +
     " onmouseout='pluginbox_onmouseout(" + index + ")'>" +
+    " <img width='100%' height='100%' stretchMiddle='true'/>" +
     " <label x='7' y='6' width='120' align='center' color='#FFFFFF' trimming='character-ellipsis'/>" +
     " <img x='16' y='75' opacity='70' src='images/thumbnails_shadow.png'/>" +
     " <div x='27' y='33' width='80' height='83' background='#FFFFFF'>" +
@@ -200,10 +200,10 @@ function AddPluginBox(plugin, index, row, column) {
     "</div>");
 
   // Set it here to prevent problems caused by special chars in the title.
-  box.children.item(0).innerText = GetPluginTitle(plugin, gCurrentLanguage);
+  box.children.item(1).innerText = GetPluginTitle(plugin, gCurrentLanguage);
 
-  var thumbnail_element1 = box.children.item(2).children.item(0);
-  var thumbnail_element2 = box.children.item(2).children.item(1);
+  var thumbnail_element1 = box.children.item(3).children.item(0);
+  var thumbnail_element2 = box.children.item(3).children.item(1);
   if (plugin.source == 1) { // built-in gadgets
     thumbnail_element1.src = plugin.attributes.thumbnail_url;
     thumbnail_element2.src = plugin.attributes.thumbnail_url;
@@ -211,7 +211,7 @@ function AddPluginBox(plugin, index, row, column) {
     AddThumbnailTask(plugin, index, thumbnail_element1, thumbnail_element2);
   }
 
-  plugin.button = box.children.item(3);
+  plugin.button = box.children.item(4);
   UpdateAddButtonVisualStatus(plugin);
 }
 
@@ -314,10 +314,10 @@ function add_button_onmouseout(index) {
 }
 
 function MouseOverPlugin(box, index) {
-  box.background = "images/thumbnails_hover.png";
-  box.children.item(2).children.item(2).src = "images/thumbnails_hover_mask.png";
+  box.children.item(0).src = "images/thumbnails_hover.png";
+  box.children.item(3).children.item(2).src = "images/thumbnails_hover_mask.png";
   // Show the "Add" button.
-  box.children.item(3).visible = true;
+  box.children.item(4).visible = true;
 
   var plugin = gCurrentPlugins[index];
   plugin_title.innerText = GetPluginTitle(plugin, gCurrentLanguage);
@@ -328,11 +328,11 @@ function MouseOverPlugin(box, index) {
 }
 
 function MouseOutPlugin(box, index) {
-  box.background = "";
-  box.children.item(2).children.item(2).src = "images/thumbnails_default_mask.png";
+  box.children.item(0).src = "";
+  box.children.item(3).children.item(2).src = "images/thumbnails_default_mask.png";
   // Hide the "Add" button when it's in normal state.
   if (!gCurrentPlugins[index].download_status)
-    box.children.item(3).visible = false;
+    box.children.item(4).visible = false;
   plugin_title.innerText = "";
   plugin_description.innerText = "";
   plugin_other_data.innerText = "";
