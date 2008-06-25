@@ -17,5 +17,4 @@
 SUBDIRS = analog_clock \
 	  digital_alarm_clock \
 	  igoogle \
-	  rss \
-	  todo
+	  rss
