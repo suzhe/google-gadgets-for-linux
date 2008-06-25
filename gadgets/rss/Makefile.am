@@ -16,13 +16,20 @@
 RSS_GADGET_FILES= en/strings.xml \
 		  zh-CN/strings.xml \
 		  gadget.gmanifest \
-		  large_rss_icon.png \
 		  main.js \
 		  main.xml \
+		  options.js \
+		  options.xml \
+		  shared.js \
 		  rss_bkgnd.png \
-		  small_rss_icon.png
+		  small_rss_icon.png \
+		  large_rss_icon.png \
+		  button_down.png \
+		  button_over.png \
+		  button_up.png
 
 EXTRA_DIST = $(RSS_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
 rss_gadget_DATA = rss.gg

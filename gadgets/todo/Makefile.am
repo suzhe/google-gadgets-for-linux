@@ -60,6 +60,7 @@ TODO_GADGET_FILES= en/strings.xml \
 		  todo_rad_unsel_up.png
 
 EXTRA_DIST = $(TODO_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
 todo_gadget_DATA = todo.gg

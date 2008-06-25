@@ -27,6 +27,7 @@ ANALOG_CLOCK_GADGET_FILES= en/strings.xml \
 		  secondhand.png
 
 EXTRA_DIST = $(ANALOG_CLOCK_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
 analog_clock_gadget_DATA = analog_clock.gg

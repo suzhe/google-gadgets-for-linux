@@ -24,6 +24,7 @@ IGOOGLE_GADGET_FILES= en/strings.xml \
 		      shared.js
 
 EXTRA_DIST = $(IGOOGLE_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
 igoogle_gadget_DATA = igoogle.gg
