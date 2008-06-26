@@ -42,21 +42,22 @@ qtinclude_HEADERS	= qt_view_widget.h \
 			  utilities.h
 
 libggadget_qt@GGL_EPOCH@_la_SOURCES = \
-			  qt_menu.cc \
-			  qt_view_widget.cc \
-			  qt_view_host.cc \
 			  qt_canvas.cc \
-			  qt_image.cc \
 			  qt_font.cc \
 			  qt_graphics.cc \
+			  qt_image.cc \
 			  qt_main_loop.cc \
+			  qt_menu.cc \
+			  qt_view_host.cc \
+			  qt_view_widget.cc \
 			  utilities.cc
 
 nodist_libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  $(MOC_FILES)
 
 libggadget_qt@GGL_EPOCH@_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS)
+			  $(DEFAULT_COMPILE_FLAGS) \
+			  -Wno-conversion
 
 libggadget_qt@GGL_EPOCH@_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

@@ -27,7 +27,8 @@ qt_edit_element_la_SOURCES = \
 			  qt_edit_element.cc
 
 qt_edit_element_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS)
+			  $(DEFAULT_COMPILE_FLAGS) \
+			  -Wno-conversion
 
 qt_edit_element_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \
