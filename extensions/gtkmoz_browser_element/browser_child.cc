@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <vector>
+#include <algorithm>
 #include <gtk/gtk.h>
 
 #define MOZILLA_CLIENT
