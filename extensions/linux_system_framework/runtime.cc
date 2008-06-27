@@ -17,40 +17,21 @@
 #include "runtime.h"
 #include <ggadget/sysdeps.h>
 #include <ggadget/logger.h>
-#include <ggadget/dbus/dbus_result_receiver.h>
-#include "hal_strings.h"
+#include <sys/utsname.h>
 
 namespace ggadget {
 namespace framework {
 namespace linux_system {
 
 Runtime::Runtime() {
-  DBusProxyFactory factory(NULL);
-  DBusProxy *proxy = factory.NewSystemProxy(kHalDBusName,
-                                            kHalObjectComputer,
-                                            kHalInterfaceDevice,
-                                            false);
-  ASSERT(proxy);
-  DBusStringReceiver name_receiver;
-  if (!proxy->Call(kHalMethodGetProperty, true, -1,
-                   name_receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalPropSystemKernelName,
-                   MESSAGE_TYPE_INVALID)) {
-    DLOG("Failed to get kernel name.");
+  struct utsname uts;
+  if (uname(&uts)) {
+    DLOG("Failed to get the system information.");
     os_name_ = GGL_PLATFORM;
   } else {
-    os_name_ = name_receiver.GetValue();
+    os_name_ = uts.sysname;
+    os_version_ = uts.release;
   }
-  DBusStringReceiver version_receiver;
-  if (!proxy->Call(kHalMethodGetProperty, true, -1,
-                   version_receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalPropSystemKernelVersion,
-                   MESSAGE_TYPE_INVALID)) {
-    DLOG("Failed to get kernel version.");
-  } else {
-    os_version_ = version_receiver.GetValue();
-  }
-  delete proxy;
 }
 
 Runtime::~Runtime() {
