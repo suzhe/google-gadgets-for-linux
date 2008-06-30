@@ -31,16 +31,17 @@ using ggadget::OptionsInterface;
 
 class SideBarGtkHost : public ggadget::HostInterface {
  public:
-  SideBarGtkHost(OptionsInterface *options, bool decorated, int view_debug_mode);
+  SideBarGtkHost(OptionsInterface *options, bool decorated,
+                 int view_debug_mode, int debug_console_config);
   virtual ~SideBarGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
-  virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void Run();
+  virtual void ShowGadgetAboutDialog(Gadget *gadget);
+  virtual void ShowGadgetDebugConsole(Gadget *gadget);
 
  private:
   class Impl;

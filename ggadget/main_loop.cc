@@ -15,6 +15,7 @@
   limitations under the License.
 */
 
+#include <cstdio>
 #include <ggadget/common.h>
 #include <ggadget/main_loop_interface.h>
 
@@ -33,7 +34,12 @@ bool SetGlobalMainLoop(MainLoopInterface *main_loop) {
 
 MainLoopInterface *GetGlobalMainLoop() {
   if (!ggl_global_main_loop_) {
-    VERIFY_M(false, ("The global main loop has not been set yet."));
+#ifdef _DEBUG
+    // Don't use VERIFY, LOG etc. because this function may be called from
+    // logger, and the logger has no way to handle this kind of reentrance
+    // because it needs the main loop to check if the call is in main thread.
+    printf("The global main loop has not been set yet.\n");
+#endif
   }
   return ggl_global_main_loop_;
 }

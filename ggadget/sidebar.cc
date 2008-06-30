@@ -148,15 +148,16 @@ class SideBar::Impl : public View {
     }
     virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
     virtual void BeginMoveDrag(int button) {}
-    virtual void Alert(const char *message) {
-      real_viewhost_->Alert(message);
+    virtual void Alert(const ViewInterface *view, const char *message) {
+      real_viewhost_->Alert(view, message);
     }
-    virtual bool Confirm(const char *message) {
-      return real_viewhost_->Confirm(message);
+    virtual bool Confirm(const ViewInterface *view, const char *message) {
+      return real_viewhost_->Confirm(view, message);
     }
-    virtual std::string Prompt(const char *message,
+    virtual std::string Prompt(const ViewInterface *view,
+                               const char *message,
                                const char *default_value) {
-      return real_viewhost_->Prompt(message, default_value);
+      return real_viewhost_->Prompt(view, message, default_value);
     }
     virtual int GetDebugMode() const {
       return real_viewhost_->GetDebugMode();

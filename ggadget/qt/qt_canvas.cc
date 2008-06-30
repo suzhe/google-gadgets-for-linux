@@ -336,7 +336,7 @@ class QtCanvas::Impl {
   }
 
   void OnZoom(double zoom) {
-    LOG("zoom, width_, height_:%f, %f, %f", zoom, width_, height_);
+    DLOG("zoom, width_, height_:%f, %f, %f", zoom, width_, height_);
     if (zoom == zoom_) return;
     ASSERT(image_); // Not support zoom for such canvas
     QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),

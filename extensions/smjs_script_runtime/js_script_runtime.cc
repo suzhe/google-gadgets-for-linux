@@ -26,13 +26,6 @@ namespace smjs {
 static const uint32 kDefaultContextSize = 32 * 1024 * 1024;
 static const uint32 kDefaultStackTrunkSize = 4096;
 
-#ifdef _DEBUG
-static JSBool GCCallback(JSContext *cx, JSGCStatus status) {
-  DLOG("***********GC: status=%d", status);
-  return JS_TRUE;
-}
-#endif
-
 JSScriptRuntime::JSScriptRuntime()
     : runtime_(JS_NewRuntime(kDefaultContextSize)) {
   JS_SetRuntimePrivate(runtime_, this);
@@ -40,9 +33,6 @@ JSScriptRuntime::JSScriptRuntime()
   // Use the similar policy as Mozilla Gecko that unconstrains the runtime's
   // threshold on nominal heap size, to avoid triggering GC too often.
   JS_SetGCParameter(runtime_, JSGC_MAX_BYTES, 0xffffffff);
-#ifdef _DEBUG
-  JS_SetGCCallbackRT(runtime_, GCCallback);
-#endif
 }
 
 JSScriptRuntime::~JSScriptRuntime() {

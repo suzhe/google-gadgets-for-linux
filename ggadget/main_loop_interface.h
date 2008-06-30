@@ -227,6 +227,9 @@ class MainLoopInterface {
    * (00:00:00 UTC, January 1, 1970).
    */
   virtual uint64_t GetCurrentTime() const = 0;
+
+  /** Checks if the calling thread is the main thread. */
+  virtual bool IsMainThread() const = 0;
 };
 
 /**

@@ -13,17 +13,17 @@ static JSScriptRuntime *g_script_runtime_ = NULL;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize qt_script_runtime extension.");
+    LOGI("Initialize qt_script_runtime extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize qt_script_runtime extension.");
+    LOGI("Finalize qt_script_runtime extension.");
     delete g_script_runtime_;
   }
 
   bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager) {
-    LOG("Register qt_script_runtime extension.");
+    LOGI("Register qt_script_runtime extension.");
     if (manager) {
       if (!g_script_runtime_)
         g_script_runtime_ = new JSScriptRuntime();

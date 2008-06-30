@@ -361,6 +361,7 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 
 JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   Variant prototype;
   // Get the default method for this object.
@@ -379,6 +380,7 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
 
 JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   // According to JS stack structure, argv[-2] is the current function object.
   jsval func_val = argv[-2];
@@ -397,6 +399,7 @@ JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
 JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                                        uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   AutoLocalRootScope local_root_scope(js_context_);
   if (!local_root_scope.good())
@@ -424,6 +427,7 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
 }
 
 JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   if (JSVAL_IS_INT(id))
     // The script wants to get the property by an array index.
     return GetPropertyByIndex(id, vp);
@@ -434,6 +438,7 @@ JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   if (JSVAL_IS_INT(id))
     // The script wants to set the property by an array index.
@@ -453,6 +458,7 @@ JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
 
 JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   if (!JSVAL_IS_INT(id))
     // Should not occur.
@@ -476,6 +482,7 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   if (!JSVAL_IS_INT(id))
     // Should not occur.
@@ -527,6 +534,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
 
 JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   if (!JSVAL_IS_STRING(id))
     // Should not occur
@@ -563,6 +571,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   ASSERT(scriptable_);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   if (!JSVAL_IS_STRING(id))
     // Should not occur
@@ -621,6 +630,7 @@ class NameCollector {
 JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
                                   jsval *statep, jsid *idp) {
 #ifdef GGADGET_SMJS_ENUMERATE_SUPPORTED
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   std::vector<std::string> *properties;
   switch (enum_op) {
     case JSENUMERATE_INIT: {
@@ -663,6 +673,7 @@ JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
 
 JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
                                         JSObject **objp) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   ASSERT(scriptable_);
   ASSERT(objp);
   *objp = NULL;

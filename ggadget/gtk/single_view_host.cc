@@ -306,29 +306,6 @@ class SingleViewHost::Impl {
     tooltip_->Show(tooltip);
   }
 
-  void InitializeWindowIcon() {
-    ASSERT(view_);
-    ASSERT(window_);
-    if (!gtk_window_get_icon(GTK_WINDOW(window_))) {
-      std::string data;
-      Gadget *gadget = view_->GetGadget();
-      if (gadget) {
-        std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
-        gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data);
-      }
-      if (!data.length()) {
-        GetGlobalFileManager()->ReadFile(kGadgetsIcon, &data);
-      }
-      if (data.length()) {
-        GdkPixbuf *pixbuf = LoadPixbufFromData(data);
-        if (pixbuf) {
-          gtk_window_set_icon(GTK_WINDOW(window_), pixbuf);
-          g_object_unref(pixbuf);
-        }
-      }
-    }
-  }
-
   bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
     ASSERT(window_);
@@ -336,7 +313,7 @@ class SingleViewHost::Impl {
     delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
-    InitializeWindowIcon();
+    SetGadgetWindowIcon(GTK_WINDOW(window_), view_->GetGadget());
 
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       if (flags & ViewInterface::OPTIONS_VIEW_FLAG_OK)
@@ -994,18 +971,18 @@ void SingleViewHost::BeginMoveDrag(int button) {
   impl_->BeginMoveDrag(button);
 }
 
-void SingleViewHost::Alert(const char *message) {
-  ShowAlertDialog(impl_->view_->GetCaption().c_str(), message);
+void SingleViewHost::Alert(const ViewInterface *view, const char *message) {
+  ShowAlertDialog(view->GetCaption().c_str(), message);
 }
 
-bool SingleViewHost::Confirm(const char *message) {
-  return ShowConfirmDialog(impl_->view_->GetCaption().c_str(), message);
+bool SingleViewHost::Confirm(const ViewInterface *view, const char *message) {
+  return ShowConfirmDialog(view->GetCaption().c_str(), message);
 }
 
-std::string SingleViewHost::Prompt(const char *message,
+std::string SingleViewHost::Prompt(const ViewInterface *view,
+                                   const char *message,
                                    const char *default_value) {
-  return ShowPromptDialog(impl_->view_->GetCaption().c_str(),
-                          message, default_value);
+  return ShowPromptDialog(view->GetCaption().c_str(), message, default_value);
 }
 
 int SingleViewHost::GetDebugMode() const {

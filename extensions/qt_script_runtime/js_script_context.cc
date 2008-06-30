@@ -319,10 +319,6 @@ Variant JSScriptContext::Evaluate(ScriptableInterface *object,
   return result;
 }
 
-Connection *JSScriptContext::ConnectErrorReporter(ErrorReporter *reporter) {
-  return impl_->error_reporter_signal_.Connect(reporter);
-}
-
 Connection *JSScriptContext::ConnectScriptBlockedFeedback(
     ScriptBlockedFeedback *feedback) {
   return impl_->script_blocked_signal_.Connect(feedback);

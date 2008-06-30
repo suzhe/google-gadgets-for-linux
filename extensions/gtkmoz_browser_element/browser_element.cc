@@ -47,19 +47,19 @@ static MainLoopInterface *ggl_main_loop = NULL;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gtkmoz_browser_element extension.");
+    LOGI("Initialize gtkmoz_browser_element extension.");
     ggadget::gtkmoz::ggl_main_loop = ggadget::GetGlobalMainLoop();
     ASSERT(ggadget::gtkmoz::ggl_main_loop);
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gtkmoz_browser_element extension.");
+    LOGI("Finalize gtkmoz_browser_element extension.");
     ggadget::gtkmoz::ggl_main_loop = NULL;
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    LOG("Register gtkmoz_browser_element extension, using name \"_browser\".");
+    LOGI("Register gtkmoz_browser_element extension, using name \"_browser\".");
     if (factory) {
       factory->RegisterElementClass(
           "_browser", &ggadget::gtkmoz::BrowserElement::CreateInstance);

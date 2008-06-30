@@ -447,19 +447,19 @@ using namespace ggadget::framework::gst_audio;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gst_audio_framework extension.");
+    LOGI("Initialize gst_audio_framework extension.");
     gst_init(NULL, NULL);
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gst_audio_framework extension.");
+    LOGI("Finalize gst_audio_framework extension.");
     gst_deinit();
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
                                   Gadget *gadget) {
-    LOG("Register gst_audio_framework extension.");
+    LOGI("Register gst_audio_framework extension.");
     ASSERT(framework && gadget);
 
     if (!framework)

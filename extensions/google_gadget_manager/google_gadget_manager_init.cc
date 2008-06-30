@@ -23,11 +23,11 @@ static ggadget::google::GoogleGadgetManager g_gadget_manager;
 
 extern "C" {
   bool Initialize() {
-    DLOG("Initialize google_gadget_manager extension.");
+    LOGI("Initialize google_gadget_manager extension.");
     return ggadget::SetGadgetManager(&g_gadget_manager);
   }
 
   void Finalize() {
-    DLOG("Finalize google_gadget_manager extension.");
+    LOGI("Finalize google_gadget_manager extension.");
   }
 }

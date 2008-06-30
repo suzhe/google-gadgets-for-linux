@@ -28,7 +28,7 @@ namespace qt {
 using namespace ggadget;
 using ggadget::Gadget;
 using ggadget::HostInterface;
-using ggadget::ViewHostInterface;;
+using ggadget::ViewHostInterface;
 using ggadget::ViewInterface;
 
 class QtHost : public ggadget::HostInterface {
@@ -38,7 +38,6 @@ class QtHost : public ggadget::HostInterface {
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual void Run();

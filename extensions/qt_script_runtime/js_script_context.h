@@ -86,8 +86,6 @@ class JSScriptContext : public ScriptContextInterface {
   /** @see ScriptContextInterface::Evaluate() */
   virtual Variant Evaluate(ScriptableInterface *object, const char *expr);
 
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
-
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback);
   virtual void CollectGarbage() {}

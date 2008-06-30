@@ -31,17 +31,17 @@ using ggadget::OptionsInterface;
 
 class SimpleGtkHost : public ggadget::HostInterface {
  public:
-  SimpleGtkHost(OptionsInterface *options, double zoom,
-                bool decorated, int view_debug_mode);
+  SimpleGtkHost(OptionsInterface *options, double zoom, bool decorated,
+                int view_debug_mode, int debug_console_config);
   virtual ~SimpleGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
-  virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void Run();
+  virtual void ShowGadgetAboutDialog(Gadget *gadget);
+  virtual void ShowGadgetDebugConsole(Gadget *gadget);
 
  private:
   class Impl;

@@ -92,16 +92,17 @@ BasicElement *BrowserElement::CreateInstance(BasicElement *parent, View *view,
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize qtwebkit_browser_element extension.");
+    LOGI("Initialize qtwebkit_browser_element extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize qtwebkit_browser_element extension.");
+    LOGI("Finalize qtwebkit_browser_element extension.");
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    LOG("Register qtwebkit_browser_element extension, using name \"_browser\".");
+    LOGI("Register qtwebkit_browser_element extension, using name "
+         "\"_browser\".");
     if (factory) {
       factory->RegisterElementClass(
           "_browser", &ggadget::qt::BrowserElement::CreateInstance);

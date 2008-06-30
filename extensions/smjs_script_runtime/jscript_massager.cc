@@ -8607,10 +8607,10 @@ int yy_flex_debug = 1;
 
 static yyconst flex_int16_t yy_rule_linenum[32] =
     {   0,
-      248,  249,  251,  252,  253,  255,  261,  270,  272,  273,
-      279,  286,  294,  302,  311,  316,  322,  334,  340,  346,
-      351,  352,  358,  365,  366,  367,  368,  369,  371,  377,
-      401
+      247,  248,  250,  251,  252,  254,  260,  269,  271,  272,
+      278,  285,  293,  301,  310,  315,  321,  333,  339,  345,
+      350,  351,  357,  364,  365,  366,  367,  368,  370,  376,
+      398
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -8779,8 +8779,7 @@ static void PopState() {
   std::string buffer = GetStackTop().buffer;
   std::string left_functions = GetStackTop().function_decls;
   if (!left_functions.empty()) {
-    LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
-        input_filename);
+    LOG("%s: File contains unpaired '(', '[' or '{'s.", input_filename);
     buffer += left_functions;
   }
 
@@ -8792,7 +8791,7 @@ static void PopState() {
   if (state == FUNCTION_DECL && !stack.empty() && GetParenCount() > 1) {
     // This function is declared in inner block of another function.
     GetStackTop().function_decls += buffer;
-    LOG("WARNING: %s:%d: Non-standard JScript grammar (function declared in"
+    LOG("%s:%d: Non-standard JScript grammar (function declared in"
         " inner blocks): %s", input_filename, yylineno, buffer.c_str());
   } else {
     ScriptOutput(buffer.c_str());
@@ -8814,7 +8813,7 @@ static void CloseParen();
 
 
 
-#line 8818 "../../extensions/smjs_script_runtime/jscript_massager.cc"
+#line 8817 "../../extensions/smjs_script_runtime/jscript_massager.cc"
 
 #define INITIAL 0
 #define OPTIONS 1
@@ -9024,10 +9023,10 @@ YY_DECL
 	register int yy_act;
     
 /* %% [7.0] user's declarations go here */
-#line 246 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 245 "../../extensions/smjs_script_runtime/jscript_massager.l"
 
 
-#line 9031 "../../extensions/smjs_script_runtime/jscript_massager.cc"
+#line 9030 "../../extensions/smjs_script_runtime/jscript_massager.cc"
 
 	if ( (yy_init) )
 		{
@@ -9159,36 +9158,36 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 248 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 247 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 249 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 248 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ScriptOutput("  ");
 	YY_BREAK
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 251 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 250 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 252 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 251 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 5:
 /* rule 5 can match eol */
 YY_RULE_SETUP
-#line 253 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 252 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 255 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 254 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   ECHO;
   if (strchr("([{", yytext[0]))
@@ -9197,7 +9196,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 261 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 260 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   LOG("%s:%d: Can't massage JS containing E4X grammar",
       input_filename, yylineno);
@@ -9209,14 +9208,14 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 270 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 269 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 9:
-#line 273 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 272 "../../extensions/smjs_script_runtime/jscript_massager.l"
 case 10:
 YY_RULE_SETUP
-#line 273 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 272 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // options or detailsViewData
   BEGIN(OPTIONS);
@@ -9226,7 +9225,7 @@ YY_RULE_SETUP
 case 11:
 /* rule 11 can match eol */
 YY_RULE_SETUP
-#line 279 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 278 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   BEGIN(INITIAL);
   PushState(OPTIONS_ONLY);
@@ -9237,7 +9236,7 @@ YY_RULE_SETUP
 case 12:
 /* rule 12 can match eol */
 YY_RULE_SETUP
-#line 286 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 285 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // options.item or detailsViewData.item
   BEGIN(INITIAL);
@@ -9249,7 +9248,7 @@ YY_RULE_SETUP
 case 13:
 /* rule 13 can match eol */
 YY_RULE_SETUP
-#line 294 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 293 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // options.defaultValue or detailsViewData.defaultValue
   BEGIN(INITIAL);
@@ -9261,7 +9260,7 @@ YY_RULE_SETUP
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 302 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 301 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   BEGIN(INITIAL);
   // In <OPTIONS> state, yytext contains the last matched string because
@@ -9273,7 +9272,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 311 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 310 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   ECHO;
   IncreaseParenCount();
@@ -9281,7 +9280,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 316 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 315 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   PopAllPairedStates();
   ECHO;
@@ -9294,11 +9293,11 @@ case 17:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 322 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 321 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // Mathes ...= but not ...==.
   ECHO;
-  LOG("WARNING: %s:%d: Old JScript grammar: %s... Converted to %s",
+  LOG("%s:%d: Old JScript grammar: %s... Converted to %s",
       input_filename, yylineno, GetStackTop().buffer.c_str(),
       GetState() == OPTIONS_DEFAULT_VALUE ? "putDefaultValue()" : "putValue()");
   ReplaceLast(")", ",");
@@ -9310,7 +9309,7 @@ YY_RULE_SETUP
 case 18:
 /* rule 18 can match eol */
 YY_RULE_SETUP
-#line 334 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 333 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   BEGIN(INITIAL);
   PopState();
@@ -9320,7 +9319,7 @@ YY_RULE_SETUP
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 340 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 339 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // Avoid [,\n] rule in this case.
   ECHO;
@@ -9329,7 +9328,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 346 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 345 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   BEGIN(INITIAL);
   unput(yytext[0]);
@@ -9337,11 +9336,11 @@ YY_RULE_SETUP
 	YY_BREAK
 case 21:
 /* rule 21 can match eol */
-#line 352 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 351 "../../extensions/smjs_script_runtime/jscript_massager.l"
 case 22:
 /* rule 22 can match eol */
 YY_RULE_SETUP
-#line 352 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 351 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   PushState(FUNCTION_EXPR);
   ECHO;
@@ -9351,7 +9350,7 @@ YY_RULE_SETUP
 case 23:
 /* rule 23 can match eol */
 YY_RULE_SETUP
-#line 358 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 357 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   PopAllPairedStates();
   PushState(FUNCTION_DECL);
@@ -9362,25 +9361,25 @@ YY_RULE_SETUP
 case 24:
 /* rule 24 can match eol */
 YY_RULE_SETUP
-#line 365 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 364 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO; // Statement should continue.
 	YY_BREAK
 case 25:
 /* rule 25 can match eol */
 YY_RULE_SETUP
-#line 366 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 365 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO; // BINARY_OP doesn't include '/' which is specially treated.
 	YY_BREAK
 case 26:
 /* rule 26 can match eol */
 YY_RULE_SETUP
-#line 367 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 366 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;  // Distinguish comments from the '/' operator.
 	YY_BREAK
 case 27:
 /* rule 27 can match eol */
 YY_RULE_SETUP
-#line 368 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 367 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO; // Statement should continue.
 	YY_BREAK
 case 28:
@@ -9389,13 +9388,13 @@ case 28:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 369 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 368 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO; // Distinguish comments from the '/' operator.
 	YY_BREAK
 case 29:
 /* rule 29 can match eol */
 YY_RULE_SETUP
-#line 371 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 370 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   // JavaScript allow lines not ended with ';'.
   PopAllPairedStates();
@@ -9405,13 +9404,12 @@ YY_RULE_SETUP
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-#line 377 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 376 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   PopAllPairedStates();
   CloseParen();
   // JScript allows ';' between '}' and 'else', which is invalid in standard JS.
-  LOG("WARNING: %s:%d: Old JScript grammar: %s...",
-      input_filename, yylineno, yytext);
+  LOG("%s:%d: Old JScript grammar: %s...", input_filename, yylineno, yytext);
   std::string text(yytext);
   text[text.find(';')] = ' ';
   ScriptOutput(text.c_str());
@@ -9423,12 +9421,11 @@ case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(OPTIONS):
 case YY_STATE_EOF(AFTER_OPTIONS_PARAM):
 case YY_STATE_EOF(ASSIGN_RIGHT):
-#line 390 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 388 "../../extensions/smjs_script_runtime/jscript_massager.l"
 {
   PopAllPairedStates();
   if (stack.size() != 1) {
-    LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
-        input_filename);
+    LOG("%s: File contains unpaired '(', '[' or '{'s.", input_filename);
   }
   PopAllStates();
   YY_FLUSH_BUFFER;
@@ -9438,15 +9435,15 @@ case YY_STATE_EOF(ASSIGN_RIGHT):
 case 31:
 /* rule 31 can match eol */
 YY_RULE_SETUP
-#line 401 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 398 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 403 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 400 "../../extensions/smjs_script_runtime/jscript_massager.l"
 ECHO;
 	YY_BREAK
-#line 9450 "../../extensions/smjs_script_runtime/jscript_massager.cc"
+#line 9447 "../../extensions/smjs_script_runtime/jscript_massager.cc"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -10563,7 +10560,7 @@ void yyfree (void * ptr )
 #undef YY_DECL_IS_OURS
 #undef YY_DECL
 #endif
-#line 403 "../../extensions/smjs_script_runtime/jscript_massager.l"
+#line 400 "../../extensions/smjs_script_runtime/jscript_massager.l"
 
 
 

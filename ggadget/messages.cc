@@ -205,7 +205,7 @@ class Messages::Impl {
     }
 
     if (messages_catalog_.find(default_locale_) == messages_catalog_.end())
-      LOG("Warning: Default messages are not available.");
+      LOG("Default messages are not available.");
 
     return messages_catalog_.size() != 0;
   }

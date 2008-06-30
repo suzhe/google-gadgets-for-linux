@@ -139,20 +139,6 @@ class ScriptContextInterface {
   virtual Variant Evaluate(ScriptableInterface *object, const char *expr) = 0;
 
   /**
-   * An @c ErrorReporter can be connected to the error reporter signal.
-   * It will receive a message string when it is called.
-   */
-  typedef Slot1<void, const char *> ErrorReporter;
-
-  /**
-   * Connects an error reporter to the error reporter signal.
-   * After connected, the reporter will receive all Script error reports.
-   * @param reporter the error reporter.
-   * @return the signal @c Connection.
-   */
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter) = 0;
-
-  /**
    * After connected, a @c ScriptBlockedFeedback will be called if the script
    * runs too long blocking UI. The first parameter is the script file name,
    * the second is the current line number. It returns @c true if allows the
@@ -177,6 +163,12 @@ class ScriptContextInterface {
    */ 
   virtual void CollectGarbage() = 0;
 
+  /**
+   * Get the current filename and line number.
+   * @param[out] filename the current filename.
+   * @param[out] lineno the current line number.
+   */
+  virtual void GetCurrentFileAndLine(std::string *filename, int *lineno) = 0;
 };
 
 } // namespace ggadget

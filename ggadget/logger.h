@@ -17,9 +17,14 @@
 #ifndef GGADGET_LOGGER_H__
 #define GGADGET_LOGGER_H__
 
+#include <string>
 #include <ggadget/common.h>
 
 namespace ggadget {
+
+class Connection;
+template <typename R, typename P1, typename P2, typename P3, typename P4>
+class Slot4;
 
 #undef LOG
 #undef ASSERT_M
@@ -27,9 +32,22 @@ namespace ggadget {
 #undef VERIFY_M
 #undef DLOG
 
+/** The supported debug message output level */
+enum LogLevel {
+  /** For verbose trace messages. */
+  LOG_TRACE = 0,
+  /** For normal information. */
+  LOG_INFO = 1,
+  /** For non-fatal errors. */
+  LOG_WARNING = 2,
+  /** For errors. */
+  LOG_ERROR = 3,
+};
+
 struct LogHelper {
-  LogHelper(const char *file, int line);
+  LogHelper(LogLevel level, const char *file, int line);
   void operator()(const char *format, ...) PRINTF_ATTRIBUTE(2, 3);
+  LogLevel level_;
   const char *file_;
   int line_;
 };
@@ -38,13 +56,17 @@ struct LogHelper {
  * Print log with printf format parameters.
  * It works in both debug and release versions.
  */
-#define LOG ::ggadget::LogHelper(__FILE__, __LINE__)
+#define LOG ::ggadget::LogHelper(::ggadget::LOG_WARNING, __FILE__, __LINE__)
+#define LOGT ::ggadget::LogHelper(::ggadget::LOG_TRACE, __FILE__, __LINE__)
+#define LOGI ::ggadget::LogHelper(::ggadget::LOG_INFO, __FILE__, __LINE__)
+#define LOGW LOG
+#define LOGE ::ggadget::LogHelper(::ggadget::LOG_ERROR, __FILE__, __LINE__)
 
 #ifdef NDEBUG
 #define ASSERT_M(x, y)
 #define VERIFY(x)
 #define VERIFY_M(x, y)
-#define DLOG  true ? (void) 0 : LOG
+#define DLOG  true ? (void) 0 : LOGT
 #else // NDEBUG
 
 /**
@@ -52,13 +74,13 @@ struct LogHelper {
  * It only works in debug versions.
  * Sample usage: <code>ASSERT_M(a==b, ("%d==%d failed\n", a, b));</code>
  */
-#define ASSERT_M(x, y) do { if (!(x)) { DLOG y; ASSERT(x); } } while (0)
+#define ASSERT_M(x, y) do { if (!(x)) { LOGE y; ASSERT(x); } } while (0)
 
 /**
  * Verify an expression and print a message if the expression is not true.
  * It only works in debug versions.
  */
-#define VERIFY(x) do { if (!(x)) DLOG("VERIFY FAILED: %s", #x); } while (0)
+#define VERIFY(x) do { if (!(x)) LOGW("VERIFY FAILED: %s", #x); } while (0)
 
 /**
  * Verify an expression with a message in printf format.
@@ -71,9 +93,61 @@ struct LogHelper {
  * Print debug log with printf format parameters.
  * It only works in debug versions.
  */
-#define DLOG LOG
+#define DLOG LOGT
 
 #endif // else NDEBUG
+
+/**
+ * This class helps manage stack-based log contexts. The log context at the
+ * top of the stack is the current log context. If any listener is connected,
+ * all logs will be sent to the corresponding context log listerner.
+ */
+class ScopedLogContext {
+ public:
+  ScopedLogContext(void *context);
+  ~ScopedLogContext();
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScopedLogContext);
+};
+
+/**
+ * C-style log context management. Can only be used when @c ScopedLogContext
+ * is not applicable. The @a log_context parameter of @c PopLogContext() is
+ * used to ensure the calls are connectly paired.
+ */
+void PushLogContext(void *context);
+void PopLogContext(void *context);
+
+/**
+ * The prototype of the listener is like:
+ * <code>
+ * std::string listener(LogLevel log_level, const char *filename, int lineno,
+ *                      const std::string &log_message);
+ * </code>
+ * The listener should return the input log_message or return the string
+ * modified from log_message.
+ */
+typedef Slot4<std::string, LogLevel, const char *, int, const std::string &>
+    LogListener;
+
+/**
+ * Connect a global log listener. All logs will be send to the listener.
+ */
+Connection *ConnectGlobalLogListener(LogListener *listener);
+
+/**
+ * Connect a log listener for a log context.
+ * @c ConnectContextLogListener(NULL, listener) will let the @a listener
+ * receive all logs that don't belong to any context.
+ * @see ScopedLogContext
+ * @see ConnectGlobalLogListener()
+ */  
+Connection *ConnectContextLogListener(void *context, LogListener *listener);
+
+/**
+ * Remove a logger context.
+ */
+void RemoveLogContext(void *context);
 
 } // namespace ggadget
 

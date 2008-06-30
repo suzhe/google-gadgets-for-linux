@@ -82,7 +82,7 @@ class Session {
   }
   void SaveCookie(const QHttpResponseHeader& header) {
     QStringList list = header.allValues("Set-Cookie");
-    if (list.size() != 0) LOG("Get Cookie Line: %d", list.size());
+    if (list.size() != 0) DLOG("Get Cookie Line: %d", list.size());
     for (int i = 0; i < list.size(); i++) {
       QList<QNetworkCookie> cookies = QNetworkCookie::parseCookies(list[i].toAscii());
       cookies_ += cookies;
@@ -766,11 +766,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     response_body_.append(array.data(), array.length());
 #if _DEBUG
     QTextStream out(stdout);
-    LOG("responseFinished: %d, %zu, %d",
-        id,
-        response_body_.length(),
-        array.length());
-    LOG("reponse: %s", response_body_.c_str());
+    DLOG("responseFinished: %d, %zu, %d",
+         id,
+         response_body_.length(),
+         array.length());
+    DLOG("reponse: %s", response_body_.c_str());
 #endif
     ChangeState(DONE);
   }
@@ -870,12 +870,12 @@ static ggadget::qt::XMLHttpRequestFactory gFactory;
 
 extern "C" {
   bool Initialize() {
-    DLOG("Initialize qt_xml_http_request extension.");
+    LOGI("Initialize qt_xml_http_request extension.");
     return ggadget::SetXMLHttpRequestFactory(&gFactory);
   }
 
   void Finalize() {
-    DLOG("Finalize qt_xml_http_request extension.");
+    LOGI("Finalize qt_xml_http_request extension.");
   }
 }
 #include "qt_xml_http_request_internal.moc"

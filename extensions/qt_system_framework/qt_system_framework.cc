@@ -157,17 +157,17 @@ using namespace ggadget::framework::qt_system_framework;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize qt_system_framework extension.");
+    LOGI("Initialize qt_system_framework extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize qt_system_framework extension.");
+    LOGI("Finalize qt_system_framework extension.");
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
                                   Gadget *gadget) {
-    LOG("Register qt_system_framework extension.");
+    LOGI("Register qt_system_framework extension.");
     ASSERT(framework && gadget);
 
     if (!framework)

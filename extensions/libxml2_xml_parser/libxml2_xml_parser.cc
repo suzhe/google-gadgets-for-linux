@@ -724,7 +724,7 @@ static XMLParser g_xml_parser;
 
 extern "C" {
   bool Initialize() {
-    DLOG("Initialize libxml2_xml_parser extension.");
+    LOGI("Initialize libxml2_xml_parser extension.");
 
     // Many files declared as GB2312 encoding contain chararacters outside
     // of standard GB2312 range. Tolerate this by using superset GB18030 or GBK.
@@ -745,6 +745,6 @@ extern "C" {
   }
 
   void Finalize() {
-    DLOG("Finalize libxml2_xml_parser extension.");
+    LOGI("Finalize libxml2_xml_parser extension.");
   }
 }

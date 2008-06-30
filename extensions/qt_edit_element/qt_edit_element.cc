@@ -40,16 +40,16 @@
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize qt_edit_element extension.");
+    LOGI("Initialize qt_edit_element extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize qt_edit_element extension.");
+    LOGI("Finalize qt_edit_element extension.");
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    LOG("Register qt_edit_element extension.");
+    LOGI("Register qt_edit_element extension.");
     if (factory) {
       factory->RegisterElementClass(
           "edit", &ggadget::qt::QtEditElement::CreateInstance);

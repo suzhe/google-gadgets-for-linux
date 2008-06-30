@@ -66,20 +66,20 @@ static ScriptableDBusObject* NewSessionObject(const char *name,
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize dbus_script_class extension.");
+    LOGI("Initialize dbus_script_class extension.");
     if (!ggl_dbus_factory)
       ggl_dbus_factory = new DBusProxyFactory(ggadget::GetGlobalMainLoop());
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize dbus_script_class extension.");
+    LOGI("Finalize dbus_script_class extension.");
     delete ggl_dbus_factory;
     ggl_dbus_factory = NULL;
   }
 
   bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
-    LOG("Register dbus_script_class extension.");
+    LOGI("Register dbus_script_class extension.");
     if (context) {
       if (!context->RegisterClass(
           kDBusSystemObjectName, NewSlotWithDefaultArgs(

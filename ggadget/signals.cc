@@ -28,8 +28,7 @@
 namespace ggadget {
 
 Connection::Connection(Signal *signal, Slot *slot)
-    : blocked_(slot == NULL),
-      signal_(signal),
+    : signal_(signal),
       slot_(slot) {
 }
 
@@ -39,8 +38,6 @@ Connection::~Connection() {
 }
 
 void Connection::Disconnect() {
-  delete slot_;
-  slot_ = NULL;
   signal_->Disconnect(this);
 }
 
@@ -55,9 +52,6 @@ bool Connection::Reconnect(Slot *slot) {
       return false;
     }
     slot_ = slot;
-    Unblock();
-  } else {
-    Block();
   }
   return true;
 }
@@ -158,7 +152,7 @@ bool Signal::HasActiveConnections() const {
     return false;
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
        it != impl_->connections_.end(); ++it) {
-    if (*it && !(*it)->blocked())
+    if (*it && (*it)->slot_)
       return true;
   }
   return false;
@@ -183,7 +177,7 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
        !*death_flag_ptr && it != impl_->connections_.end(); ++it) {
     Connection *connection = *it;
-    if (connection && !connection->blocked()) {
+    if (connection && connection->slot_) {
       result = connection->slot_->Call(argc, argv);
     }
   }
@@ -232,6 +226,10 @@ bool Signal::Disconnect(Connection *connection) {
   }
   delete connection;
   return true;
+}
+
+size_t Signal::GetConnectionCount() const {
+  return impl_->connections_.size();
 }
 
 } // namespace ggadget

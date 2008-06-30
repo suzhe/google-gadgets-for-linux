@@ -26,23 +26,13 @@ namespace ggadget {
 class Signal;
 
 /**
- * The connection object between a @c Singal and a @c Slot.
+ * The connection object between a @c Signal and a @c Slot.
  * The caller can use the connection to temporarily block the slot.
  */
 class Connection : public SmallObject<> {
  public:
   /**
-   * Block the connection.  No more signals will be emitted to the slot.
-   * It's useful when the caller know that a <code>MethodSlot</code>'s
-   * underlying object has been deleted.
-   */
-  void Block() { blocked_ = true; }
-  void Unblock() { if (slot_) blocked_ = false; }
-  bool blocked() const { return blocked_; }
-
-  /**
-   * Disconnect the connection.
-   * After disconnection, the connection can't be unblocked any more.
+   * Disconnect the connection. The connection itself will be deleted.
    */
   void Disconnect();
 
@@ -50,7 +40,6 @@ class Connection : public SmallObject<> {
    * Reconnect the connection to another @c Slot.
    * The @a slot is then owned by this connection no matter @c Reconnect
    * succeeded or failed.
-   * The connection will be unblocked if it has been blocked or disconnected.
    * @param slot the new @c Slot to be connected.
    * @return @c true if succeeds.
    */
@@ -74,7 +63,6 @@ class Connection : public SmallObject<> {
   Connection(Signal *signal, Slot *slot);
   ~Connection();
 
-  bool blocked_;
   Signal *signal_;
   Slot *slot_;
 };
@@ -134,6 +122,11 @@ class Signal {
    * Disconnect a connection from this signal.
    */
   bool Disconnect(Connection *connection);
+
+  /**
+   * Gets the count of connected connections, including blocked or unblocked.
+   */
+  size_t GetConnectionCount() const;
 
  protected:
   Signal();

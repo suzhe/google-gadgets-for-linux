@@ -33,16 +33,16 @@
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gtk_edit_element extension.");
+    LOGI("Initialize gtk_edit_element extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gtk_edit_element extension.");
+    LOGI("Finalize gtk_edit_element extension.");
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    LOG("Register gtk_edit_element extension.");
+    LOGI("Register gtk_edit_element extension.");
     if (factory) {
       factory->RegisterElementClass(
           "edit", &ggadget::gtk::GtkEditElement::CreateInstance);

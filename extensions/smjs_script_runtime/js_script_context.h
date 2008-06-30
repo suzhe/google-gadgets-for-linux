@@ -126,18 +126,17 @@ class JSScriptContext : public ScriptContextInterface {
                                 const Variant &value);
   /** @see ScriptContextInterface::Evaluate() */
   virtual Variant Evaluate(ScriptableInterface *object, const char *expr);
-  /** @see ScriptContextInterface::ConnectErrorReporter() */
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
   /** @see ScriptContextInterface::ConnectScriptBlockedFeedback() */
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback);
   /** @see ScriptContextInterface::CollectGarbage() */
   virtual void CollectGarbage();
+  /** @see ScriptContextInterface::GetCurrentFileAndLine() */
+  virtual void GetCurrentFileAndLine(std::string *filename, int *lineno);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
 
-  void GetCurrentFileAndLineInternal(std::string *filename, int *lineno);
   NativeJSWrapper *WrapNativeObjectToJSInternal(
       JSObject *js_object, NativeJSWrapper *wrapper,
       ScriptableInterface *scriptable);
@@ -210,6 +209,8 @@ class AutoLocalRootScope {
   JSContext *cx_;
   JSBool good_;
 };
+
+JSScriptContext *GetJSScriptContext(JSContext *context);
 
 } // namespace smjs
 } // namespace ggadget

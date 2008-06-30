@@ -39,6 +39,7 @@ class NativeMainLoop : public MainLoopInterface {
   virtual void Quit();
   virtual bool IsRunning() const;
   virtual uint64_t GetCurrentTime() const;
+  virtual bool IsMainThread() const;
 
  private:
   class Impl;

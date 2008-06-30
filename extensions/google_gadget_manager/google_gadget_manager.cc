@@ -209,7 +209,7 @@ void GoogleGadgetManager::OnUpdateDone(bool request_success,
   updating_metadata_ = false;
   if (request_success) {
     if (parsing_success) {
-      LOG("Successfully updated gadget metadata");
+      LOGI("Successfully updated gadget metadata");
       last_update_time_ = static_cast<int64_t>(main_loop_->GetCurrentTime());
       last_try_time_ = -1;
       retry_timeout_ = 0;
@@ -241,7 +241,7 @@ void GoogleGadgetManager::OnUpdateDone(bool request_success,
   }
   global_options_->PutValue(kRetryTimeoutOption, Variant(retry_timeout_));
   LOG("Failed to update gadget metadata. Will retry after %dms",
-        retry_timeout_);
+      retry_timeout_);
   metadata_updated_signal_(false);
   ScheduleNextUpdate();
 }
@@ -1004,7 +1004,7 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   } else {
     delete browser_gadget_;
     browser_gadget_ = NULL;
-    DLOG("Failed to load Google Gadget Browser.");
+    LOG("Failed to load Google Gadget Browser.");
   }
 }
 

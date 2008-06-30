@@ -106,6 +106,7 @@ even in the middle of a word. -->
 <MENU_ITEM_50P>50%</MENU_ITEM_50P>
 <MENU_ITEM_75P>75%</MENU_ITEM_75P>
 <MENU_ITEM_CHANGE_HOTKEY>更改热键(&amp;H)...</MENU_ITEM_CHANGE_HOTKEY>
+<MENU_ITEM_DEBUG_CONSOLE>调试窗口(&amp;B)</MENU_ITEM_DEBUG_CONSOLE>
 
 <!-- Title of the confirm dialog of third party gadget installation. -->
 <GADGET_CONFIRM_TITLE>安装第三方小工具</GADGET_CONFIRM_TITLE>
@@ -137,5 +138,13 @@ even in the middle of a word. -->
 <!-- Tooltip text for the status icon. The %s parameter is the hotkey string. -->
 <STATUS_ICON_TOOLTIP>Google 小工具</STATUS_ICON_TOOLTIP>
 <STATUS_ICON_TOOLTIP_WITH_HOTKEY>Google 小工具，按下 %s 以显示或隐藏小工具。</STATUS_ICON_TOOLTIP_WITH_HOTKEY>
+
+<!-- Messages for debug console. -->
+<DEBUG_CLEAR>清空</DEBUG_CLEAR>
+<DEBUG_TRACE>Trace</DEBUG_TRACE>
+<DEBUG_INFO>Info</DEBUG_INFO>
+<DEBUG_WARNING>Warning</DEBUG_WARNING>
+<DEBUG_ERROR>Error</DEBUG_ERROR>
+<DEBUG_LOCK_SCROLL>滚动锁定</DEBUG_LOCK_SCROLL>
 
 </strings>

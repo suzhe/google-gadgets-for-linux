@@ -233,7 +233,7 @@ QWebPage *WebPage::createWindow(
 
 void WebView::OnParentDestroyed(QObject *obj) {
   if (owner_->parent_ == obj) {
-    LOG("Parent widget destroyed");
+    DLOG("Parent widget destroyed");
     owner_->parent_ = NULL;
   }
 }

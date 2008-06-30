@@ -114,7 +114,7 @@ bool CheckSignatureValidity(const char* signature, bool single) {
   bool ret = true;
   if ((single && !dbus_signature_validate_single(signature, &error)) ||
       !dbus_signature_validate(signature, &error)) {
-    LOG("Check Validity for signature %s failed, %s: %s",
+    LOG("Failed to check validity for signature %s, %s: %s",
         signature, error.name, error.message);
     ret = false;
   }
@@ -160,7 +160,7 @@ std::string GetVariantSignature(const Variant &value) {
       }
       break;
     default:
-      LOG("other meanless type: %d", value.type());
+      LOG("Unsupported Variant type %d to be converted to DBus.", value.type());
   }
   return "";
 }
@@ -194,7 +194,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -205,8 +205,8 @@ class DBusMarshaller::Impl {
         {
           bool b;
           if (!arg.value.ConvertToBool(&b)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
+                Variant::TYPE_BOOL, arg.value.Print().c_str());
             return false;
           }
           Append(b);
@@ -216,7 +216,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -227,7 +227,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -238,7 +238,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -249,7 +249,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -260,7 +260,7 @@ class DBusMarshaller::Impl {
         {
           int64_t v;
           if (!arg.value.ConvertToInt64(&v)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -271,7 +271,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.ConvertToInt64(&i)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
                 Variant::TYPE_INT64, arg.value.Print().c_str());
             return false;
           }
@@ -282,8 +282,8 @@ class DBusMarshaller::Impl {
         {
           double v;
           if (!arg.value.ConvertToDouble(&v)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
+                Variant::TYPE_DOUBLE, arg.value.Print().c_str());
             return false;
           }
           Append(v);
@@ -293,8 +293,8 @@ class DBusMarshaller::Impl {
         {
           std::string s;
           if (!arg.value.ConvertToString(&s)) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
+                Variant::TYPE_STRING, arg.value.Print().c_str());
             return false;
           }
           Append(s.c_str());
@@ -303,8 +303,8 @@ class DBusMarshaller::Impl {
       case 'a':
         {
           if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
+                Variant::TYPE_SCRIPTABLE, arg.value.Print().c_str());
             return false;
           }
           /* special handle dict case */
@@ -342,8 +342,8 @@ class DBusMarshaller::Impl {
       case '{':
         {
           if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
-            LOG("type dismatch. expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+            LOG("Type dismatch. Expected type: %d, actual value:%s",
+                Variant::TYPE_SCRIPTABLE, arg.value.Print().c_str());
             return false;
           }
           StringList sig_list;
@@ -418,7 +418,7 @@ class DBusMarshaller::Impl {
     }
     bool Callback(int id, const Variant &value) {
       if (index_ >= signature_list_.size()) {
-        LOG("the signature of the variant does not match the specified "
+        LOG("The signature of the variant does not match the specified "
             "signature.");
         return false;
       }
@@ -551,7 +551,7 @@ class DBusMarshaller::Impl {
             if (item_sig.empty()) {
               item_sig = arg.signature;
             } else if (item_sig != arg.signature) {
-              LOG("types of items in the array are not the same.");
+              LOG("Types of items in the array are not the same.");
               ret = false;
             }
             vec[i] = arg.value;
@@ -646,7 +646,7 @@ class DBusMarshaller::Impl {
           break;
         }
       default:
-        LOG("unsupported type: %d", type);
+        LOG("Unsupported type: %d", type);
         return false;
     }
     if (!copy_value)
@@ -920,7 +920,7 @@ class DBusDemarshaller::Impl {
           dbus_message_iter_recurse(iter_, &subiter);
           char *sig = dbus_message_iter_get_signature(&subiter);
           if (!sig) {
-            LOG("sub type of variant is invalid.");
+            LOG("Sub type of variant is invalid.");
             return false;
           }
           Impl sub(iter_);
@@ -932,7 +932,7 @@ class DBusDemarshaller::Impl {
           break;
         }
       default:
-        LOG("unsupported type: %d", type);
+        LOG("Unsupported type: %d", type);
         return false;
     }
     return true;
@@ -948,7 +948,7 @@ class DBusDemarshaller::Impl {
       }
       int arg_type = GetTypeBySignature(it->signature.c_str());
       if (arg_type != MessageTypeToDBusType(type)) {
-        LOG("type dismatch! the type in message is %d, "
+        LOG("Type dismatch! the type in message is %d, "
             " but in this function it is %d", arg_type, type);
         ASSERT(false);
         return false;
@@ -972,7 +972,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             unsigned char v = static_cast<unsigned char>(i);
@@ -983,7 +984,8 @@ class DBusDemarshaller::Impl {
           {
             bool v;
             if (!out_arg.value.ConvertToBool(&v)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_BOOL, out_arg.value.Print().c_str());
               return false;
             }
             memcpy(return_storage, &v, sizeof(bool));
@@ -993,7 +995,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             int16_t v = static_cast<int16_t>(i);
@@ -1004,7 +1007,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             uint16_t v = static_cast<uint16_t>(i);
@@ -1015,7 +1019,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             int v = static_cast<int>(i);
@@ -1026,7 +1031,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             uint32_t v = static_cast<uint32_t>(i);
@@ -1037,7 +1043,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             memcpy(return_storage, &i, sizeof(dbus_int64_t));
@@ -1047,7 +1054,8 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
               return false;
             }
             uint64_t v = static_cast<uint64_t>(i);
@@ -1058,7 +1066,8 @@ class DBusDemarshaller::Impl {
           {
             double v;
             if (!out_arg.value.ConvertToDouble(&v)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_DOUBLE, out_arg.value.Print().c_str());
               return false;
             }
             memcpy(return_storage, &v, sizeof(double));
@@ -1068,7 +1077,8 @@ class DBusDemarshaller::Impl {
           {
             std::string str;
             if (!out_arg.value.ConvertToString(&str)) {
-              LOG("type dismatch.");
+              LOG("Type dismatch. Expected type: %d, actual value:%s",
+                  Variant::TYPE_STRING, out_arg.value.Print().c_str());
               return false;
             }
             const char* s = str.c_str();
@@ -1082,7 +1092,7 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_DICT:
           memcpy(return_storage, &out_arg.value, sizeof(Variant));
         default:
-          LOG("the type %d is not supported yet!", first_arg_type);
+          LOG("The DBus type %d is not supported yet!", first_arg_type);
           return false;
       }
     }
@@ -1164,7 +1174,7 @@ void DBusMainLoopClosure::Impl::DispatchStatusFunction(
          == DBUS_DISPATCH_DATA_REMAINS)
     ;
   if (status != DBUS_DISPATCH_COMPLETE)
-    LOG("dispatch failed.");
+    LOG("Failed to dispatch DBus conneection.");
 }
 
 class DBusMainLoopClosure::Impl::DBusWatchCallBack : public
@@ -1176,7 +1186,7 @@ class DBusMainLoopClosure::Impl::DBusWatchCallBack : public
   }
   virtual ~DBusWatchCallBack() {}
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-    LOG("Call DBusWatchCallBack, watch id: %d", watch_id);
+    DLOG("Call DBusWatchCallBack, watch id: %d", watch_id);
     if (!enabled_) return true;
     if (dbus_connection_get_dispatch_status(connection_) !=
         DBUS_DISPATCH_COMPLETE) {
@@ -1228,7 +1238,7 @@ dbus_bool_t DBusMainLoopClosure::Impl::AddWatch(DBusWatch *watch,
   } else if (flag == DBUS_WATCH_WRITABLE) {
     /** do nothing */
   } else {
-    LOG("invalid flag: %d", flag);
+    LOG("Invalid DBus watch flag: %d", flag);
   }
   return TRUE;
 }
@@ -1342,7 +1352,7 @@ bool DBusMainLoopClosure::Impl::Setup() {
                                            WatchToggled,
                                            this,
                                            NULL)) {
-    LOG("no memory to set watch functions.");
+    LOG("Failed to set DBus connection watch functions.");
     return false;
   }
   if (!dbus_connection_set_timeout_functions(connection_,
@@ -1351,7 +1361,7 @@ bool DBusMainLoopClosure::Impl::Setup() {
                                              TimeoutToggled,
                                              this,
                                              NULL)) {
-    LOG("no memory to set timeout functions.");
+    LOG("Failed to set DBus connection timeout functions.");
     return false;
   }
   if (dbus_connection_get_dispatch_status(connection_) != DBUS_DISPATCH_COMPLETE)

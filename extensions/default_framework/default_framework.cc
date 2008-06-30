@@ -485,17 +485,17 @@ using namespace ggadget::framework::default_framework;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize default_framework extension.");
+    LOGI("Initialize default_framework extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize default_framework extension.");
+    LOGI("Finalize default_framework extension.");
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
                                   Gadget *gadget) {
-    LOG("Register default_framework extension.");
+    LOGI("Register default_framework extension.");
     ASSERT(framework && gadget);
 
     if (!framework)

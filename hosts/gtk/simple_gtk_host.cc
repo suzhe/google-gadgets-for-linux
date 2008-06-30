@@ -74,13 +74,15 @@ class SimpleGtkHost::Impl {
 
  public:
   Impl(SimpleGtkHost *owner, OptionsInterface *options,
-       double zoom, bool decorated, int view_debug_mode)
+       double zoom, bool decorated, int view_debug_mode,
+       int debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       options_(options),
       zoom_(zoom),
       decorated_(decorated),
       view_debug_mode_(view_debug_mode),
+      debug_console_config_(debug_console_config),
       gadgets_shown_(true),
       transparent_(SupportsComposite(NULL)),
       gadget_manager_(GetGadgetManager()),
@@ -236,8 +238,13 @@ class SimpleGtkHost::Impl {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
       result = LoadGadget(path.c_str(), options.c_str(), id);
-      LOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
-          path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      if (result) {
+        DLOG("SimpleGtkHost: Load gadget %s, with option %s, succeeded",
+             path.c_str(), options.c_str());
+      } else {
+        LOG("SimpleGtkHost: Load gadget %s, with option %s, failed",
+             path.c_str(), options.c_str());
+      }
     }
     return result;
   }
@@ -349,19 +356,6 @@ class SimpleGtkHost::Impl {
     } else {
       LOG("Can't find gadget instance %d", instance_id);
     }
-  }
-
-  void DebugOutput(DebugLevel level, const char *message) const {
-    const char *str_level = "";
-    switch (level) {
-      case DEBUG_TRACE: str_level = "TRACE: "; break;
-      case DEBUG_INFO: str_level = "INFO: "; break;
-      case DEBUG_WARNING: str_level = "WARNING: "; break;
-      case DEBUG_ERROR: str_level = "ERROR: "; break;
-      default: break;
-    }
-    // TODO: actual debug console.
-    LOG("%s%s", str_level, message);
   }
 
   void LoadGadgets() {
@@ -720,6 +714,10 @@ class SimpleGtkHost::Impl {
     impl->ToggleAllGadgets();
   }
 
+  void ShowGadgetDebugConsole(Gadget *gadget) {
+    // TODO:
+  }
+
   typedef std::map<int, GadgetInfo> GadgetInfoMap;
   GadgetInfoMap gadgets_;
 
@@ -730,6 +728,7 @@ class SimpleGtkHost::Impl {
   double zoom_;
   bool decorated_;
   int view_debug_mode_;
+  int debug_console_config_;
   bool gadgets_shown_;
   bool transparent_;
 
@@ -748,8 +747,10 @@ class SimpleGtkHost::Impl {
 };
 
 SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
-                             bool decorated, int view_debug_mode)
-  : impl_(new Impl(this, options, zoom, decorated, view_debug_mode)) {
+                             bool decorated, int view_debug_mode,
+                             int debug_console_config)
+  : impl_(new Impl(this, options, zoom, decorated, view_debug_mode,
+                   debug_console_config)) {
   impl_->SetupUI();
   impl_->InitGadgets();
 }
@@ -768,10 +769,6 @@ void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
 }
 
-void SimpleGtkHost::DebugOutput(DebugLevel level, const char *message) const {
-  impl_->DebugOutput(level, message);
-}
-
 bool SimpleGtkHost::OpenURL(const char *url) const {
   return ggadget::gtk::OpenURL(url);
 }
@@ -780,13 +777,17 @@ bool SimpleGtkHost::LoadFont(const char *filename) {
   return ggadget::gtk::LoadFont(filename);
 }
 
+void SimpleGtkHost::Run() {
+  impl_->LoadGadgets();
+  gtk_main();
+}
+
 void SimpleGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
   ggadget::gtk::ShowGadgetAboutDialog(gadget);
 }
 
-void SimpleGtkHost::Run() {
-  impl_->LoadGadgets();
-  gtk_main();
+void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
+  impl_->ShowGadgetDebugConsole(gadget);
 }
 
 } // namespace gtk

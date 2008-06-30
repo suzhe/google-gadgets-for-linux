@@ -58,10 +58,10 @@ TEST(signal, SignalBasics) {
   Connection *connection = meta_signal.Connect(
       NewSlot(&obj, &TestClass::TestSlotMethod));
   ASSERT_TRUE(connection != NULL);
-  ASSERT_FALSE(connection->blocked());
   ASSERT_EQ(1, meta_signal.GetArgCount());
   ASSERT_EQ(Variant::TYPE_INT64, meta_signal.GetArgTypes()[0]);
   ASSERT_EQ(Variant::TYPE_SLOT, meta_signal.GetReturnType());
+  ASSERT_EQ(1U, meta_signal.GetConnectionCount());
 
   // Initially unblocked.
   for (int i = 0; i < kNumTestData; i++) {
@@ -70,33 +70,7 @@ TEST(signal, SignalBasics) {
     delete temp_slot;
   }
 
-  // Block the connection.
-  connection->Block();
-  ASSERT_TRUE(connection->blocked());
-  for (int i = 0; i < kNumTestData; i++) {
-    Slot *temp_slot = meta_signal(i);
-    ASSERT_TRUE(temp_slot == NULL);
-  }
-
-  // Unblock the connection.
-  connection->Unblock();
-  ASSERT_FALSE(connection->blocked());
-  for (int i = 0; i < kNumTestData; i++) {
-    Slot *temp_slot = meta_signal(i);
-    CheckSlot(i, temp_slot);
-    delete temp_slot;
-  }
-
-  // A disconnected connection will be always blocked.
-  connection->Block();
-  ASSERT_TRUE(connection->blocked());
-  for (int i = 0; i < kNumTestData; i++) {
-    Slot *temp_slot = meta_signal(i);
-    ASSERT_TRUE(temp_slot == NULL);
-  }
-
   connection->Reconnect(NewSlot(&obj, &TestClass::TestSlotMethod));
-  ASSERT_FALSE(connection->blocked());
   for (int i = 0; i < kNumTestData; i++) {
     Slot *temp_slot = meta_signal(i);
     CheckSlot(i, temp_slot);
@@ -109,6 +83,7 @@ TEST(signal, SignalBasics) {
     Slot *temp_slot = meta_signal(i);
     ASSERT_TRUE(temp_slot == NULL);
   }
+  ASSERT_EQ(0U, meta_signal.GetConnectionCount());
 }
 
 TEST(signal, SignalConnectNullSlot) {
@@ -116,11 +91,9 @@ TEST(signal, SignalConnectNullSlot) {
   MetaSignal meta_signal;
   Connection *connection = meta_signal.Connect(NULL);
   ASSERT_TRUE(connection != NULL);
-  ASSERT_TRUE(connection->blocked());
   ASSERT_TRUE(connection->slot() == NULL);
 
   connection->Reconnect(NewSlot(&obj, &TestClass::TestSlotMethod));
-  ASSERT_FALSE(connection->blocked());
 }
 
 TEST(signal, SignalSlotCompatibility) {

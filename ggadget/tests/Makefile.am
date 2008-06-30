@@ -30,7 +30,6 @@ noinst_HEADERS		= init_extensions.h \
 			  main_loop_test.h \
 			  mocked_element.h \
 			  mocked_file_manager.h \
-			  mocked_host.h \
 			  mocked_timer_main_loop.h \
 			  mocked_view_host.h \
 			  mocked_xml_http_request.h \
