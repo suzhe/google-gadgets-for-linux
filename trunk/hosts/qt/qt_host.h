@@ -42,6 +42,7 @@ class QtHost : public ggadget::HostInterface {
   virtual bool LoadFont(const char *filename);
   virtual void Run();
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
+  virtual void ShowGadgetDebugConsole(Gadget *gadget);
 
  private:
   class Impl;

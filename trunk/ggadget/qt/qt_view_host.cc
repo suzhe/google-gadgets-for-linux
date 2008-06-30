@@ -429,28 +429,29 @@ bool QtViewHost::ShowContextMenu(int button) {
 void QtViewHost::BeginMoveDrag(int button) {
 }
 
-void QtViewHost::Alert(const char *message) {
+void QtViewHost::Alert(const ViewInterface *view, const char *message) {
   QMessageBox::information(
       NULL,
-      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message));
 }
 
-bool QtViewHost::Confirm(const char *message) {
+bool QtViewHost::Confirm(const ViewInterface *view, const char *message) {
   int ret = QMessageBox::question(
       NULL,
-      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message),
       QMessageBox::Yes| QMessageBox::No,
       QMessageBox::Yes);
   return ret == QMessageBox::Yes;
 }
 
-std::string QtViewHost::Prompt(const char *message,
-                                const char *default_value) {
+std::string QtViewHost::Prompt(const ViewInterface *view,
+                               const char *message,
+                               const char *default_value) {
   QString s= QInputDialog::getText(
       NULL,
-      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message),
       QLineEdit::Normal);
   return s.toStdString();

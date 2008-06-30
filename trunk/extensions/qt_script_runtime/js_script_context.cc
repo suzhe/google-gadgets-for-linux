@@ -324,5 +324,14 @@ Connection *JSScriptContext::ConnectScriptBlockedFeedback(
   return impl_->script_blocked_signal_.Connect(feedback);
 }
 
+void JSScriptContext::CollectGarbage() {
+  impl_->engine_.collectGarbage();
+}
+
+void JSScriptContext::GetCurrentFileAndLine(std::string *fname, int *lineno) {
+  fname->clear();
+  lineno = 0;
+}
+
 } // namespace qt
 } // namespace ggadget
