@@ -337,6 +337,20 @@ std::string GetHomeDirectory() {
   return home ? std::string(home) : GetCurrentDirectory();
 }
 
+std::string GetAbsolutePath(const std::string &path) {
+  // Normalizes the file path.
+  std::string result = path;
+  // Not using kDirSeparator because Windows version should have more things
+  // to do than simply replace the path separator.
+  if (result[0] != '/') {
+    char buffer[PATH_MAX];
+    getcwd(buffer, PATH_MAX);
+    result = std::string(buffer) + "/" + result;
+  }
+  result = NormalizeFilePath(result.c_str());
+  return result;
+}
+
 bool CreateTempDirectory(const char *prefix, std::string *path) {
   ASSERT(path);
   bool result = false;

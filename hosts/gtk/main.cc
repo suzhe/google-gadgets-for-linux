@@ -37,8 +37,10 @@
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
+#include <ggadget/run_once.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
+#include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
 #include <ggadget/xml_http_request_interface.h>
@@ -49,6 +51,7 @@
 static ggadget::gtk::MainLoop g_main_loop;
 
 static const char kOptionsName[] = "gtk-host-options";
+static const char kRunOnceSocketName[] = "gtk-host-socket";
 
 static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
@@ -140,6 +143,10 @@ static const char *g_help_string =
   "  If any gadgets are specified, they will be installed by using\n"
   "  GadgetManager.\n";
 
+static void Handler(const std::string &data) {
+  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
+}
+
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
@@ -148,6 +155,20 @@ int main(int argc, char* argv[]) {
   bool decorated = false;
   bool sidebar = true;
   bool background = false;
+
+  // Set global main loop
+  ggadget::SetGlobalMainLoop(&g_main_loop);
+
+  std::string profile_dir =
+      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
+                             ggadget::kDefaultProfileDirectory, NULL);
+  ggadget::EnsureDirectories(profile_dir.c_str());
+
+  ggadget::RunOnce run_once(
+      ggadget::BuildFilePath(profile_dir.c_str(),
+                             kRunOnceSocketName,
+                             NULL).c_str());
+  run_once.ConnectOnMessage(ggadget::NewSlot(Handler));
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
@@ -180,8 +201,18 @@ int main(int argc, char* argv[]) {
         DLOG("Use zoom factor %lf", zoom);
       }
     } else {
-      gadget_paths.push_back(argv[i]);
+      std::string path = ggadget::GetAbsolutePath(argv[i]);
+      if (run_once.IsRunning()) {
+        run_once.SendMessage(path);
+      } else {
+        gadget_paths.push_back(path);
+      }
     }
+  }
+
+  if (run_once.IsRunning()) {
+    DLOG("Another instance already exists.");
+    exit(0);
   }
 
   // set locale according to env vars
@@ -191,9 +222,6 @@ int main(int argc, char* argv[]) {
   // printing any log messages.
   if (background)
     ggadget::Daemonize();
-
-  // Set global main loop
-  ggadget::SetGlobalMainLoop(&g_main_loop);
 
   // Set global file manager.
   ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
@@ -220,9 +248,6 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  std::string profile_dir =
-      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
-                             ggadget::kDefaultProfileDirectory, NULL);
   fm = ggadget::DirFileManager::Create(profile_dir.c_str(), true);
   if (fm != NULL) {
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);

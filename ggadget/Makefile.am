@@ -91,6 +91,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
+			  run_once.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
 			  script_runtime_interface.h \
@@ -181,6 +182,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  object_element.cc \
 			  options_factory.cc \
 			  progressbar_element.cc \
+			  run_once.cc \
 			  script_runtime_manager.cc \
 			  scriptable_array.cc \
 			  scriptable_event.cc \
@@ -210,7 +212,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  xml_parser.cc \
 			  xml_utils.cc \
 			  zip_file_manager.cc
-
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
 			  @LTDLINCL@ \

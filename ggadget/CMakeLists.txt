@@ -86,6 +86,7 @@ SET(SRCS
   mediaplayer_element_base.cc
   object_element.cc
   progressbar_element.cc
+  run_once.cc
   scrollbar_element.cc
   scrolling_element.cc
   view_element.cc
