@@ -57,19 +57,21 @@ static const char kOptionGadgetsShown[] = "gadgets_shown";
 class SimpleGtkHost::Impl {
   struct GadgetInfo {
     GadgetInfo()
-      : gadget_(NULL), main_(NULL), popout_(NULL), details_(NULL),
-        popout_on_right_(false), details_on_right_(false) {
+      : gadget(NULL), main(NULL), popout(NULL), details(NULL),
+        popout_on_right(false), details_on_right(false),
+        debug_console(NULL) {
     }
 
-    Gadget *gadget_;
+    Gadget *gadget;
 
-    SingleViewHost *main_;
-    SingleViewHost *popout_;
-    SingleViewHost *details_;
-    DecoratedViewHost *main_decorator_;
+    SingleViewHost *main;
+    SingleViewHost *popout;
+    SingleViewHost *details;
+    DecoratedViewHost *main_decorator;
 
-    bool popout_on_right_;
-    bool details_on_right_;
+    bool popout_on_right;
+    bool details_on_right;
+    GtkWidget *debug_console;
   };
 
  public:
@@ -110,7 +112,7 @@ class SimpleGtkHost::Impl {
   ~Impl() {
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
-      delete it->second.gadget_;
+      delete it->second.gadget;
 
     gtk_widget_destroy(host_menu_);
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
@@ -224,6 +226,11 @@ class SimpleGtkHost::Impl {
     return result == GTK_RESPONSE_YES;
   }
 
+  bool EnumerateGadgetInstancesCallback(int id) {
+    AddGadgetInstanceCallback(id); // Ignore the error.
+    return true;
+  }
+
   bool NewGadgetInstanceCallback(int id) {
     if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
         ConfirmGadget(id)) {
@@ -277,7 +284,15 @@ class SimpleGtkHost::Impl {
       gadget->ShowMainView();
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    gadgets_[instance_id].gadget_ = gadget;
+    GadgetInfo *info = &gadgets_[instance_id];
+    info->gadget = gadget;
+
+    // If debug console is opened during view host creation, the title is
+    // not set then because main view is not available. Set the title now.
+    if (info->debug_console) {
+      gtk_window_set_title(GTK_WINDOW(info->debug_console),
+                           gadget->GetMainView()->GetCaption().c_str());
+    }
     return true;
   }
 
@@ -296,13 +311,16 @@ class SimpleGtkHost::Impl {
       return svh;
 
     DecoratedViewHost *dvh;
+    GadgetInfo *info = &gadgets_[gadget_id];
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
+      if (debug_console_config_ >= 2)
+        ShowGadgetDebugConsole(gadget);
+
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
                                   transparent_);
-      GadgetInfo *info = &gadgets_[gadget_id];
-      ASSERT(!info->main_);
-      info->main_ = svh;
-      info->main_decorator_ = dvh;
+      ASSERT(!info->main);
+      info->main = svh;
+      info->main_decorator = dvh;
 
       svh->ConnectOnShowHide(
           NewSlot(this, &Impl::OnMainViewShowHideHandler, gadget_id));
@@ -313,10 +331,9 @@ class SimpleGtkHost::Impl {
     } else {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
                                   transparent_);
-      GadgetInfo *info = &gadgets_[gadget_id];
-      ASSERT(info->main_);
-      ASSERT(!info->details_);
-      info->details_ = svh;
+      ASSERT(info->main);
+      ASSERT(!info->details);
+      info->details = svh;
 
       svh->ConnectOnShowHide(
           NewSlot(this, &Impl::OnDetailsViewShowHideHandler, gadget_id));
@@ -351,7 +368,10 @@ class SimpleGtkHost::Impl {
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
-      delete it->second.gadget_;
+      if (it->second.debug_console)
+        gtk_widget_destroy(it->second.debug_console);
+
+      delete it->second.gadget;
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
@@ -360,13 +380,13 @@ class SimpleGtkHost::Impl {
 
   void LoadGadgets() {
     gadget_manager_->EnumerateGadgetInstances(
-        NewSlot(this, &Impl::AddGadgetInstanceCallback));
+        NewSlot(this, &Impl::EnumerateGadgetInstancesCallback));
   }
 
   void ShowAllMenuCallback(const char *) {
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      it->second.main_->ShowView(false, 0, NULL);
+      it->second.main->ShowView(false, 0, NULL);
     }
     gadgets_shown_ = true;
     if (options_)
@@ -376,7 +396,7 @@ class SimpleGtkHost::Impl {
   void HideAllMenuCallback(const char *) {
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      it->second.main_->CloseView();
+      it->second.main->CloseView();
     }
     gadgets_shown_ = false;
     if (options_)
@@ -466,9 +486,9 @@ class SimpleGtkHost::Impl {
       int gadget_id = child->GetGadget()->GetInstanceID();
 
       GadgetInfo *info = &gadgets_[gadget_id];
-      ASSERT(info->main_);
-      ASSERT(!info->popout_);
-      info->popout_ = svh;
+      ASSERT(info->main);
+      ASSERT(!info->popout);
+      info->popout = svh;
 
       svh->ConnectOnShowHide(
           NewSlot(this, &Impl::OnPopOutViewShowHideHandler, gadget_id));
@@ -504,87 +524,87 @@ class SimpleGtkHost::Impl {
 
         // Clear the popout info.
         int gadget_id = child->GetGadget()->GetInstanceID();
-        gadgets_[gadget_id].popout_ = NULL;
+        gadgets_[gadget_id].popout = NULL;
       }
     }
   }
 
   void AdjustViewHostPosition(GadgetInfo *info) {
-    ASSERT(info && info->main_ && info->main_decorator_);
+    ASSERT(info && info->main && info->main_decorator);
     int x, y;
     int width, height;
-    info->main_->GetWindowPosition(&x, &y);
-    info->main_->GetWindowSize(&width, &height);
+    info->main->GetWindowPosition(&x, &y);
+    info->main->GetWindowSize(&width, &height);
     int screen_width = gdk_screen_get_width(
-        gtk_widget_get_screen(info->main_->GetWindow()));
+        gtk_widget_get_screen(info->main->GetWindow()));
     int screen_height = gdk_screen_get_height(
-        gtk_widget_get_screen(info->main_->GetWindow()));
+        gtk_widget_get_screen(info->main->GetWindow()));
 
     bool main_dock_right = (x > width);
 
-    if (info->popout_ && info->popout_->IsVisible()) {
+    if (info->popout && info->popout->IsVisible()) {
       int popout_width, popout_height;
-      info->popout_->GetWindowSize(&popout_width, &popout_height);
-      if (info->popout_on_right_ && popout_width < x &&
+      info->popout->GetWindowSize(&popout_width, &popout_height);
+      if (info->popout_on_right && popout_width < x &&
           x + width + popout_width > screen_width)
-        info->popout_on_right_ = false;
-      else if (!info->popout_on_right_ && popout_width > x &&
+        info->popout_on_right = false;
+      else if (!info->popout_on_right && popout_width > x &&
                x + width + popout_width < screen_width)
-        info->popout_on_right_ = true;
+        info->popout_on_right = true;
 
       if (y + popout_height > screen_height)
         y = screen_height - popout_height;
 
-      if (info->popout_on_right_) {
-        info->popout_->SetWindowPosition(x + width, y);
+      if (info->popout_on_right) {
+        info->popout->SetWindowPosition(x + width, y);
         width += popout_width;
       } else {
-        info->popout_->SetWindowPosition(x - popout_width, y);
+        info->popout->SetWindowPosition(x - popout_width, y);
         x -= popout_width;
         width += popout_width;
       }
 
-      main_dock_right = !info->popout_on_right_;
+      main_dock_right = !info->popout_on_right;
     }
 
-    if (info->details_ && info->details_->IsVisible()) {
+    if (info->details && info->details->IsVisible()) {
       int details_width, details_height;
-      info->details_->GetWindowSize(&details_width, &details_height);
-      if (info->details_on_right_ && details_width < x &&
+      info->details->GetWindowSize(&details_width, &details_height);
+      if (info->details_on_right && details_width < x &&
           x + width + details_width > screen_width)
-        info->details_on_right_ = false;
-      else if (!info->details_on_right_ && details_width > x &&
+        info->details_on_right = false;
+      else if (!info->details_on_right && details_width > x &&
                x + width + details_width < screen_width)
-        info->details_on_right_ = true;
+        info->details_on_right = true;
 
       if (y + details_height > screen_height)
         y = screen_height - details_height;
 
-      if (info->details_on_right_) {
-        info->details_->SetWindowPosition(x + width, y);
+      if (info->details_on_right) {
+        info->details->SetWindowPosition(x + width, y);
       } else {
-        info->details_->SetWindowPosition(x - details_width, y);
+        info->details->SetWindowPosition(x - details_width, y);
       }
     }
 
-    info->main_decorator_->SetDockEdge(main_dock_right);
+    info->main_decorator->SetDockEdge(main_dock_right);
   }
 
   void OnMainViewShowHideHandler(bool show, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end()) {
       if (show) {
-        if (it->second.popout_ && !it->second.popout_->IsVisible())
-          it->second.popout_->ShowView(false, 0, NULL);
+        if (it->second.popout && !it->second.popout->IsVisible())
+          it->second.popout->ShowView(false, 0, NULL);
         AdjustViewHostPosition(&it->second);
       } else {
-        if (it->second.popout_) {
-          it->second.popout_->CloseView();
+        if (it->second.popout) {
+          it->second.popout->CloseView();
         }
-        if (it->second.details_) {
+        if (it->second.details) {
           // The details view won't be shown again.
-          it->second.details_->CloseView();
-          it->second.details_ = NULL;
+          it->second.details->CloseView();
+          it->second.details = NULL;
         }
       }
     }
@@ -606,11 +626,11 @@ class SimpleGtkHost::Impl {
 
   void OnPopOutViewShowHideHandler(bool show, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.popout_) {
-      if (it->second.details_) {
+    if (it != gadgets_.end() && it->second.popout) {
+      if (it->second.details) {
         // Close Details whenever the popout view shows or hides.
-        it->second.details_->CloseView();
-        it->second.details_ = NULL;
+        it->second.details->CloseView();
+        it->second.details = NULL;
       }
       if (show)
         AdjustViewHostPosition(&it->second);
@@ -619,8 +639,8 @@ class SimpleGtkHost::Impl {
 
   bool OnPopOutViewBeginResizeHandler(int button, int hittest, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.popout_) {
-      if (it->second.popout_on_right_)
+    if (it != gadgets_.end() && it->second.popout) {
+      if (it->second.popout_on_right)
         return hittest == ViewInterface::HT_LEFT ||
                hittest == ViewInterface::HT_TOPLEFT ||
                hittest == ViewInterface::HT_BOTTOMLEFT ||
@@ -638,7 +658,7 @@ class SimpleGtkHost::Impl {
 
   void OnPopOutViewResizedHandler(int width, int height, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.popout_) {
+    if (it != gadgets_.end() && it->second.popout) {
       AdjustViewHostPosition(&it->second);
     }
   }
@@ -650,20 +670,20 @@ class SimpleGtkHost::Impl {
 
   void OnDetailsViewShowHideHandler(bool show, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.details_) {
+    if (it != gadgets_.end() && it->second.details) {
       if (show) {
         AdjustViewHostPosition(&it->second);
       } else {
         // The same details view will never shown again.
-        it->second.details_ = NULL;
+        it->second.details = NULL;
       }
     }
   }
 
   bool OnDetailsViewBeginResizeHandler(int button, int hittest, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.details_) {
-      if (it->second.details_on_right_)
+    if (it != gadgets_.end() && it->second.details) {
+      if (it->second.details_on_right)
         return hittest == ViewInterface::HT_LEFT ||
                hittest == ViewInterface::HT_TOPLEFT ||
                hittest == ViewInterface::HT_BOTTOMLEFT ||
@@ -681,7 +701,7 @@ class SimpleGtkHost::Impl {
 
   void OnDetailsViewResizedHandler(int width, int height, int gadget_id) {
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
-    if (it != gadgets_.end() && it->second.details_) {
+    if (it != gadgets_.end() && it->second.details) {
       AdjustViewHostPosition(&it->second);
     }
   }
@@ -715,7 +735,19 @@ class SimpleGtkHost::Impl {
   }
 
   void ShowGadgetDebugConsole(Gadget *gadget) {
-    // TODO:
+    if (!gadget)
+      return;
+    GadgetInfoMap::iterator it = gadgets_.find(gadget->GetInstanceID());
+    if (it == gadgets_.end())
+      return;
+    GadgetInfo *info = &it->second;
+    if (info->debug_console) {
+      DLOG("Gadget has already debug console opened: %p", info->debug_console);
+      return;
+    }
+    info->debug_console = NewGadgetDebugConsole(gadget);
+    g_signal_connect(info->debug_console, "destroy",
+                     G_CALLBACK(gtk_widget_destroyed), &info->debug_console);
   }
 
   typedef std::map<int, GadgetInfo> GadgetInfoMap;

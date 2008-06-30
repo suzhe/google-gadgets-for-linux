@@ -586,7 +586,6 @@ void GtkEditImpl::QueueDraw() {
     owner_->QueueDraw();
     content_modified_ = false;
     update_canvas_ = true;
-    // DLOG("QueueDraw: content modified.");
   } else {
     if (selection_changed_) {
       UpdateSelectionRegion();
@@ -595,7 +594,6 @@ void GtkEditImpl::QueueDraw() {
       if (!selection_region_.IsEmpty())
         owner_->QueueDrawRegion(selection_region_);
       selection_changed_ = false;
-      DLOG("QueueDraw: selection changed.");
     }
     if (cursor_moved_) {
       UpdateCursorRegion();
@@ -604,7 +602,6 @@ void GtkEditImpl::QueueDraw() {
       if (!cursor_region_.IsEmpty())
         owner_->QueueDrawRegion(cursor_region_);
       cursor_moved_ = false;
-      DLOG("QueueDraw: cursor moved.");
     }
   }
 }
@@ -1462,7 +1459,7 @@ void GtkEditImpl::EnterText(const char *str) {
   std::string txt = multiline_ ? std::string(str) : CleanupLineBreaks(str);
   const char *end = NULL;
   g_utf8_validate(txt.c_str(), -1, &end);
-  if (end > str) {
+  if (end > txt.c_str()) {
     int n_chars = static_cast<int>(g_utf8_strlen(txt.c_str(),
                                                  end - txt.c_str()));
     int index = static_cast<int>(

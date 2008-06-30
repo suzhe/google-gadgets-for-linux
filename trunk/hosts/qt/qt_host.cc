@@ -100,7 +100,7 @@ class QtHost::Impl {
   }
   void InitGadgets() {
     gadget_manager_->EnumerateGadgetInstances(
-        NewSlot(this, &Impl::AddGadgetInstanceCallback));
+        NewSlot(this, &Impl::EnumerateGadgetInstancesCallback));
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
     gadget_manager_->ConnectOnRemoveGadgetInstance(
@@ -129,6 +129,11 @@ class QtHost::Impl {
         QMessageBox::Yes| QMessageBox::No,
         QMessageBox::Yes);
     return ret == QMessageBox::Yes;
+  }
+
+  bool EnumerateGadgetInstancesCallback(int id) {
+    AddGadgetInstanceCallback(id); // Ignore the error.
+    return true;
   }
 
   bool NewGadgetInstanceCallback(int id) {
