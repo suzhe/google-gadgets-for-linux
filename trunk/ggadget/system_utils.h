@@ -116,6 +116,11 @@ std::string GetCurrentDirectory();
 std::string GetHomeDirectory();
 
 /**
+ * Gets the absolute path of a given relative or absolute path.
+ */
+std::string GetAbsolutePath(const std::string &path);
+
+/**
  * Creates an unique temporary directory that can be used to store temporary
  * files.
  *
