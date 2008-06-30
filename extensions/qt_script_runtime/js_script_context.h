@@ -90,6 +90,7 @@ class JSScriptContext : public ScriptContextInterface {
 
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback);
+  virtual void CollectGarbage() {}
 
   class Impl;
  private:
