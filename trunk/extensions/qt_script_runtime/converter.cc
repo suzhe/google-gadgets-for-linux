@@ -315,11 +315,9 @@ static bool ConvertNativeUTF16ToJSString(QScriptEngine *engine,
 
 /*static bool ConvertNativeArrayToJS(QScriptEngine *engine,
                                    ScriptableArray *array, QScriptValue *qval) {
-  DLOG("ConvertNativeArrayToJS");
   return false;
 }*/
 /*static QScriptValue JSObject(QScriptContext *context, QScriptEngine *engine) {
-  LOG("Being called");
   return engine->undefinedValue();
 }*/
 static bool ConvertNativeToJSObject(QScriptEngine *engine,

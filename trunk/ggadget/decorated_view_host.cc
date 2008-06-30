@@ -1963,17 +1963,22 @@ bool DecoratedViewHost::ShowContextMenu(int button) {
   return view_host ? view_host->ShowContextMenu(button) : false;
 }
 
-void DecoratedViewHost::Alert(const char *message) {
-  impl_->view_decorator_->Alert(message);
+void DecoratedViewHost::Alert(const ViewInterface *view, const char *message) {
+  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
+  if (view_host) view_host->Alert(view, message);
 }
 
-bool DecoratedViewHost::Confirm(const char *message) {
-  return impl_->view_decorator_->Confirm(message);
+bool DecoratedViewHost::Confirm(const ViewInterface *view,
+                                const char *message) {
+  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
+  return view_host ? view_host->Confirm(view, message) : false;
 }
 
-std::string DecoratedViewHost::Prompt(const char *message,
-                                   const char *default_value) {
-  return impl_->view_decorator_->Prompt(message, default_value);
+std::string DecoratedViewHost::Prompt(const ViewInterface *view,
+                                      const char *message,
+                                      const char *default_value) {
+  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
+  return view_host ? view_host->Prompt(view, message, default_value) : "";
 }
 
 int DecoratedViewHost::GetDebugMode() const {

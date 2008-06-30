@@ -197,8 +197,7 @@ static void PopState() {
   std::string buffer = GetStackTop().buffer;
   std::string left_functions = GetStackTop().function_decls;
   if (!left_functions.empty()) {
-    LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
-        input_filename);
+    LOG("%s: File contains unpaired '(', '[' or '{'s.", input_filename);
     buffer += left_functions;
   }
 
@@ -210,7 +209,7 @@ static void PopState() {
   if (state == FUNCTION_DECL && !stack.empty() && GetParenCount() > 1) {
     // This function is declared in inner block of another function.
     GetStackTop().function_decls += buffer;
-    LOG("WARNING: %s:%d: Non-standard JScript grammar (function declared in"
+    LOG("%s:%d: Non-standard JScript grammar (function declared in"
         " inner blocks): %s", input_filename, yylineno, buffer.c_str());
   } else {
     ScriptOutput(buffer.c_str());
@@ -322,7 +321,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 <AFTER_OPTIONS_PARAM>{WS}=/[^=] {
   // Mathes ...= but not ...==.
   ECHO;
-  LOG("WARNING: %s:%d: Old JScript grammar: %s... Converted to %s",
+  LOG("%s:%d: Old JScript grammar: %s... Converted to %s",
       input_filename, yylineno, GetStackTop().buffer.c_str(),
       GetState() == OPTIONS_DEFAULT_VALUE ? "putDefaultValue()" : "putValue()");
   ReplaceLast(")", ",");
@@ -378,8 +377,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
   PopAllPairedStates();
   CloseParen();
   // JScript allows ';' between '}' and 'else', which is invalid in standard JS.
-  LOG("WARNING: %s:%d: Old JScript grammar: %s...",
-      input_filename, yylineno, yytext);
+  LOG("%s:%d: Old JScript grammar: %s...", input_filename, yylineno, yytext);
   std::string text(yytext);
   text[text.find(';')] = ' ';
   ScriptOutput(text.c_str());
@@ -390,8 +388,7 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 <<EOF>> {
   PopAllPairedStates();
   if (stack.size() != 1) {
-    LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
-        input_filename);
+    LOG("%s: File contains unpaired '(', '[' or '{'s.", input_filename);
   }
   PopAllStates();
   YY_FLUSH_BUFFER;

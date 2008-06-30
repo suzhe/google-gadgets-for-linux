@@ -441,6 +441,14 @@ class NativeMainLoop::Impl {
     return static_cast<uint64_t>(tv.tv_sec)*1000 + tv.tv_usec/1000;
   }
 
+  bool IsMainThread() const {
+#ifdef HAVE_PTHREAD
+    return pthread_equal(pthread_self(), main_loop_thread_) == 0;    
+#else
+    return true;
+#endif
+  }
+
  private:
 #ifdef HAVE_PTHREAD
   void WakeUpUnLocked() {
@@ -547,6 +555,9 @@ bool NativeMainLoop::IsRunning() const {
 }
 uint64_t NativeMainLoop::GetCurrentTime() const {
   return impl_->GetCurrentTime();
+}
+bool NativeMainLoop::IsMainThread() const {
+  return impl_->IsMainThread();
 }
 
 } // namespace ggadget

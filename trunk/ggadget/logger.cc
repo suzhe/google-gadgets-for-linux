@@ -15,14 +15,15 @@
 */
 
 
-#include <sys/time.h>
-#include <time.h>
-#include <cassert>
+#include "logger.h"
+
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <third_party/valgrind/valgrind.h>
-#include "logger.h"
+#include <map>
+#include <vector>
+#include "main_loop_interface.h"
+#include "signals.h"
 #include "string_utils.h"
 
 #ifdef _DEBUG
@@ -32,41 +33,111 @@
 
 namespace ggadget {
 
-LogHelper::LogHelper(const char *file, int line)
-    : file_(file), line_(line) {
+typedef Signal4<std::string, LogLevel, const char *, int,
+                const std::string &> LogSignal;
+
+static LogSignal g_global_log_signal;
+typedef std::map<void *, LogSignal *> ContextSignalMap;
+static ContextSignalMap g_context_log_signals;
+static std::vector<void *> g_log_context_stack;
+
+LogHelper::LogHelper(LogLevel level, const char *file, int line)
+    : level_(level), file_(file), line_(line) {
 }
 
+static void DoLog(LogLevel level, const char *file, int line,
+                  const std::string &message) {
+  static bool in_logger = false; // Prevents re-entrance.
+  if (in_logger) return;
+
+  in_logger = true;
+  std::string new_message;
+  void *context = g_log_context_stack.empty() ?
+                  NULL : g_log_context_stack.back();
+  ContextSignalMap::const_iterator it = g_context_log_signals.find(context);
+  if (it != g_context_log_signals.end())
+    new_message = (*it->second)(level, file, line, message);
+  else
+    new_message = message;
+
+  g_global_log_signal(level, file, line, new_message);
+  in_logger = false;
+}
+
+// Run in the main thread if LoggerHelper is called in another thread.
+class LogTask : public WatchCallbackInterface {
+ public:
+  LogTask(LogLevel level, const char *file, int line,
+          const std::string &message)
+      : level_(level), file_(file), line_(line), message_(message) {
+  }
+  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    DoLog(level_, VariantValue<const char *>()(file_), line_, message_);
+    return false;
+  }
+  virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    delete this;
+  }
+
+  LogLevel level_;
+  // Variant can correctly handle NULL char *, and use decoupled memory space.
+  Variant file_;
+  int line_;
+  std::string message_;
+};
+
 void LogHelper::operator()(const char *format, ...) {
-  if (RUNNING_ON_VALGRIND) {
-    va_list ap;
-    va_start(ap, format);
-    std::string message = StringVPrintf(format, ap);
-    va_end(ap);
-    VALGRIND_PRINTF_BACKTRACE("%s:%d: %s", file_, line_, message.c_str());
+  va_list ap;
+  va_start(ap, format);
+  std::string message = StringVPrintf(format, ap);
+  va_end(ap);
+
+  MainLoopInterface *main_loop = GetGlobalMainLoop();
+  if (!main_loop || main_loop->IsMainThread()) {
+    DoLog(level_, file_, line_, message);
   } else {
-    va_list ap;
-    va_start(ap, format);
-#ifdef LOG_WITH_TIMESTAMP
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    printf("%02d:%02d.%03d: ",
-           static_cast<int>(tv.tv_sec / 60 % 60),
-           static_cast<int>(tv.tv_sec % 60),
-           static_cast<int>(tv.tv_usec / 1000));
-#endif
-#ifdef LOG_WITH_FILE_LINE
-    static const char *short_log = getenv(("GGL_SHORT_LOG"));
-    if (short_log) {
-      const char *name = strrchr(file_, '/');
-      printf("%s:%d: ", name ? name+1 : file_, line_);
-    } else {
-      printf("%s:%d: ", file_, line_);
-    }
-#endif
-    vprintf(format, ap);
-    va_end(ap);
-    putchar('\n');
-    fflush(stdout);
+    main_loop->AddTimeoutWatch(0, new LogTask(level_, file_, line_, message));
+  }
+}
+
+ScopedLogContext::ScopedLogContext(void *context) {
+  g_log_context_stack.push_back(context);
+}
+
+ScopedLogContext::~ScopedLogContext() {
+  g_log_context_stack.pop_back();
+}
+
+void PushLogContext(void *context) {
+  g_log_context_stack.push_back(context);
+}
+
+void PopLogContext(void *log_context) {
+  ASSERT(log_context == g_log_context_stack.back());
+  g_log_context_stack.pop_back();
+}
+
+Connection *ConnectGlobalLogListener(LogListener *listener) {
+  return g_global_log_signal.Connect(listener);
+}
+
+Connection *ConnectContextLogListener(void *context, LogListener *listener) {
+  ContextSignalMap::const_iterator it = g_context_log_signals.find(context);
+  LogSignal *signal;
+  if (it == g_context_log_signals.end()) {
+    signal = new LogSignal();
+    g_context_log_signals[context] = signal;
+  } else {
+    signal = it->second;
+  }
+  return signal->Connect(listener);
+}
+
+void RemoveLogContext(void *context) {
+  ContextSignalMap::iterator it = g_context_log_signals.find(context);
+  if (it != g_context_log_signals.end()) {
+    delete it->second;
+    g_context_log_signals.erase(it);
   }
 }
 

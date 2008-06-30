@@ -1084,11 +1084,11 @@ static ggadget::curl::XMLHttpRequestFactory gFactory;
 
 extern "C" {
   bool Initialize() {
-    DLOG("Initialize curl_xml_http_request extension.");
+    LOGI("Initialize curl_xml_http_request extension.");
     return ggadget::SetXMLHttpRequestFactory(&gFactory);
   }
 
   void Finalize() {
-    DLOG("Finalize curl_xml_http_request extension.");
+    LOGI("Finalize curl_xml_http_request extension.");
   }
 }

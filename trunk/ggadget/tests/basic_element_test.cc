@@ -21,7 +21,6 @@
 #include "ggadget/xml_utils.h"
 #include "ggadget/view.h"
 #include "mocked_element.h"
-#include "mocked_host.h"
 #include "mocked_timer_main_loop.h"
 #include "mocked_view_host.h"
 #include "init_extensions.h"

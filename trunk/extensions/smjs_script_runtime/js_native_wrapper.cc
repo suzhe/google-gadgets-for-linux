@@ -81,6 +81,7 @@ ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
 
 bool JSNativeWrapper::EnumerateProperties(
     EnumeratePropertiesCallback *callback) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   ASSERT(callback);
   bool result = true;
   JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
@@ -108,6 +109,7 @@ bool JSNativeWrapper::EnumerateProperties(
 
 bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
   ASSERT(callback);
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   bool result = true;
   JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
   if (id_array) {
@@ -131,6 +133,7 @@ bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
 }
 
 ResultVariant JSNativeWrapper::GetProperty(const char *name) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   Variant result;
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
@@ -143,6 +146,7 @@ ResultVariant JSNativeWrapper::GetProperty(const char *name) {
 }
 
 bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
     RaiseException(js_context_,
@@ -154,6 +158,7 @@ bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
 }
 
 ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   Variant result;
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
@@ -166,6 +171,7 @@ ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
 }
 
 bool JSNativeWrapper::SetPropertyByIndex(int index, const Variant &value) {
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
     JS_ReportError(js_context_,

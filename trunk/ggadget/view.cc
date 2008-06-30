@@ -1221,7 +1221,7 @@ class View::Impl {
       if (binary)
         return graphics_->NewImage("", binary->data(), is_mask);
     } else {
-      LOG("Unsupported type of image src.");
+      LOG("Unsupported type of image src: '%s'", src.Print().c_str());
       DLOG("src=%s", src.Print().c_str());
     }
     return NULL;
@@ -1675,16 +1675,17 @@ bool View::OpenURL(const char *url) const {
 
 void View::Alert(const char *message) const {
   if (impl_->view_host_)
-    impl_->view_host_->Alert(message);
+    impl_->view_host_->Alert(this, message);
 }
 
 bool View::Confirm(const char *message) const {
-  return impl_->view_host_ ? impl_->view_host_->Confirm(message) : false;
+  return impl_->view_host_ ? impl_->view_host_->Confirm(this, message) : false;
 }
 
-std::string
-View::Prompt(const char *message, const char *default_result) const {
-  return impl_->view_host_ ? impl_->view_host_->Prompt(message, default_result) : "";
+std::string View::Prompt(const char *message,
+                         const char *default_result) const {
+  return impl_->view_host_ ?
+         impl_->view_host_->Prompt(this, message, default_result) : "";
 }
 
 uint64_t View::GetCurrentTime() const {

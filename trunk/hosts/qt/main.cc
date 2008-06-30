@@ -128,18 +128,21 @@ static const char *g_help_string =
   "Usage: %s [Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
-  "  -d mode    Specify debug modes for drawing View:\n"
-  "             0 - No debug.\n"
-  "             1 - Draw bounding boxes around container elements.\n"
-  "             2 - Draw bounding boxes around all elements.\n"
-  "             4 - Draw bounding boxes around clip region.\n"
+  "  -d mode, --debug mode\n"
+  "      Specify debug modes for drawing View:\n"
+  "      0 - No debug.\n"
+  "      1 - Draw bounding boxes around container elements.\n"
+  "      2 - Draw bounding boxes around all elements.\n"
+  "      4 - Draw bounding boxes around clip region.\n"
 #endif
 #if QT_VERSION >= 0x040400
-  "  -s script_runtime  Specify which script runtime to use\n"
-  "             smjs - spidermonkey js runtime\n"
-  "             qt   - QtScript js runtime(experimental)\n"
+  "  -s script_runtime, --script-runtime script_runtime\n"
+  "      Specify which script runtime to use\n"
+  "      smjs - spidermonkey js runtime\n"
+  "      qt   - QtScript js runtime(experimental)\n"
 #endif
-  "  -h, --help Print this message and exit.\n"
+  "  -h, --help\n"
+  "      Print this message and exit.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths.\n"
@@ -246,7 +249,8 @@ int main(int argc, char* argv[]) {
       }
 #endif
 #if QT_VERSION >= 0x040400
-    } else if (strcmp("-s", argv[i]) == 0) {
+    } else if (strcmp("-s", argv[i]) == 0 ||
+               strcmp("--script-runtime", argv[i]) == 0) {
       if (++i < argc) {
         if (strcmp(argv[i], "qt") == 0) {
           js_runtime = "qt-script-runtime";

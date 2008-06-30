@@ -68,10 +68,12 @@ ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   Variant return_value(GetReturnType());
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.
-    LOG("Finalized JavaScript function still be called");
+    LOG("Finalized JavaScript function %s still be called",
+        function_info_.c_str());
     return ResultVariant(return_value);
   }
 
+  ScopedLogContext log_context(GetJSScriptContext(context_));
   if (JS_IsExceptionPending(context_))
     return ResultVariant(return_value);
 

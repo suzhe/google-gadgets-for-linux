@@ -61,7 +61,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
 }
 
 QtViewWidget::~QtViewWidget() {
-  LOG("Widget freed");
+  DLOG("Widget freed");
   if (child_) {
     child_->setParent(NULL);
   }
@@ -323,7 +323,7 @@ void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
-  LOG("drag enter");
+  DLOG("drag enter");
   if (event->mimeData()->hasUrls()) {
     drag_urls_.clear();
     if (drag_files_)
@@ -343,7 +343,7 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
-  LOG("drag leave");
+  DLOG("drag leave");
   DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0, drag_files_);
   view_->OnDragEvent(drag_event);
 }

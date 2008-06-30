@@ -14,13 +14,15 @@
   limitations under the License.
 */
 
-#include <map>
-#include <cstdlib>
 #include <gtk/gtk.h>
 #include <glib/gthread.h>
 #include <locale.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <ctime>
+#include <map>
+#include <cstdlib>
 
 #include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
@@ -120,23 +122,70 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
+#ifdef _DEBUG
+static int g_log_level = ggadget::LOG_TRACE;
+static bool g_long_log = true;
+#else
+static int g_log_level = ggadget::LOG_WARNING;
+static bool g_long_log = false;
+#endif
+
+std::string LogListener(ggadget::LogLevel level, const char *filename, int line,
+                        const std::string &message) {
+  if (level >= g_log_level) {
+    if (g_long_log) {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      printf("%02d:%02d.%03d: ",
+             static_cast<int>(tv.tv_sec / 60 % 60),
+             static_cast<int>(tv.tv_sec % 60),
+             static_cast<int>(tv.tv_usec / 1000));
+      if (filename) {
+        // Print only the last part of the file name.
+        const char *name = strrchr(filename, '/');
+        if (name)
+          filename = name + 1;
+        printf("%s:%d: ", filename, line);
+      }
+    }
+    printf("%s\n", message.c_str());
+    fflush(stdout);
+  }
+  return message;
+}
 
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
   "Usage: %s [Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
-  "  -d mode    Specify debug modes for drawing View:\n"
-  "             0 - No debug.\n"
-  "             1 - Draw bounding boxes around container elements.\n"
-  "             2 - Draw bounding boxes around all elements.\n"
-  "             4 - Draw bounding boxes around clip region.\n"
+  "  -d mode, --debug mode\n"
+  "      Specify debug modes for drawing View:\n"
+  "      0 - No debug.\n"
+  "      1 - Draw bounding boxes around container elements.\n"
+  "      2 - Draw bounding boxes around all elements.\n"
+  "      4 - Draw bounding boxes around clip region.\n"
 #endif
-  "  -z zoom    Specify initial zoom factor for View, no effect for sidebar.\n"
-  "  -b         Draw window border for Main View.\n"
-  "  -ns        Use dashboard mode instead of sidebar mode.\n"
-  "  -bg        Run in background.\n"
-  "  -h, --help Print this message and exit.\n"
+  "  -z zoom, --zoom zoom\n"
+  "      Specify initial zoom factor for View, no effect for sidebar.\n"
+  "  -b, --border\n"
+  "      Draw window border for Main View.\n"
+  "  -ns, --no-sidebar\n"
+  "      Use dashboard mode instead of sidebar mode.\n"
+  "  -bg, --background\n"
+  "      Run in background.\n"
+  "  -l loglevel, --log-level loglevel\n"
+  "      Specify the minimum gadget.debug log level.\n"
+  "      0 - Trace(All)  1 - Info  2 - Warning  3 - Error  >=4 - No log\n"
+  "  -ll, --long-log\n"
+  "      Output logs using long format.\n"
+  "  -dc, --debug-console debug_console_config\n"
+  "      Change debug console configuration (will be saved in config file):\n"
+  "      0 - No debug console allowed\n"
+  "      1 - Gadgets has debug console menu item\n"
+  "      2 - Open debug console when gadget is added to debug startup code\n"
+  "  -h, --help\n"
+  "      Print this message and exit.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths.\n"
@@ -155,6 +204,7 @@ int main(int argc, char* argv[]) {
   bool decorated = false;
   bool sidebar = true;
   bool background = false;
+  int debug_console = -1;
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
@@ -200,6 +250,18 @@ int main(int argc, char* argv[]) {
           zoom = 1.0;
         DLOG("Use zoom factor %lf", zoom);
       }
+    } else if (strcmp("-l", argv[i]) == 0 ||
+               strcmp("--log-level", argv[i]) == 0) {
+      if (++i < argc)
+        g_log_level = atoi(argv[i]);
+    } else if (strcmp("-ll", argv[i]) == 0 ||
+               strcmp("--long-log", argv[i]) == 0) {
+      g_long_log = true;
+    } else if (strcmp("-dc", argv[i]) == 0 ||
+               strcmp("--debug-console", argv[i]) == 0) {
+      debug_console = 1;
+      if (++i < argc)
+        debug_console = atoi(argv[i]);
     } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
       if (run_once.IsRunning()) {
@@ -217,6 +279,8 @@ int main(int argc, char* argv[]) {
 
   // set locale according to env vars
   setlocale(LC_ALL, "");
+
+  ggadget::ConnectGlobalLogListener(ggadget::NewSlot(LogListener));
 
   // Puth the process into background in the early stage to prevent from
   // printing any log messages.
@@ -279,13 +343,28 @@ int main(int argc, char* argv[]) {
   // extension manager.
   ext_manager->SetReadonly();
 
+  ggadget::OptionsInterface *global_options = ggadget::GetGlobalOptions();
+  if (global_options) {
+    if (debug_console == -1) {
+      debug_console = 0;
+      global_options->GetValue(ggadget::kDebugConsoleOption)
+          .ConvertToInt(&debug_console);
+    } else {
+      global_options->PutValue(ggadget::kDebugConsoleOption,
+                               ggadget::Variant(debug_console));
+    }
+  }
+
   ggadget::HostInterface *host;
   ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);
 
-  if (sidebar)
-    host = new hosts::gtk::SideBarGtkHost(options, decorated, debug_mode);
-  else
-    host = new hosts::gtk::SimpleGtkHost(options, zoom, decorated, debug_mode);
+  if (sidebar) {
+    host = new hosts::gtk::SideBarGtkHost(options, decorated,
+                                          debug_mode, debug_console);
+  } else {
+    host = new hosts::gtk::SimpleGtkHost(options, zoom, decorated,
+                                         debug_mode, debug_console);
+  }
 
 #ifdef _DEBUG
   std::vector<ggadget::Gadget *> temp_gadgets;

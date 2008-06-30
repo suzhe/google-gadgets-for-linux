@@ -19,11 +19,13 @@
 
 #include <string>
 #include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/string_utils.h>
 
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
+template <typename R, typename P1, typename P2> class Slot2;
 class HostInterface;
 class DetailsViewData;
 class FileManagerInterface;
@@ -269,6 +271,12 @@ class Gadget {
    * Only called during user interaction is allowed.
    */
   bool OpenURL(const char *url) const;
+
+  /**
+   * Connect a log listener which will receive all logs for this gadget.
+   */
+  Connection *ConnectLogListener(
+      Slot2<void, LogLevel, const std::string &> *listener);
 
  public:
   /**

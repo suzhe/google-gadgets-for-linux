@@ -101,6 +101,7 @@ class MockedTimerMainLoop : public ggadget::MainLoopInterface {
   virtual void Quit() { running_ = false; }
   virtual bool IsRunning() const { return running_; }
   virtual uint64_t GetCurrentTime() const { return current_time_; }
+  virtual bool IsMainThread() const { return true; }
 
   // Explicitly advance the current time.
   void AdvanceTime(int time) {

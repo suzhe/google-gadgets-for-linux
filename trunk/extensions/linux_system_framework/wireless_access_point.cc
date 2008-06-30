@@ -100,7 +100,7 @@ class WirelessAccessPoint::Impl {
                                        true, -1, NULL,
                                        MESSAGE_TYPE_BOOLEAN, false,
                                        MESSAGE_TYPE_INVALID);
-    LOG("Disconnect result: %s", result ? "true" : "false");
+    DLOG("Disconnect result: %s", result ? "true" : "false");
     if (callback) {
       (*callback)(result);
       delete callback;

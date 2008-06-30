@@ -155,17 +155,17 @@ using namespace ggadget::framework::gtk_system_framework;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gtk_system_framework extension.");
+    LOGI("Initialize gtk_system_framework extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gtk_system_framework extension.");
+    LOGI("Finalize gtk_system_framework extension.");
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
                                   Gadget *gadget) {
-    LOG("Register gtk_system_framework extension.");
+    LOGI("Register gtk_system_framework extension.");
     ASSERT(framework && gadget);
 
     if (!framework)

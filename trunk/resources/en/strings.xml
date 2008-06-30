@@ -106,6 +106,7 @@ even in the middle of a word. -->
 <MENU_ITEM_50P>50%</MENU_ITEM_50P>
 <MENU_ITEM_75P>75%</MENU_ITEM_75P>
 <MENU_ITEM_CHANGE_HOTKEY>Change &amp;Hotkey...</MENU_ITEM_CHANGE_HOTKEY>
+<MENU_ITEM_DEBUG_CONSOLE>De&amp;bug Console</MENU_ITEM_DEBUG_CONSOLE>
 
 <!-- Title of the confirm dialog of third party gadget installation. -->
 <GADGET_CONFIRM_TITLE>Third Party Gadget Installation</GADGET_CONFIRM_TITLE>
@@ -137,5 +138,13 @@ even in the middle of a word. -->
 <!-- Tooltip text for the status icon. The %s parameter is the hotkey string. -->
 <STATUS_ICON_TOOLTIP>Google Gadgets</STATUS_ICON_TOOLTIP>
 <STATUS_ICON_TOOLTIP_WITH_HOTKEY>Google Gadgets, press %s to show or hide gadgets.</STATUS_ICON_TOOLTIP_WITH_HOTKEY>
+
+<!-- Messages for debug console. -->
+<DEBUG_CLEAR>Clear</DEBUG_CLEAR>
+<DEBUG_TRACE>Trace</DEBUG_TRACE>
+<DEBUG_INFO>Info</DEBUG_INFO>
+<DEBUG_WARNING>Warning</DEBUG_WARNING>
+<DEBUG_ERROR>Error</DEBUG_ERROR>
+<DEBUG_LOCK_SCROLL>Lock scroll</DEBUG_LOCK_SCROLL>
 
 </strings>

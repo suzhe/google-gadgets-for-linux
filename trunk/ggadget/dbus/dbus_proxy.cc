@@ -289,7 +289,7 @@ class DBusProxy::Impl {
         case 'v':
           return Variant::TYPE_SCRIPTABLE;
         default:
-          LOG("invalid type: %s", s);
+          LOG("Invalid DBus type: %s.", s);
       }
       return Variant::TYPE_VOID;
     }
@@ -416,7 +416,7 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
                                         domdoc, NULL, NULL)) {
       DOMNodeInterface *root_node = domdoc->GetDocumentElement();
       if (!root_node || root_node->GetNodeName() != "node") {
-        LOG("have no node named 'node', invalid XML returned.");
+        LOG("No node named 'node', invalid XML returned.");
         goto exit;
       }
       method_calls_.clear();
@@ -438,7 +438,7 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
           if (sub_node->GetNodeType() == DOMNodeInterface::ELEMENT_NODE &&
               !ParseOneMethodNode(down_cast<DOMElementInterface*>(sub_node)) &&
               !ParseOneSignalNode(down_cast<DOMElementInterface*>(sub_node)))
-            LOG("failed to parse one node, node type: %s",
+            LOG("Failed to parse one node, node type: %s",
                 sub_node->GetNodeName().c_str());
         }
       }
@@ -495,7 +495,7 @@ bool DBusProxy::Impl::ParseOneMethodNode(DOMElementInterface* node) {
     } else if (direction == "in") {
       method.in_args.push_back(arg);
     } else {
-      LOG("direction is missed or invalid: *%s*", direction.c_str());
+      LOG("Direction is missing or invalid: *%s*", direction.c_str());
       return false;
     }
   }
@@ -555,10 +555,10 @@ bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
     if (it == method_calls_.end()) {
       DLOG("no method %s registered by Introspectable interface.", method);
     } else if (number_dismatch) {
-      LOG("arg number dismatch for method %s", method);
+      LOG("Arg number dismatch for method %s", method);
       return false;
     } else {
-      LOG("Warning: Arguments for %s dismatch with the prototyp by "
+      LOG("Arguments for %s dismatch with the prototyp by "
           "Introspectable interface.", method);
       ASSERT(false);
     }
@@ -569,7 +569,7 @@ bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
                                                       method);
   DBusMarshaller marshaller(message);
   if (!marshaller.AppendArguments(*in_arguments)) {
-    LOG("marshal failed.");
+    LOG("Failed to marshal DBus message.");
     dbus_message_unref(message);
     return false;
   }

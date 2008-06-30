@@ -39,16 +39,16 @@
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gst_mediaplayer_element extension.");
+    LOGI("Initialize gst_mediaplayer_element extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gst_mediaplayer_element extension.");
+    LOGI("Finalize gst_mediaplayer_element extension.");
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    LOG("Register gst_mediaplayer_element extension.");
+    LOGI("Register gst_mediaplayer_element extension.");
     if (factory) {
       // Used when the mediaplayer element is hosted by an object element.
       factory->RegisterElementClass(

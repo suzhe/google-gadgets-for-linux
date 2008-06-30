@@ -30,16 +30,16 @@ using ggadget::google::kGoogleGadgetManagerTag;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize gadget_browser_script_utils extension.");
+    LOGI("Initialize gadget_browser_script_utils extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize gadget_browser_script_utils extension.");
+    LOGI("Finalize gadget_browser_script_utils extension.");
   }
 
   bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
-    LOG("Register ggadget_browser_script_utils extension.");
+    LOGI("Register ggadget_browser_script_utils extension.");
     GadgetManagerInterface *gadget_manager = GetGadgetManager();
     if (!gadget_manager ||
         strcmp(gadget_manager->GetImplTag(), kGoogleGadgetManagerTag) != 0) {

@@ -50,6 +50,10 @@
 
 namespace ggadget {
 
+// The place holder in the handler of gadget.debug.xxxx() which will be
+// replaced with the actual script filename and line number.
+static const char kFileLinePlaceHolder[] = "<FILE:LINE>";
+
 class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
@@ -79,10 +83,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         // We may support multiple different script languages later.
         context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
         if (context_) {
-          context_->ConnectErrorReporter(
-              NewSlot(gadget->impl_, &Impl::OnScriptError));
           context_->ConnectScriptBlockedFeedback(
               NewSlot(this, &ViewBundle::OnScriptBlocked));
+          ConnectContextLogListener(
+              context_, NewSlot(gadget->impl_, &Impl::OnContextLog, context_));
         }
       }
 
@@ -104,6 +108,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       delete view_;
       view_ = NULL;
       if (context_) {
+        RemoveLogContext(context_);
         context_->Destroy();
         context_ = NULL;
       }
@@ -119,8 +124,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       if (!view_host)
         return true; // Maybe in test environment, let the script continue.
 
-      return !view_host->Confirm(StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
-                                              filename, lineno).c_str());
+      return !view_host->Confirm(
+          view_, StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
+                              filename, lineno).c_str());
     }
 
    private:
@@ -156,7 +162,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         trusted_(trusted),
         in_user_interaction_(false),
-        remove_me_timer_(0) {
+        remove_me_timer_(0),
+        debug_console_config_(0) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -164,6 +171,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ASSERT(file_manager_);
     ASSERT(options_);
     ASSERT(scriptable_options_);
+
+    OptionsInterface *global_options = GetGlobalOptions();
+    if (global_options) {
+      global_options->GetValue(kDebugConsoleOption)
+          .ConvertToInt(&debug_console_config_);
+    }
   }
 
   ~Impl() {
@@ -282,8 +295,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         if (!CompareVersion(i->second.c_str(), GGL_VERSION, 
                             &compare_result)
             || compare_result > 0) {
-          LOG("Gadget required platform version %s higher than supported version %s",
-              i->second.c_str(), GGL_VERSION);
+          LOG("Gadget required platform version %s higher than supported "
+              "version %s", i->second.c_str(), GGL_VERSION);
           return false;
         }
       }
@@ -314,6 +327,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
+    ScopedLogContext log_context(main_view_->context());
     main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
     RegisterScriptExtensions(main_view_->context());
 
@@ -373,10 +387,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     RegisterConstant("storage", &storage_);
 
     // Register properties of gadget.debug.
-    debug_.RegisterMethod("trace", NewSlot(this, &Impl::DebugTrace));
-    debug_.RegisterMethod("info", NewSlot(this, &Impl::DebugInfo));
-    debug_.RegisterMethod("warning", NewSlot(this, &Impl::DebugWarning));
-    debug_.RegisterMethod("error", NewSlot(this, &Impl::DebugError));
+    debug_.RegisterMethod("trace", NewSlot(this, &Impl::ScriptLog, LOG_TRACE));
+    debug_.RegisterMethod("info", NewSlot(this, &Impl::ScriptLog, LOG_INFO));
+    debug_.RegisterMethod("warning", NewSlot(this, &Impl::ScriptLog,
+                                             LOG_WARNING));
+    debug_.RegisterMethod("error", NewSlot(this, &Impl::ScriptLog, LOG_ERROR));
 
     // Register properties of gadget.storage.
     storage_.RegisterMethod("extract", NewSlot(this, &Impl::ExtractFile));
@@ -492,6 +507,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     RemoveMe(true);
   }
 
+  void DebugConsoleMenuCallback(const char *) {
+    host_->ShowGadgetDebugConsole(owner_);
+  }
+
   void OnAddCustomMenuItems(MenuInterface *menu) {
     ScriptableMenu scriptable_menu(menu);
     onaddcustommenuitems_signal_(&scriptable_menu);
@@ -503,6 +522,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
     bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
                          !oncommand_signal_.HasActiveConnections();
+    if (debug_console_config_ > 0) {
+      menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0,
+                    NewSlot(this, &Impl::DebugConsoleMenuCallback),
+                    MenuInterface::MENU_ITEM_PRI_GADGET);
+    }
     menu->AddItem(GM_("MENU_ITEM_ABOUT"),
                   disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
                   NewSlot(this, &Impl::AboutMenuCallback),
@@ -601,21 +625,29 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     manifest_info_map_[kManifestAboutText] = about_text;
   }
 
-
-  void DebugTrace(const char *message) {
-    host_->DebugOutput(HostInterface::DEBUG_TRACE, message);
+  std::string OnContextLog(LogLevel level, const char *filename, int line,
+                           const std::string &message,
+                           ScriptContextInterface *context) {
+    std::string real_message;
+    if (strncmp(kFileLinePlaceHolder, message.c_str(),
+                sizeof(kFileLinePlaceHolder) - 1) == 0) {
+      std::string script_filename;
+      int script_line;
+      context->GetCurrentFileAndLine(&script_filename, &script_line);
+      StringAppendPrintf(&real_message, "%s:%d: %s",
+                         script_filename.c_str(), script_line,
+                         message.c_str() + sizeof(kFileLinePlaceHolder) - 1);
+    } else {
+      real_message = message;
+    }
+    log_signal_(level, real_message);
+    return real_message;
   }
 
-  void DebugInfo(const char *message) {
-    host_->DebugOutput(HostInterface::DEBUG_INFO, message);
-  }
-
-  void DebugWarning(const char *message) {
-    host_->DebugOutput(HostInterface::DEBUG_WARNING, message);
-  }
-
-  void DebugError(const char *message) {
-    host_->DebugOutput(HostInterface::DEBUG_ERROR, message);
+  void ScriptLog(const char *message, LogLevel level) {
+    // <FILE:LINE> will be replaced with the actual filename and line in
+    // OnContextLog().
+    LogHelper(level, NULL, 0)("%s%s", kFileLinePlaceHolder, message);
   }
 
   // ExtractFile and OpenTextFile only allow accessing gadget local files.
@@ -681,7 +713,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         ret = view->ShowView(true, flag,
                              NewSlot(this, &Impl::OptionsDialogCallback));
       } else {
-        LOG("gadget cancelled the options dialog.");
+        DLOG("gadget cancelled the options dialog.");
       }
       delete window;
       delete options_view_;
@@ -882,11 +914,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return fm ? new LocalizedFileManager(fm) : NULL;
   }
 
-  void OnScriptError(const char *message) {
-    DebugError((std::string("Script error in gadget " ) + base_path_ +
-               ": " + message).c_str());
-  }
-
   NativeOwnedScriptable<UINT64_C(0x4edfd94b70f04da6)> global_;
   NativeOwnedScriptable<UINT64_C(0xb13b9595da304041)> debug_;
   NativeOwnedScriptable<UINT64_C(0xaf77f40a271f41d4)> storage_;
@@ -928,6 +955,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool trusted_;
   bool in_user_interaction_;
   int remove_me_timer_;
+  Signal2<void, LogLevel, const std::string &> log_signal_;
+  int debug_console_config_;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -1061,6 +1090,11 @@ bool Gadget::IsInUserInteraction() const {
 
 bool Gadget::OpenURL(const char *url) const {
   return impl_->OpenURL(url);
+}
+
+Connection *Gadget::ConnectLogListener(
+    Slot2<void, LogLevel, const std::string &> *listener) {
+  return impl_->log_signal_.Connect(listener);
 }
 
 // static methods

@@ -38,19 +38,17 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
-  virtual void DebugOutput(DebugLevel level, const char *message) const {
-    owner_->DebugOutput(level, message);
-  }
   virtual bool OpenURL(const char *url) const {
     return owner_->OpenURL(url);
   }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
+  virtual void Run() {}
   virtual void ShowGadgetAboutDialog(Gadget *gadget) {
     owner_->ShowGadgetAboutDialog(gadget);
   }
-  virtual void Run() {}
+  void ShowGadgetDebugConsole(Gadget *gadget) {}
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

@@ -172,7 +172,8 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
     std::string name = attr->GetName();
     std::string value = attr->GetValue();
     if (GadgetStrCmp(kInnerTextProperty, name.c_str()) == 0) {
-      LOG("%s is not allowed in XML as an attribute: ", kInnerTextProperty);
+      LOG("%s:%d:%d: %s is not allowed in XML as an attribute: ",
+          filename, attr->GetRow(), attr->GetColumn(), kInnerTextProperty);
       continue;
     }
 

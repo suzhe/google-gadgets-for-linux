@@ -236,24 +236,30 @@ class ViewHostInterface {
    */
   virtual void BeginMoveDrag(int button) = 0;
 
-  /** Displays a message box containing the message string. */
-  virtual void Alert(const char *message) = 0;
+  /**
+   * Displays a message box containing the message string.
+   * @param view the real calling view, useful when this call is delegated.
+   * @param message the message string.
+   */
+  virtual void Alert(const ViewInterface *view, const char *message) = 0;
 
   /**
    * Displays a dialog containing the message string and Yes and No buttons.
+   * @param view the real calling view, useful when this call is delegated.
    * @param message the message string.
    * @return @c true if Yes button is pressed, @c false if not.
    */
-  virtual bool Confirm(const char *message) = 0;
+  virtual bool Confirm(const ViewInterface *view, const char *message) = 0;
 
   /**
    * Displays a dialog asking the user to enter text.
+   * @param view the real calling view, useful when this call is delegated.
    * @param message the message string displayed before the edit box.
    * @param default_value the initial default value dispalyed in the edit box.
    * @return the user inputted text, or an empty string if user canceled the
    *     dialog.
    */
-  virtual std::string Prompt(const char *message,
+  virtual std::string Prompt(const ViewInterface *view, const char *message,
                              const char *default_value) = 0;
 
   /** Gets the debug mode for drawing view. */

@@ -37,14 +37,6 @@ class Signal;
  */
 class HostInterface {
  public:
-  /** The supported debug message output level */
-  enum DebugLevel {
-    DEBUG_TRACE,    // For verbose trace messages.
-    DEBUG_INFO,     // For normal information.
-    DEBUG_WARNING,  // For non-fatal errors.
-    DEBUG_ERROR,    // For errors.
-  };
-
   virtual ~HostInterface() { }
 
   /**
@@ -71,9 +63,6 @@ class HostInterface {
    */
   virtual void RemoveGadget(Gadget *gadget, bool save_data) = 0;
 
-  /** Output a debug string to the debug console or other places. */
-  virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
-
   /** Open the given URL in the user's default web browser. */
   virtual bool OpenURL(const char *url) const = 0;
 
@@ -87,6 +76,11 @@ class HostInterface {
    * Shows an about dialog for a specified gadget.
    */
   virtual void ShowGadgetAboutDialog(Gadget *gadget) = 0;
+
+  /**
+   * Shows a debug console that will display all logs for the gadget.
+   */
+  virtual void ShowGadgetDebugConsole(Gadget *gadget) = 0;
 };
 
 } // namespace ggadget

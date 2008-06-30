@@ -84,9 +84,9 @@ class SingleViewHost : public ViewHostInterface {
 
   virtual void BeginMoveDrag(int button);
 
-  virtual void Alert(const char *message);
-  virtual bool Confirm(const char *message);
-  virtual std::string Prompt(const char *message,
+  virtual void Alert(const ViewInterface *view, const char *message);
+  virtual bool Confirm(const ViewInterface *view, const char *message);
+  virtual std::string Prompt(const ViewInterface *view, const char *message,
                              const char *default_value);
   virtual int GetDebugMode() const;
 

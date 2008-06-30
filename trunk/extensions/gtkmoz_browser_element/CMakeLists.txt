@@ -58,10 +58,6 @@ ENDIF(NOT GTKMOZEMBED_FOUND)
 
 SET(CHILD_SRCS
   browser_child.cc
-  ${CMAKE_SOURCE_DIR}/ggadget/digest_utils.cc
-  ${CMAKE_SOURCE_DIR}/ggadget/logger.cc
-  ${CMAKE_SOURCE_DIR}/ggadget/string_utils.cc
-  ${CMAKE_SOURCE_DIR}/ggadget/unicode_utils.cc
   ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/json.cc
 )
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
@@ -69,6 +65,7 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${GTKMOZEMBED_LIBRARIES}
   ${SMJS_LIBRARIES}
   ${GTK_LIBRARIES}
+  ggadget
 )
 OUTPUT_EXECUTABLE(gtkmoz-browser-child)
 

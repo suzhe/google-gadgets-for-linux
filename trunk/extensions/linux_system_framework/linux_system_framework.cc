@@ -79,17 +79,17 @@ using namespace ggadget::framework::linux_system;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize linux_system_framework extension.");
+    LOGI("Initialize linux_system_framework extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize linux_system_framework extension.");
+    LOGI("Finalize linux_system_framework extension.");
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
                                   Gadget *gadget) {
-    LOG("Register linux_system_framework extension.");
+    LOGI("Register linux_system_framework extension.");
     ASSERT(framework && gadget);
 
     if (!framework)

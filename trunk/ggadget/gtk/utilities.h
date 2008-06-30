@@ -27,6 +27,7 @@
 namespace ggadget {
 
 class Gadget;
+
 namespace gtk {
 
 /**
@@ -39,8 +40,7 @@ void ShowAlertDialog(const char *title, const char *message);
 
 /**
  * Displays a dialog containing the message string and Yes and No buttons.
- *
- * @param title tile of the alert window.
+ * @param title tile of the dialog.
  * @param message the message string.
  * @return @c true if Yes button is pressed, @c false if not.
  */
@@ -48,8 +48,7 @@ bool ShowConfirmDialog(const char *title, const char *message);
 
 /**
  * Displays a dialog asking the user to enter text.
- *
- * @param title tile of the alert window.
+ * @param title tile of the dialog.
  * @param message the message string displayed before the edit box.
  * @param default_value the initial default value dispalyed in the edit box.
  * @return the user inputted text, or an empty string if user canceled the
@@ -142,6 +141,18 @@ void GetWorkAreaGeometry(GtkWidget *window, GdkRectangle *workarea);
  * @return true if success.
  */
 bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot);
+
+/**
+ * Sets the icon of a window to the icon of a gadget, or the default gadget
+ * icon if @a gadget is @c NULL or the gadget has not a valid icon.
+ * Won't set icon if the window has already an icon.
+ */
+void SetGadgetWindowIcon(GtkWindow *window, const Gadget *gadget);
+
+/**
+ * Shows a debug console that will display all logs for the gadget.
+ */
+GtkWidget *NewGadgetDebugConsole(Gadget *gadget);
 
 } // namespace gtk
 } // namespace ggadget

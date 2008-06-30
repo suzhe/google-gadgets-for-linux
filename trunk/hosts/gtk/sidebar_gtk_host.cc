@@ -80,12 +80,13 @@ enum SideBarPosition {
 
 class SideBarGtkHost::Impl {
  public:
-  class GadgetViewHostInfo {
-   public:
+  struct GadgetViewHostInfo {
     GadgetViewHostInfo(Gadget *g) {
       Reset(g);
     }
     ~GadgetViewHostInfo() {
+      if (debug_console)
+        gtk_widget_destroy(debug_console);
       delete gadget;
       gadget = NULL;
     }
@@ -98,9 +99,9 @@ class SideBarGtkHost::Impl {
       index_in_sidebar = 0;
       undock_by_drag = false;
       old_keep_above = false;
+      debug_console = NULL;
     }
 
-   public:
     Gadget *gadget;
 
     DecoratedViewHost *decorated_view_host;
@@ -111,16 +112,18 @@ class SideBarGtkHost::Impl {
     int  index_in_sidebar;
     bool undock_by_drag;
     bool old_keep_above;
+    GtkWidget *debug_console;
   };
 
   Impl(SideBarGtkHost *owner, OptionsInterface *options,
-       bool decorated, int view_debug_mode)
+       bool decorated, int view_debug_mode, int debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       decorated_(decorated),
       sidebar_shown_(true),
       transparent_(false),
       view_debug_mode_(view_debug_mode),
+      debug_console_config_(debug_console_config),
       sidebar_host_(NULL),
       expanded_original_(NULL),
       expanded_popout_(NULL),
@@ -568,8 +571,13 @@ class SideBarGtkHost::Impl {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
       result = LoadGadget(path.c_str(), options.c_str(), id);
-      LOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
-          path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      if (result) {
+        DLOG("SideBarGtkHost: Load gadget %s, with option %s, succeeded",
+             path.c_str(), options.c_str());
+      } else {
+        LOG("SideBarGtkHost: Load gadget %s, with option %s, failed",
+             path.c_str(), options.c_str());
+      }
     }
     return result;
   }
@@ -949,6 +957,13 @@ class SideBarGtkHost::Impl {
       it->second->decorated_view_host->SetDockEdge(
           option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
 
+    // If debug console is opened during view host creation, the title is
+    // not set then because main view is not available. Set the title now.
+    if (it->second->debug_console) {
+      gtk_window_set_title(GTK_WINDOW(it->second->debug_console),
+                           gadget->GetMainView()->GetCaption().c_str());
+    }
+
     return true;
   }
 
@@ -987,8 +1002,13 @@ class SideBarGtkHost::Impl {
     if (gadgets_.find(id) == gadgets_.end() || !gadgets_[id]) {
       gadgets_[id] = new GadgetViewHostInfo(gadget);
     }
-    if (gadgets_[id]->gadget != gadget)
+    if (gadgets_[id]->gadget != gadget) {
+      // How will this occur?
       gadgets_[id]->Reset(gadget);
+    }
+
+    if (debug_console_config_ >= 2)
+      ShowGadgetDebugConsole(gadget);
 
     ViewHostInterface *view_host;
     DecoratedViewHost *decorator;
@@ -1301,18 +1321,6 @@ class SideBarGtkHost::Impl {
     return false;
   }
 
-  void DebugOutput(DebugLevel level, const char *message) const {
-    const char *str_level = "";
-    switch (level) {
-      case DEBUG_TRACE: str_level = "TRACE: "; break;
-      case DEBUG_INFO: str_level = "INFO: "; break;
-      case DEBUG_WARNING: str_level = "WARNING: "; break;
-      case DEBUG_ERROR: str_level = "ERROR: "; break;
-      default: break;
-    }
-    LOG("%s%s", str_level, message);
-  }
-
   void LoadGadgets() {
     gadget_manager_->EnumerateGadgetInstances(
         NewSlot(this, &Impl::AddGadgetInstanceCallback));
@@ -1445,6 +1453,22 @@ class SideBarGtkHost::Impl {
   }
 #endif
 
+  void ShowGadgetDebugConsole(Gadget *gadget) {
+    if (!gadget)
+      return;
+    GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
+    if (it == gadgets_.end() || !it->second)
+      return;
+    GadgetViewHostInfo *info = it->second;
+    if (info->debug_console) {
+      DLOG("Gadget has already debug console opened: %p", info->debug_console);
+      return;
+    }
+    info->debug_console = NewGadgetDebugConsole(gadget);
+    g_signal_connect(info->debug_console, "destroy",
+                     G_CALLBACK(gtk_widget_destroyed), &info->debug_console);
+  }
+
  public:  // members
   GadgetBrowserHost gadget_browser_host_;
 
@@ -1457,6 +1481,7 @@ class SideBarGtkHost::Impl {
   bool sidebar_shown_;
   bool transparent_;
   int view_debug_mode_;
+  int debug_console_config_;
 
   SingleViewHost *sidebar_host_;
   DecoratedViewHost *expanded_original_;
@@ -1497,9 +1522,10 @@ class SideBarGtkHost::Impl {
   HotKeyGrabber hotkey_grabber_;
 };
 
-SideBarGtkHost::SideBarGtkHost(OptionsInterface *options,
-                               bool decorated, int view_debug_mode)
-  : impl_(new Impl(this, options, decorated, view_debug_mode)) {
+SideBarGtkHost::SideBarGtkHost(OptionsInterface *options, bool decorated,
+                               int view_debug_mode, int debug_console_config)
+  : impl_(new Impl(this, options, decorated, view_debug_mode,
+                   debug_console_config)) {
   impl_->SetupUI();
   impl_->InitGadgets();
 #if !GTK_CHECK_VERSION(2,10,0) || !defined(GGL_HOST_LINUX)
@@ -1522,10 +1548,6 @@ void SideBarGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
 }
 
-void SideBarGtkHost::DebugOutput(DebugLevel level, const char *message) const {
-  impl_->DebugOutput(level, message);
-}
-
 bool SideBarGtkHost::OpenURL(const char *url) const {
   return ggadget::gtk::OpenURL(url);
 }
@@ -1534,13 +1556,17 @@ bool SideBarGtkHost::LoadFont(const char *filename) {
   return ggadget::gtk::LoadFont(filename);
 }
 
-void SideBarGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
-  ggadget::gtk::ShowGadgetAboutDialog(gadget);
-}
-
 void SideBarGtkHost::Run() {
   impl_->LoadGadgets();
   gtk_main();
+}
+
+void SideBarGtkHost::ShowGadgetAboutDialog(Gadget *gadget) {
+  ggadget::gtk::ShowGadgetAboutDialog(gadget);
+}
+
+void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
+  impl_->ShowGadgetDebugConsole(gadget);
 }
 
 } // namespace gtk

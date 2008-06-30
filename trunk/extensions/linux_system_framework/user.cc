@@ -45,9 +45,9 @@ User::User()
   input_devices_.push_back("mouse");
 
 #ifdef _DEBUG
-  LOG("Names of input devices:");
+  DLOG("Names of input devices:");
   for (size_t i = 0; i < input_devices_.size(); i++) {
-    LOG("%s", input_devices_[i].c_str());
+    DLOG("%s", input_devices_[i].c_str());
   }
 #endif
 

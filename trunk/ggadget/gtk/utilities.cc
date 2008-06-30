@@ -14,10 +14,14 @@
   limitations under the License.
 */
 
-#include <algorithm>
+#include "utilities.h"
+
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <unistd.h>
+#include <algorithm>
+#include <ctime>
 #include <cstdlib>
 #include <string>
 #include <fontconfig/fontconfig.h>
@@ -28,11 +32,13 @@
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/messages.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/file_manager_factory.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/view.h>
 #include <ggadget/view_interface.h>
-#include "utilities.h"
 
 namespace ggadget {
 namespace gtk {
@@ -48,6 +54,7 @@ void ShowAlertDialog(const char *title, const char *message) {
   gtk_window_set_screen(GTK_WINDOW(dialog), screen);
   gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
   gtk_window_set_title(GTK_WINDOW(dialog), title);
+  SetGadgetWindowIcon(GTK_WINDOW(dialog), NULL);
   gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
 }
@@ -63,6 +70,7 @@ bool ShowConfirmDialog(const char *title, const char *message) {
   gtk_window_set_screen(GTK_WINDOW(dialog), screen);
   gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
   gtk_window_set_title(GTK_WINDOW(dialog), title);
+  SetGadgetWindowIcon(GTK_WINDOW(dialog), NULL);
   gint result = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
   return result == GTK_RESPONSE_YES;
@@ -83,6 +91,7 @@ std::string ShowPromptDialog(const char *title, const char *message,
   gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
   gtk_window_set_skip_taskbar_hint(GTK_WINDOW(dialog), TRUE);
   gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+  SetGadgetWindowIcon(GTK_WINDOW(dialog), NULL);
 
   GtkWidget *image = gtk_image_new_from_stock(GTK_STOCK_DIALOG_QUESTION,
                                               GTK_ICON_SIZE_DIALOG);
@@ -138,6 +147,7 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
   gtk_window_set_skip_taskbar_hint(GTK_WINDOW(dialog), TRUE);
   gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+  SetGadgetWindowIcon(GTK_WINDOW(dialog), NULL);
 
   std::string title_text;
   std::string copyright_text;
@@ -605,6 +615,229 @@ bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot) {
 #endif
   delete slot;
   return false;
+}
+
+void SetGadgetWindowIcon(GtkWindow *window, const Gadget *gadget) {
+  if (!gtk_window_get_icon(window)) {
+    std::string data;
+    if (gadget) {
+      std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+      gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data);
+    }
+    if (data.empty()) {
+      FileManagerInterface *file_manager = GetGlobalFileManager();
+      if (file_manager)
+        file_manager->ReadFile(kGadgetsIcon, &data);
+    }
+    if (!data.empty()) {
+      GdkPixbuf *pixbuf = LoadPixbufFromData(data);
+      if (pixbuf) {
+        gtk_window_set_icon(window, pixbuf);
+        g_object_unref(pixbuf);
+      }
+    }
+  }
+}
+
+// Debug console implementation.
+static const char kDebugLogLevelOption[] = "debug_log_level";
+static const char kDebugLockScrollOption[] = "debug_lock_scroll";
+static const gint kDebugMaxBufferSize = 512 * 1024;
+
+struct DebugConsoleInfo {
+  Connection *log_connection;
+  GtkTextView *log_view;
+  int log_level;
+  bool lock_scroll;
+};
+
+static void OnDebugConsoleLog(LogLevel level, const std::string &message,
+                              DebugConsoleInfo *info) {
+  if (level < info->log_level)
+    return;
+
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(info->log_view);
+  GtkTextIter end;
+  gtk_text_buffer_get_end_iter(buffer, &end);
+  char *level_tag = NULL;
+  switch (level) {
+    case LOG_TRACE: level_tag = "T "; break;
+    case LOG_INFO: level_tag = "I "; break;
+    case LOG_WARNING: level_tag = "W "; break;
+    case LOG_ERROR: level_tag = "E "; break;
+  }
+  if (level_tag)
+    gtk_text_buffer_insert(buffer, &end, level_tag, 2);
+  
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  char timestr[15];
+  snprintf(timestr, sizeof(timestr), "%02d:%02d.%03d: ",
+           static_cast<int>(tv.tv_sec / 60 % 60),
+           static_cast<int>(tv.tv_sec % 60),
+           static_cast<int>(tv.tv_usec / 1000));
+
+  gtk_text_buffer_get_end_iter(buffer, &end);
+  gtk_text_buffer_insert(buffer, &end, timestr, -1);
+  gtk_text_buffer_get_end_iter(buffer, &end);
+  gtk_text_buffer_insert(buffer, &end, message.c_str(),
+                         static_cast<gint>(message.size()));
+  gtk_text_buffer_get_end_iter(buffer, &end);
+  gtk_text_buffer_insert(buffer, &end, "\n", 1);
+  gtk_text_buffer_get_end_iter(buffer, &end);
+  gtk_text_buffer_place_cursor(buffer, &end);
+
+  if (!info->lock_scroll)
+    gtk_text_view_scroll_to_iter(info->log_view, &end, 0, FALSE, 0, 0);
+
+  // Trim the beginning lines if the buffer exceeds the maximum size.
+  while (gtk_text_buffer_get_char_count(buffer) > kDebugMaxBufferSize) {
+    GtkTextIter start;
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    GtkTextIter *next_line = gtk_text_iter_copy(&start);
+    gtk_text_iter_forward_line(next_line);
+    gtk_text_buffer_delete(buffer, &start, next_line);
+    gtk_text_iter_free(next_line);
+  }
+}
+
+static void OnDebugConsoleDestroy(GtkObject *object, gpointer user_data) {
+  DLOG("Debug console destroyed: %p", object);
+  DebugConsoleInfo *info = static_cast<DebugConsoleInfo *>(user_data);
+  info->log_connection->Disconnect();
+
+  OptionsInterface *options = GetGlobalOptions();
+  if (options) {
+    options->PutValue(kDebugLogLevelOption, Variant(info->log_level));
+    options->PutValue(kDebugLockScrollOption, Variant(info->lock_scroll));
+  }
+
+  delete info;
+}
+
+static void OnClearClicked(GtkButton *button, gpointer user_data) {
+  DebugConsoleInfo *info = static_cast<DebugConsoleInfo *>(user_data);
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(info->log_view);
+  if (buffer) {
+    GtkTextIter start, end;
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    gtk_text_buffer_get_end_iter(buffer, &end);
+    gtk_text_buffer_delete(buffer, &start, &end);
+  }
+}
+
+static void OnLevel0Toggled(GtkToggleButton *toggle, gpointer user_data) {
+  if (gtk_toggle_button_get_active(toggle))
+    *static_cast<int *>(user_data) = 0;
+}
+static void OnLevel1Toggled(GtkToggleButton *toggle, gpointer user_data) {
+  if (gtk_toggle_button_get_active(toggle))
+    *static_cast<int *>(user_data) = 1;
+}
+static void OnLevel2Toggled(GtkToggleButton *toggle, gpointer user_data) {
+  if (gtk_toggle_button_get_active(toggle))
+    *static_cast<int *>(user_data) = 2;
+}
+static void OnLevel3Toggled(GtkToggleButton *toggle, gpointer user_data) {
+  if (gtk_toggle_button_get_active(toggle))
+    *static_cast<int *>(user_data) = 3;
+}
+
+static void OnLockScrollToggled(GtkToggleButton *toggle, gpointer user_data) {
+  *static_cast<bool *>(user_data) = gtk_toggle_button_get_active(toggle);
+}
+
+GtkWidget *NewGadgetDebugConsole(Gadget *gadget) {
+  GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  // Gadget main view may be unavailable if this function is called very early.
+  if (gadget->GetMainView()) {
+    gtk_window_set_title(GTK_WINDOW(window),
+                         gadget->GetMainView()->GetCaption().c_str());
+  }
+  gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
+
+  GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
+  GtkWidget *toolbar = gtk_hbox_new(FALSE, 6);
+  GtkWidget *clear = gtk_button_new_with_label(GM_("DEBUG_CLEAR"));
+  GtkWidget *levels[4];
+  levels[0] = gtk_radio_button_new_with_label(NULL, GM_("DEBUG_TRACE"));
+  levels[1] = gtk_radio_button_new_with_label_from_widget(
+      GTK_RADIO_BUTTON(levels[0]), GM_("DEBUG_INFO"));
+  levels[2] = gtk_radio_button_new_with_label_from_widget(
+      GTK_RADIO_BUTTON(levels[0]), GM_("DEBUG_WARNING"));
+  levels[3] = gtk_radio_button_new_with_label_from_widget(
+      GTK_RADIO_BUTTON(levels[0]), GM_("DEBUG_ERROR"));
+  GtkWidget *lock_scroll = gtk_check_button_new_with_label(
+      GM_("DEBUG_LOCK_SCROLL"));
+
+  gtk_container_add(GTK_CONTAINER(window), vbox);
+  gtk_box_pack_start(GTK_BOX(toolbar), clear, FALSE, FALSE, 1);
+  gtk_box_pack_start(GTK_BOX(toolbar), levels[0], FALSE, FALSE, 1);
+  gtk_box_pack_start(GTK_BOX(toolbar), levels[1], FALSE, FALSE, 1);
+  gtk_box_pack_start(GTK_BOX(toolbar), levels[2], FALSE, FALSE, 1);
+  gtk_box_pack_start(GTK_BOX(toolbar), levels[3], FALSE, FALSE, 1);
+  gtk_box_pack_start(GTK_BOX(toolbar), lock_scroll, FALSE, FALSE, 5);
+  gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
+
+  GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+  gtk_box_pack_end(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
+  gtk_container_set_border_width(GTK_CONTAINER(scroll), 1);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll),
+                                      GTK_SHADOW_IN);
+  gtk_widget_set_size_request(scroll, 500, 350);
+  GtkWidget *log_view = gtk_text_view_new();
+  gtk_container_add(GTK_CONTAINER(scroll), log_view);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(log_view), FALSE);
+  gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(log_view), GTK_WRAP_NONE);
+  gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(log_view), FALSE);
+  gtk_text_view_set_left_margin(GTK_TEXT_VIEW(log_view), 2);
+  gtk_text_view_set_right_margin(GTK_TEXT_VIEW(log_view), 2);
+
+  SetGadgetWindowIcon(GTK_WINDOW(window), gadget);
+  gtk_widget_show_all(window);
+
+  DebugConsoleInfo *console_info = new DebugConsoleInfo();
+  memset(console_info, 0, sizeof(DebugConsoleInfo));
+  console_info->log_view = GTK_TEXT_VIEW(log_view);
+  console_info->log_connection =
+      gadget->ConnectLogListener(NewSlot(OnDebugConsoleLog, console_info));
+  console_info->log_level = LOG_TRACE;
+  console_info->lock_scroll = false;
+
+  OptionsInterface *options = GetGlobalOptions();
+  if (options) {
+    options->GetValue(kDebugLogLevelOption).ConvertToInt(
+        &console_info->log_level);
+    if (console_info->log_level < LOG_TRACE)
+      console_info->log_level = LOG_TRACE;
+    if (console_info->log_level > LOG_ERROR)
+      console_info->log_level = LOG_ERROR;
+    options->GetValue(kDebugLockScrollOption).ConvertToBool(
+        &console_info->lock_scroll);
+  }
+  gtk_toggle_button_set_active(
+      GTK_TOGGLE_BUTTON(levels[console_info->log_level]), TRUE);
+  gtk_toggle_button_set_active(
+      GTK_TOGGLE_BUTTON(lock_scroll), console_info->lock_scroll);
+
+  g_signal_connect(clear, "clicked", G_CALLBACK(OnClearClicked), console_info);
+  g_signal_connect(levels[0], "toggled", G_CALLBACK(OnLevel0Toggled),
+                   &console_info->log_level);
+  g_signal_connect(levels[1], "toggled", G_CALLBACK(OnLevel1Toggled),
+                   &console_info->log_level);
+  g_signal_connect(levels[2], "toggled", G_CALLBACK(OnLevel2Toggled),
+                   &console_info->log_level);
+  g_signal_connect(levels[3], "toggled", G_CALLBACK(OnLevel3Toggled),
+                   &console_info->log_level);
+  g_signal_connect(lock_scroll, "toggled", G_CALLBACK(OnLockScrollToggled),
+                   &console_info->lock_scroll);
+
+  g_signal_connect(window, "destroy", G_CALLBACK(OnDebugConsoleDestroy),
+                   console_info);
+  // The caller must destroy the window before the gadget is deleted.
+  return window;
 }
 
 } // namespace gtk

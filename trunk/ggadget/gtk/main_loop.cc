@@ -53,12 +53,14 @@ class MainLoop::Impl {
 
  public:
   Impl(MainLoopInterface *main_loop)
-    : main_loop_(main_loop), destroyed_(false) {
+    : main_loop_(main_loop), destroyed_(false),
+      main_thread_(NULL) {
     // Initialize the glib thread environment, otherwise the glib main loop
     // will not be thread safe.
     if (!g_thread_supported())
       g_thread_init(NULL);
 
+    main_thread_ = g_thread_self();
     g_static_mutex_init(&mutex_);
     watches_ = g_hash_table_new_full(g_direct_hash,
                                      g_direct_equal,
@@ -190,6 +192,10 @@ class MainLoop::Impl {
     return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
   }
 
+  bool IsMainThread() const {
+    return g_thread_self() == main_thread_;
+  }
+
  private:
   void RemoveWatchNode(WatchNode *node) {
     g_static_mutex_lock(&mutex_);
@@ -296,6 +302,7 @@ class MainLoop::Impl {
 
   GStaticMutex mutex_;
   bool destroyed_;
+  GThread *main_thread_;
 };
 
 MainLoop::MainLoop()
@@ -338,6 +345,9 @@ bool MainLoop::IsRunning() const {
 }
 uint64_t MainLoop::GetCurrentTime() const {
   return impl_->GetCurrentTime();
+}
+bool MainLoop::IsMainThread() const {
+  return impl_->IsMainThread();
 }
 
 } // namespace gtk

@@ -44,7 +44,7 @@ static const uint32 kOperationCallbackWeight =
 uint64_t JSScriptContext::operation_callback_time_ = 0;
 int JSScriptContext::reset_operation_time_timer_ = 0;
 
-static JSScriptContext *GetJSScriptContext(JSContext *context) {
+JSScriptContext *GetJSScriptContext(JSContext *context) {
   return reinterpret_cast<JSScriptContext *>(JS_GetContextPrivate(context));
 }
 
@@ -217,8 +217,8 @@ void JSScriptContext::RecordFileAndLine(JSContext *cx, const char *message,
   }
 }
 
-void JSScriptContext::GetCurrentFileAndLineInternal(std::string *filename,
-                                                    int *lineno) {
+void JSScriptContext::GetCurrentFileAndLine(std::string *filename,
+                                            int *lineno) {
   filename_.clear();
   lineno_ = 0;
   jsval old_exception;
@@ -243,7 +243,7 @@ void JSScriptContext::GetCurrentFileAndLine(JSContext *context,
   ASSERT(filename && lineno);
   JSScriptContext *context_wrapper = GetJSScriptContext(context);
   if (context_wrapper) {
-    context_wrapper->GetCurrentFileAndLineInternal(filename, lineno);
+    context_wrapper->GetCurrentFileAndLine(filename, lineno);
   } else {
     filename->clear();
     *lineno = 0;
@@ -429,6 +429,9 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   AutoLocalRootScope local_root_scope(cx);
   if (!local_root_scope.good())
     return JS_FALSE;
+  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
+  ASSERT(context_wrapper);
+  ScopedLogContext log_context(context_wrapper);
 
   JSClassWithNativeCtor *cls =
       reinterpret_cast<JSClassWithNativeCtor *>(JS_GET_CLASS(cx, obj));
@@ -451,10 +454,7 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   ScriptableInterface *scriptable =
       VariantValue<ScriptableInterface *>()(return_value.v());
 
-  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
-  ASSERT(context_wrapper);
-  if (context_wrapper)
-    context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
+  context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
   delete [] params;
   // Count the reference from ClassName.prototype.
   cls->Ref();
@@ -569,26 +569,7 @@ JSBool JSScriptContext::EvaluateToJSVal(ScriptableInterface *object,
 
 void JSScriptContext::ReportError(JSContext *cx, const char *message,
                                   JSErrorReport *report) {
-  JSScriptContext *this_p = GetJSScriptContext(cx);
-  if (!this_p)
-    return;
-
-  char lineno_buf[16];
-  snprintf(lineno_buf, sizeof(lineno_buf), "%d", report->lineno);
-  std::string error_report;
-  if (report->filename)
-    error_report = report->filename;
-  error_report += ':';
-  error_report += lineno_buf;
-  error_report += ": ";
-  error_report += message;
-  if (!this_p->error_reporter_signal_.HasActiveConnections())
-    LOG("No error reporter: %s", error_report.c_str());
-  this_p->error_reporter_signal_(error_report.c_str());
-}
-
-Connection *JSScriptContext::ConnectErrorReporter(ErrorReporter *reporter) {
-  return error_reporter_signal_.Connect(reporter);
+  LOGE("%s:%d: %s", report->filename, report->lineno, message);
 }
 
 JSBool JSScriptContext::OperationCallback(JSContext *cx) {

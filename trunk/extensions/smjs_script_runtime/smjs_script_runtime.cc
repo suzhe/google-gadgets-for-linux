@@ -30,17 +30,17 @@ static JSScriptRuntime *g_smjs_script_runtime_ = NULL;
 
 extern "C" {
   bool Initialize() {
-    LOG("Initialize smjs_script_runtime extension.");
+    LOGI("Initialize smjs_script_runtime extension.");
     return true;
   }
 
   void Finalize() {
-    LOG("Finalize smjs_script_runtime extension.");
+    LOGI("Finalize smjs_script_runtime extension.");
     delete g_smjs_script_runtime_;
   }
 
   bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager) {
-    LOG("Register smjs_script_runtime extension.");
+    LOGI("Register smjs_script_runtime extension.");
     if (manager) {
       if (!g_smjs_script_runtime_)
         g_smjs_script_runtime_ = new JSScriptRuntime();

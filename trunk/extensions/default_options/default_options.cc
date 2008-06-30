@@ -458,13 +458,13 @@ static OptionsDelegator g_global_options(
 
 extern "C" {
   bool Initialize() {
-    DLOG("Initialize default_options extension.");
+    LOGI("Initialize default_options extension.");
     return ggadget::SetOptionsFactory(&ggadget::DefaultOptionsFactory) &&
            ggadget::SetGlobalOptions(&ggadget::g_global_options);
   }
 
   void Finalize() {
-    DLOG("Finalize default_options extension.");
+    LOGI("Finalize default_options extension.");
     ggadget::DefaultOptions::FinalizeAllOptions();
   }
 }

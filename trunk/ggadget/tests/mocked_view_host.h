@@ -161,9 +161,11 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
   virtual void CloseView() { }
   virtual bool ShowContextMenu(int button) { return false; }
-  virtual void Alert(const char *message) { }
-  virtual bool Confirm(const char *message) { return false; }
-  virtual std::string Prompt(const char *message, const char *default_value) {
+  virtual void Alert(const ViewInterface *view, const char *message) { }
+  virtual bool Confirm(const ViewInterface *view,
+                       const char *message) { return false; }
+  virtual std::string Prompt(const ViewInterface *view, const char *message,
+                             const char *default_value) {
     return std::string();
   }
   virtual int GetDebugMode() const {

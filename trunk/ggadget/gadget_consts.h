@@ -243,6 +243,17 @@ const char kFileUrlPrefix[] = "file://";
 /** The fallback encoding used to parse text files. */
 const char kEncodingFallback[] = "ISO8859-1";
 
+/**
+ * The option key in the global options file, indicates the configuration
+ * about debug console. It's value is an integer:
+ *   - 0: no debug console;
+ *   - 1: allow debug console (a "Show debug console" menu item will be added
+ *        to each gadget)
+ *   - 2: open debug console when a gadget is added, useful to debug gadget
+ *        startup code.
+ */
+const char kDebugConsoleOption[] = "debug_console";
+
 } // namespace ggadget
 
 #endif // GGADGET_GADGET_CONSTS_H__
