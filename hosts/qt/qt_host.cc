@@ -357,6 +357,9 @@ void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
   ggadget::qt::ShowGadgetAboutDialog(gadget);
 }
 
+void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {
+}
+
 #include "qt_host_internal.moc"
 
 } // namespace qt

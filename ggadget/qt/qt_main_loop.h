@@ -24,6 +24,7 @@ class QtMainLoop : public MainLoopInterface {
   virtual void Quit();
   virtual bool IsRunning() const;
   virtual uint64_t GetCurrentTime() const;
+  virtual bool IsMainThread() const { return true; }
 
   void MarkUnusedWatchNode(WatchNode *watch_node);
 

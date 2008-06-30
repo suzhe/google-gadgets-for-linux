@@ -88,7 +88,8 @@ class JSScriptContext : public ScriptContextInterface {
 
   virtual Connection *ConnectScriptBlockedFeedback(
       ScriptBlockedFeedback *feedback);
-  virtual void CollectGarbage() {}
+  virtual void CollectGarbage();
+  virtual void GetCurrentFileAndLine(std::string *filename, int *lineno);
 
   class Impl;
  private:

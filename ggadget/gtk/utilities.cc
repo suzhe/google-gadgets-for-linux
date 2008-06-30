@@ -659,7 +659,7 @@ static void OnDebugConsoleLog(LogLevel level, const std::string &message,
   GtkTextBuffer *buffer = gtk_text_view_get_buffer(info->log_view);
   GtkTextIter end;
   gtk_text_buffer_get_end_iter(buffer, &end);
-  char *level_tag = NULL;
+  const char *level_tag = NULL;
   switch (level) {
     case LOG_TRACE: level_tag = "T "; break;
     case LOG_INFO: level_tag = "I "; break;
