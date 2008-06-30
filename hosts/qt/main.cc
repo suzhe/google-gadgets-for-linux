@@ -39,6 +39,7 @@
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_menu.h>
 #include <ggadget/qt/qt_main_loop.h>
+#include <ggadget/run_once.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
@@ -52,6 +53,7 @@
 #endif
 
 static ggadget::qt::QtMainLoop *g_main_loop;
+static const char kRunOnceSocketName[] = "qt-host-socket";
 
 static const char *kGlobalExtensions[] = {
   "default-framework",
@@ -187,13 +189,47 @@ static bool CheckCompositingManager(Display *dpy) {
 }
 #endif
 
-int main(int argc, char* argv[]) {
-  // set locale according to env vars
-  setlocale(LC_ALL, "");
+static void Handler(const std::string &data) {
+  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
+}
 
+int main(int argc, char* argv[]) {
   bool composite = false;
   int debug_mode = 0;
   const char* js_runtime = "smjs-script-runtime";
+  // set locale according to env vars
+  setlocale(LC_ALL, "");
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+  if (InitArgb() && CheckCompositingManager(dpy)) {
+    composite = true;
+  } else {
+    visual = NULL;
+    if (colormap) {
+      XFreeColormap(dpy, colormap);
+      colormap = 0;
+    }
+  }
+  QApplication app(dpy, argc, argv,
+                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
+#else
+  QApplication app(argc, argv);
+#endif
+
+  // Set global main loop
+  g_main_loop = new ggadget::qt::QtMainLoop();
+  ggadget::SetGlobalMainLoop(g_main_loop);
+
+  std::string profile_dir =
+      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
+                             ggadget::kDefaultProfileDirectory, NULL);
+
+  ggadget::EnsureDirectories(profile_dir.c_str());
+
+  ggadget::RunOnce run_once(
+      ggadget::BuildFilePath(profile_dir.c_str(),
+                             kRunOnceSocketName,
+                             NULL).c_str());
+  run_once.ConnectOnMessage(ggadget::NewSlot(Handler));
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
@@ -219,29 +255,19 @@ int main(int argc, char* argv[]) {
       }
 #endif
     } else {
-      gadget_paths.push_back(argv[i]);
+      std::string path = ggadget::GetAbsolutePath(argv[i]);
+      if (run_once.IsRunning()) {
+        run_once.SendMessage(path);
+      } else {
+        gadget_paths.push_back(path);
+      }
     }
   }
 
-#if defined(Q_WS_X11) && defined(HAVE_X11)
-  if (InitArgb() && CheckCompositingManager(dpy)) {
-    composite = true;
-  } else {
-    visual = NULL;
-    if (colormap) {
-      XFreeColormap(dpy, colormap);
-      colormap = 0;
-    }
+  if (run_once.IsRunning()) {
+    DLOG("Another instance already exists.");
+    exit(0);
   }
-  QApplication app(dpy, argc, argv,
-                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
-#else
-  QApplication app(argc, argv);
-#endif
-
-  // Set global main loop
-  g_main_loop = new ggadget::qt::QtMainLoop();
-  ggadget::SetGlobalMainLoop(g_main_loop);
 
   // Set global file manager.
   ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
@@ -266,9 +292,6 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  std::string profile_dir =
-      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
-                             ggadget::kDefaultProfileDirectory, NULL);
   fm = ggadget::DirFileManager::Create(profile_dir.c_str(), true);
   if (fm != NULL) {
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
