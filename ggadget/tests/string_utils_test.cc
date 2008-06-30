@@ -181,6 +181,16 @@ TEST(StringUtils, ExtractTextFromHTML) {
       " &#32;&#x&#&unknown;&#x30;&#x101111;&#x2009;\n\r\t Text ").c_str());
 }
 
+TEST(StringUtils, CleanupLineBreaks) {
+  EXPECT_STREQ("", CleanupLineBreaks("").c_str());
+  EXPECT_STREQ(" ", CleanupLineBreaks("\r\n").c_str());
+  EXPECT_STREQ(" ", CleanupLineBreaks("\n").c_str());
+  EXPECT_STREQ(" ", CleanupLineBreaks("\r").c_str());
+  EXPECT_STREQ("    ", CleanupLineBreaks("\r\n\n\r\r\n").c_str());
+  EXPECT_STREQ("one    two three four",
+               CleanupLineBreaks("one \r\n  two\rthree\nfour").c_str());
+}
+
 TEST(StringUtils, ContainsHTML) {
   EXPECT_FALSE(ContainsHTML(""));
   EXPECT_FALSE(ContainsHTML(NULL));

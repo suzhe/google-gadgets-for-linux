@@ -265,6 +265,8 @@ bool GtkEditImpl::IsUnderline() {
 void GtkEditImpl::SetMultiline(bool multiline) {
   if (multiline_ != multiline) {
     multiline_ = multiline;
+    if (!multiline_)
+      SetText(CleanupLineBreaks(text_.c_str()).c_str());
     QueueRefresh(true, true);
   }
 }
@@ -319,8 +321,9 @@ void GtkEditImpl::SetText(const char* text) {
       return; // prevent some redraws
     }
 
-    text_.assign(txt);
-    text_length_ = static_cast<int>(g_utf8_strlen(text_.c_str(), text_.length()));
+    text_ = multiline_ ? txt : CleanupLineBreaks(txt.c_str());
+    text_length_ = static_cast<int>(g_utf8_strlen(text_.c_str(),
+                                                  text_.length()));
   } else {
     text_.clear();
     text_length_ = 0;
@@ -1456,13 +1459,15 @@ void GtkEditImpl::EnterText(const char *str) {
     DeleteText(cursor_, cursor_ + 1);
   }
 
+  std::string txt = multiline_ ? std::string(str) : CleanupLineBreaks(str);
   const char *end = NULL;
-  g_utf8_validate(str, -1, &end);
+  g_utf8_validate(txt.c_str(), -1, &end);
   if (end > str) {
-    int n_chars = static_cast<int>(g_utf8_strlen(str, end - str));
+    int n_chars = static_cast<int>(g_utf8_strlen(txt.c_str(),
+                                                 end - txt.c_str()));
     int index = static_cast<int>(
         g_utf8_offset_to_pointer(text_.c_str(), cursor_) - text_.c_str());
-    text_.insert(index, str, end - str);
+    text_.insert(index, txt.c_str(), end - txt.c_str());
     cursor_ += n_chars;
     selection_bound_ += n_chars;
     text_length_ += n_chars;

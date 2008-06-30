@@ -522,6 +522,24 @@ bool ContainsHTML(const char *s) {
   return false;
 }
 
+std::string CleanupLineBreaks(const char *source) {
+  ASSERT(source);
+  std::string result;
+  while (*source) {
+    if (*source == '\r') {
+      result += ' ';
+      if (source[1] == '\n')
+        source++;
+    } else if (*source == '\n') {
+      result += ' ';
+    } else {
+      result += *source;
+    }
+    source++;
+  }
+  return result;
+}
+
 bool SimpleMatchXPath(const char *xpath, const char *pattern) {
   ASSERT(xpath && pattern);
   while (*xpath && *pattern) {

@@ -202,6 +202,12 @@ std::string ExtractTextFromHTML(const char *source);
 bool ContainsHTML(const char *s);
 
 /**
+ * Converts all '\r's, '\n's and '\r\n's into spaces. Useful to display
+ * multi-line text in a single-line container.
+ */ 
+std::string CleanupLineBreaks(const char *source);
+
+/**
  * Matches an XPath string against an XPath pattern, and returns whether
  * matches. This function only supports simple xpath grammar, containing only
  * element tag name, element index (not allowed in pattern) and attribute
