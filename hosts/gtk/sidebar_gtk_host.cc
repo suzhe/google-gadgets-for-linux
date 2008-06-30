@@ -557,6 +557,11 @@ class SideBarGtkHost::Impl {
     return result == GTK_RESPONSE_YES;
   }
 
+  bool EnumerateGadgetInstancesCallback(int id) {
+    AddGadgetInstanceCallback(id); // Ignore the error.
+    return true;
+  }
+
   bool NewGadgetInstanceCallback(int id) {
     if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
         ConfirmGadget(id)) {
@@ -1007,13 +1012,13 @@ class SideBarGtkHost::Impl {
       gadgets_[id]->Reset(gadget);
     }
 
-    if (debug_console_config_ >= 2)
-      ShowGadgetDebugConsole(gadget);
-
     ViewHostInterface *view_host;
     DecoratedViewHost *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
+        if (debug_console_config_ >= 2)
+          ShowGadgetDebugConsole(gadget);
+
         LoadGadgetOptions(gadget);
         if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
           view_host = sidebar_->NewViewHost(gadgets_[id]->index_in_sidebar);
@@ -1323,7 +1328,7 @@ class SideBarGtkHost::Impl {
 
   void LoadGadgets() {
     gadget_manager_->EnumerateGadgetInstances(
-        NewSlot(this, &Impl::AddGadgetInstanceCallback));
+        NewSlot(this, &Impl::EnumerateGadgetInstancesCallback));
   }
 
   bool ShouldHideSideBar() const {
