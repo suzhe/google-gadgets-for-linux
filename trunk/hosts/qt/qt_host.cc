@@ -387,7 +387,6 @@ void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 
-#include "qt_host_internal.moc"
-
 } // namespace qt
 } // namespace hosts
+#include "qt_host_internal.moc"
