@@ -21,6 +21,7 @@ SUBDIRS = . tests
 
 MOC_FILES		= qt_main_loop.moc \
 			  qt_menu_internal.moc \
+			  utilities_internal.moc \
 			  qt_view_host.moc
 
 INCLUDES		= -I$(top_builddir) \
@@ -31,6 +32,7 @@ lib_LTLIBRARIES		= libggadget-qt@GGL_EPOCH@.la
 noinst_HEADERS		= qt_canvas.h \
 			  qt_font.h \
 			  qt_image.h \
+			  utilities_internal.h \
 			  qt_menu_internal.h
 
 qtincludedir		= $(GGL_INCLUDE_DIR)/ggadget/qt
@@ -82,5 +84,7 @@ qt_main_loop.moc:qt_main_loop.h
 qt_menu_internal.moc:qt_menu_internal.h
 	$(MOC) $< -o $@
 qt_view_host.moc:qt_view_host.h
+	$(MOC) $< -o $@
+utilities_internal.moc:utilities_internal.h
 	$(MOC) $< -o $@
 endif

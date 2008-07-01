@@ -668,7 +668,7 @@ static void OnDebugConsoleLog(LogLevel level, const std::string &message,
   }
   if (level_tag)
     gtk_text_buffer_insert(buffer, &end, level_tag, 2);
-  
+
   struct timeval tv;
   gettimeofday(&tv, NULL);
   char timestr[15];

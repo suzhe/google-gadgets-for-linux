@@ -49,6 +49,15 @@ namespace qt {
 
 class QtHost::Impl {
  public:
+  struct GadgetInfo {
+    GadgetInfo(Gadget *g) : gadget_(g), debug_console_(NULL) {}
+    ~GadgetInfo() {
+      if (debug_console_) delete debug_console_;
+      if (gadget_) delete gadget_;
+    }
+    Gadget *gadget_;
+    QWidget* debug_console_;
+  };
   Impl(QtHost *host, bool composite, int view_debug_mode)
     : gadget_manager_(GetGadgetManager()),
       gadget_browser_host_(host, view_debug_mode),
@@ -66,8 +75,8 @@ class QtHost::Impl {
     DLOG("Going to free %zd gadgets", gadgets_.size());
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      DLOG("Close Gadget: %s", it->second->GetManifestInfo(kManifestName).c_str());
-      it->second->CloseMainView();  // TODO: Save window state. A little hacky!
+      DLOG("Close Gadget: %s", it->second->gadget_->GetManifestInfo(kManifestName).c_str());
+      it->second->gadget_->CloseMainView();  // TODO: Save window state. A little hacky!
       delete it->second;
     }
     delete obj_;
@@ -184,7 +193,7 @@ class QtHost::Impl {
       delete gadget;
       return false;
     }
-    gadgets_[instance_id] = gadget;
+    gadgets_[instance_id] = new GadgetInfo(gadget);
     return true;
   }
 
@@ -229,7 +238,8 @@ class QtHost::Impl {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
-      DLOG("Close Gadget: %s", it->second->GetManifestInfo(kManifestName).c_str());
+      DLOG("Close Gadget: %s", it->second->gadget_->GetManifestInfo(kManifestName).c_str());
+      it->second->gadget_ = NULL; // Not sure about it
       delete it->second;
       gadgets_.erase(it);
     } else {
@@ -306,6 +316,18 @@ class QtHost::Impl {
     }
   }
 
+  void ShowGadgetDebugConsole(Gadget *gadget) {
+    if (!gadget) return;
+    GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
+    if (it == gadgets_.end() || !it->second) return;
+    GadgetInfo *info = it->second;
+    if (info->debug_console_) {
+      DLOG("Gadget has already debug console opened: %p", info->debug_console_);
+      return;
+    }
+    NewGadgetDebugConsole(gadget, &info->debug_console_);
+  }
+
   GadgetManagerInterface *gadget_manager_;
   GadgetBrowserHost gadget_browser_host_;
   QtHost *host_;
@@ -320,7 +342,7 @@ class QtHost::Impl {
   QSystemTrayIcon tray_;
   QtHostObject *obj_;        // provides slots for qt
 
-  typedef std::map<int, Gadget *> GadgetsMap;
+  typedef std::map<int, GadgetInfo*> GadgetsMap;
   GadgetsMap gadgets_;
 };
 
@@ -363,6 +385,7 @@ void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
 }
 
 void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {
+  impl_->ShowGadgetDebugConsole(gadget);
 }
 
 #include "qt_host_internal.moc"

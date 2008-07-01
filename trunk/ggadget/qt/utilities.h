@@ -43,6 +43,8 @@ int GetModifiers(Qt::KeyboardModifiers state);
 
 unsigned int GetKeyCode(int qt_key);
 
+QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget **widget);
+
 } // namespace qt
 } // namespace ggadget
 
