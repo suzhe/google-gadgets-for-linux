@@ -31,7 +31,13 @@ SET(SRCS
   utilities.cc
 )
 
-QT4_AUTOMOC(qt_menu.cc qt_main_loop.cc qt_gadget_widget.cc qt_view_host.cc)
+QT4_AUTOMOC(
+  qt_menu.cc
+  qt_main_loop.cc
+  qt_gadget_widget.cc
+  qt_view_host.cc
+  utilities.cc
+)
 
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})

@@ -21,6 +21,7 @@
 #include <QtGui/QKeyEvent>
 #include <QtGui/QAbstractTextDocumentLayout>
 #include <QtGui/QTextLine>
+#include <QtGui/QTextDocumentFragment>
 #include <QtGui/QTextBlock>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/event.h>
@@ -218,6 +219,8 @@ bool QtEditElement::IsMultiline() const {
 void QtEditElement::SetMultiline(bool multiline) {
   if (multiline_ != multiline) {
     multiline_ = multiline;
+    if (!multiline_)
+      SetValue(GetValue().c_str());
     QueueDraw();
   }
 }
@@ -280,7 +283,12 @@ std::string QtEditElement::GetValue() const {
 }
 
 void QtEditElement::SetValue(const char *value) {
-  doc_.setPlainText(QString::fromUtf8(value));
+  if (!multiline_) {
+    std::string v = CleanupLineBreaks(value);
+    doc_.setPlainText(QString::fromUtf8(v.c_str()));
+  } else {
+    doc_.setPlainText(QString::fromUtf8(value));
+  }
   QueueDraw();
 }
 
@@ -656,23 +664,28 @@ void QtEditElement::FocusOut() {
 }
 
 void QtEditElement::PasteClipboard() {
-   QClipboard *clipboard = QApplication::clipboard();
-   EnterText(clipboard->text());
+  QClipboard *clipboard = QApplication::clipboard();
+  if (!multiline_) {
+    std::string content = clipboard->text().toUtf8().data();
+    content = CleanupLineBreaks(content.c_str());
+    EnterText(QString::fromUtf8(content.c_str()));
+  } else {
+    EnterText(clipboard->text());
+  }
 }
 
 void QtEditElement::CopyClipboard() {
   if (cursor_->hasSelection() && password_char_.isEmpty()) {
-    QClipboard *clipboard = QApplication::clipboard();
-    clipboard->setText(cursor_->selectedText());
+    const QTextDocumentFragment fragment(*cursor_);
+    QApplication::clipboard()->setText(fragment.toPlainText());
   }
 }
 
 void QtEditElement::CutClipboard() {
-  if (cursor_->hasSelection() && password_char_.isEmpty()) {
-    QClipboard *clipboard = QApplication::clipboard();
-    clipboard->setText(cursor_->selectedText());
-    cursor_->deleteChar();
-  }
+  if (readonly_ || !password_char_.isEmpty() || !cursor_->hasSelection())
+    return;
+  CopyClipboard();
+  cursor_->deleteChar();
 }
 
 int QtEditElement::RealHeight() {

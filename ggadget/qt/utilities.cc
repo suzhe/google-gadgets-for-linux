@@ -28,6 +28,7 @@
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/view_interface.h>
 #include "utilities.h"
+#include "utilities_internal.h"
 
 namespace ggadget {
 namespace qt {
@@ -217,5 +218,11 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   box.exec();
 }
 
+QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget** widget) {
+  DebugConsole *console = new DebugConsole(gadget, widget);
+  console->show();
+  return console;
+}
 } // namespace qt
 } // namespace ggadget
+#include "utilities_internal.moc"
