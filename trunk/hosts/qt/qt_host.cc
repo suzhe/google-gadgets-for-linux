@@ -239,7 +239,6 @@ class QtHost::Impl {
 
     if (it != gadgets_.end()) {
       DLOG("Close Gadget: %s", it->second->gadget_->GetManifestInfo(kManifestName).c_str());
-      it->second->gadget_ = NULL; // Not sure about it
       delete it->second;
       gadgets_.erase(it);
     } else {

@@ -97,7 +97,7 @@ class DebugConsole : public QWidget {
   }
 };
 
-}
-}
+} // namespace qt
+} // namespace ggadget
 
 #endif
