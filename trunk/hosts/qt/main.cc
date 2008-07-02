@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <sys/time.h>
+#include <time.h>
 #include <cstdlib>
 #include <locale.h>
 #include <QtGui/QApplication>
@@ -123,6 +125,38 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
+#ifdef _DEBUG
+static int g_log_level = ggadget::LOG_TRACE;
+static bool g_long_log = true;
+#else
+static int g_log_level = ggadget::LOG_WARNING;
+static bool g_long_log = false;
+#endif
+
+static std::string LogListener(ggadget::LogLevel level, const char *filename,
+                               int line, const std::string &message) {
+  if (level >= g_log_level) {
+    if (g_long_log) {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      printf("%02d:%02d.%03d: ",
+             static_cast<int>(tv.tv_sec / 60 % 60),
+             static_cast<int>(tv.tv_sec % 60),
+             static_cast<int>(tv.tv_usec / 1000));
+      if (filename) {
+        // Print only the last part of the file name.
+        const char *name = strrchr(filename, '/');
+        if (name)
+          filename = name + 1;
+        printf("%s:%d: ", filename, line);
+      }
+    }
+    printf("%s\n", message.c_str());
+    fflush(stdout);
+  }
+  return message;
+}
+
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
   "Usage: %s [Options] [Gadgets]\n"
@@ -141,6 +175,16 @@ static const char *g_help_string =
   "      smjs - spidermonkey js runtime\n"
   "      qt   - QtScript js runtime(experimental)\n"
 #endif
+  "  -l loglevel, --log-level loglevel\n"
+  "      Specify the minimum gadget.debug log level.\n"
+  "      0 - Trace(All)  1 - Info  2 - Warning  3 - Error  >=4 - No log\n"
+  "  -ll, --long-log\n"
+  "      Output logs using long format.\n"
+  "  -dc, --debug-console debug_console_config\n"
+  "      Change debug console configuration (will be saved in config file):\n"
+  "      0 - No debug console allowed\n"
+  "      1 - Gadgets has debug console menu item\n"
+  "      2 - Open debug console when gadget is added to debug startup code\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -199,9 +243,11 @@ static void Handler(const std::string &data) {
 int main(int argc, char* argv[]) {
   bool composite = false;
   int debug_mode = 0;
+  int debug_console = -1;
   const char* js_runtime = "smjs-script-runtime";
   // set locale according to env vars
   setlocale(LC_ALL, "");
+
 #if defined(Q_WS_X11) && defined(HAVE_X11)
   if (InitArgb() && CheckCompositingManager(dpy)) {
     composite = true;
@@ -234,6 +280,9 @@ int main(int argc, char* argv[]) {
                              NULL).c_str());
   run_once.ConnectOnMessage(ggadget::NewSlot(Handler));
 
+  ggadget::ConnectGlobalLogListener(ggadget::NewSlot(LogListener));
+
+
   // Parse command line.
   std::vector<std::string> gadget_paths;
   for (int i = 1; i < argc; i++) {
@@ -258,7 +307,19 @@ int main(int argc, char* argv[]) {
         }
       }
 #endif
-    } else {
+    } else if (strcmp("-l", argv[i]) == 0 ||
+               strcmp("--log-level", argv[i]) == 0) {
+      if (++i < argc)
+        g_log_level = atoi(argv[i]);
+    } else if (strcmp("-ll", argv[i]) == 0 ||
+               strcmp("--long-log", argv[i]) == 0) {
+      g_long_log = true;
+    } else if (strcmp("-dc", argv[i]) == 0 ||
+               strcmp("--debug-console", argv[i]) == 0) {
+      debug_console = 1;
+      if (++i < argc)
+        debug_console = atoi(argv[i]);
+   } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
       if (run_once.IsRunning()) {
         run_once.SendMessage(path);
@@ -324,7 +385,20 @@ int main(int argc, char* argv[]) {
     return 1;
 
   ext_manager->SetReadonly();
-  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode);
+
+  ggadget::OptionsInterface *global_options = ggadget::GetGlobalOptions();
+  if (global_options) {
+    if (debug_console == -1) {
+      debug_console = 0;
+      global_options->GetValue(ggadget::kDebugConsoleOption)
+          .ConvertToInt(&debug_console);
+    } else {
+      global_options->PutValue(ggadget::kDebugConsoleOption,
+                               ggadget::Variant(debug_console));
+    }
+  }
+
+  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode, debug_console);
 
   // Load gadget files.
   if (gadget_paths.size()) {
