@@ -338,6 +338,7 @@ class SingleViewHost::Impl {
     // take effect immediately.
     gtk_widget_show_now(window_);
     gtk_window_present(GTK_WINDOW(window_));
+    gdk_window_raise(window_->window);
 
     // gtk_window_stick() must be called everytime.
     if (!decorated_)

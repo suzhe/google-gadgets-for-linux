@@ -37,24 +37,27 @@
 
 namespace ggadget {
 
+static const double kGadgetSpacing = 1;
+static const double kUndockDragThreshold = 2;
+static const double kBackgroundOpacity = 0.618;
+static const double kSideBarMinWidth = 50;
+static const double kSideBarMaxWidth = 999;
+static const double kBorderWidth = 3;
+
 class SideBar::Impl : public View {
  public:
   class SideBarViewHost : public ViewHostInterface {
    public:
-    SideBarViewHost(SideBar::Impl *owner,
-                    ViewHostInterface::Type type,
-                    ViewHostInterface *real_viewhost,
-                    int index)
-        : owner_(owner),
-          private_view_(NULL),
-          view_element_(NULL),
-          real_viewhost_(real_viewhost),
-          index_(index) {
+    SideBarViewHost(SideBar::Impl *owner, int index)
+      : owner_(owner),
+        view_element_(new ViewElement(owner->main_div_, owner, NULL, true)),
+        initial_index_(index) {
+      view_element_->SetVisible(false);
+      owner_->InsertViewElement(index, view_element_);
     }
     virtual ~SideBarViewHost() {
-      if (view_element_ && !owner_->RemoveViewElement(view_element_)) {
-        delete view_element_;
-      }
+      owner_->RemoveViewElement(view_element_);
+      owner_->Layout();
       view_element_ = NULL;
       DLOG("SideBarViewHost Dtor: %p", this);
     }
@@ -63,54 +66,36 @@ class SideBar::Impl : public View {
     }
     virtual void Destroy() { delete this; }
     virtual void SetView(ViewInterface *view) {
-      if (view_element_) {
-        if (!owner_->RemoveViewElement(view_element_))
-          delete view_element_;
-        view_element_ = NULL;
-        private_view_ = NULL;
-      }
-      if (!view) return;
-      view_element_ = new ViewElement(owner_->main_div_, owner_,
-                                      down_cast<View *>(view), true);
-      // set disable before ShowView is called
-      view_element_->SetEnabled(false);
-      // insert the view element in proper place
-      owner_->InsertViewElement(index_, view_element_);
-      private_view_ = view_element_->GetChildView();
+      // set invisible before ShowView is called
+      view_element_->SetVisible(false);
+      view_element_->SetChildView(down_cast<View*>(view));
       QueueDraw();
     }
     virtual ViewInterface *GetView() const {
-      return private_view_;
+      return view_element_->GetChildView();
     }
     virtual GraphicsInterface *NewGraphics() const {
-      return real_viewhost_->NewGraphics();
+      return owner_->view_host_->NewGraphics();
     }
     virtual void *GetNativeWidget() const {
       return owner_->GetNativeWidget();
     }
     virtual void ViewCoordToNativeWidgetCoord(double x, double y,
-                                              double *widget_x,
-                                              double *widget_y) const {
-      double vx = x, vy = y;
-      if (view_element_)
-        view_element_->SelfCoordToViewCoord(x, y, &vx, &vy);
-      if (real_viewhost_)
-        real_viewhost_->ViewCoordToNativeWidgetCoord(vx, vy, widget_x, widget_y);
+                                              double *wx, double *wy) const {
+      view_element_->ChildViewCoordToViewCoord(x, y, &x, &y);
+      owner_->view_host_->ViewCoordToNativeWidgetCoord(x, y, wx, wy);
     }
-    virtual void NativeWidgetCoordToViewCoord(
-        double x, double y, double *view_x, double *view_y) const {
-      double vx = x, vy = y;
-      if (real_viewhost_)
-        real_viewhost_->NativeWidgetCoordToViewCoord(x, y, &vx, &vy);
-      if (view_element_)
-        view_element_->ViewCoordToSelfCoord(vx, vy, view_x, view_y);
+    virtual void NativeWidgetCoordToViewCoord(double x, double y,
+                                              double *vx, double *vy) const {
+      owner_->view_host_->NativeWidgetCoordToViewCoord(x, y, &x, &y);
+      view_element_->ViewCoordToChildViewCoord(x, y, vx, vy);
     }
     virtual void QueueDraw() {
       if (view_element_)
         view_element_->QueueDraw();
     }
     virtual void QueueResize() {
-      resize_event_();
+      owner_->Layout();
     }
     virtual void EnableInputShapeMask(bool /* enable */) {
       // Do nothing.
@@ -119,87 +104,77 @@ class SideBar::Impl : public View {
     virtual void SetCaption(const char *caption) {}
     virtual void SetShowCaptionAlways(bool always) {}
     virtual void SetCursor(int type) {
-      real_viewhost_->SetCursor(type);
+      view_element_->SetCursor(
+          static_cast<ViewInterface::CursorType>(type));
+      owner_->view_host_->SetCursor(type);
     }
     virtual void SetTooltip(const char *tooltip) {
-      real_viewhost_->SetTooltip(tooltip);
+      owner_->view_host_->SetTooltip(tooltip);
     }
     virtual bool ShowView(bool modal, int flags,
                           Slot1<void, int> *feedback_handler) {
-      if (view_element_) {
-        view_element_->SetEnabled(true);
+      delete feedback_handler;
+      if (view_element_->GetChildView()) {
+        view_element_->SetVisible(true);
         owner_->Layout();
+        return true;
       }
-      if (feedback_handler) {
-        (*feedback_handler)(flags);
-        delete feedback_handler;
-      }
-      return true;
+      return false;
     }
     virtual void CloseView() {
-      if (view_element_) {
-        view_element_->SetEnabled(false);
-        owner_->Layout();
-      }
+      view_element_->SetVisible(false);
+      owner_->Layout();
     }
     virtual bool ShowContextMenu(int button) {
-      DLOG("Sidebar viewhost's ShowContextMenu");
-      return real_viewhost_->ShowContextMenu(button);
+      return owner_->view_host_->ShowContextMenu(button);
     }
     virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
     virtual void BeginMoveDrag(int button) {}
     virtual void Alert(const ViewInterface *view, const char *message) {
-      real_viewhost_->Alert(view, message);
+      owner_->view_host_->Alert(view, message);
     }
     virtual bool Confirm(const ViewInterface *view, const char *message) {
-      return real_viewhost_->Confirm(view, message);
+      return owner_->view_host_->Confirm(view, message);
     }
     virtual std::string Prompt(const ViewInterface *view,
                                const char *message,
                                const char *default_value) {
-      return real_viewhost_->Prompt(view, message, default_value);
+      return owner_->view_host_->Prompt(view, message, default_value);
     }
     virtual int GetDebugMode() const {
-      return real_viewhost_->GetDebugMode();
+      return owner_->view_host_->GetDebugMode();
     }
-    Connection *ConnectOnResize(Slot0<void> *slot) {
-      return resize_event_.Connect(slot);
-    }
-    int index() const {
-      return index_;
-    }
-    void SetIndex(int index) {
-      index_ = index;
-    }
+    int GetInitialIndex() const { return initial_index_; }
    private:
     SideBar::Impl *owner_;
-    View *private_view_;
     ViewElement *view_element_;
-    ViewHostInterface *real_viewhost_;
-    EventSignal resize_event_;
-    int index_;
+    int initial_index_;
   };
 
   Impl(SideBar *owner, ViewHostInterface *view_host)
-      : View(view_host, NULL, NULL, NULL),
-        owner_(owner),
-        view_host_(view_host),
-        null_element_(NULL),
-        popout_element_(NULL),
-        blank_height_(0),
-        mouse_move_event_x_(-1),
-        mouse_move_event_y_(-1),
-        hit_element_bottom_(false),
-        hit_element_normal_part_(false),
-        hit_sidebar_border_(false),
-        hittest_(HT_CLIENT),
-        background_(NULL),
-        icon_(NULL),
-        main_div_(NULL),
-        children_(NULL) {
+    : View(view_host, NULL, NULL, NULL),
+      owner_(owner),
+      view_host_(view_host),
+      null_element_(NULL),
+      blank_height_(0),
+      mouse_move_event_x_(-1),
+      mouse_move_event_y_(-1),
+      hit_element_bottom_(false),
+      hit_element_normal_part_(false),
+      hit_sidebar_border_(false),
+      hittest_(HT_CLIENT),
+      original_width_(0),
+      original_height_(0),
+      top_div_(NULL),
+      main_div_(NULL),
+      add_gadget_button_(NULL),
+      menu_button_(NULL),
+      close_button_(NULL),
+      children_(NULL),
+      initializing_(false) {
     SetResizable(ViewInterface::RESIZABLE_TRUE);
     // EnableCanvasCache(false);
-    SetupDecorator();
+    SetupUI();
   }
   ~Impl() {
   }
@@ -208,22 +183,22 @@ class SideBar::Impl : public View {
   virtual EventResult OnMouseEvent(const MouseEvent &event) {
     hittest_ = HT_CLIENT;
 
-    // the mouse down event after expand event should file unexpand event
-    if (ShouldFirePopInEvent(event)) {
-      popin_event_();
-    }
-
     EventResult result = EVENT_RESULT_UNHANDLED;
     // don't sent mouse event to view elements when layouting or resizing
     if (!hit_element_bottom_)
       result = View::OnMouseEvent(event);
 
-    if (result == EVENT_RESULT_UNHANDLED) {
-      if (event.GetX() >= 0 && event.GetX() < kBoderWidth) {
+    if (event.GetType() == Event::EVENT_MOUSE_DOWN) {
+      ViewElement *e = GetMouseOverViewElement();
+      onclick_signal_(e ? e->GetChildView() : NULL);
+    }
+
+    if (result == EVENT_RESULT_UNHANDLED && !IsMinimized()) {
+      if (event.GetX() >= 0 && event.GetX() < kBorderWidth) {
         hittest_ = HT_LEFT;
         SetCursor(CURSOR_SIZEWE);
       } else if (event.GetX() < GetWidth() &&
-               event.GetX() >= GetWidth() - kBoderWidth) {
+               event.GetX() >= GetWidth() - kBorderWidth) {
         hittest_ = HT_RIGHT;
         SetCursor(CURSOR_SIZEWE);
       }
@@ -237,7 +212,7 @@ class SideBar::Impl : public View {
     int index = 0;
     double x, y;
     BasicElement *element = NULL;
-    ViewElement *focused = owner_->GetMouseOverElement();
+    ViewElement *focused = GetMouseOverViewElement();
     double offset = mouse_move_event_y_ - event.GetY();
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_DOWN:
@@ -266,8 +241,7 @@ class SideBar::Impl : public View {
             }
             break;
           case HT_CLIENT:
-            if (focused != popout_element_)
-              hit_element_normal_part_ = true;
+            hit_element_normal_part_ = true;
             break;
           default:
             break;
@@ -313,7 +287,9 @@ class SideBar::Impl : public View {
                    (std::abs(offset) > kUndockDragThreshold ||
                     std::abs(event.GetX() - mouse_move_event_x_) >
                     kUndockDragThreshold)) {
-          undock_event_(mouse_move_event_x_, mouse_move_event_y_);
+          focused->ViewCoordToChildViewCoord(mouse_move_event_x_,
+                                             mouse_move_event_y_, &x, &y);
+          onundock_signal_(focused->GetChildView(), GetIndex(focused), x, y);
           ResetState();
         } else if (hit_sidebar_border_) {
           return EVENT_RESULT_UNHANDLED;
@@ -333,36 +309,138 @@ class SideBar::Impl : public View {
   }
 
   virtual bool OnAddContextMenuItems(MenuInterface *menu) {
-    if (GetMouseOverElement() &&
-        GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
-      GetMouseOverElement()->OnAddContextMenuItems(menu);
+    BasicElement *e = GetMouseOverElement();
+    if (e && e->IsInstanceOf(ViewElement::CLASS_ID)) {
+      e->OnAddContextMenuItems(menu);
     } else {
-      system_menu_event_(menu);
+      onmenu_signal_(menu);
     }
     // In sidebar mode, view host shouldn't add any host level menu items.
     return false;
   }
+
   virtual bool OnSizing(double *width, double *height) {
-    return kSideBarMinWidth < *width && *width < kSideBarMaxWidth;
+    return kSideBarMinWidth < *width && *width < kSideBarMaxWidth &&
+           *height >= main_div_->GetPixelY();
   }
+
   virtual void SetSize(double width, double height) {
-    View::SetSize(width, height);
+    if (top_div_->IsVisible() && main_div_->IsVisible()) {
+      // Not minimized.
+      View::SetSize(width, height);
+      original_width_ = width;
+      original_height_ = height;
+    } else if (top_div_->IsVisible()) {
+      // horizontal minimized.
+      View::SetSize(width, main_div_->GetPixelY());
+      original_width_ = width;
+    } else {
+      // vertical minimized.
+      View::SetSize(kBorderWidth, height);
+      original_height_ = height;
+    }
 
-    main_div_->SetPixelWidth(width - 2 * kBoderWidth);
-    main_div_->SetPixelHeight(height - 2 * kBoderWidth - kIconHeight);
-
-    button_array_[0]->SetPixelX(width - 3 * kIconHeight - 2 - kBoderWidth);
-    button_array_[1]->SetPixelX(width - 2 * kIconHeight - 1 - kBoderWidth);
-    button_array_[2]->SetPixelX(width - kIconHeight - kBoderWidth);
-
+    if (main_div_->IsVisible()) {
+      main_div_->SetPixelWidth(width - kBorderWidth * 2);
+      main_div_->SetPixelHeight(height - kBorderWidth - main_div_->GetPixelY());
+    }
+    if (top_div_->IsVisible()) {
+      top_div_->SetPixelWidth(width - kBorderWidth * 2);
+    }
     Layout();
   }
-  void ResetState() {
-    if (GetPopupElement()) {
-      GetPopupElement()->SetOpacity(1);
-      SetPopupElement(NULL);
+
+ public:
+  ViewElement *GetMouseOverViewElement() {
+    BasicElement *e = GetMouseOverElement();
+    return (e && e->IsInstanceOf(ViewElement::CLASS_ID)) ?
+           down_cast<ViewElement*>(e) : NULL;
+  }
+
+  ViewHostInterface *NewViewHost(int index) {
+    DLOG("sidebar: NewViewHost with index: %d", index);
+    SideBarViewHost *vh = new SideBarViewHost(this, index);
+    return vh;
+  }
+
+  void Minimize(bool vertical) {
+    // Don't minimize again if it's already minimized.
+    if (!IsMinimized()) {
+      if (vertical) {
+        top_div_->SetVisible(false);
+        main_div_->SetVisible(false);
+      } else {
+        main_div_->SetVisible(false);
+      }
+      SetSize(original_width_, original_height_);
+    }
+  }
+
+  bool IsMinimized() const {
+    return !(top_div_->IsVisible() && main_div_->IsVisible());
+  }
+
+  void Restore() {
+    if (IsMinimized()) {
+      top_div_->SetVisible(true);
+      main_div_->SetVisible(true);
+      SetSize(original_width_, original_height_);
+    }
+  }
+
+  int GetIndexOfPosition(double y) const {
+    int count = children_->GetCount();
+    for (int i = 0; i < count; ++i) {
+      ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
+      double x, middle;
+      e->SelfCoordToViewCoord(0, e->GetPixelHeight()/2, &x, &middle);
+      if (y < middle)
+        return i;
+    }
+    return count;
+  }
+
+  int GetIndexOfView(const ViewInterface *view) const {
+    int count = children_->GetCount();
+    for (int i = 0; i < count; ++i) {
+      ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
+      View *v = e->GetChildView();
+      if (v == view)
+        return i;
+    }
+    return -1;
+  }
+
+  void InsertPlaceholder(int index, double height) {
+    // only one null element is allowed
+    if (!null_element_) {
+      null_element_ = new ViewElement(main_div_, this, NULL, true);
+    }
+    null_element_->SetPixelHeight(height);
+    InsertViewElement(index, null_element_);
+  }
+
+  void ClearPlaceholder() {
+    if (null_element_) {
+      RemoveViewElement(null_element_);
+      null_element_ = NULL;
       Layout();
     }
+  }
+
+  void EnumerateViews(Slot2<bool, int, View*> *slot) {
+    ASSERT(slot);
+    int count = children_->GetCount();
+    for (int i = 0; i < count; ++i) {
+      ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
+      View *v = e->GetChildView();
+      if (v && !(*slot)(i, v))
+        break;
+    }
+    delete slot;
+  }
+
+  void ResetState() {
     mouse_move_event_x_ = -1;
     mouse_move_event_y_ = -1;
     hit_element_bottom_ = false;
@@ -371,154 +449,145 @@ class SideBar::Impl : public View {
     blank_height_ = 0;
     elements_height_.clear();
   }
-  void SetupDecorator() {
-    background_ = new ImgElement(NULL, this, NULL);
-    background_->SetSrc(Variant(kVDMainBackground));
-    background_->SetStretchMiddle(true);
-    background_->SetOpacity(kOpacityFactor);
-    background_->SetPixelX(0);
-    background_->SetPixelY(0);
-    background_->SetRelativeWidth(1);
-    background_->SetRelativeHeight(1);
-    background_->EnableCanvasCache(true);
-    GetChildren()->InsertElement(background_, NULL);
 
-    SetupButtons();
+  void SetupUI() {
+    ImgElement *background = new ImgElement(NULL, this, NULL);
+    GetChildren()->InsertElement(background, NULL);
+    background->SetSrc(Variant(kVDMainBackground));
+    background->SetStretchMiddle(true);
+    background->SetOpacity(kBackgroundOpacity);
+    background->SetPixelX(0);
+    background->SetPixelY(0);
+    background->SetRelativeWidth(1);
+    background->SetRelativeHeight(1);
+    background->EnableCanvasCache(true);
+
+    top_div_ = new DivElement(NULL, this, NULL);
+    GetChildren()->InsertElement(top_div_, NULL);
+    top_div_->SetPixelX(kBorderWidth);
+    top_div_->SetPixelY(kBorderWidth);
+
+    ImgElement *icon = new ImgElement(top_div_, this, NULL);
+    top_div_->GetChildren()->InsertElement(icon, NULL);
+    icon->SetSrc(Variant(kSideBarGoogleIcon));
+    icon->SetPixelX(0);
+    icon->SetPixelY(0);
+
+    DivElement *button_div = new DivElement(top_div_, this, NULL);
+    top_div_->GetChildren()->InsertElement(button_div, NULL);
+    button_div->SetRelativePinX(1);
+    button_div->SetRelativeX(1);
+    button_div->SetPixelY(0);
+    button_div->SetRelativeHeight(1);
+
+    add_gadget_button_ = new ButtonElement(button_div, this, NULL);
+    button_div->GetChildren()->InsertElement(add_gadget_button_, NULL);
+    add_gadget_button_->SetImage(Variant(kSBButtonAddUp));
+    add_gadget_button_->SetDownImage(Variant(kSBButtonAddDown));
+    add_gadget_button_->SetOverImage(Variant(kSBButtonAddOver));
+    add_gadget_button_->SetTooltip(GM_("SIDEBAR_ADD_GADGETS_TOOLTIP"));
+
+    menu_button_ = new ButtonElement(button_div, this, NULL);
+    button_div->GetChildren()->InsertElement(menu_button_, NULL);
+    menu_button_->SetImage(Variant(kSBButtonMenuUp));
+    menu_button_->SetDownImage(Variant(kSBButtonMenuDown));
+    menu_button_->SetOverImage(Variant(kSBButtonMenuOver));
+    menu_button_->SetTooltip(GM_("SIDEBAR_MENU_BUTTON_TOOLTIP"));
+    menu_button_->ConnectOnClickEvent(NewSlot(this, &Impl::OnMenuButtonClick));
+
+    close_button_ = new ButtonElement(button_div, this, NULL);
+    button_div->GetChildren()->InsertElement(close_button_, NULL);
+    close_button_->SetImage(Variant(kSBButtonMinimizeUp));
+    close_button_->SetDownImage(Variant(kSBButtonMinimizeDown));
+    close_button_->SetOverImage(Variant(kSBButtonMinimizeOver));
+    close_button_->SetTooltip(GM_("SIDEBAR_MINIMIZE_BUTTON_TOOLTIP"));
+
+    Elements *buttons = button_div->GetChildren();
+    double max_button_height = 0;
+    double buttons_width = 0;
+    for (int i = 0; i < 3; ++i) {
+      BasicElement *button = buttons->GetItemByIndex(i);
+      button->Layout();
+      button->SetRelativePinY(0.5);
+      button->SetRelativeY(0.5);
+      button->SetPixelX(buttons_width);
+      max_button_height = std::max(button->GetPixelHeight(), max_button_height);
+      buttons_width += button->GetPixelWidth();
+    }
+    button_div->SetPixelWidth(buttons_width);
+    top_div_->SetPixelHeight(std::max(icon->GetSrcHeight(), max_button_height));
 
     main_div_ = new DivElement(NULL, this, NULL);
     GetChildren()->InsertElement(main_div_, NULL);
-    main_div_->SetPixelX(kBoderWidth);
-    main_div_->SetPixelY(kBoderWidth + kIconHeight);
+    main_div_->SetPixelX(kBorderWidth);
+    main_div_->SetPixelY(top_div_->GetPixelY() + top_div_->GetPixelHeight());
     children_ = main_div_->GetChildren();
   }
-  void SetupButtons() {
-    icon_ = new ImgElement(NULL, this, NULL);
-    GetChildren()->InsertElement(icon_, NULL);
-    icon_->SetSrc(Variant(kSideBarGoogleIcon));
-    icon_->EnableCanvasCache(true);
-    icon_->SetPixelX(kBoderWidth);
-    icon_->SetPixelY(kBoderWidth);
 
-    button_array_[0] = new ButtonElement(NULL, this, NULL);
-    button_array_[0]->SetImage(Variant(kSBButtonAddUp));
-    button_array_[0]->SetDownImage(Variant(kSBButtonAddDown));
-    button_array_[0]->SetOverImage(Variant(kSBButtonAddOver));
-    button_array_[0]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
-    button_array_[0]->SetTooltip(GM_("SIDEBAR_ADD_GADGETS_TOOLTIP"));
-    GetChildren()->InsertElement(button_array_[0], NULL);
-
-    button_array_[1] = new ButtonElement(NULL, this, NULL);
-    button_array_[1]->SetImage(Variant(kSBButtonMenuUp));
-    button_array_[1]->SetDownImage(Variant(kSBButtonMenuDown));
-    button_array_[1]->SetOverImage(Variant(kSBButtonMenuOver));
-    button_array_[1]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
-    button_array_[1]->ConnectOnClickEvent(NewSlot(
-        this, &Impl::HandleConfigureButtonClick));
-    button_array_[1]->SetTooltip(GM_("SIDEBAR_MENU_BUTTON_TOOLTIP"));
-    GetChildren()->InsertElement(button_array_[1], NULL);
-
-    button_array_[2] = new ButtonElement(NULL, this, NULL);
-    button_array_[2]->SetImage(Variant(kSBButtonMinimizeUp));
-    button_array_[2]->SetDownImage(Variant(kSBButtonMinimizeDown));
-    button_array_[2]->SetOverImage(Variant(kSBButtonMinimizeOver));
-    button_array_[2]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
-    button_array_[2]->SetTooltip(GM_("SIDEBAR_MINIMIZE_BUTTON_TOOLTIP"));
-    GetChildren()->InsertElement(button_array_[2], NULL);
-  }
-  bool ShouldFirePopInEvent(const MouseEvent &event) {
-    if (!popout_element_ ||
-        event.GetType() != MouseEvent::EVENT_MOUSE_DOWN ||
-        GetMouseOverElement() == popout_element_)
-      return false;
-    return true;
-  }
-  void HandleConfigureButtonClick() {
+  void OnMenuButtonClick() {
     view_host_->ShowContextMenu(MouseEvent::BUTTON_LEFT);
   }
+
   int GetIndex(const BasicElement *element) const {
     ASSERT(element->IsInstanceOf(ViewElement::CLASS_ID));
     for (int i = 0; i < children_->GetCount(); ++i)
       if (element == children_->GetItemByIndex(i)) return i;
     return -1;
   }
-  void InsertViewElement(int index, BasicElement *element) {
-    ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
+
+  void InsertViewElement(int index, ViewElement *element) {
     ASSERT(index >= 0);
-    // insert the element by the order of their SideBarViewHost
-    int i = 0;
-    for (; i < children_->GetCount(); ++i) {
-      BasicElement *e = children_->GetItemByIndex(i);
-      int cur_index = i;
-      ViewInterface *view = down_cast<ViewElement *>(e)->GetChildView();
-      // for element that has not view, only judge by the element order
-      if (view)
-        cur_index = down_cast<SideBarViewHost *>(view->GetViewHost())->index();
-      if (cur_index >= index) {
-        if (e != element) {
-          children_->InsertElement(element, e);
-          if (element->IsEnabled()) Layout();
+    ASSERT(element);
+    int count = children_->GetCount();
+    if (initializing_) {
+      for (int i = 0; i < count; ++i) {
+        ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
+        View *v = e->GetChildView();
+        if (v) {
+          SideBarViewHost *vh = down_cast<SideBarViewHost*>(v->GetViewHost());
+          if (index <= vh->GetInitialIndex()) {
+            children_->InsertElement(element, e);
+            element = NULL;
+            break;
+          }
         }
-        return;
+      }
+      if (element)
+        children_->InsertElement(element, NULL);
+    } else {
+      if (index >= count) {
+        children_->InsertElement(element, NULL);
+      } else {
+        BasicElement *e = children_->GetItemByIndex(index);
+        if (e != element)
+          children_->InsertElement(element, e);
       }
     }
-    // not find a proper position, append to the end
-    if (down_cast<ViewElement *>(element)->GetChildView())
-      children_->InsertElement(element, NULL);
-    else
-      ClearPlaceHolder();
+    Layout();
   }
-  bool RemoveViewElement(BasicElement *element) {
-    ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
-    bool enabled = element->IsEnabled();
-    bool r = children_->RemoveElement(element);
-    if (enabled && r) Layout();
-    return r;
+
+  void RemoveViewElement(ViewElement *element) {
+    children_->RemoveElement(element);
   }
+
   void Layout() {
-    double y = kGadgetSpacing;
-    for (int i = 0; i < children_->GetCount(); ++i) {
-      ViewElement *element =
-        down_cast<ViewElement *>(children_->GetItemByIndex(i));
-      if (!element->IsEnabled()) continue;
+    double y = 0;
+    int count = children_->GetCount();
+    for (int i = 0; i < count; ++i) {
+      ViewElement *e = down_cast<ViewElement *>(children_->GetItemByIndex(i));
       double width = main_div_->GetPixelWidth();
-      double height = ceil(element->GetPixelHeight());
-      if (element->IsVisible() && element->OnSizing(&width, &height)) {
-        element->SetSize(width, ceil(height));
-      }
-      element->SetPixelX(0);
-      element->SetPixelY(ceil(y));
-      y += element->GetPixelHeight() + kGadgetSpacing;
+      double height = ceil(e->GetPixelHeight());
+      if (e->OnSizing(&width, &height))
+        e->SetSize(width, ceil(height));
+      e->SetPixelX(0);
+      e->SetPixelY(ceil(y));
+      if (e->IsVisible())
+        y += e->GetPixelHeight();
+      y += kGadgetSpacing;
     }
     QueueDraw();
   }
-  ViewElement *FindViewElementByView(ViewInterface *view) const {
-    for (int i = 0; i < children_->GetCount(); ++i) {
-      ViewElement *element =
-          down_cast<ViewElement *>(children_->GetItemByIndex(i));
-      // they may be not exactly the same view, but they should be owned by
-      // the same gadget...
-      if (element->GetChildView() &&
-          element->GetChildView()->GetGadget() == view->GetGadget())
-        return element;
-    }
-    return NULL;
-  }
-  void InsertPlaceholder(int index, double height) {
-    // only one null element is allowed
-    if (!null_element_) {
-      null_element_ = new ViewElement(main_div_, this, NULL, true);
-      null_element_->SetVisible(false);
-    }
-    null_element_->SetPixelHeight(height);
-    InsertViewElement(index, null_element_);
-  }
-  void ClearPlaceHolder() {
-    if (null_element_) {
-      children_->RemoveElement(null_element_);
-      null_element_ = NULL;
-      Layout();
-    }
-  }
+
   // *offset could be any value
   bool UpResize(bool do_resize, int index, double *offset) {
     double sign = *offset > 0 ? 1 : -1;
@@ -557,6 +626,7 @@ class SideBar::Impl : public View {
     *offset = count;
     return true;
   }
+
   bool DownResize(bool do_resize, int index, double *offset) {
     double count = 0;
     if (blank_height_ > 0) count = std::max(-blank_height_, *offset);
@@ -594,7 +664,8 @@ class SideBar::Impl : public View {
     *offset = count;
     return true;
   }
-  inline double GetBlankHeight() const {
+
+  double GetBlankHeight() const {
     int index = children_->GetCount();
     if (!index) return GetHeight();
     BasicElement *element = children_->GetItemByIndex(index - 1);
@@ -604,10 +675,7 @@ class SideBar::Impl : public View {
  public:
   SideBar *owner_;
   ViewHostInterface *view_host_;
-
   ViewElement *null_element_;
-  ViewElement *popout_element_;
-  ViewElement *popout_details_view_element_;
 
   std::vector<double> elements_height_;
   double blank_height_;
@@ -618,36 +686,23 @@ class SideBar::Impl : public View {
   bool hit_sidebar_border_;
   HitTest hittest_;
 
-  // elements of sidebar decorator
-  ImgElement *background_;
-  ImgElement *icon_;
+  double original_width_;
+  double original_height_;
+
+  DivElement *top_div_;
   DivElement *main_div_;
+  ButtonElement *add_gadget_button_;
+  ButtonElement *menu_button_;
+  ButtonElement *close_button_;
+
   Elements   *children_;
-  ButtonElement *button_array_[3];
 
-  EventSignal popin_event_;
-  EventSignal size_event_;
-  Signal1<bool, MenuInterface *> system_menu_event_;
-  Signal2<void, double, double> undock_event_;
+  bool initializing_;
 
-  static const double kGadgetSpacing = 1;
-  static const double kUndockDragThreshold = 2;
-  static const double kOpacityFactor = 0.618;
-  static const double kSideBarMinWidth = 50;
-  static const double kSideBarMaxWidth = 999;
-  static const double kBoderWidth = 3;
-  static const double kButtonWidth = 18;
-  static const double kIconHeight = 22;
+  Signal4<void, View*, int, double, double> onundock_signal_;
+  Signal1<void, View*> onclick_signal_;
+  Signal1<void, MenuInterface *> onmenu_signal_;
 };
-
-const double SideBar::Impl::kGadgetSpacing;
-const double SideBar::Impl::kUndockDragThreshold;
-const double SideBar::Impl::kOpacityFactor;
-const double SideBar::Impl::kSideBarMinWidth;
-const double SideBar::Impl::kSideBarMaxWidth;
-const double SideBar::Impl::kBoderWidth;
-const double SideBar::Impl::kButtonWidth;
-const double SideBar::Impl::kIconHeight;
 
 SideBar::SideBar(ViewHostInterface *view_host)
   : impl_(new Impl(this, view_host)) {
@@ -658,13 +713,12 @@ SideBar::~SideBar() {
   impl_ = NULL;
 }
 
+void SideBar::SetInitializing(bool initializing) {
+  impl_->initializing_ = initializing;
+}
+
 ViewHostInterface *SideBar::NewViewHost(int index) {
-  DLOG("sidebar: NewViewHost with index: %d", index);
-  Impl::SideBarViewHost *vh =
-      new Impl::SideBarViewHost(impl_, ViewHostInterface::VIEW_HOST_MAIN,
-                                impl_->view_host_, index);
-  vh->ConnectOnResize(NewSlot(impl_, &Impl::Layout));
-  return vh;
+  return impl_->NewViewHost(index);
 }
 
 ViewHostInterface *SideBar::GetSideBarViewHost() const {
@@ -683,104 +737,65 @@ double SideBar::GetHeight() const {
   return impl_->GetHeight();
 }
 
-int SideBar::GetIndexFromHeight(double height) const {
-  int i = 0;
-  BasicElement *e = NULL;
-  for (; i < impl_->children_->GetCount(); ++i) {
-    e = impl_->children_->GetItemByIndex(i);
-    ViewInterface *view = down_cast<ViewElement *>(e)->GetChildView();
-    // ignore place holder
-    if (!view) continue;
-    double middle = e->GetPixelY() + e->GetPixelHeight() / 2;
-    if (height - impl_->main_div_->GetPixelY() < middle)
-      return down_cast<Impl::SideBarViewHost *>(view->GetViewHost())->index();
-  }
-  return e ? down_cast<Impl::SideBarViewHost *>(down_cast<ViewElement *>(
-      e)->GetChildView()->GetViewHost())->index() + 1 : 0;
+void SideBar::Show() {
+  impl_->ShowView(false, 0, NULL);
+}
+
+void SideBar::Hide() {
+  impl_->CloseView();
+}
+
+void SideBar::Minimize(bool vertical) {
+  impl_->Minimize(vertical);
+}
+
+void SideBar::Restore() {
+  impl_->Restore();
+}
+
+bool SideBar::IsMinimized() const {
+  return impl_->IsMinimized();
+}
+
+int SideBar::GetIndexOfPosition(double y) const {
+  return impl_->GetIndexOfPosition(y);
+}
+
+int SideBar::GetIndexOfView(const ViewInterface *view) const {
+  return impl_->GetIndexOfView(view);
 }
 
 void SideBar::InsertPlaceholder(int index, double height) {
   return impl_->InsertPlaceholder(index, height);
 }
 
-void SideBar::ClearPlaceHolder() {
-  impl_->ClearPlaceHolder();
+void SideBar::ClearPlaceholder() {
+  impl_->ClearPlaceholder();
 }
 
-void SideBar::Layout() {
-  impl_->Layout();
+void SideBar::EnumerateViews(Slot2<bool, int, View*> *slot) {
+  impl_->EnumerateViews(slot);
 }
 
-void SideBar::UpdateElememtsIndex() {
-  for (int i = 0; i < impl_->children_->GetCount(); ++i) {
-    BasicElement *e = impl_->children_->GetItemByIndex(i);
-    ViewInterface *v = down_cast<ViewElement *>(e)->GetChildView();
-    if (!v) continue;
-    down_cast<Impl::SideBarViewHost* >(v->GetViewHost())->SetIndex(i);
-  }
+Connection *SideBar::ConnectOnUndock(
+    Slot4<void, View*, int, double, double> *slot) {
+  return impl_->onundock_signal_.Connect(slot);
 }
 
-ViewElement *SideBar::GetMouseOverElement() const {
-  BasicElement *element = impl_->GetMouseOverElement();
-  if (element && element->IsInstanceOf(ViewElement::CLASS_ID))
-    return down_cast<ViewElement *>(element);
-  return NULL;
-}
-
-ViewElement *SideBar::FindViewElementByView(ViewInterface *view) const {
-  return impl_->FindViewElementByView(view);
-}
-
-ViewElement *SideBar::GetViewElementByIndex(int index) const {
-  return down_cast<ViewElement *>(
-      impl_->children_->GetItemByIndex(index));
-}
-
-ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
-  if (view) {
-    ViewElement *element = impl_->FindViewElementByView(view);
-    // popin previous element before set other popout one
-    if (impl_->popout_element_ && impl_->popout_element_ != element)
-      impl_->popin_event_();
-    impl_->popout_element_ = element;
-  } else {
-    impl_->popout_element_ = NULL;
-  }
-  return impl_->popout_element_;
-}
-
-void SideBar::EnumerateViewElements(Slot2<bool, int, ViewElement *> *slot) {
-  for (int i = 0; i < impl_->children_->GetCount(); ++i) {
-    ViewElement *v =
-        down_cast<ViewElement *>(impl_->children_->GetItemByIndex(i));
-    if (!v || !v->IsEnabled() || !v->GetChildView())
-      continue;
-    if (!(*slot)(i, v)) {
-      delete slot;
-      return;
-    }
-  }
-  delete slot;
-}
-
-Connection *SideBar::ConnectOnUndock(Slot2<void, double, double> *slot) {
-  return impl_->undock_event_.Connect(slot);
-}
-
-Connection *SideBar::ConnectOnPopIn(Slot0<void> *slot) {
-  return impl_->popin_event_.Connect(slot);
+Connection *SideBar::ConnectOnClick(Slot1<void, View*> *slot) {
+  return impl_->onclick_signal_.Connect(slot);
 }
 
 Connection *SideBar::ConnectOnAddGadget(Slot0<void> *slot) {
-  return impl_->button_array_[0]->ConnectOnClickEvent(slot);
+  return impl_->add_gadget_button_->ConnectOnClickEvent(slot);
 }
 
-Connection *SideBar::ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot) {
-  return impl_->system_menu_event_.Connect(slot);
+Connection *SideBar::ConnectOnMenu(Slot1<void, MenuInterface *> *slot) {
+  return impl_->onmenu_signal_.Connect(slot);
 }
 
 Connection *SideBar::ConnectOnClose(Slot0<void> *slot) {
-  return impl_->button_array_[2]->ConnectOnClickEvent(slot);
+  return impl_->close_button_->ConnectOnClickEvent(slot);
 }
 
 Connection *SideBar::ConnectOnSizeEvent(Slot0<void> *slot) {

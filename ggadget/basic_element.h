@@ -392,6 +392,11 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   bool IsSizeChanged() const;
 
+  /**
+   * Sets the size changed state to false.
+   */
+  void ClearSizeChanged();
+
  public: // Coordination translation methods.
   /**
    * Converts coordinates in this element's space to coordinates in a

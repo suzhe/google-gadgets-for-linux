@@ -49,6 +49,15 @@ class SideBar {
 
  public:
   /**
+   * Enables or disables initialization mode.
+   *
+   * In initialization mode, the index specified when calling NewVhewHost() is
+   * the initial index, and all newly created view hosts will be sorted by
+   * initial indexes.
+   */
+  void SetInitializing(bool initializing);
+
+  /**
    * Creates a new ViewHost instance and of curse a new view element
    * hold in the side bar.
    *
@@ -73,79 +82,108 @@ class SideBar {
   /** Retrieves the height of side bar in pixels. */
   double GetHeight() const;
 
-  /** Retrieves the index of the element in the sidebar that is specified
-   *  by the height.
-   * @param height the Y-coordination in the sidebar system.
+  /** Shows sidebar window. */
+  void Show();
+
+  /** Hides sidebar window. */
+  void Hide();
+
+  /**
+   * Minimizes sidebar at specified orientation.
+   *
+   * If vertical is true, then sidebar will be minimized to a thin line which
+   * can be snapped to monitor left or right border. Otherwise, sidebar will be
+   * minimized to a small window only containing the button icons.
+   *
+   * If sidebar is minimized, the size of sidebar will be changed accordingly.
+   * And the new size set by SetSize() will be taken effect when it's restored.
    */
-  int GetIndexFromHeight(double height) const;
+  void Minimize(bool vertical);
+
+  /** Restores sidebar's size. */
+  void Restore();
+
+  /** Checks if sidebar is in minimized mode. */
+  bool IsMinimized() const;
+
+  /**
+   * Retrieves the index of the view in the sidebar at sepcified vertical
+   * position.
+   * @param y the vertical position in sidebar.
+   */
+  int GetIndexOfPosition(double y) const;
+
+  /**
+   * Retrieves the index of a specified view, if the view is not in the sidebar
+   * then -1 will be returned.
+   */
+  int GetIndexOfView(const ViewInterface *view) const;
 
   /**
    * Insert a place holder in the side bar.
    *
-   * @param index The index of position in the sidebar of the place hodler.
-   * @param height The height of the position.
+   * @param index The index of position in the sidebar of the place holder.
+   * @param height The height of the place holder.
    */
   void InsertPlaceholder(int index, double height);
 
   /**
-   * Clear place holder(s)
+   * Clear place holder
    */
-  void ClearPlaceHolder();
+  void ClearPlaceholder();
 
   /**
-   * Explicitly let side bar reorganize the layout.
-   */
-  void Layout();
-
-  /**
-   * Explicitly update all elements' index in the sidebar
-   */
-  void UpdateElememtsIndex();
-
-  /**
-   * @return Return the element that is moused over. Return @c NULL if no
-   * view element is moused over.
-   */
-  ViewElement *GetMouseOverElement() const;
-
-  /**
-   * Find if any view element in the side bar is the container of the @c view.
-   * @param view the queried view.
-   * @return @c NULL if no such view element is found.
-   */
-  ViewElement *FindViewElementByView(ViewInterface *view) const;
-
-  /**
-   * Find view element by index.
-   */
-  ViewElement *GetViewElementByIndex(int index) const;
-
-  /**
-   * Set pop out view.
-   * When an element is poped out, the @c host associated with
-   * the sidebar should let sidebar know it.
-   * @param view the view that was poped out
-   * @return the view element that contains the @c view.
-   */
-  ViewElement *SetPopOutedView(ViewInterface *view);
-
-  /**
-   * Enumerate view elements in the sidebar.
+   * Enumerate views in the sidebar.
    * The callback will receive two parameters, first is the index of the
-   * view element and the second is the pointer point to the view element
-   * and should return true if it wants the enumeration to continue,
-   * or false to break the enumeration.
+   * view and the second is the pointer point to the view and should return
+   * true if it wants the enumeration to continue, or false to break the
+   * enumeration.
    */
-  void EnumerateViewElements(Slot2<bool, int, ViewElement *> *slot);
+  void EnumerateViews(Slot2<bool, int, View *> *slot);
 
   /**
    * Event connection methods.
    */
-  Connection *ConnectOnUndock(Slot2<void, double, double> *slot);
-  Connection *ConnectOnPopIn(Slot0<void> *slot);
+  /**
+   * Connects a slot to OnUndock signal, which will be emitted when user wants
+   * to undock a gadget by dragging it.
+   * The first parameter is the child view to be undocked.
+   * The second parameter is the index of the child view.
+   * The third and fourth parameter are the mouse position relative to the
+   * child view's coordinates.
+   */
+  Connection *ConnectOnUndock(Slot4<void, View*, int, double, double> *slot);
+
+  /**
+   * Connects a slot to OnClick signal, which will be emitted when a mouse
+   * click event occurred.
+   * The first parameter is the child view under the mouse pointer, or NULL if
+   * the click event is occurred on sidebar.
+   */
+  Connection *ConnectOnClick(Slot1<void, View*> *slot);
+
+  /**
+   * Connects a slot to OnAddGadget signal, which will be emitted when add
+   * gadget button is clicked.
+   */
   Connection *ConnectOnAddGadget(Slot0<void> *slot);
-  Connection *ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot);
+
+  /**
+   * Connects a slot to OnMenu signal, which will be emitted when menu button
+   * is clicked.
+   */
+  Connection *ConnectOnMenu(Slot1<void, MenuInterface *> *slot);
+
+  /**
+   * Connects a slot to OnClose signal, which will be emitted when close button
+   * is clicked.
+   */
   Connection *ConnectOnClose(Slot0<void> *slot);
+
+  /**
+   * Connects a slot to OnSizeEvent signal, which will be emitted when sidebar's
+   * size is changed.
+   */
   Connection *ConnectOnSizeEvent(Slot0<void> *slot);
 
  private:

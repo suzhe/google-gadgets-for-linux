@@ -915,7 +915,6 @@ class View::Impl {
       children_.Draw(target);
 
     if (popup_element_.Get()) {
-      popup_element_.Get()->ClearPositionChanged();
       std::vector<BasicElement *> elements;
       BasicElement *e = popup_element_.Get();
       for (; e != NULL; e = e->GetParentElement())
