@@ -162,8 +162,25 @@ class DecoratedViewHost::Impl {
       cw += (left + right);
       ch += (top + bottom);
 
-      if (SetViewSize(GetWidth(), GetHeight(), cw, ch))
-        Layout();
+      SetViewSize(GetWidth(), GetHeight(), cw, ch);
+      // Always do layout event if the view size is not changed, because
+      // child view's size has been changed.
+      Layout();
+    }
+
+    // Update child view's size according to decorated view's size.
+    void UpdateChildViewSize() {
+      if (IsChildViewVisible()) {
+        double left, right, top, bottom;
+        double cw, ch;
+        GetMargins(&left, &right, &top, &bottom);
+        GetMinimumClientExtents(&cw, &ch);
+
+        double vw = std::max(GetWidth() - left - right, cw);
+        double vh = std::max(GetHeight() - top - bottom, ch);
+        if (view_element_->OnSizing(&vw, &vh))
+            view_element_->SetSize(vw, vh);
+      }
     }
 
     void Layout() {
@@ -1188,6 +1205,9 @@ class DecoratedViewHost::Impl {
       UpdateVisibility();
       UpdateViewSize();
 
+      if (!minimized_)
+        UpdateChildViewSize();
+
       View *child = GetChildView();
       if (child) {
         SimpleEvent event(minimized_ ? Event::EVENT_MINIMIZE :
@@ -1941,6 +1961,10 @@ void DecoratedViewHost::SetShowCaptionAlways(bool always) {
 }
 
 void DecoratedViewHost::SetCursor(int type) {
+  // Set the cursor type to view element, so that decorated view can get the
+  // type.
+  impl_->view_decorator_->GetViewElement()->SetCursor(
+      static_cast<ViewInterface::CursorType>(type));
   impl_->view_decorator_->SetCursor(type);
 }
 

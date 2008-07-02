@@ -508,27 +508,31 @@ class BasicElement::Impl {
       }
       // To let all associated copy elements to update their content.
       FireOnContentChangedSignal();
+      content_changed_ = false;
     }
+
+    // No other code will use it before calling Draw(), so it's safe to reset.
+    visibility_changed_ = false;
   }
 
   void Draw(CanvasInterface *canvas) {
     // GetPixelWidth() and GetPixelHeight might be overrode.
     double width = owner_->GetPixelWidth();
     double height = owner_->GetPixelHeight();
-    bool force_draw = false;
-
-    // Invalidates the canvas cache if the element size has changed.
-    if (cache_ &&
-        (cache_->GetWidth() != width || cache_->GetHeight() != height)) {
-      DestroyCanvas(cache_);
-      cache_ = NULL;
-      force_draw = true;
-    }
-
     // Only do draw if visible
     // Check for width, height == 0 since IntersectRectClipRegion fails for
     // those cases.
     if (visible_ && opacity_ != 0 && width > 0 && height > 0) {
+      bool force_draw = false;
+
+      // Invalidates the canvas cache if the element size has changed.
+      if (cache_ &&
+          (cache_->GetWidth() != width || cache_->GetHeight() != height)) {
+        DestroyCanvas(cache_);
+        cache_ = NULL;
+        force_draw = true;
+      }
+
       // Creates the canvas cache only when necessary.
       if (cache_enabled_) {
         if (!cache_) {
@@ -1596,6 +1600,10 @@ void BasicElement::ClearPositionChanged() {
 
 bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
+}
+
+void BasicElement::ClearSizeChanged() {
+  impl_->size_changed_ = false;
 }
 
 bool BasicElement::IsSizeChanged() const {

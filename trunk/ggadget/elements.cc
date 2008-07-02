@@ -134,7 +134,8 @@ class Elements::Impl {
       case Variant::TYPE_STRING:
         return GetItemByName(VariantValue<const char *>()(index_or_name));
       case Variant::TYPE_DOUBLE:
-        return GetItemByIndex(static_cast<int>(VariantValue<double>()(index_or_name)));
+        return GetItemByIndex(
+            static_cast<int>(VariantValue<double>()(index_or_name)));
       default:
         return NULL;
     }
@@ -283,27 +284,24 @@ class Elements::Impl {
   }
 
   void Layout() {
-    size_t child_count = children_.size();
-    for (size_t i = 0; i < child_count; i++) {
-      children_[i]->Layout();
+    Children::iterator it = children_.begin();
+    Children::iterator end = children_.end();
+    bool need_update_extents = false;
+    for (; it != end; ++it) {
+      (*it)->Layout();
+      if ((*it)->IsPositionChanged() || (*it)->IsSizeChanged())
+        need_update_extents = true;
+      // Clear the size and position changed state here, because children's
+      // Draw() method might not be called.
+      (*it)->ClearPositionChanged();
+      (*it)->ClearSizeChanged();
     }
 
     if (scrollable_) {
-      // If scrollable, the canvas size is the max extent of the children.
-      bool need_update_extents = false;
-      for (size_t i = 0; i < child_count; i++) {
-        if (children_[i]->IsPositionChanged() ||
-            children_[i]->IsSizeChanged()) {
-          need_update_extents = true;
-          break;
-        }
-      }
-
       if (need_update_extents) {
         width_ = height_ = 0;
-        for (size_t i = 0; i < child_count; i++) {
-          UpdateChildExtent(children_[i], &width_, &height_);
-        }
+        for (it = children_.begin(); it != end; ++it)
+          UpdateChildExtent(*it, &width_, &height_);
       }
     } else if (owner_) {
       // If not scrollable, the canvas size is the same as the parent.

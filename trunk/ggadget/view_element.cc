@@ -59,6 +59,11 @@ class ViewElement::Impl {
       onopen_connection_->Disconnect();
   }
 
+  void OnChildViewOpen() {
+    UpdateScaleAndSize();
+    child_view_->GetViewHost()->QueueResize();
+  }
+
   void UpdateScaleAndSize() {
     if (child_view_) {
       scale_ = child_view_->GetGraphics()->GetZoom() /
@@ -130,7 +135,7 @@ void ViewElement::SetChildView(View *child_view) {
     impl_->onsize_connection_ = child_view->ConnectOnSizeEvent(
         NewSlot(impl_, &Impl::UpdateScaleAndSize));
     impl_->onopen_connection_ = child_view->ConnectOnOpenEvent(
-        NewSlot(impl_, &Impl::UpdateScaleAndSize));
+        NewSlot(impl_, &Impl::OnChildViewOpen));
   }
 
   impl_->child_view_ = child_view;
