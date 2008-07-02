@@ -33,7 +33,7 @@ using ggadget::ViewInterface;
 
 class QtHost : public ggadget::HostInterface {
  public:
-  QtHost(bool composite, int view_debug_mode);
+  QtHost(bool composite, int view_debug_mode, int debug_console);
   virtual ~QtHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);

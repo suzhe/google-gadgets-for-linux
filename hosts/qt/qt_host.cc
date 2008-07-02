@@ -58,11 +58,12 @@ class QtHost::Impl {
     Gadget *gadget_;
     QWidget* debug_console_;
   };
-  Impl(QtHost *host, bool composite, int view_debug_mode)
+  Impl(QtHost *host, bool composite, int view_debug_mode, int dc_option)
     : gadget_manager_(GetGadgetManager()),
       gadget_browser_host_(host, view_debug_mode),
       host_(host),
       view_debug_mode_(view_debug_mode),
+      debug_console_option_(dc_option),
       composite_(composite),
       gadgets_shown_(true),
       expanded_popout_(NULL),
@@ -187,13 +188,16 @@ class QtHost::Impl {
       delete gadget;
       return false;
     }
+    GadgetInfo *info = new GadgetInfo(gadget);
+    if (debug_console_option_ >= 2)
+      NewGadgetDebugConsole(gadget, &info->debug_console_);
 
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
-      delete gadget;
+      delete info;
       return false;
     }
-    gadgets_[instance_id] = new GadgetInfo(gadget);
+    gadgets_[instance_id] = info;
     return true;
   }
 
@@ -331,6 +335,7 @@ class QtHost::Impl {
   GadgetBrowserHost gadget_browser_host_;
   QtHost *host_;
   int view_debug_mode_;
+  int debug_console_option_;
   bool composite_;
   bool gadgets_shown_;
 
@@ -345,8 +350,8 @@ class QtHost::Impl {
   GadgetsMap gadgets_;
 };
 
-QtHost::QtHost(bool composite, int view_debug_mode)
-  : impl_(new Impl(this, composite, view_debug_mode)) {
+QtHost::QtHost(bool composite, int view_debug_mode, int debug_console)
+  : impl_(new Impl(this, composite, view_debug_mode, debug_console)) {
   impl_->InitGadgets();
 }
 
