@@ -111,8 +111,11 @@ class SimpleGtkHost::Impl {
 
   ~Impl() {
     for (GadgetInfoMap::iterator it = gadgets_.begin();
-         it != gadgets_.end(); ++it)
+         it != gadgets_.end(); ++it) {
+      if (it->second.debug_console)
+        gtk_widget_destroy(it->second.debug_console);
       delete it->second.gadget;
+    }
 
     gtk_widget_destroy(host_menu_);
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
@@ -273,9 +276,15 @@ class SimpleGtkHost::Impl {
                                 // We still don't trust any user added gadgets
                                 // at gadget runtime level.
                                 false);
+    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
+      if (it != gadgets_.end()) {
+        if (it->second.debug_console)
+          gtk_widget_destroy(it->second.debug_console);
+        gadgets_.erase(it);
+      }
       delete gadget;
       return false;
     }
@@ -284,13 +293,11 @@ class SimpleGtkHost::Impl {
       gadget->ShowMainView();
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    GadgetInfo *info = &gadgets_[instance_id];
-    info->gadget = gadget;
 
     // If debug console is opened during view host creation, the title is
     // not set then because main view is not available. Set the title now.
-    if (info->debug_console) {
-      gtk_window_set_title(GTK_WINDOW(info->debug_console),
+    if (it->second.debug_console) {
+      gtk_window_set_title(GTK_WINDOW(it->second.debug_console),
                            gadget->GetMainView()->GetCaption().c_str());
     }
     return true;
@@ -300,6 +307,9 @@ class SimpleGtkHost::Impl {
                                  ViewHostInterface::Type type) {
     ASSERT(gadget);
     int gadget_id = gadget->GetInstanceID();
+    GadgetInfo *info = &gadgets_[gadget_id];
+    ASSERT(info->gadget == NULL || info->gadget == gadget);
+    info->gadget = gadget;
 
     bool decorated =
         (decorated_ || type == ViewHostInterface::VIEW_HOST_OPTIONS);
@@ -311,7 +321,6 @@ class SimpleGtkHost::Impl {
       return svh;
 
     DecoratedViewHost *dvh;
-    GadgetInfo *info = &gadgets_[gadget_id];
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
       if (debug_console_config_ >= 2)
         ShowGadgetDebugConsole(gadget);
@@ -370,7 +379,6 @@ class SimpleGtkHost::Impl {
     if (it != gadgets_.end()) {
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
-
       delete it->second.gadget;
       gadgets_.erase(it);
     } else {

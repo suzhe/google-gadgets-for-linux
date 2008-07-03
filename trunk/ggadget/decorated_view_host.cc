@@ -458,6 +458,7 @@ class DecoratedViewHost::Impl {
              gadget->GetInstanceID(), elm->GetPixelWidth(),
              elm->GetPixelHeight(), elm->GetScale());
         UpdateViewSize();
+        UpdateChildViewSize();
       }
     }
    protected:
@@ -1204,9 +1205,7 @@ class DecoratedViewHost::Impl {
 
       UpdateVisibility();
       UpdateViewSize();
-
-      if (!minimized_)
-        UpdateChildViewSize();
+      UpdateChildViewSize();
 
       View *child = GetChildView();
       if (child) {
