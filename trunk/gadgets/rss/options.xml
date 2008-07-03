@@ -15,21 +15,36 @@
   limitations under the License.
 -->
 
-<view width="350" height="400" resizable="false"
+<view width="350" height="405" resizable="false"
       onok="OKClicked()" onopen="OnOpen()" caption="&GADGET_OPTIONS;">
   <label y="5">&GADGET_ADDLABEL;</label>
-  <edit width="295" height="20" y="25" name="feedname" 
-    onchange="FeedBoxChanged()"/>
+  <div width="295" height="20" y="25">
+    <img stretchMiddle="true" src="element_border.png" 
+      width="100%" height="100%"/>
+    <edit width="293" height="18" x="1" y="1" name="feedname" 
+      onchange="FeedBoxChanged()"/>
+  </div>
   <button x="300" y="25" width="50" name="addbutton" onclick="AddFeed()" 
     caption="&GADGET_ADD;" downImage="button_down.png" image="button_up.png"
     overImage="button_over.png" stretchMiddle="true"/>
-  <listbox name="feeds" width="100%" height="300" y="50" background="#ffffff"
-    autoscroll="true" itemHeight="35" onchange="SelectedFeedChanged();"/>
-  <button x="250" y="355" width="100" name="removebutton" onclick="RemoveFeed()"
-    caption="&GADGET_REMOVE;" downImage="button_down.png" image="button_up.png"
+  <div width="350" height="300" y="50">
+    <img stretchMiddle="true" src="element_border.png" 
+      width="100%" height="100%"/>
+    <listbox name="feeds" width="348" height="298" x="1" y="1" 
+      background="#ffffff" autoscroll="true" itemHeight="35" 
+      onchange="SelectedFeedChanged();"/>
+  </div>
+  <button x="250" y="355" width="100" name="removebutton" 
+    onclick="RemoveFeed()" caption="&GADGET_REMOVE;" 
+    downImage="button_down.png" image="button_up.png"
     overImage="button_over.png" stretchMiddle="true"/>
   <label y="380">&GADGET_MAXSHOW;</label>
-  <edit x="320" y="380" width="30" align="right" name="maxitems"/>
+  <div width="30" height="20" x="320" y="380">
+    <img stretchMiddle="true" src="element_border.png" 
+      width="100%" height="100%"/>
+    <edit x="1" y="1" width="28" height="18" 
+      align="right" name="maxitems"/>
+  </div>
   <script src="shared.js"/>
   <script src="options.js"/>
 </view>
