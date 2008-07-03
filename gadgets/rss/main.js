@@ -37,7 +37,7 @@ if (!g_feeds) {
 options.putDefaultValue(kMaxItemsOption, kMaxItemsDefault);
 var g_max_items = options.getValue(kMaxItemsOption);
 
-options.putDefaultValue(kURLOption, "unset");
+options.putDefaultValue(kURLOption, strings.GADGET_DEFAULTURL);
 var url = options.getValue(kURLOption);
 if (url != "unset") {
   url = NormalizeURL(url);

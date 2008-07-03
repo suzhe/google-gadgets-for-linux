@@ -30,4 +30,5 @@
 <GADGET_ADD>添加</GADGET_ADD>
 <GADGET_REMOVE>删除</GADGET_REMOVE>
 <GADGET_MAXSHOW>每个剪辑最多可显示的条目:</GADGET_MAXSHOW>
+<GADGET_DEFAULTURL>http://news.google.cn/?output=rss</GADGET_DEFAULTURL>
 </strings>
