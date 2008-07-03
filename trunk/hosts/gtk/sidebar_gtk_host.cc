@@ -731,6 +731,7 @@ class SideBarGtkHost::Impl {
   // view host related methods.
   void CloseDetailsView(int gadget_id) {
     GadgetInfo *info = &gadgets_[gadget_id];
+    ASSERT(info->gadget);
     if (info->details) {
       info->gadget->CloseDetailsView();
       info->details = NULL;
@@ -970,8 +971,6 @@ class SideBarGtkHost::Impl {
   }
 
   void OnDetailsViewClose(int gadget_id) {
-    GadgetInfo *info = &gadgets_[gadget_id];
-    ASSERT(info->gadget);
     CloseDetailsView(gadget_id);
   }
 
@@ -1570,7 +1569,7 @@ class SideBarGtkHost::Impl {
     DLOG("SideBarLeaveNotifyHandler");
     if (impl->auto_hide_ && !impl->sidebar_->IsMinimized() &&
         !gtk_window_is_active(GTK_WINDOW(impl->sidebar_window_)) &&
-        impl->auto_hide_source_ == 0 && impl->auto_show_source_ != 0) {
+        impl->auto_hide_source_ == 0 && impl->auto_show_source_ == 0) {
       impl->auto_hide_source_ =
         g_timeout_add(kAutoHideTimeout, SideBarAutoHideTimeoutHandler, impl);
     }
