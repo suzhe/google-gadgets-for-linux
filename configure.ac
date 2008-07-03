@@ -543,7 +543,7 @@ AC_CHECK_FUNCS([mkdtemp tempnam])
 # Check flex
 AC_PROG_LEX
 if test "$LEX" != flex; then
-  LEX="$SHELL $top_srcdir/autotools/missing flex"
+  LEX="$SHELL $abs_top_srcdir/autotools/missing flex"
 fi
 
 ###########################################################
