@@ -283,7 +283,7 @@ class SideBar::Impl : public View {
             UpResize(true, index, &offset);
             Layout();
           }
-        } else if (hit_element_normal_part_ &&
+        } else if (hit_element_normal_part_ && focused->GetChildView() &&
                    (std::abs(offset) > kUndockDragThreshold ||
                     std::abs(event.GetX() - mouse_move_event_x_) >
                     kUndockDragThreshold)) {
@@ -577,8 +577,9 @@ class SideBar::Impl : public View {
       ViewElement *e = down_cast<ViewElement *>(children_->GetItemByIndex(i));
       double width = main_div_->GetPixelWidth();
       double height = ceil(e->GetPixelHeight());
-      if (e->OnSizing(&width, &height))
-        e->SetSize(width, ceil(height));
+      // Just ignore the OnSizing result, to set child view's width forcely.
+      e->OnSizing(&width, &height);
+      e->SetSize(width, ceil(height));
       e->SetPixelX(0);
       e->SetPixelY(ceil(y));
       if (e->IsVisible())

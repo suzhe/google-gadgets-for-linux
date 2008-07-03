@@ -333,6 +333,9 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
                                       bool direct,
                                       BasicElement **fired_element,
                                       BasicElement **in_element) {
+  if (!impl_->child_view_)
+    return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+
   // child view must process the mouse event first, so that the hittest value
   // can be updated correctly.
   EventResult result1 = EVENT_RESULT_UNHANDLED;
@@ -353,6 +356,9 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
 
 EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
                                      BasicElement **fired_element) {
+  if (!impl_->child_view_)
+    return EVENT_RESULT_UNHANDLED;
+
   Event::Type type = event.GetType();
 
   // View doesn't accept DRAG_OVER event, so converts it to DRAG_MOTION.
@@ -371,15 +377,21 @@ EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
 }
 
 bool ViewElement::OnAddContextMenuItems(MenuInterface *menu) {
-  return impl_->child_view_->OnAddContextMenuItems(menu);
+  if (impl_->child_view_)
+    return impl_->child_view_->OnAddContextMenuItems(menu);
+  return false;
 }
 
 EventResult ViewElement::OnKeyEvent(const KeyboardEvent &event) {
-  return impl_->child_view_->OnKeyEvent(event);
+  if (impl_->child_view_)
+    return impl_->child_view_->OnKeyEvent(event);
+  return EVENT_RESULT_UNHANDLED;
 }
 
 EventResult ViewElement::OnOtherEvent(const Event &event) {
-  return impl_->child_view_->OnOtherEvent(event);
+  if (impl_->child_view_)
+    return impl_->child_view_->OnOtherEvent(event);
+  return EVENT_RESULT_UNHANDLED;
 }
 
 void ViewElement::GetDefaultSize(double *width, double *height) const {

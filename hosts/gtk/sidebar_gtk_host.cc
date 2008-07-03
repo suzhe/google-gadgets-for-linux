@@ -181,9 +181,9 @@ class SideBarGtkHost::Impl {
 
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      delete it->second.gadget;
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
+      delete it->second.gadget;
     }
 
     delete sidebar_;
@@ -480,6 +480,10 @@ class SideBarGtkHost::Impl {
     value = options_->GetInternalValue(kOptionFontSize);
     value.ConvertToInt(&font_size_);
 
+    // Auto hide can't work correctly without always on top.
+    if (auto_hide_)
+      always_on_top_ = true;
+
     std::string hotkey;
     if (options_->GetInternalValue(kOptionHotKey).ConvertToString(&hotkey) &&
         hotkey.length()) {
@@ -700,14 +704,10 @@ class SideBarGtkHost::Impl {
                           32, GDK_PROP_MODE_REPLACE,
                           reinterpret_cast<guchar *>(&struts), 12);
     } else {
-      if (has_strut_) {
-        has_strut_ = false;
-        gdk_property_delete(sidebar_window_->window, net_wm_strut_);
-        gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
-      }
-      if (!always_on_top_) {
-        sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
-      }
+      has_strut_ = false;
+      gdk_property_delete(sidebar_window_->window, net_wm_strut_);
+      gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
+      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     }
 
     DLOG("Set SideBar size: %dx%d", sidebar_width_, workarea_.height);
@@ -1154,10 +1154,11 @@ class SideBarGtkHost::Impl {
     } else {
       CloseAllPopOutWindowsOfSideBar(-1);
       if (auto_hide_) {
-        sidebar_->Hide();
         sidebar_->Minimize(true);
-        AdjustSideBar();
-        sidebar_->Show();
+        // To make sure AdjustSideBar() will be called after the sidebar has
+        // been resized.
+        g_idle_add_full(G_PRIORITY_HIGH_IDLE + 50,
+                        AdjustSideBarTimeoutHandler, this, NULL);
       } else {
         sidebar_->Hide();
       }
@@ -1173,6 +1174,11 @@ class SideBarGtkHost::Impl {
       AdjustSideBar();
     }
 #endif
+  }
+
+  static gboolean AdjustSideBarTimeoutHandler(gpointer user_data) {
+    reinterpret_cast<Impl *>(user_data)->AdjustSideBar();
+    return FALSE;
   }
 
   void InitGadgets() {
@@ -1197,13 +1203,11 @@ class SideBarGtkHost::Impl {
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
       if (it != gadgets_.end()) {
-        delete it->second.gadget;
         if (it->second.debug_console)
           gtk_widget_destroy(it->second.debug_console);
         gadgets_.erase(it);
-      } else {
-        delete gadget;
       }
+      delete gadget;
       return false;
     }
 
@@ -1391,9 +1395,9 @@ class SideBarGtkHost::Impl {
   void RemoveGadgetInstanceCallback(int instance_id) {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
     if (it != gadgets_.end()) {
-      delete it->second.gadget;
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
+      delete it->second.gadget;
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
@@ -1564,13 +1568,9 @@ class SideBarGtkHost::Impl {
   static gboolean SideBarLeaveNotifyHandler(
       GtkWidget *widget, GdkEventCrossing *event, Impl *impl) {
     DLOG("SideBarLeaveNotifyHandler");
-    if (impl->auto_show_source_) {
-      g_source_remove(impl->auto_show_source_);
-      impl->auto_show_source_ = 0;
-    }
     if (impl->auto_hide_ && !impl->sidebar_->IsMinimized() &&
         !gtk_window_is_active(GTK_WINDOW(impl->sidebar_window_)) &&
-        impl->auto_hide_source_ == 0) {
+        impl->auto_hide_source_ == 0 && impl->auto_show_source_ != 0) {
       impl->auto_hide_source_ =
         g_timeout_add(kAutoHideTimeout, SideBarAutoHideTimeoutHandler, impl);
     }
