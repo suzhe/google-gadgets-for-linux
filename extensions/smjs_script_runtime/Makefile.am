@@ -17,8 +17,6 @@
 if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
-EXTRA_DIST		= jscript_massager.l
-
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
@@ -27,15 +25,10 @@ noinst_HEADERS		= converter.h \
 			  js_native_wrapper.h \
 			  js_script_context.h \
 			  js_script_runtime.h \
-			  jscript_massager.h \
 			  json.h \
 			  native_js_wrapper.h
 
-noinst_LTLIBRARIES	= libggadget-smjs.la libjscript-massager.la
-
-libjscript_massager_la_SOURCES = jscript_massager.cc
-libjscript_massager_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS) -Wno-conversion
-libjscript_massager_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+noinst_LTLIBRARIES	= libggadget-smjs.la
 
 libggadget_smjs_la_SOURCES = \
 			  converter.cc \
@@ -57,7 +50,7 @@ libggadget_smjs_la_CPPFLAGS = \
 
 libggadget_smjs_la_LIBADD = \
 			  @SPIDERMONKEY_LIBS@ \
-			  libjscript-massager.la
+			  $(top_builddir)/ggadget/js/libjscript-massager.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@
@@ -85,8 +78,5 @@ smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \
 			  -module \
 			  @SPIDERMONKEY_LDFLAGS@
-
-jscript_massager.cc : jscript_massager.l
-	$(LEX) -o $@ $<
 
 endif

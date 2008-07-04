@@ -27,6 +27,7 @@ SUBDIRS = dbus_script_class \
 	  qt_system_framework \
 	  linux_system_framework \
 	  smjs_script_runtime \
+	  qt_script_runtime \
 	  curl_xml_http_request \
 	  libxml2_xml_parser \
 	  default_options \

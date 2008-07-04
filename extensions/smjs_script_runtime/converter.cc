@@ -26,12 +26,14 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/unicode_utils.h>
+#include <ggadget/js/jscript_massager.h>
 #include "js_function_slot.h"
 #include "js_native_wrapper.h"
 #include "js_script_context.h"
-#include "jscript_massager.h"
 #include "json.h"
 #include "native_js_wrapper.h"
+
+using namespace ggadget::js;
 
 namespace ggadget {
 namespace smjs {

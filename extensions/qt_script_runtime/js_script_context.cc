@@ -18,6 +18,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/slot.h>
 #include <ggadget/unicode_utils.h>
+#include <ggadget/js/jscript_massager.h>
 #include "js_script_context.h"
 #include "js_function_slot.h"
 #include "js_script_runtime.h"
@@ -41,6 +42,7 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
 
 class JSScriptContext::Impl {
  public:
+  Impl(): resolver_(NULL), line_number_(0) {}
   bool SetGlobalObject(ScriptableInterface *global_object) {
     resolver_ = new ResolverScriptClass(&engine_, global_object);
     engine_.globalObject().setPrototype(engine_.newObject(resolver_));
@@ -55,6 +57,8 @@ class JSScriptContext::Impl {
   Signal1<void, const char *> error_reporter_signal_;
   Signal2<bool, const char *, int> script_blocked_signal_;
   ResolverScriptClass *resolver_;
+  QString file_name_;
+  int line_number_;
 };
 
 class SlotCallerWrapper : public QObject {
@@ -84,6 +88,12 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
     context->thisObject().setScriptClass(resolver);
     return engine->undefinedValue();
   } else {
+    // Update filename and line number
+    JSScriptContext::Impl *impl = g_data[engine];
+    QScriptContextInfo info(context);
+    impl->file_name_ = info.fileName();
+    impl->line_number_ = info.lineNumber();
+
     QScriptValue val;
     ret = ConvertNativeToJS(engine, res.v(), &val);
     ASSERT(ret);
@@ -93,13 +103,17 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
 
 ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
                                          ScriptableInterface *object)
-    : QScriptClass(engine), object_(object),
+    : QScriptClass(engine), object_(object), call_slot_(NULL),
       on_reference_change_connection_(NULL) {
   if (object) {
     DLOG("Ref:%p, %p,%d", this, object_, object_->GetRefCount());
     object->Ref();
     on_reference_change_connection_ = object->ConnectOnReferenceChange(
         NewSlot(this, &ResolverScriptClass::OnRefChange));
+    if (object->GetPropertyInfo("", NULL) == ScriptableInterface::PROPERTY_METHOD) {
+      ResultVariant p = object->GetProperty("");
+      call_slot_ = VariantValue<Slot*>()(p.v());
+    }
   }
 }
 
@@ -232,6 +246,24 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
   }
 }
 
+bool ResolverScriptClass::supportsExtension(Extension extension) const {
+  return call_slot_ && extension == Callable;
+}
+
+QVariant ResolverScriptClass::extension(Extension extension,
+                                        const QVariant &argument) {
+  ASSERT(call_slot_ && extension == Callable);
+  DLOG("Object called as function");
+  QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
+  Variant *argv = NULL;
+  bool ret = ConvertJSArgsToNative(context, call_slot_, &argv);
+  ResultVariant res = call_slot_->Call(call_slot_->GetArgCount(), argv);
+  QScriptValue val;
+  ret = ConvertNativeToJS(engine(), res.v(), &val);
+  ASSERT(ret);
+  return qVariantFromValue(ret);
+}
+
 JSScriptContext::JSScriptContext() : impl_(new Impl()){
   g_data[&impl_->engine_] = impl_;
 }
@@ -252,7 +284,11 @@ void JSScriptContext::Execute(const char *script,
                               const char *filename,
                               int lineno) {
   DLOG("Execute: (%s, %d)", filename, lineno);
-  QScriptValue val = impl_->engine_.evaluate(script, filename, lineno);
+
+  std::string massaged_script = ggadget::js::MassageJScript(script, false,
+                                                            filename, lineno);
+  QScriptValue val = impl_->engine_.evaluate(massaged_script.c_str(),
+                                             filename, lineno);
   if (impl_->engine_.hasUncaughtException()) {
     QStringList bt = impl_->engine_.uncaughtExceptionBacktrace();
     LOG("Backtrace:");
@@ -267,7 +303,11 @@ Slot *JSScriptContext::Compile(const char *script,
                                int lineno) {
   DLOG("Compile: (%s, %d)", filename, lineno);
   DLOG("\t%s", script);
-  return new JSFunctionSlot(NULL, &impl_->engine_, script, filename, lineno);
+
+  std::string massaged_script = ggadget::js::MassageJScript(script, false,
+                                                            filename, lineno);
+  return new JSFunctionSlot(NULL, &impl_->engine_, massaged_script.c_str(),
+                            filename, lineno);
 }
 
 bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
@@ -329,8 +369,8 @@ void JSScriptContext::CollectGarbage() {
 }
 
 void JSScriptContext::GetCurrentFileAndLine(std::string *fname, int *lineno) {
-  fname->clear();
-  lineno = 0;
+  *fname = impl_->file_name_.toUtf8().data();
+  *lineno = impl_->line_number_;
 }
 
 } // namespace qt

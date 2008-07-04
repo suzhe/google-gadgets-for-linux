@@ -40,7 +40,7 @@ enum QuitCode {
 };
 QuitCode g_quit_code = DONT_QUIT;
 
-static const int kBufferSize = 655360;
+static const size_t kBufferSize = 655360;
 static char g_buffer[kBufferSize];
 static void Process(QScriptEngine *engine, const char *filename) {
   FILE *file;

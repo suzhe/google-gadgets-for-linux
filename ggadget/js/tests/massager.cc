@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,20 +14,17 @@
   limitations under the License.
 */
 
-TEST("Test Normal", function() {
-  name = "org.freedesktop.DBus";
-  path = "/org/freedesktop/DBus";
-  sysobj = new DBusSystemObject(name, path, name);
-  ASSERT(TRUE(sysobj));
-  names = sysobj.ListNames();
-  ASSERT(LE(1, names.length));
-  ASSERT(UNDEFINED(sysobj.length));
+#include <cstdio>
+#include "../jscript_massager.h"
 
-  sessionobj = new DBusSessionObject(name, path, name);
-  ASSERT(NE(null, sysobj));
-  names2 = sessionobj.ListNames();
-  ASSERT(LE(1, names2.length));
-  ASSERT(UNDEFINED(sessionobj.length));
-});
+int main(int argc, char **argv) {
+  std::string input;
+  char buffer[80];
+  while (fgets(buffer, sizeof(buffer), stdin))
+    input += buffer;
 
-RUN_ALL_TESTS();
+  bool debug = argc > 1 && argv[1][0] == '1';
+  std::string result = ggadget::js::MassageJScript(input.c_str(), debug,
+                                                     "", 1);
+  printf("%s", result.c_str());
+}
