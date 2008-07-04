@@ -50,7 +50,7 @@ libggadget_smjs_la_CPPFLAGS = \
 
 libggadget_smjs_la_LIBADD = \
 			  @SPIDERMONKEY_LIBS@ \
-			  $(top_builddir)/ggadget/js/libjscript-massager.la \
+			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@

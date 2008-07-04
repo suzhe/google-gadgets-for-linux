@@ -24,13 +24,14 @@ EXTRA_DIST		= jscript_massager.l
 			  test_scripts/json_test.js \
 			  test_scripts/wrapper_test.js
 
-noinst_HEADERS		= jscript_massager.h
+jsincludedir		= $(GGL_INCLUDE_DIR)/ggadget/js
+jsinclude_HEADERS	= jscript_massager.h
 
-noinst_LTLIBRARIES	= libjscript-massager.la
+lib_LTLIBRARIES	= libggadget-js@GGL_EPOCH@.la
 
-libjscript_massager_la_SOURCES = jscript_massager.cc
-libjscript_massager_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS) -Wno-conversion
-libjscript_massager_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+libggadget_js@GGL_EPOCH@_la_SOURCES = jscript_massager.cc
+libggadget_js@GGL_EPOCH@_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS) -Wno-conversion
+libggadget_js@GGL_EPOCH@_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 jscript_massager.cc : jscript_massager.l
 	$(LEX) -o $@ $<

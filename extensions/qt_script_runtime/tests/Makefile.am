@@ -28,6 +28,7 @@ LDADD			= @QT4_LIBS@ \
 			  ../qt-script-runtime.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
 check_PROGRAMS		= dom_test_shell \

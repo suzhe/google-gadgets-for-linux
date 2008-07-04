@@ -75,7 +75,8 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   Variant *argv = NULL;
   bool ret = ConvertJSArgsToNative(context, wrapper->slot_, &argv);
   ASSERT(ret);
-  ResultVariant res = wrapper->slot_->Call(wrapper->slot_->GetArgCount(), argv);
+  ResultVariant res = wrapper->slot_->Call(NULL,
+                                           wrapper->slot_->GetArgCount(), argv);
 /*  if (argv) {
     for (int i = 0; i < context->argumentCount(); i++)
       FreeNativeValue(argv[i]);
@@ -257,7 +258,7 @@ QVariant ResolverScriptClass::extension(Extension extension,
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
   Variant *argv = NULL;
   bool ret = ConvertJSArgsToNative(context, call_slot_, &argv);
-  ResultVariant res = call_slot_->Call(call_slot_->GetArgCount(), argv);
+  ResultVariant res = call_slot_->Call(NULL, call_slot_->GetArgCount(), argv);
   QScriptValue val;
   ret = ConvertNativeToJS(engine(), res.v(), &val);
   ASSERT(ret);

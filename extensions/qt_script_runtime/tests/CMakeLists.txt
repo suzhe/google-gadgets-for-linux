@@ -20,6 +20,7 @@ SET(LIBS
   gtest
   ggadget
   editline
+  ggadget-js
   ggadget-qtscript
   ${QT_LIBRARIES}
 )

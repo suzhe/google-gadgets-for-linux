@@ -50,7 +50,8 @@ JSFunctionSlot::~JSFunctionSlot() {
   DLOG("JSFunctionSlot deleted");
 }
 
-ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
+ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
+                                   int argc, const Variant argv[]) const {
   QScriptValue qval;
   if (code_) {
     DLOG("JSFunctionSlot::Call: %s", script_.c_str());

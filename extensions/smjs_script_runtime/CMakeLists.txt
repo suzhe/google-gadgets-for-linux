@@ -30,7 +30,6 @@ SET(SRCS
   js_native_wrapper.cc
   js_script_context.cc
   js_script_runtime.cc
-  ../../ggadget/js/jscript_massager.cc
   json.cc
   native_js_wrapper.cc
 )
@@ -41,6 +40,7 @@ ADD_MODULE(smjs-script-runtime smjs_script_runtime.cc)
 TARGET_LINK_LIBRARIES(smjs-script-runtime
   ${SMJS_LIBRARIES}
   ggadget
+  ggadget-js
   ggadget-smjs)
 OUTPUT_MODULE(smjs-script-runtime)
 

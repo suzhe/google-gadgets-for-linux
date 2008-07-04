@@ -26,7 +26,8 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
   GlobalObject()
       // "scriptable" is native owned and strict.
       // "scriptable2" is native owned and not strict.
-      : test_scriptable2(true, false) {
+      : test_scriptable1(true, true),
+        test_scriptable2(true, false, true) {
     RegisterConstant("scriptable", &test_scriptable1);
     RegisterConstant("scriptable2", &test_scriptable2);
     // For testing name overriding.
@@ -37,13 +38,13 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
 
   ScriptableInterface *ConstructScriptable() {
     // Return shared ownership object.
-    return test_scriptable2.NewObject(false, true);
+    return test_scriptable2.NewObject(false, true, true);
   }
 
   ScriptableInterface *GetS2() { return &test_scriptable2; }
 
-  TestScriptable1 test_scriptable1;
-  TestScriptable2 test_scriptable2;
+  BaseScriptable test_scriptable1;
+  ExtScriptable test_scriptable2;
 };
 
 static GlobalObject *global;
