@@ -230,7 +230,9 @@ class SimpleGtkHost::Impl {
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
-    AddGadgetInstanceCallback(id); // Ignore the error.
+    if (!AddGadgetInstanceCallback(id))
+      gadget_manager_->RemoveGadgetInstance(id);
+    // Return true to continue the enumeration.
     return true;
   }
 

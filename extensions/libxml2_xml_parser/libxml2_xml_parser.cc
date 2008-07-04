@@ -79,14 +79,25 @@ static const char kXMLTagUTF32BE[] = {
     ((content_size) >= sizeof(pattern) && \
      memcmp((content_ptr), (pattern), sizeof(pattern)) == 0)
 
-// Used in ConvertStringToUTF8 to detect errors during conversion.
+// Used in ConvertStringToUTF8 to detect errors during conversion,
+// and in ParseXML to let the XML error go into our LOG pipe.
+// FIXME: Using global error reporter may have side-effect if another module
+// linked to our binary also uses libxml2, especially in other threads.
 static bool g_error_occurred = false;
+static std::string g_error_buffer;
 static void ErrorFunc(void *ctx, const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  LOG("%s", StringVPrintf(msg, ap).c_str());
+  StringAppendVPrintf(&g_error_buffer, msg, ap);
   va_end(ap);
   g_error_occurred = true;
+  if (g_error_buffer.size() &&
+      g_error_buffer[g_error_buffer.size() - 1] == '\n') {
+    // Only send to our log when a line break is received.
+    g_error_buffer.erase(g_error_buffer.size() - 1);
+    LOG("%s", g_error_buffer.c_str());
+    g_error_buffer.clear();
+  }
 }
 
 // Converts a string in given encoding to a utf8.
@@ -297,7 +308,10 @@ static xmlDoc *ParseXML(const std::string &xml,
     // Let the built-in libxml2 error reporter print the correct filename.
     ctxt->input->filename = xmlMemStrdup(filename);
 
+    xmlGenericErrorFunc old_error_func = xmlGenericError;
+    xmlSetGenericErrorFunc(NULL, ErrorFunc);
     xmlParseDocument(ctxt);
+    xmlSetGenericErrorFunc(NULL, old_error_func);
 
     if (ctxt->wellFormed) {
       // Successfully parsed the document.

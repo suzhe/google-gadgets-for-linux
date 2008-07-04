@@ -37,6 +37,7 @@ class ButtonElement::Impl {
       icon_image_(NULL), icon_disabled_image_(NULL),
       stretch_middle_(false),
       icon_position_(ICON_LEFT) {
+    text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER);
     text_.SetAlign(CanvasInterface::ALIGN_CENTER);
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
   }

@@ -60,7 +60,11 @@ static void DoLog(LogLevel level, const char *file, int line,
   else
     new_message = message;
 
-  g_global_log_signal(level, file, line, new_message);
+  if (g_global_log_signal.HasActiveConnections()) {
+    g_global_log_signal(level, file, line, new_message);
+  } else {
+    printf("%s:%d: %s\n", file, line, new_message.c_str());
+  }
   in_logger = false;
 }
 

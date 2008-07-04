@@ -46,6 +46,7 @@ class CheckBoxElement::Impl {
       overimage_[i] = NULL;
       disabledimage_[i] = NULL;
     }
+    text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER);
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
   }
   ~Impl() {

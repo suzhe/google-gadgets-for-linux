@@ -50,10 +50,6 @@
 
 namespace ggadget {
 
-// The place holder in the handler of gadget.debug.xxxx() which will be
-// replaced with the actual script filename and line number.
-static const char kFileLinePlaceHolder[] = "<FILE:LINE>";
-
 class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
@@ -629,25 +625,23 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                            const std::string &message,
                            ScriptContextInterface *context) {
     std::string real_message;
-    if (strncmp(kFileLinePlaceHolder, message.c_str(),
-                sizeof(kFileLinePlaceHolder) - 1) == 0) {
-      std::string script_filename;
-      int script_line;
-      context->GetCurrentFileAndLine(&script_filename, &script_line);
-      StringAppendPrintf(&real_message, "%s:%d: %s",
-                         script_filename.c_str(), script_line,
-                         message.c_str() + sizeof(kFileLinePlaceHolder) - 1);
-    } else {
+    std::string script_filename;
+    int script_line;
+    context->GetCurrentFileAndLine(&script_filename, &script_line);
+    if (script_filename.empty() ||
+        strncmp(script_filename.c_str(), message.c_str(),
+                script_filename.size()) == 0) {
       real_message = message;
+    } else {
+      StringAppendPrintf(&real_message, "%s:%d: %s",
+                         script_filename.c_str(), script_line, message.c_str());
     }
     log_signal_(level, real_message);
     return real_message;
   }
 
   void ScriptLog(const char *message, LogLevel level) {
-    // <FILE:LINE> will be replaced with the actual filename and line in
-    // OnContextLog().
-    LogHelper(level, NULL, 0)("%s%s", kFileLinePlaceHolder, message);
+    LogHelper(level, NULL, 0)("%s", message);
   }
 
   // ExtractFile and OpenTextFile only allow accessing gadget local files.
