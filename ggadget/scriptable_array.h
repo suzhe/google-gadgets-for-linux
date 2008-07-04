@@ -81,7 +81,7 @@ class ScriptableArray : public ScriptableHelperDefault {
 
  protected:
   ScriptableArray(Variant *array, size_t count);
-  virtual void DoRegister();
+  virtual void DoClassRegister();
   virtual ~ScriptableArray();
 
  private:

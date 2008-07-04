@@ -37,7 +37,7 @@ class DetailsViewData : public ScriptableHelperDefault {
 
  protected:
   virtual ~DetailsViewData();
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

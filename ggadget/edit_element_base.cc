@@ -56,59 +56,61 @@ EditElementBase::EditElementBase(BasicElement *parent, View *view, const char *n
   SetAutoscroll(true);
 }
 
-void EditElementBase::DoRegister() {
-  ScrollingElement::DoRegister();
+void EditElementBase::DoClassRegister() {
+  ScrollingElement::DoClassRegister();
   RegisterProperty("background",
-                   NewSlot(this, &EditElementBase::GetBackground),
-                   NewSlot(this, &EditElementBase::SetBackground));
+                   NewSlot(&EditElementBase::GetBackground),
+                   NewSlot(&EditElementBase::SetBackground));
   RegisterProperty("bold",
-                   NewSlot(this, &EditElementBase::IsBold),
-                   NewSlot(this, &EditElementBase::SetBold));
+                   NewSlot(&EditElementBase::IsBold),
+                   NewSlot(&EditElementBase::SetBold));
   RegisterProperty("color",
-                   NewSlot(this, &EditElementBase::GetColor),
-                   NewSlot(this, &EditElementBase::SetColor));
+                   NewSlot(&EditElementBase::GetColor),
+                   NewSlot(&EditElementBase::SetColor));
   RegisterProperty("font",
-                   NewSlot(this, &EditElementBase::GetFont),
-                   NewSlot(this, &EditElementBase::SetFont));
+                   NewSlot(&EditElementBase::GetFont),
+                   NewSlot(&EditElementBase::SetFont));
   RegisterProperty("italic",
-                   NewSlot(this, &EditElementBase::IsItalic),
-                   NewSlot(this, &EditElementBase::SetItalic));
+                   NewSlot(&EditElementBase::IsItalic),
+                   NewSlot(&EditElementBase::SetItalic));
   RegisterProperty("multiline",
-                   NewSlot(this, &EditElementBase::IsMultiline),
-                   NewSlot(this, &EditElementBase::SetMultiline));
+                   NewSlot(&EditElementBase::IsMultiline),
+                   NewSlot(&EditElementBase::SetMultiline));
   RegisterProperty("passwordChar",
-                   NewSlot(this, &EditElementBase::GetPasswordChar),
-                   NewSlot(this, &EditElementBase::SetPasswordChar));
+                   NewSlot(&EditElementBase::GetPasswordChar),
+                   NewSlot(&EditElementBase::SetPasswordChar));
   RegisterProperty("size",
-                   NewSlot(this, &EditElementBase::GetSize),
-                   NewSlot(this, &EditElementBase::SetSize));
+                   NewSlot(&EditElementBase::GetSize),
+                   NewSlot(&EditElementBase::SetSize));
   RegisterProperty("strikeout",
-                   NewSlot(this, &EditElementBase::IsStrikeout),
-                   NewSlot(this, &EditElementBase::SetStrikeout));
+                   NewSlot(&EditElementBase::IsStrikeout),
+                   NewSlot(&EditElementBase::SetStrikeout));
   RegisterProperty("underline",
-                   NewSlot(this, &EditElementBase::IsUnderline),
-                   NewSlot(this, &EditElementBase::SetUnderline));
+                   NewSlot(&EditElementBase::IsUnderline),
+                   NewSlot(&EditElementBase::SetUnderline));
   RegisterProperty("value",
-                   NewSlot(this, &EditElementBase::GetValue),
-                   NewSlot(this, &EditElementBase::SetValue));
+                   NewSlot(&EditElementBase::GetValue),
+                   NewSlot(&EditElementBase::SetValue));
   RegisterProperty("wordWrap",
-                   NewSlot(this, &EditElementBase::IsWordWrap),
-                   NewSlot(this, &EditElementBase::SetWordWrap));
+                   NewSlot(&EditElementBase::IsWordWrap),
+                   NewSlot(&EditElementBase::SetWordWrap));
   RegisterProperty("readonly",
-                   NewSlot(this, &EditElementBase::IsReadOnly),
-                   NewSlot(this, &EditElementBase::SetReadOnly));
+                   NewSlot(&EditElementBase::IsReadOnly),
+                   NewSlot(&EditElementBase::SetReadOnly));
   RegisterProperty("idealBoundingRect",
-                   NewSlot(impl_, &Impl::GetIdealBoundingRect),
+                   NewSlot(&Impl::GetIdealBoundingRect,
+                           &EditElementBase::impl_),
                    NULL);
 
-  RegisterMethod("select", NewSlot(this, &EditElementBase::Select));
-  RegisterMethod("selectAll", NewSlot(this, &EditElementBase::SelectAll));
+  RegisterMethod("select", NewSlot(&EditElementBase::Select));
+  RegisterMethod("selectAll", NewSlot(&EditElementBase::SelectAll));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &EditElementBase::impl_);
 
   RegisterStringEnumProperty("align",
-                             NewSlot(this, &EditElementBase::GetAlign),
-                             NewSlot(this, &EditElementBase::SetAlign),
+                             NewSlot(&EditElementBase::GetAlign),
+                             NewSlot(&EditElementBase::SetAlign),
                              kAlignNames, arraysize(kAlignNames));
 }
 

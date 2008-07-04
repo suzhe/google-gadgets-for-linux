@@ -97,6 +97,10 @@ class CheckBoxElement::Impl {
     return owner->GetView()->GetChildren();
   }
 
+  DEFINE_DELEGATE_GETTER(GetTextFrame,
+                         &(down_cast<CheckBoxElement *>(src)->impl_->text_),
+                         BasicElement, TextFrame);
+
   bool is_checkbox_;
   TextFrame text_;
   bool mousedown_;
@@ -115,45 +119,48 @@ CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
   SetEnabled(true);
 }
 
-void CheckBoxElement::DoRegister() {
-  BasicElement::DoRegister();
+void CheckBoxElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+  impl_->text_.RegisterClassProperties(Impl::GetTextFrame,
+                                       Impl::GetTextFrameConst);
   RegisterProperty("value",
-                   NewSlot(this, &CheckBoxElement::GetValue),
-                   NewSlot(this, &CheckBoxElement::SetValue));
+                   NewSlot(&CheckBoxElement::GetValue),
+                   NewSlot(&CheckBoxElement::SetValue));
   RegisterProperty("image",
-                   NewSlot(this, &CheckBoxElement::GetImage),
-                   NewSlot(this, &CheckBoxElement::SetImage));
+                   NewSlot(&CheckBoxElement::GetImage),
+                   NewSlot(&CheckBoxElement::SetImage));
   RegisterProperty("downImage",
-                   NewSlot(this, &CheckBoxElement::GetDownImage),
-                   NewSlot(this, &CheckBoxElement::SetDownImage));
+                   NewSlot(&CheckBoxElement::GetDownImage),
+                   NewSlot(&CheckBoxElement::SetDownImage));
   RegisterProperty("overImage",
-                   NewSlot(this, &CheckBoxElement::GetOverImage),
-                   NewSlot(this, &CheckBoxElement::SetOverImage));
+                   NewSlot(&CheckBoxElement::GetOverImage),
+                   NewSlot(&CheckBoxElement::SetOverImage));
   RegisterProperty("disabledImage",
-                   NewSlot(this, &CheckBoxElement::GetDisabledImage),
-                   NewSlot(this, &CheckBoxElement::SetDisabledImage));
+                   NewSlot(&CheckBoxElement::GetDisabledImage),
+                   NewSlot(&CheckBoxElement::SetDisabledImage));
   RegisterProperty("checkedImage",
-                   NewSlot(this, &CheckBoxElement::GetCheckedImage),
-                   NewSlot(this, &CheckBoxElement::SetCheckedImage));
+                   NewSlot(&CheckBoxElement::GetCheckedImage),
+                   NewSlot(&CheckBoxElement::SetCheckedImage));
   RegisterProperty("checkedDownImage",
-                   NewSlot(this, &CheckBoxElement::GetCheckedDownImage),
-                   NewSlot(this, &CheckBoxElement::SetCheckedDownImage));
+                   NewSlot(&CheckBoxElement::GetCheckedDownImage),
+                   NewSlot(&CheckBoxElement::SetCheckedDownImage));
   RegisterProperty("checkedOverImage",
-                   NewSlot(this, &CheckBoxElement::GetCheckedOverImage),
-                   NewSlot(this, &CheckBoxElement::SetCheckedOverImage));
+                   NewSlot(&CheckBoxElement::GetCheckedOverImage),
+                   NewSlot(&CheckBoxElement::SetCheckedOverImage));
   RegisterProperty("checkedDisabledImage",
-                   NewSlot(this, &CheckBoxElement::GetCheckedDisabledImage),
-                   NewSlot(this, &CheckBoxElement::SetCheckedDisabledImage));
+                   NewSlot(&CheckBoxElement::GetCheckedDisabledImage),
+                   NewSlot(&CheckBoxElement::SetCheckedDisabledImage));
 
   // undocumented properties
   RegisterProperty("caption",
-                   NewSlot(&impl_->text_, &TextFrame::GetText),
-                   NewSlot(&impl_->text_, &TextFrame::SetText));
+                   NewSlot(&TextFrame::GetText, Impl::GetTextFrameConst),
+                   NewSlot(&TextFrame::SetText, Impl::GetTextFrame));
   RegisterProperty("checkboxOnRight",
-                   NewSlot(this, &CheckBoxElement::IsCheckBoxOnRight),
-                   NewSlot(this, &CheckBoxElement::SetCheckBoxOnRight));
+                   NewSlot(&CheckBoxElement::IsCheckBoxOnRight),
+                   NewSlot(&CheckBoxElement::SetCheckBoxOnRight));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &CheckBoxElement::impl_);
 }
 
 CheckBoxElement::~CheckBoxElement() {

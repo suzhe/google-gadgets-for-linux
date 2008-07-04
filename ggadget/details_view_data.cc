@@ -56,20 +56,20 @@ DetailsViewData::DetailsViewData()
     : impl_(new Impl()) {
 }
 
-void DetailsViewData::DoRegister() {
+void DetailsViewData::DoClassRegister() {
   RegisterProperty("html_content",
-                   NewSlot(this, &DetailsViewData::GetContentIsHTML),
-                   NewSlot(this, &DetailsViewData::SetContentIsHTML));
+                   NewSlot(&DetailsViewData::GetContentIsHTML),
+                   NewSlot(&DetailsViewData::SetContentIsHTML));
   RegisterProperty("contentIsView",
-                   NewSlot(this, &DetailsViewData::GetContentIsView),
-                   NewSlot(this, &DetailsViewData::SetContentIsView));
-  RegisterMethod("SetContent", NewSlot(this, &DetailsViewData::SetContent));
+                   NewSlot(&DetailsViewData::GetContentIsView),
+                   NewSlot(&DetailsViewData::SetContentIsView));
+  RegisterMethod("SetContent", NewSlot(&DetailsViewData::SetContent));
   RegisterMethod("SetContentFromItem",
-                 NewSlot(this, &DetailsViewData::SetContentFromItem));
-  RegisterConstant("detailsViewData", &impl_->scriptable_data_);
+                 NewSlot(&DetailsViewData::SetContentFromItem));
+  RegisterProperty("detailsViewData", NewSlot(&DetailsViewData::GetData), NULL);
   RegisterProperty("external",
-                   NewSlot(this, &DetailsViewData::GetExternalObject),
-                   NewSlot(this, &DetailsViewData::SetExternalObject));
+                   NewSlot(&DetailsViewData::GetExternalObject),
+                   NewSlot(&DetailsViewData::SetExternalObject));
 }
 
 DetailsViewData::~DetailsViewData() {

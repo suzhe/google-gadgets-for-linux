@@ -35,7 +35,7 @@ class CheckBoxElement : public BasicElement {
   virtual ~CheckBoxElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /** Lets this button use default images. */

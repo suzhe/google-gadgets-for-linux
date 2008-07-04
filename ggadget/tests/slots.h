@@ -18,6 +18,7 @@
 #define GGADGET_TESTS_SLOTS_H__
 
 #include <vector>
+#include "ggadget/scriptable_interface.h"
 #include "ggadget/variant.h"
 
 namespace ggadget {

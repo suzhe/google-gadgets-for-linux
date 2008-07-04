@@ -39,7 +39,7 @@ class EditElementBase : public ScrollingElement {
   virtual ~EditElementBase();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

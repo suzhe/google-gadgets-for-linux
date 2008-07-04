@@ -28,6 +28,9 @@ class ScriptableImage::Impl {
     ::ggadget::DestroyImage(image_);
   }
 
+  DEFINE_DELEGATE_GETTER_CONST(GetImage, src->impl_->image_,
+                               ScriptableImage, ImageInterface);
+
   ImageInterface *image_;
 };
 
@@ -35,12 +38,12 @@ ScriptableImage::ScriptableImage(ImageInterface *image)
     : impl_(new Impl(image)) {
 }
 
-void ScriptableImage::DoRegister() {
+void ScriptableImage::DoClassRegister() {
   RegisterProperty("width",
-                   NewSlot(impl_->image_, &ImageInterface::GetWidth),
+                   NewSlot(&ImageInterface::GetWidth, Impl::GetImage),
                    NULL);
   RegisterProperty("height",
-                   NewSlot(impl_->image_, &ImageInterface::GetHeight),
+                   NewSlot(&ImageInterface::GetHeight, Impl::GetImage),
                    NULL);
 }
 

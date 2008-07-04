@@ -66,8 +66,13 @@ const char kOnTextChangeEvent[]    = "ontextchange";
  */
 class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
  public:
-  DEFINE_CLASS_ID(0x6732238aacb4468a, ScriptableInterface)
+  /**
+   * Not using DEFINE_CLASS_ID because we use dynamic CLASS_IDs according to
+   * actual type of the input event.
+   */ 
+  static const uint64_t CLASS_ID = UINT64_C(0x6732238aacb4468a);
 
+ public:
   /**
    * @param event it's not declared as a const reference because sometimes we
    *     need dynamically allocated event (e.g. @c View::PostEvent()).
@@ -81,8 +86,11 @@ class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
                   Event *output_event);
   virtual ~ScriptableEvent();
 
+  virtual bool IsInstanceOf(uint64_t class_id) const;
+  virtual uint64_t GetClassId() const;
+
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   const char *GetName() const;

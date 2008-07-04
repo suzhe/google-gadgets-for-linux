@@ -373,7 +373,7 @@ class DefaultAudioclip : public AudioclipInterface {
   virtual void SetSrc(const char *src) { }
   virtual State GetState() const { return SOUND_STATE_PLAYING; }
   virtual int GetVolume() const { return 100; }
-  virtual void SetVolume(int volume) const { }
+  virtual void SetVolume(int volume) { }
   virtual void Play() { }
   virtual void Pause() { }
   virtual void Stop() { }

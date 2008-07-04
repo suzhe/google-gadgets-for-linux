@@ -33,6 +33,7 @@ class ItemElement : public BasicElement {
 
  protected:
   virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /** Gets and sets whether this item is currently selected. */

@@ -37,7 +37,8 @@ class JSFunctionSlot : public Slot {
                  NativeJSWrapper *owner, JSObject *function);
   virtual ~JSFunctionSlot();
 
-  virtual ResultVariant Call(int argc, const Variant argv[]) const;
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const;
 
   virtual bool HasMetadata() const { return prototype_ != NULL; }
   virtual Variant::Type GetReturnType() const {

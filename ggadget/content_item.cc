@@ -149,6 +149,15 @@ class ContentItem::Impl {
     }
   }
 
+  DEFINE_DELEGATE_GETTER(GetHeadingText, &src->impl_->heading_text_,
+                         ContentItem, TextFrame);
+  DEFINE_DELEGATE_GETTER(GetSourceText, &src->impl_->source_text_,
+                         ContentItem, TextFrame);
+  DEFINE_DELEGATE_GETTER(GetTimeText, &src->impl_->time_text_,
+                         ContentItem, TextFrame);
+  DEFINE_DELEGATE_GETTER(GetSnippetText, &src->impl_->snippet_text_,
+                         ContentItem, TextFrame);
+
   View *view_;
   ContentAreaElement *content_area_;
   ScriptableHolder<ScriptableImage> image_, notifier_image_;
@@ -161,15 +170,14 @@ class ContentItem::Impl {
   double x_, y_, width_, height_;
   bool x_relative_, y_relative_, width_relative_, height_relative_;
   double layout_x_, layout_y_, layout_width_, layout_height_;
-  Signal7<void, ContentItem *, Gadget::DisplayTarget,
-         ScriptableCanvas *, double, double, double, double> on_draw_item_signal_;
+  Signal7<void, ContentItem *, Gadget::DisplayTarget, ScriptableCanvas *,
+          double, double, double, double> on_draw_item_signal_;
   Signal4<double, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, double> on_get_height_signal_;
   Signal1<Variant, ContentItem *> on_open_item_signal_;
   Signal1<Variant, ContentItem *> on_toggle_item_pinned_state_signal_;
-  Signal7<Variant, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, double, double, double, double>
-      on_get_is_tooltip_required_signal_;
+  Signal7<Variant, ContentItem *, Gadget::DisplayTarget, ScriptableCanvas *,
+          double, double, double, double> on_get_is_tooltip_required_signal_;
   Signal1<ScriptableInterface *, ContentItem *> on_details_view_signal_;
   Signal2<Variant, ContentItem *, int> on_process_details_view_feedback_signal_;
   Signal1<Variant, ContentItem *> on_remove_item_signal_;
@@ -179,61 +187,73 @@ ContentItem::ContentItem(View *view)
     : impl_(new Impl(view)) {
 }
 
-void ContentItem::DoRegister() {
+void ContentItem::DoClassRegister() {
   RegisterProperty("image",
-                   NewSlot(this, &ContentItem::GetImage),
-                   NewSlot(this, &ContentItem::SetImage));
+                   NewSlot(&ContentItem::GetImage),
+                   NewSlot(&ContentItem::SetImage));
   RegisterProperty("notifier_image",
-                   NewSlot(this, &ContentItem::GetNotifierImage),
-                   NewSlot(this, &ContentItem::SetNotifierImage));
+                   NewSlot(&ContentItem::GetNotifierImage),
+                   NewSlot(&ContentItem::SetNotifierImage));
   RegisterProperty("time_created",
-                   NewSlot(this, &ContentItem::GetTimeCreated),
-                   NewSlot(this, &ContentItem::SetTimeCreated));
+                   NewSlot(&ContentItem::GetTimeCreated),
+                   NewSlot(&ContentItem::SetTimeCreated));
   RegisterProperty("heading",
-                   NewSlot(this, &ContentItem::GetHeading),
-                   NewSlot(this, &ContentItem::SetHeading));
+                   NewSlot(&ContentItem::GetHeading),
+                   NewSlot(&ContentItem::SetHeading));
   RegisterProperty("source",
-                   NewSlot(this, &ContentItem::GetSource),
-                   NewSlot(this, &ContentItem::SetSource));
+                   NewSlot(&ContentItem::GetSource),
+                   NewSlot(&ContentItem::SetSource));
   RegisterProperty("snippet",
-                   NewSlot(this, &ContentItem::GetSnippet),
-                   NewSlot(this, &ContentItem::SetSnippet));
+                   NewSlot(&ContentItem::GetSnippet),
+                   NewSlot(&ContentItem::SetSnippet));
   // Don't use the xxxColor properties until they are in the public API. 
   RegisterProperty("headingColor",
-                   NewSlot(&impl_->heading_text_, &TextFrame::GetColor),
-                   NewSlot<void, const Variant &>(
-                           &impl_->heading_text_, &TextFrame::SetColor));
+                   NewSlot(&TextFrame::GetColor, Impl::GetHeadingTextConst),
+                   NewSlot<void, const Variant &>(&TextFrame::SetColor,
+                                                  Impl::GetHeadingText));
   RegisterProperty("sourceColor",
-                   NewSlot(&impl_->source_text_, &TextFrame::GetColor),
-                   NewSlot<void, const Variant &>(
-                           &impl_->source_text_, &TextFrame::SetColor));
+                   NewSlot(&TextFrame::GetColor, Impl::GetSourceTextConst),
+                   NewSlot<void, const Variant &>(&TextFrame::SetColor,
+                                                  Impl::GetSourceText));
   RegisterProperty("timeColor",
-                   NewSlot(&impl_->time_text_, &TextFrame::GetColor),
-                   NewSlot<void, const Variant &>(
-                           &impl_->time_text_, &TextFrame::SetColor));
+                   NewSlot(&TextFrame::GetColor, Impl::GetTimeTextConst),
+                   NewSlot<void, const Variant &>(&TextFrame::SetColor,
+                                                  &Impl::GetTimeText));
+  RegisterProperty("snippetColor",
+                   NewSlot(&TextFrame::GetColor, Impl::GetSnippetTextConst),
+                   NewSlot<void, const Variant &>(&TextFrame::SetColor,
+                                                  &Impl::GetSnippetText));
   RegisterProperty("open_command",
-                   NewSlot(this, &ContentItem::GetOpenCommand),
-                   NewSlot(this, &ContentItem::SetOpenCommand));
+                   NewSlot(&ContentItem::GetOpenCommand),
+                   NewSlot(&ContentItem::SetOpenCommand));
   RegisterProperty("layout",
-                   NewSlot(this, &ContentItem::GetLayout),
-                   NewSlot(this, &ContentItem::SetLayout));
+                   NewSlot(&ContentItem::GetLayout),
+                   NewSlot(&ContentItem::SetLayout));
   RegisterProperty("flags", NULL, // Write only.
-                   NewSlot(this, &ContentItem::SetFlags));
+                   NewSlot(&ContentItem::SetFlags));
   RegisterProperty("tooltip", NULL, // Write only.
-                   NewSlot(this, &ContentItem::SetTooltip));
-  RegisterMethod("SetRect", NewSlot(impl_, &Impl::SetRect));
+                   NewSlot(&ContentItem::SetTooltip));
+  RegisterMethod("SetRect", NewSlot(&Impl::SetRect, &ContentItem::impl_));
 
-  RegisterSignal("onDrawItem", &impl_->on_draw_item_signal_);
-  RegisterSignal("onGetHeight", &impl_->on_get_height_signal_);
-  RegisterSignal("onOpenItem", &impl_->on_open_item_signal_);
-  RegisterSignal("onToggleItemPinnedState",
-                 &impl_->on_toggle_item_pinned_state_signal_);
-  RegisterSignal("onGetIsTooltipRequired",
-                 &impl_->on_get_is_tooltip_required_signal_);
-  RegisterSignal("onDetailsView", &impl_->on_details_view_signal_);
-  RegisterSignal("onProcessDetailsViewFeedback",
-                 &impl_->on_process_details_view_feedback_signal_);
-  RegisterSignal("onRemoveItem", &impl_->on_remove_item_signal_);
+  RegisterClassSignal("onDrawItem", &Impl::on_draw_item_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onGetHeight", &Impl::on_get_height_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onOpenItem", &Impl::on_open_item_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onToggleItemPinnedState",
+                      &Impl::on_toggle_item_pinned_state_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onGetIsTooltipRequired",
+                      &Impl::on_get_is_tooltip_required_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onDetailsView", &Impl::on_details_view_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onProcessDetailsViewFeedback",
+                      &Impl::on_process_details_view_feedback_signal_,
+                      &ContentItem::impl_);
+  RegisterClassSignal("onRemoveItem", &Impl::on_remove_item_signal_,
+                      &ContentItem::impl_);
 }
 
 ContentItem::~ContentItem() {
@@ -785,30 +805,30 @@ ScriptableCanvas::ScriptableCanvas(CanvasInterface *canvas, View *view)
     : canvas_(canvas), view_(view) {
 }
 
-void ScriptableCanvas::DoRegister() {
+void ScriptableCanvas::DoClassRegister() {
   RegisterMethod("DrawLine",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::DrawLineWithColorName),
+                     NewSlot(&ScriptableCanvas::DrawLineWithColorName),
                      kDrawLineDefaultArgs));
   RegisterMethod("DrawRect",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::DrawRectWithColorName),
+                     NewSlot(&ScriptableCanvas::DrawRectWithColorName),
                      kDrawRectDefaultArgs));
   RegisterMethod("DrawImage",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::DrawImage),
+                     NewSlot(&ScriptableCanvas::DrawImage),
                      kDrawImageDefaultArgs));
   RegisterMethod("DrawText",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::DrawTextWithColorName),
+                     NewSlot(&ScriptableCanvas::DrawTextWithColorName),
                      kDrawTextDefaultArgs));
   RegisterMethod("GetTextWidth",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::GetTextWidth),
+                     NewSlot(&ScriptableCanvas::GetTextWidth),
                      kGetTextWidthDefaultArgs));
   RegisterMethod("GetTextHeight",
                  NewSlotWithDefaultArgs(
-                     NewSlot(this, &ScriptableCanvas::GetTextHeight),
+                     NewSlot(&ScriptableCanvas::GetTextHeight),
                      kGetTextHeightDefaultArgs));
 }
 

@@ -64,7 +64,8 @@ JSFunctionSlot::~JSFunctionSlot() {
   }
 }
 
-ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
+ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
+                                   const Variant argv[]) const {
   Variant return_value(GetReturnType());
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.

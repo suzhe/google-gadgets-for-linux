@@ -125,7 +125,7 @@ class View::Impl {
           if (impl_->gadget_)
             impl_->gadget_->SetInUserInteraction(old_interaction);
         } else {
-          slot_->Call(0, NULL);
+          slot_->Call(NULL, 0, NULL);
         }
       }
 
@@ -1033,7 +1033,7 @@ class View::Impl {
     ASSERT(slot);
     event->SetReturnValue(EVENT_RESULT_HANDLED);
     event_stack_.push_back(event);
-    slot->Call(0, NULL);
+    slot->Call(NULL, 0, NULL);
     event_stack_.pop_back();
   }
 

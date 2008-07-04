@@ -49,7 +49,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   virtual ~Elements();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

@@ -79,25 +79,25 @@ ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
       impl_(new Impl) {
 }
 
-void ImgElement::DoRegister() {
-  BasicElement::DoRegister();
+void ImgElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("src",
-                   NewSlot(this, &ImgElement::GetSrc),
-                   NewSlot(this, &ImgElement::SetSrc));
-  RegisterProperty("srcWidth", NewSlot(this, &ImgElement::GetSrcWidth), NULL);
-  RegisterProperty("srcHeight", NewSlot(this, &ImgElement::GetSrcHeight), NULL);
+                   NewSlot(&ImgElement::GetSrc),
+                   NewSlot(&ImgElement::SetSrc));
+  RegisterProperty("srcWidth", NewSlot(&ImgElement::GetSrcWidth), NULL);
+  RegisterProperty("srcHeight", NewSlot(&ImgElement::GetSrcHeight), NULL);
   RegisterProperty("colorMultiply",
-                   NewSlot(this, &ImgElement::GetColorMultiply),
-                   NewSlot(this, &ImgElement::SetColorMultiply));
+                   NewSlot(&ImgElement::GetColorMultiply),
+                   NewSlot(&ImgElement::SetColorMultiply));
   RegisterStringEnumProperty("cropMaintainAspect",
-                             NewSlot(this, &ImgElement::GetCropMaintainAspect),
-                             NewSlot(this, &ImgElement::SetCropMaintainAspect),
+                             NewSlot(&ImgElement::GetCropMaintainAspect),
+                             NewSlot(&ImgElement::SetCropMaintainAspect),
                              kCropMaintainAspectNames,
                              arraysize(kCropMaintainAspectNames));
   RegisterProperty("stretchMiddle",
-                   NewSlot(this, &ImgElement::IsStretchMiddle),
-                   NewSlot(this, &ImgElement::SetStretchMiddle));
-  RegisterMethod("setSrcSize", NewSlot(this, &ImgElement::SetSrcSize));
+                   NewSlot(&ImgElement::IsStretchMiddle),
+                   NewSlot(&ImgElement::SetStretchMiddle));
+  RegisterMethod("setSrcSize", NewSlot(&ImgElement::SetSrcSize));
 }
 
 ImgElement::~ImgElement() {

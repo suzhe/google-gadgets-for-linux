@@ -32,22 +32,38 @@ class ScriptableHelperImplInterface : public ScriptableInterface,
                                       public RegisterableInterface {
  public:
   virtual ~ScriptableHelperImplInterface() { }
+  virtual void RegisterClassSignal(const char *name,
+                                   ClassSignal *class_signal) = 0;
   virtual void SetInheritsFrom(ScriptableInterface *inherits_from) = 0;
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetPendingException(ScriptableInterface *exception) = 0;
 };
 
+/**
+ * The callback interface used by the @c ScriptableHelperImplInterface
+ * implementation to callback to its owner (@c ScriptableHelper object).
+ */
+class ScriptableHelperCallbackInterface {
+ public:
+  virtual ~ScriptableHelperCallbackInterface() { }
+  virtual void DoRegister() = 0;
+  virtual void DoClassRegister() = 0;
+  virtual ScriptableInterface *GetScriptable() = 0;
+};
+
 ScriptableHelperImplInterface *NewScriptableHelperImpl(
-    Slot0<void> *do_register);
+    ScriptableHelperCallbackInterface *owner);
 
 } // namespace internal
 
 /**
  * A @c ScriptableInterface implementation helper.
  */
-template <typename I, bool TrackRefs = false>
-class ScriptableHelper : public I, public RegisterableInterface {
+template <typename I>
+class ScriptableHelper : public I,
+                         public RegisterableInterface,
+                         public internal::ScriptableHelperCallbackInterface {
  private:
   // Checks at compile time if the argument I is ScriptableInterface or
   // derived from it.
@@ -56,8 +72,7 @@ class ScriptableHelper : public I, public RegisterableInterface {
 
  public:
   ScriptableHelper()
-      : impl_(internal::NewScriptableHelperImpl(
-            NewSlot(this, &ScriptableHelper::DoRegister))) {
+      : impl_(internal::NewScriptableHelperImpl(this)) {
   }
 
   virtual ~ScriptableHelper() {
@@ -123,22 +138,65 @@ class ScriptableHelper : public I, public RegisterableInterface {
    *     will be automatically assigned from @c 0 to count-1, which is useful
    *     to define enum values.
    */
-  void RegisterConstants(int count,
+  void RegisterConstants(size_t count,
                          const char *const names[],
                          const Variant values[]) {
     ASSERT(names);
-    for (int i = 0; i < count; i++)
+    for (size_t i = 0; i < count; i++)
       impl_->RegisterVariantConstant(names[i], values ? values[i] : Variant(i));
   }
 
   /**
    * Register a constant.
-   * @param name the constant name.
+   * @param name the constant name. The pointers must point to static
+   *     allocated memory.
    * @param value the constant value.
    */
   template <typename T>
   void RegisterConstant(const char *name, T value) {
     impl_->RegisterVariantConstant(name, Variant(value));
+  }
+
+  /**
+   * Register a single class signal.
+   * @param name property name.  It must point to static allocated memory.
+   * @param signal the signal to register.
+   */
+  template <typename T, typename S>
+  void RegisterClassSignal(const char *name, S T::*signal) {
+    COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                   T_must_be_ScriptableInterface_or_derived_from_it);
+    COMPILE_ASSERT((IsDerived<Signal, S>::value),
+                   S_must_be_derived_from_Signal);
+    impl_->RegisterClassSignal(name, NewClassSignal(signal));
+  }
+
+  /**
+   * Register a single class signal which will be delegated from T to DT,
+   * using a delegate getter function.
+   */
+  template <typename T, typename DT, typename S>
+  void RegisterClassSignal(const char *name, S DT::*signal,
+                           DT *(*delegate_getter)(T *)) {
+    COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                   T_must_be_ScriptableInterface_or_derived_from_it);
+    COMPILE_ASSERT((IsDerived<Signal, S>::value),
+                   S_must_be_derived_from_Signal);
+    impl_->RegisterClassSignal(name, NewClassSignal(signal, delegate_getter));
+  }
+
+  /**
+   * Register a single class signal which will be delegated from T to DT,
+   * using the delegated field pointer.
+   */
+  template <typename T, typename DT, typename S>
+  void RegisterClassSignal(const char *name, S DT::*signal,
+                           DT *T::*delegate_field) {
+    COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                   T_must_be_ScriptableInterface_or_derived_from_it);
+    COMPILE_ASSERT((IsDerived<Signal, S>::value),
+                   S_must_be_derived_from_Signal);
+    impl_->RegisterClassSignal(name, NewClassSignal(signal, delegate_field));
   }
 
   /**
@@ -203,9 +261,6 @@ class ScriptableHelper : public I, public RegisterableInterface {
    */
   virtual void Ref() {
     impl_->Ref();
-    if (TrackRefs)
-      DLOG("Ref: classid=%jx this=%p ref=%d",
-           GetClassId(), this, GetRefCount());
   }
 
   /**
@@ -213,10 +268,6 @@ class ScriptableHelper : public I, public RegisterableInterface {
    * Normally this method is not allowed to be overriden.
    */
   virtual void Unref(bool transient = false) {
-    if (TrackRefs) {
-      DLOG("Unref: classid=%jx this=%p ref=%d transient=%d",
-           GetClassId(), this, GetRefCount() - 1, transient);
-    }
     impl_->Unref(transient);
     if (!transient && impl_->GetRefCount() == 0) delete this;
   }
@@ -299,9 +350,15 @@ class ScriptableHelper : public I, public RegisterableInterface {
    */
   virtual void DoRegister() { }
 
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
+  /**
+   * The subclass overrides this method to register class-wide scriptable
+   * properties.
+   */ 
+  virtual void DoClassRegister() { }
 
+ private:
+  virtual ScriptableInterface *GetScriptable() { return this; }
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
   internal::ScriptableHelperImplInterface *impl_;
 };
 
@@ -313,8 +370,8 @@ typedef ScriptableHelper<ScriptableInterface> ScriptableHelperDefault;
  * objects. For example, define the objects as local variables or data members,
  * as well as pointers.
  */
-template <typename I, bool TrackRefs = false>
-class ScriptableHelperNativeOwned : public ScriptableHelper<I, TrackRefs> {
+template <typename I>
+class ScriptableHelperNativeOwned : public ScriptableHelper<I> {
  public:
   ScriptableHelperNativeOwned() {
     ScriptableHelper<I>::Ref();

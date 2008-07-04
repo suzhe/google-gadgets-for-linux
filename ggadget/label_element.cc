@@ -27,6 +27,10 @@ class LabelElement::Impl {
   ~Impl() {
   }
 
+  DEFINE_DELEGATE_GETTER(GetTextFrame,
+                         &(down_cast<LabelElement *>(src)->impl_->text_),
+                         BasicElement, TextFrame);
+
   TextFrame text_;
 };
 
@@ -35,11 +39,13 @@ LabelElement::LabelElement(BasicElement *parent, View *view, const char *name)
       impl_(new Impl(this, view)) {
 }
 
-void LabelElement::DoRegister() {
-  BasicElement::DoRegister();
+void LabelElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+  impl_->text_.RegisterClassProperties(Impl::GetTextFrame,
+                                       Impl::GetTextFrameConst);
   RegisterProperty("innerText",
-                   NewSlot(&impl_->text_, &TextFrame::GetText),
-                   NewSlot(&impl_->text_, &TextFrame::SetText));
+                   NewSlot(&TextFrame::GetText, Impl::GetTextFrameConst),
+                   NewSlot(&TextFrame::SetText, Impl::GetTextFrame));
 }
 
 LabelElement::~LabelElement() {

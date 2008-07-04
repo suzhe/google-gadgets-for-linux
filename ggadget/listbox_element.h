@@ -33,7 +33,7 @@ class ListBoxElement : public DivElement {
   virtual ~ListBoxElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);

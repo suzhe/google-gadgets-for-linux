@@ -263,7 +263,7 @@ class GstAudioclip : public AudioclipInterface {
     return kMinVolume;
   }
 
-  virtual void SetVolume(int volume) const {
+  virtual void SetVolume(int volume) {
     if (playbin_) {
       if (volume < kMinVolume || volume > kMaxVolume) {
         LOG("Invalid volume value, range: [%d, %d].",

@@ -31,13 +31,14 @@ TEST(slot, Slot) {
   ASSERT_EQ(Variant::TYPE_SLOT, meta_slot->GetReturnType());
   for (int i = 0; i < kNumTestData; i++) {
     Variant param(i);
-    Slot *slot = VariantValue<Slot *>()(meta_slot->Call(1, &param).v());
+    Slot *slot = VariantValue<Slot *>()(meta_slot->Call(NULL, 1, &param).v());
     ASSERT_TRUE(slot->HasMetadata());
     ASSERT_EQ(testdata[i].argc, slot->GetArgCount());
     ASSERT_EQ(testdata[i].return_type, slot->GetReturnType());
     for (int j = 0; j < testdata[i].argc; j++)
       ASSERT_EQ(testdata[i].arg_types[j], slot->GetArgTypes()[j]);
-    ResultVariant call_result = slot->Call(testdata[i].argc, testdata[i].args);
+    ResultVariant call_result =
+        slot->Call(NULL, testdata[i].argc, testdata[i].args);
     ASSERT_EQ(testdata[i].return_value, call_result.v());
     printf("%d: '%s' '%s'\n", i, result, testdata[i].result);
     ASSERT_STREQ(testdata[i].result, result);

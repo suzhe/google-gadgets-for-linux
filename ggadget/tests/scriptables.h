@@ -38,18 +38,18 @@ extern std::string g_buffer;
 void AppendBuffer(const char *format, ...);
 
 // A normal scriptable class.
-class TestScriptable1 : public ScriptableHelperDefault {
+class BaseScriptable : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xdb06ba021f1b4c05, ScriptableInterface);
 
-  TestScriptable1(bool native_owned = true);
-  virtual ~TestScriptable1();
+  BaseScriptable(bool native_owned, bool register_class);
+  virtual ~BaseScriptable();
 
   void ClearBuffer() {
     g_buffer.clear();
   }
-  double TestMethodDouble2(bool p1, long p2) {
-    AppendBuffer("TestMethodDouble2(%d, %ld)\n", p1, p2);
+  double MethodDouble2(bool p1, long p2) {
+    AppendBuffer("MethodDouble2(%d, %ld)\n", p1, p2);
     return p1 ? p2 : -p2;
   }
   void SetDoubleProperty(double double_property) {
@@ -83,6 +83,18 @@ class TestScriptable1 : public ScriptableHelperDefault {
 
   enum EnumType { VALUE_0, VALUE_1, VALUE_2 };
 
+  EnumType GetEnumProperty() const { return enum_property_; }
+  void SetEnumProperty(EnumType e) { enum_property_ = e; }
+
+  Variant GetVariantProperty() const { return variant_property_; }
+  void SetVariantProperty(const Variant &v) { variant_property_ = v; }
+
+ protected:
+  void DoRegisterConstants();
+  virtual void DoClassRegister();
+  // If !register_class_, register is done in the constructor.
+  bool register_class_;
+
  private:
   bool native_owned_;
   double double_property_;
@@ -90,11 +102,11 @@ class TestScriptable1 : public ScriptableHelperDefault {
   Variant variant_property_;
 };
 
-class TestPrototype : public ScriptableHelperNativeOwnedDefault {
+class Prototype : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xbb7f8eddc2e94353, ScriptableInterface);
-  static TestPrototype *GetInstance() {
-    return instance_ ? instance_ : (instance_ = new TestPrototype());
+  static Prototype *GetInstance() {
+    return instance_ ? instance_ : (instance_ = new Prototype());
   }
 
   // Place this signal declaration here for testing.
@@ -104,27 +116,27 @@ class TestPrototype : public ScriptableHelperNativeOwnedDefault {
   ScriptableInterface *Method(const ScriptableInterface *s) {
     return const_cast<ScriptableInterface *>(s);
   }
-  TestPrototype *GetSelf() { return this; }
+  Prototype *GetSelf() { return this; }
 
  private:
-  TestPrototype();
+  Prototype();
 
-  static TestPrototype *instance_;
+  static Prototype *instance_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,
 // and some property/methods with arguments or return types of Scriptable.
-class TestScriptable2 : public TestScriptable1 {
+class ExtScriptable : public BaseScriptable {
  public:
-  DEFINE_CLASS_ID(0xa88ea50b8b884e, TestScriptable1);
-  TestScriptable2(bool native_owned = true, bool strict = true);
-  virtual ~TestScriptable2();
+  DEFINE_CLASS_ID(0xa88ea50b8b884e, BaseScriptable);
+  ExtScriptable(bool native_owned, bool strict, bool register_class);
+  virtual ~ExtScriptable();
 
   virtual bool IsStrict() const { return strict_; }
 
   static const int kArraySize = 20;
 
-  Variant GetArray(int index) {
+  Variant GetArray(int index) const {
     if (index >= 0 && index < kArraySize)
       return Variant(array_[index]);
     return Variant();  // void
@@ -154,24 +166,18 @@ class TestScriptable2 : public TestScriptable1 {
     return false;
   }
 
-  void SetTime(const std::string &time) {
-    time_ = time;
-    if (time == "lunch")
-      signal_result_ = onlunch_signal_(std::string("Have lunch"));
-    else if (time == "supper")
-      signal_result_= onsupper_signal_(std::string("Have supper"), this);
+  ExtScriptable *GetSelf() { return this; }
+  ExtScriptable *ObjectMethod(const ExtScriptable *t) {
+    return const_cast<ExtScriptable *>(t);
   }
-
-  TestScriptable2 *GetSelf() { return this; }
-  TestScriptable2 *TestMethod(const TestScriptable2 *t) {
-    return const_cast<TestScriptable2 *>(t);
-  }
-  TestScriptable2 *NewObject(bool native_owned, bool strict) {
-    TestScriptable2 *result = new TestScriptable2(native_owned, strict);
+  ExtScriptable *NewObject(bool native_owned, bool strict,
+                           bool register_class) {
+    ExtScriptable *result = new ExtScriptable(native_owned, strict,
+                                              register_class);
     DLOG("NewObject: %p", result);
     return result;
   }
-  void ReleaseObject(TestScriptable2 *obj) {
+  void ReleaseObject(ExtScriptable *obj) {
     if (obj) {
       if (obj->IsNativeOwned())
         delete obj;
@@ -186,40 +192,62 @@ class TestScriptable2 : public TestScriptable1 {
   void SetCallback(Slot *callback);
   std::string CallCallback(int x);
 
-  void FireComplexSignal(const char *s, int i) {
-    // Signals returning ScriptableInterface * call only be called with Emit(). 
-    Variant params[] = { Variant(s), Variant(i) };
-    ResultVariant signal_result = complex_signal_.Emit(2, params);
-    complex_signal_data_.Reset(
-        VariantValue<ScriptableInterface *>()(signal_result.v()));
-  }
-
-  ScriptableInterface *GetComplexSignalData() {
-    return complex_signal_data_.Get();
-  }
-
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
   typedef Signal1<std::string, const std::string &> OnLunchSignal;
   typedef Signal2<std::string, const std::string &,
-                  TestScriptable2 *> OnSupperSignal;
+                  ExtScriptable *> OnSupperSignal;
   typedef Signal2<ScriptableInterface *, const char *, int> ComplexSignal;
 
-  OnLunchSignal onlunch_signal_;
-  OnSupperSignal onsupper_signal_;
-  ComplexSignal complex_signal_;
+  class Inner {
+   public:
+    Inner(ExtScriptable *owner) : owner_(owner) { }
+    OnLunchSignal onlunch_signal_;
+    OnSupperSignal onsupper_signal_;
+    ComplexSignal complex_signal_;
+
+    std::string GetTime() const { return time_; }
+    void SetTime(const std::string &time) {
+      time_ = time;
+      if (time == "lunch")
+        signal_result_ = onlunch_signal_(std::string("Have lunch"));
+      else if (time == "supper")
+        signal_result_= onsupper_signal_(std::string("Have supper"), owner_);
+    }
+
+    void FireComplexSignal(const char *s, int i) {
+      // Signals returning ScriptableInterface * call only be called with Emit(). 
+      Variant params[] = { Variant(s), Variant(i) };
+      ResultVariant signal_result = complex_signal_.Emit(2, params);
+      complex_signal_data_.Reset(
+          VariantValue<ScriptableInterface *>()(signal_result.v()));
+    }
+
+    ScriptableInterface *GetComplexSignalData() {
+      return complex_signal_data_.Get();
+    }
+
+    ExtScriptable *owner_;
+    std::string time_;
+    ScriptableHolder<ScriptableInterface> complex_signal_data_;
+    std::string signal_result_;
+  };
+
+  static Inner *GetInner(ExtScriptable *s) { return &s->inner_; }
+  static const Inner *GetInnerConst(const ExtScriptable *s) {
+    return &s->inner_;
+  }
 
  protected:
+  virtual void DoClassRegister();
   virtual void DoRegister();
 
  private:
   int array_[kArraySize];
   bool strict_;
-  std::string time_;
-  std::string signal_result_;
   std::map<std::string, std::string> dynamic_properties_;
   Slot *callback_;
-  ScriptableHolder<ScriptableInterface> complex_signal_data_;
+  Inner inner_;
 };
 
 extern const Variant kNewObjectDefaultArgs[];

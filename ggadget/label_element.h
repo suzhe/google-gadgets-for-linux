@@ -40,7 +40,7 @@ class LabelElement : public BasicElement {
                                       const char *name);
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
   virtual void DoDraw(CanvasInterface *canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
 

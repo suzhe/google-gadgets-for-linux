@@ -24,10 +24,10 @@ ScriptableMenu::ScriptableMenu(MenuInterface *menu)
     : menu_(menu) {
 }
 
-void ScriptableMenu::DoRegister() {
-  RegisterMethod("AddItem", NewSlot(this, &ScriptableMenu::ScriptAddItem));
-  RegisterMethod("SetItemStyle", NewSlot(menu_, &MenuInterface::SetItemStyle));
-  RegisterMethod("AddPopup", NewSlot(this, &ScriptableMenu::ScriptAddPopup));
+void ScriptableMenu::DoClassRegister() {
+  RegisterMethod("AddItem", NewSlot(&ScriptableMenu::ScriptAddItem));
+  RegisterMethod("SetItemStyle", NewSlot(&ScriptableMenu::SetItemStyle));
+  RegisterMethod("AddPopup", NewSlot(&ScriptableMenu::ScriptAddPopup));
 }
 
 ScriptableMenu::~ScriptableMenu() {
@@ -50,6 +50,10 @@ ScriptableMenu *ScriptableMenu::ScriptAddPopup(const char *popup_text) {
           menu_->AddPopup(popup_text, MenuInterface::MENU_ITEM_PRI_CLIENT));
   submenus_.push_back(submenu);
   return submenu;
+}
+
+void ScriptableMenu::SetItemStyle(const char *item_text, int style) {
+  menu_->SetItemStyle(item_text, style);
 }
 
 } // namespace ggadget

@@ -53,18 +53,16 @@ DivElement::DivElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
 }
 
-void DivElement::DoRegister() {
-  ScrollingElement::DoRegister();
+void DivElement::DoClassRegister() {
+  ScrollingElement::DoClassRegister();
   RegisterProperty("autoscroll",
-                   NewSlot(implicit_cast<ScrollingElement *>(this),
-                           &ScrollingElement::IsAutoscroll),
-                   NewSlot(implicit_cast<ScrollingElement *>(this),
-                           &ScrollingElement::SetAutoscroll));
+                   NewSlot(&ScrollingElement::IsAutoscroll),
+                   NewSlot(&ScrollingElement::SetAutoscroll));
   RegisterProperty("background",
-                   NewSlot(this, &DivElement::GetBackground),
-                   NewSlot(this, &DivElement::SetBackground));
+                   NewSlot(&DivElement::GetBackground),
+                   NewSlot(&DivElement::SetBackground));
   // "backgroundMode" is for native use only.
-  // JS can use <img stretchMode="true" to get the similar effect.
+  // JS can use <img stretchMode="true"> to get the similar effect.
 }
 
 DivElement::~DivElement() {

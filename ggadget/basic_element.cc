@@ -236,7 +236,7 @@ class BasicElement::Impl {
   }
 
   // Retrieves the opacity of the element.
-  int GetIntOpacity() const {
+  int GetIntOpacity() {
     return static_cast<int>(round(opacity_ * 255));
   }
 
@@ -246,15 +246,15 @@ class BasicElement::Impl {
     SetOpacity(opacity / 255.0);
   }
 
-  double GetParentWidth() const {
+  double GetParentWidth() {
     return parent_ ? parent_->GetClientWidth() : view_->GetWidth();
   }
 
-  double GetParentHeight() const {
+  double GetParentHeight() {
     return parent_ ? parent_->GetClientHeight() : view_->GetHeight();
   }
 
-  Variant GetWidth() const {
+  Variant GetWidth() {
     return BasicElement::GetPixelOrRelative(width_relative_, width_specified_,
                                             width_, pwidth_);
   }
@@ -285,7 +285,7 @@ class BasicElement::Impl {
     }
   }
 
-  Variant GetHeight() const {
+  Variant GetHeight() {
     return BasicElement::GetPixelOrRelative(height_relative_, height_specified_,
                                             height_, pheight_);
   }
@@ -316,7 +316,7 @@ class BasicElement::Impl {
     }
   }
 
-  Variant GetX() const {
+  Variant GetX() {
     return BasicElement::GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
   }
 
@@ -346,7 +346,7 @@ class BasicElement::Impl {
     }
   }
 
-  Variant GetY() const {
+  Variant GetY() {
     return BasicElement::GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
   }
 
@@ -376,7 +376,7 @@ class BasicElement::Impl {
     }
   }
 
-  Variant GetPinX() const {
+  Variant GetPinX() {
     return BasicElement::GetPixelOrRelative(pin_x_relative_, true,
                                             pin_x_, ppin_x_);
   }
@@ -395,7 +395,7 @@ class BasicElement::Impl {
     }
   }
 
-  Variant GetPinY() const {
+  Variant GetPinY() {
     return BasicElement::GetPixelOrRelative(pin_y_relative_, true,
                                             pin_y_, ppin_y_);
   }
@@ -745,13 +745,13 @@ class BasicElement::Impl {
     }
   }
 
-  bool IsReallyVisible() const {
+  bool IsReallyVisible() {
     return visible_ && opacity_ != 0.0 &&
         (!parent_ ||
          (parent_->IsReallyVisible() && parent_->IsChildInVisibleArea(owner_)));
   }
 
-  ViewInterface::HitTest GetHitTest() const {
+  ViewInterface::HitTest GetHitTest() {
     return hittest_;
   }
 
@@ -810,10 +810,17 @@ class BasicElement::Impl {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
         view_->FireEvent(&scriptable_event, onmousemove_event_);
         break;
-      case Event::EVENT_MOUSE_DOWN:
+      case Event::EVENT_MOUSE_DOWN: {
+        ElementHolder self_holder(owner_);
         view_->SetFocus(owner_);
+        if (!self_holder.Get()) {
+          // In case that the element is deleted in focus event handlers.
+          *fired_element = *in_element = NULL;
+          return EVENT_RESULT_UNHANDLED;
+        }
         view_->FireEvent(&scriptable_event, onmousedown_event_);
         break;
+      }
       case Event::EVENT_MOUSE_UP:
         view_->FireEvent(&scriptable_event, onmouseup_event_);
         break;
@@ -1076,84 +1083,6 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
 }
 
 void BasicElement::DoRegister() {
-  RegisterProperty("x",
-                   NewSlot(impl_, &Impl::GetX),
-                   NewSlot(impl_, &Impl::SetX));
-  RegisterProperty("y",
-                   NewSlot(impl_, &Impl::GetY),
-                   NewSlot(impl_, &Impl::SetY));
-  RegisterProperty("width",
-                   NewSlot(impl_, &Impl::GetWidth),
-                   NewSlot(impl_, &Impl::SetWidth));
-  RegisterProperty("height",
-                   NewSlot(impl_, &Impl::GetHeight),
-                   NewSlot(impl_, &Impl::SetHeight));
-  RegisterConstant("name", impl_->name_);
-  // Use RegisterProperty instead of RegisterConstant for tagName can
-  // reduce the duplicates of std::string of tag_name_.
-  RegisterProperty("tagName", NewSlot(this, &BasicElement::GetTagName), NULL);
-
-  // TODO: Contentarea on Windows seems to support some of the following
-  // properties.
-  // if (GadgetStrCmp(tag_name, "contentarea") == 0)
-    // The following properties and methods are not supported by contentarea.
-  //  return;
-
-  RegisterStringEnumProperty("cursor",
-                             NewSlot(this, &BasicElement::GetCursor),
-                             NewSlot(this, &BasicElement::SetCursor),
-                             kCursorTypeNames, arraysize(kCursorTypeNames));
-  RegisterProperty("dropTarget",
-                   NewSlot(this, &BasicElement::IsDropTarget),
-                   NewSlot(this, &BasicElement::SetDropTarget));
-  RegisterProperty("enabled",
-                   NewSlot(this, &BasicElement::IsEnabled),
-                   NewSlot(this, &BasicElement::SetEnabled));
-  RegisterStringEnumProperty("hitTest",
-                             NewSlot(impl_, &Impl::GetHitTest),
-                             NewSlot(this, &BasicElement::SetHitTest),
-                             kHitTestNames, arraysize(kHitTestNames));
-  RegisterProperty("mask",
-                   NewSlot(this, &BasicElement::GetMask),
-                   NewSlot(this, &BasicElement::SetMask));
-  RegisterProperty("offsetHeight",
-                   NewSlot(this, &BasicElement::GetPixelHeight), NULL);
-  RegisterProperty("offsetWidth",
-                   NewSlot(this, &BasicElement::GetPixelWidth), NULL);
-  RegisterProperty("offsetX",
-                   NewSlot(this, &BasicElement::GetPixelX), NULL);
-  RegisterProperty("offsetY",
-                   NewSlot(this, &BasicElement::GetPixelY), NULL);
-  RegisterProperty("opacity",
-                   NewSlot(impl_, &Impl::GetIntOpacity),
-                   NewSlot(impl_, &Impl::SetIntOpacity));
-  RegisterConstant("parentElement", impl_->parent_);
-
-  // Note: don't use relative pinX/pinY until they are in the public API.
-  RegisterProperty("pinX",
-                   NewSlot(impl_, &Impl::GetPinX),
-                   NewSlot(impl_, &Impl::SetPinX));
-  RegisterProperty("pinY",
-                   NewSlot(impl_, &Impl::GetPinY),
-                   NewSlot(impl_, &Impl::SetPinY));
-  RegisterProperty("rotation",
-                   NewSlot(this, &BasicElement::GetRotation),
-                   NewSlot(this, &BasicElement::SetRotation));
-  RegisterProperty("tooltip",
-                   NewSlot(this, &BasicElement::GetTooltip),
-                   NewSlot(this, &BasicElement::SetTooltip));
-  RegisterProperty("visible",
-                   NewSlot(this, &BasicElement::IsVisible),
-                   NewSlot(this, &BasicElement::SetVisible));
-  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
-  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
-
-  // Note: don't use 'flip' property until it is in the public API.
-  RegisterStringEnumProperty("flip",
-                             NewSlot(this, &BasicElement::GetFlip),
-                             NewSlot(this, &BasicElement::SetFlip),
-                             kFlipNames, arraysize(kFlipNames));
-
   // Use GetChildren() instead of impl_->children_ because GetChildren()
   // may be overriden.
   Elements *children = GetChildren();
@@ -1168,26 +1097,126 @@ void BasicElement::DoRegister() {
     RegisterMethod("removeAllElements",
                    NewSlot(children, &Elements::RemoveAllElements));
   }
+}
 
-  RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
-  RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
-  RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
-  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);
-  RegisterSignal(kOnDragDropEvent, &impl_->ondragdrop_event_);
-  RegisterSignal(kOnDragOutEvent, &impl_->ondragout_event_);
-  RegisterSignal(kOnDragOverEvent, &impl_->ondragover_event_);
-  RegisterSignal(kOnFocusInEvent, &impl_->onfocusin_event_);
-  RegisterSignal(kOnFocusOutEvent, &impl_->onfocusout_event_);
-  RegisterSignal(kOnKeyDownEvent, &impl_->onkeydown_event_);
-  RegisterSignal(kOnKeyPressEvent, &impl_->onkeypress_event_);
-  RegisterSignal(kOnKeyUpEvent, &impl_->onkeyup_event_);
-  RegisterSignal(kOnMouseDownEvent, &impl_->onmousedown_event_);
-  RegisterSignal(kOnMouseMoveEvent, &impl_->onmousemove_event_);
-  RegisterSignal(kOnMouseOutEvent, &impl_->onmouseout_event_);
-  RegisterSignal(kOnMouseOverEvent, &impl_->onmouseover_event_);
-  RegisterSignal(kOnMouseUpEvent, &impl_->onmouseup_event_);
-  RegisterSignal(kOnMouseWheelEvent, &impl_->onmousewheel_event_);
-  RegisterSignal(kOnSizeEvent, &impl_->onsize_event_);
+void BasicElement::DoClassRegister() {
+  RegisterProperty("x",
+                   NewSlot(&Impl::GetX, &BasicElement::impl_),
+                   NewSlot(&Impl::SetX, &BasicElement::impl_));
+  RegisterProperty("y",
+                   NewSlot(&Impl::GetY, &BasicElement::impl_),
+                   NewSlot(&Impl::SetY, &BasicElement::impl_));
+  RegisterProperty("width",
+                   NewSlot(&Impl::GetWidth, &BasicElement::impl_),
+                   NewSlot(&Impl::SetWidth, &BasicElement::impl_));
+  RegisterProperty("height",
+                   NewSlot(&Impl::GetHeight, &BasicElement::impl_),
+                   NewSlot(&Impl::SetHeight, &BasicElement::impl_));
+  RegisterProperty("name", NewSlot(&BasicElement::GetName), NULL);
+  RegisterProperty("tagName", NewSlot(&BasicElement::GetTagName), NULL);
+
+  // TODO: Contentarea on Windows seems to support some of the following
+  // properties.
+  // if (GadgetStrCmp(tag_name, "contentarea") == 0)
+    // The following properties and methods are not supported by contentarea.
+  //  return;
+
+  RegisterStringEnumProperty("cursor",
+                             NewSlot(&BasicElement::GetCursor),
+                             NewSlot(&BasicElement::SetCursor),
+                             kCursorTypeNames, arraysize(kCursorTypeNames));
+  RegisterProperty("dropTarget",
+                   NewSlot(&BasicElement::IsDropTarget),
+                   NewSlot(&BasicElement::SetDropTarget));
+  RegisterProperty("enabled",
+                   NewSlot(&BasicElement::IsEnabled),
+                   NewSlot(&BasicElement::SetEnabled));
+  RegisterStringEnumProperty("hitTest",
+                             NewSlot(&Impl::GetHitTest, &BasicElement::impl_),
+                             NewSlot(&BasicElement::SetHitTest),
+                             kHitTestNames, arraysize(kHitTestNames));
+  RegisterProperty("mask",
+                   NewSlot(&BasicElement::GetMask),
+                   NewSlot(&BasicElement::SetMask));
+  RegisterProperty("offsetHeight",
+                   NewSlot(&BasicElement::GetPixelHeight), NULL);
+  RegisterProperty("offsetWidth",
+                   NewSlot(&BasicElement::GetPixelWidth), NULL);
+  RegisterProperty("offsetX", NewSlot(&BasicElement::GetPixelX), NULL);
+  RegisterProperty("offsetY", NewSlot(&BasicElement::GetPixelY), NULL);
+  RegisterProperty("opacity",
+                   NewSlot(&Impl::GetIntOpacity, &BasicElement::impl_),
+                   NewSlot(&Impl::SetIntOpacity, &BasicElement::impl_));
+  RegisterProperty("parentElement",
+                   NewSlot(static_cast<BasicElement *(BasicElement::*)()>(
+                       &BasicElement::GetParentElement)),
+                   NULL);
+
+  // Note: don't use relative pinX/pinY until they are in the public API.
+  RegisterProperty("pinX",
+                   NewSlot(&Impl::GetPinX, &BasicElement::impl_),
+                   NewSlot(&Impl::SetPinX, &BasicElement::impl_));
+  RegisterProperty("pinY",
+                   NewSlot(&Impl::GetPinY, &BasicElement::impl_),
+                   NewSlot(&Impl::SetPinY, &BasicElement::impl_));
+  RegisterProperty("rotation",
+                   NewSlot(&BasicElement::GetRotation),
+                   NewSlot(&BasicElement::SetRotation));
+  RegisterProperty("tooltip",
+                   NewSlot(&BasicElement::GetTooltip),
+                   NewSlot(&BasicElement::SetTooltip));
+  RegisterProperty("visible",
+                   NewSlot(&BasicElement::IsVisible),
+                   NewSlot(&BasicElement::SetVisible));
+  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
+  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
+
+  // Note: don't use 'flip' property until it is in the public API.
+  RegisterStringEnumProperty("flip",
+                             NewSlot(&BasicElement::GetFlip),
+                             NewSlot(&BasicElement::SetFlip),
+                             kFlipNames, arraysize(kFlipNames));
+  RegisterMethod("focus", NewSlot(&BasicElement::Focus));
+  RegisterMethod("killFocus", NewSlot(&BasicElement::KillFocus));
+
+  RegisterClassSignal(kOnClickEvent, &Impl::onclick_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnDblClickEvent, &Impl::ondblclick_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnRClickEvent, &Impl::onrclick_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnRDblClickEvent, &Impl::onrdblclick_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnDragDropEvent, &Impl::ondragdrop_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnDragOutEvent, &Impl::ondragout_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnDragOverEvent, &Impl::ondragover_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnFocusInEvent, &Impl::onfocusin_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnFocusOutEvent, &Impl::onfocusout_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnKeyDownEvent, &Impl::onkeydown_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnKeyPressEvent, &Impl::onkeypress_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnKeyUpEvent, &Impl::onkeyup_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseDownEvent, &Impl::onmousedown_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseMoveEvent, &Impl::onmousemove_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseOutEvent, &Impl::onmouseout_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseOverEvent, &Impl::onmouseover_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseUpEvent, &Impl::onmouseup_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnMouseWheelEvent, &Impl::onmousewheel_event_,
+                      &BasicElement::impl_);
+  RegisterClassSignal(kOnSizeEvent, &Impl::onsize_event_,
+                      &BasicElement::impl_);
 }
 
 BasicElement::~BasicElement() {

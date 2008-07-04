@@ -32,7 +32,7 @@ class ComboBoxElement : public BasicElement {
   virtual ~ComboBoxElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   virtual void MarkRedraw();

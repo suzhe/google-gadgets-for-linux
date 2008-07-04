@@ -183,6 +183,9 @@ class ComboBoxElement::Impl {
     listbox_->MarkRedraw();
   }
 
+  DEFINE_DELEGATE_GETTER(GetListBox, src->impl_->listbox_,
+                         ComboBoxElement, ListBoxElement);
+
   ComboBoxElement *owner_;
   BasicElement *mouseover_child_, *grabbed_child_;
   int max_items_;
@@ -203,72 +206,85 @@ ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
   SetEnabled(true);
 }
 
-void ComboBoxElement::DoRegister() {
-  BasicElement::DoRegister();
+void ComboBoxElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("background",
-                   NewSlot(this, &ComboBoxElement::GetBackground),
-                   NewSlot(this, &ComboBoxElement::SetBackground));
+                   NewSlot(&ComboBoxElement::GetBackground),
+                   NewSlot(&ComboBoxElement::SetBackground));
   RegisterProperty("itemHeight",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemHeight),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemHeight));
+                   NewSlot(&ListBoxElement::GetItemHeight,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemHeight, Impl::GetListBox));
   RegisterProperty("itemWidth",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemWidth),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemWidth));
+                   NewSlot(&ListBoxElement::GetItemWidth,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemWidth, Impl::GetListBox));
   RegisterProperty("itemOverColor",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemOverColor),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemOverColor));
+                   NewSlot(&ListBoxElement::GetItemOverColor,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemOverColor,
+                           Impl::GetListBox));
   RegisterProperty("itemSelectedColor",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemSelectedColor),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemSelectedColor));
+                   NewSlot(&ListBoxElement::GetItemSelectedColor,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemSelectedColor,
+                           Impl::GetListBox));
   RegisterProperty("itemSeparator",
-                   NewSlot(impl_->listbox_, &ListBoxElement::HasItemSeparator),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemSeparator));
+                   NewSlot(&ListBoxElement::HasItemSeparator,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemSeparator,
+                           Impl::GetListBox));
   RegisterProperty("selectedIndex",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetSelectedIndex),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetSelectedIndex));
+                   NewSlot(&ListBoxElement::GetSelectedIndex,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetSelectedIndex,
+                           Impl::GetListBox));
   RegisterProperty("selectedItem",
-                   NewSlot(impl_->listbox_, &ListBoxElement::GetSelectedItem),
-                   NewSlot(impl_->listbox_, &ListBoxElement::SetSelectedItem));
+                   NewSlot(&ListBoxElement::GetSelectedItem,
+                           Impl::GetListBox),
+                   NewSlot(&ListBoxElement::SetSelectedItem, Impl::GetListBox));
   RegisterProperty("droplistVisible",
-                   NewSlot(this, &ComboBoxElement::IsDroplistVisible),
-                   NewSlot(this, &ComboBoxElement::SetDroplistVisible));
+                   NewSlot(&ComboBoxElement::IsDroplistVisible),
+                   NewSlot(&ComboBoxElement::SetDroplistVisible));
   RegisterProperty("maxDroplistItems",
-                   NewSlot(this, &ComboBoxElement::GetMaxDroplistItems),
-                   NewSlot(this, &ComboBoxElement::SetMaxDroplistItems));
+                   NewSlot(&ComboBoxElement::GetMaxDroplistItems),
+                   NewSlot(&ComboBoxElement::SetMaxDroplistItems));
   RegisterProperty("value",
-                   NewSlot(this, &ComboBoxElement::GetValue),
-                   NewSlot(this, &ComboBoxElement::SetValue));
+                   NewSlot(&ComboBoxElement::GetValue),
+                   NewSlot(&ComboBoxElement::SetValue));
   RegisterStringEnumProperty("type",
-                             NewSlot(this, &ComboBoxElement::GetType),
-                             NewSlot(this, &ComboBoxElement::SetType),
+                             NewSlot(&ComboBoxElement::GetType),
+                             NewSlot(&ComboBoxElement::SetType),
                              kTypeNames, arraysize(kTypeNames));
 
   RegisterMethod("clearSelection",
-                 NewSlot(impl_->listbox_, &ListBoxElement::ClearSelection));
+                 NewSlot(&ListBoxElement::ClearSelection, Impl::GetListBox));
 
   // Version 5.5 newly added methods and properties.
   RegisterProperty("itemSeparatorColor",
-                   NewSlot(impl_->listbox_,
-                           &ListBoxElement::GetItemSeparatorColor),
-                   NewSlot(impl_->listbox_,
-                           &ListBoxElement::SetItemSeparatorColor));
+                   NewSlot(&ListBoxElement::GetItemSeparatorColor,
+                           Impl::GetListBoxConst),
+                   NewSlot(&ListBoxElement::SetItemSeparatorColor,
+                           Impl::GetListBox));
   RegisterMethod("appendString",
-                 NewSlot(impl_->listbox_, &ListBoxElement::AppendString));
+                 NewSlot(&ListBoxElement::AppendString, Impl::GetListBox));
   RegisterMethod("insertStringAt",
-                 NewSlot(impl_->listbox_, &ListBoxElement::InsertStringAt));
+                 NewSlot(&ListBoxElement::InsertStringAt, Impl::GetListBox));
   RegisterMethod("removeString",
-                 NewSlot(impl_->listbox_, &ListBoxElement::RemoveString));
+                 NewSlot(&ListBoxElement::RemoveString, Impl::GetListBox));
 
   // Disabled
   RegisterProperty("autoscroll",
-                   NewSlot(this, &ComboBoxElement::IsAutoscroll),
-                   NewSlot(this, &ComboBoxElement::SetAutoscroll));
+                   NewSlot(&ComboBoxElement::IsAutoscroll),
+                   NewSlot(&ComboBoxElement::SetAutoscroll));
   RegisterProperty("multiSelect",
-                   NewSlot(this, &ComboBoxElement::IsMultiSelect),
-                   NewSlot(this, &ComboBoxElement::SetMultiSelect));
+                   NewSlot(&ComboBoxElement::IsMultiSelect),
+                   NewSlot(&ComboBoxElement::SetMultiSelect));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
-  RegisterSignal(kOnTextChangeEvent, &impl_->ontextchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &ComboBoxElement::impl_);
+  RegisterClassSignal(kOnTextChangeEvent, &Impl::ontextchange_event_,
+                      &ComboBoxElement::impl_);
 }
 
 ComboBoxElement::~ComboBoxElement() {

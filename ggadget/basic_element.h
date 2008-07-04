@@ -53,6 +53,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
  protected:
   virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   enum FlipMode {

@@ -32,7 +32,7 @@ class ScriptableImage : public ScriptableHelperDefault {
 
  protected:
   virtual ~ScriptableImage();
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   const ImageInterface *GetImage() const;

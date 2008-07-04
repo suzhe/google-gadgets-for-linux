@@ -56,7 +56,7 @@ class ObjectElement : public BasicElement {
   void SetObjectClassId(const std::string& classId);
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
   virtual void DoDraw(CanvasInterface *canvas);
 
  private:

@@ -220,9 +220,9 @@ TEST("Test scriptables", function() {
   ASSERT(EQ(scriptable2, proto.PrototypeMethod(scriptable2)));
 
   ASSERT(EQ(scriptable2, scriptable2.OverrideSelf));
-  ASSERT(NULL(scriptable2.TestMethod(null)));
+  ASSERT(NULL(scriptable2.ObjectMethod(null)));
   // Incompatible type.
-  ASSERT(NULL(scriptable2.TestMethod(scriptable)));
+  ASSERT(NULL(scriptable2.ObjectMethod(scriptable)));
 });
 
 TEST("Test dynamic allocated objects", function() {
@@ -274,7 +274,7 @@ TEST("Test ownership policies", function() {
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
 
   var b = scriptable2.NewObject(false);
-  b = scriptable2.TestMethod(b);
+  b = scriptable2.ObjectMethod(b);
   b = null;
   scriptable.ClearBuffer();
   gc();
@@ -439,10 +439,10 @@ TEST("Test Enumeration", function() {
       "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
       "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
       "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
-      "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
-      "TestMethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
-      "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
-      "ontest", "time",
+      "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult",
+      "ObjectMethod", "MethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1",
+      "VALUE_2", "VariantProperty", "length", "my_ondelete", "onlunch",
+      "onsupper", "ontest", "time",
     ];
     var expected_index = new Object();
     for (var i = 0; i < expected_array.length; i++)

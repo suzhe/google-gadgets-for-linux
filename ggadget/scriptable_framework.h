@@ -63,6 +63,9 @@ class ScriptableAudio : public ScriptableHelperDefault {
   ScriptableAudio(AudioInterface *audio, Gadget *gadget);
   virtual ~ScriptableAudio();
 
+ protected:
+  virtual void DoRegister();
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableAudio);
 
@@ -104,8 +107,11 @@ class ScriptablePerfmon : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x07495B8910EE4BCC, ScriptableInterface);
 
-  explicit ScriptablePerfmon(PerfmonInterface *perfmon, Gadget *gadget);
+  ScriptablePerfmon(PerfmonInterface *perfmon, Gadget *gadget);
   virtual ~ScriptablePerfmon();
+
+ protected:
+  virtual void DoRegister();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptablePerfmon);
@@ -252,6 +258,9 @@ class ScriptableGraphics : public ScriptableHelperDefault {
 
   explicit ScriptableGraphics(Gadget *gadget);
   virtual ~ScriptableGraphics();
+
+ protected:
+  virtual void DoRegister();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableGraphics);

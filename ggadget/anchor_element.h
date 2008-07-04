@@ -32,7 +32,7 @@ class AnchorElement : public BasicElement {
   virtual ~AnchorElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

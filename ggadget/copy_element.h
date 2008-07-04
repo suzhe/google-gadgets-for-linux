@@ -47,7 +47,7 @@ class CopyElement : public BasicElement {
   double GetSrcHeight() const;
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   virtual bool IsPointIn(double x, double y) const;

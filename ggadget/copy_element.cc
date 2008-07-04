@@ -144,11 +144,11 @@ CopyElement::CopyElement(BasicElement *parent, View *view, const char *name)
       impl_(new Impl(this)) {
 }
 
-void CopyElement::DoRegister() {
-  BasicElement::DoRegister();
+void CopyElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("src",
-                   NewSlot(impl_, &CopyElement::Impl::GetSrc),
-                   NewSlot(impl_, &CopyElement::Impl::SetSrc));
+                   NewSlot(&Impl::GetSrc, &CopyElement::impl_),
+                   NewSlot(&Impl::SetSrc, &CopyElement::impl_));
 }
 
 CopyElement::~CopyElement() {

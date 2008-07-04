@@ -449,7 +449,8 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                              &params, &expected_argc))
     return JS_FALSE;
 
-  ResultVariant return_value = cls->constructor_->Call(expected_argc, params);
+  ResultVariant return_value = cls->constructor_->Call(NULL, expected_argc,
+                                                       params);
   ASSERT(return_value.v().type() == Variant::TYPE_SCRIPTABLE);
   ScriptableInterface *scriptable =
       VariantValue<ScriptableInterface *>()(return_value.v());

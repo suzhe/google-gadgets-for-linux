@@ -32,7 +32,7 @@ class BrowserElement : public BasicElement {
   class Impl;
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

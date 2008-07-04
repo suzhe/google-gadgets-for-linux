@@ -98,7 +98,7 @@ class ContentItem : public ScriptableHelperDefault {
 
  protected:
   virtual ~ContentItem();
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /** Called when this content item is added into a content area. */
@@ -266,7 +266,7 @@ class ScriptableCanvas : public ScriptableHelperNativeOwnedDefault {
   virtual ~ScriptableCanvas();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   enum FontID {

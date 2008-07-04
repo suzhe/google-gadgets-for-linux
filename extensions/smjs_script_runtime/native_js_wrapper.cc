@@ -411,7 +411,7 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                              &params, &expected_argc))
     return JS_FALSE;
 
-  ResultVariant return_value = slot->Call(expected_argc, params);
+  ResultVariant return_value = slot->Call(scriptable_, expected_argc, params);
   delete [] params;
   params = NULL;
 

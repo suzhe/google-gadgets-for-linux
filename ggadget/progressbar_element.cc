@@ -163,41 +163,42 @@ ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
 }
 
-void ProgressBarElement::DoRegister() {
-  BasicElement::DoRegister();
+void ProgressBarElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("emptyImage",
-                   NewSlot(this, &ProgressBarElement::GetEmptyImage),
-                   NewSlot(this, &ProgressBarElement::SetEmptyImage));
+                   NewSlot(&ProgressBarElement::GetEmptyImage),
+                   NewSlot(&ProgressBarElement::SetEmptyImage));
   RegisterProperty("max",
-                   NewSlot(this, &ProgressBarElement::GetMax),
-                   NewSlot(this, &ProgressBarElement::SetMax));
+                   NewSlot(&ProgressBarElement::GetMax),
+                   NewSlot(&ProgressBarElement::SetMax));
   RegisterProperty("min",
-                   NewSlot(this, &ProgressBarElement::GetMin),
-                   NewSlot(this, &ProgressBarElement::SetMin));
+                   NewSlot(&ProgressBarElement::GetMin),
+                   NewSlot(&ProgressBarElement::SetMin));
   RegisterStringEnumProperty("orientation",
-                   NewSlot(this, &ProgressBarElement::GetOrientation),
-                   NewSlot(this, &ProgressBarElement::SetOrientation),
+                   NewSlot(&ProgressBarElement::GetOrientation),
+                   NewSlot(&ProgressBarElement::SetOrientation),
                    kOrientationNames, arraysize(kOrientationNames));
   RegisterProperty("fullImage",
-                   NewSlot(this, &ProgressBarElement::GetFullImage),
-                   NewSlot(this, &ProgressBarElement::SetFullImage));
+                   NewSlot(&ProgressBarElement::GetFullImage),
+                   NewSlot(&ProgressBarElement::SetFullImage));
   RegisterProperty("thumbDisabledImage",
-                   NewSlot(this, &ProgressBarElement::GetThumbDisabledImage),
-                   NewSlot(this, &ProgressBarElement::SetThumbDisabledImage));
+                   NewSlot(&ProgressBarElement::GetThumbDisabledImage),
+                   NewSlot(&ProgressBarElement::SetThumbDisabledImage));
   RegisterProperty("thumbDownImage",
-                   NewSlot(this, &ProgressBarElement::GetThumbDownImage),
-                   NewSlot(this, &ProgressBarElement::SetThumbDownImage));
+                   NewSlot(&ProgressBarElement::GetThumbDownImage),
+                   NewSlot(&ProgressBarElement::SetThumbDownImage));
   RegisterProperty("thumbImage",
-                   NewSlot(this, &ProgressBarElement::GetThumbImage),
-                   NewSlot(this, &ProgressBarElement::SetThumbImage));
+                   NewSlot(&ProgressBarElement::GetThumbImage),
+                   NewSlot(&ProgressBarElement::SetThumbImage));
   RegisterProperty("thumbOverImage",
-                   NewSlot(this, &ProgressBarElement::GetThumbOverImage),
-                   NewSlot(this, &ProgressBarElement::SetThumbOverImage));
+                   NewSlot(&ProgressBarElement::GetThumbOverImage),
+                   NewSlot(&ProgressBarElement::SetThumbOverImage));
   RegisterProperty("value",
-                   NewSlot(this, &ProgressBarElement::GetValue),
-                   NewSlot(this, &ProgressBarElement::SetValue));
+                   NewSlot(&ProgressBarElement::GetValue),
+                   NewSlot(&ProgressBarElement::SetValue));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &ProgressBarElement::impl_);
 }
 
 ProgressBarElement::~ProgressBarElement() {

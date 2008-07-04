@@ -133,6 +133,10 @@ void ScrollingElement::DoRegister() {
   BasicElement::DoRegister();
 }
 
+void ScrollingElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+}
+
 ScrollingElement::~ScrollingElement() {
   delete impl_;
 }

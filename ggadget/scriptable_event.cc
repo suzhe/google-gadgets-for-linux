@@ -21,6 +21,14 @@
 
 namespace ggadget {
 
+static const uint64_t kMouseEventClassId = UINT64_C(0x06fccf33c75e4445);
+static const uint64_t kKeyboardEventClassId = UINT64_C(0xf8f4522e6ad346a4);
+static const uint64_t kDragEventClassId = UINT64_C(0x7fd0f2cdae9d4689);
+static const uint64_t kSizingEventClassId = UINT64_C(0xba226642c2d94168);
+static const uint64_t kOptionChangedEventClassId = UINT64_C(0x8c13c37976f0443d);
+static const uint64_t kTimerEventClassId = UINT64_C(0xc7de1daa11a0489b);
+static const uint64_t kPerfmonEventClassId = UINT64_C(0x4109a5fb49c84ae6);
+
 class ScriptableEvent::Impl {
  public:
   Impl(const Event *event, ScriptableInterface *src_element,
@@ -29,6 +37,32 @@ class ScriptableEvent::Impl {
          return_value_(EVENT_RESULT_UNHANDLED),
          src_element_(src_element),
          output_event_(output_event) {
+    if (event->IsMouseEvent()) {
+      class_id_ = kMouseEventClassId;
+    } else if (event->IsKeyboardEvent()) {
+      class_id_ = kKeyboardEventClassId;
+    } else if (event->IsDragEvent()) {
+      class_id_ = kDragEventClassId;
+    } else {
+      Event::Type type = event->GetType();
+      switch (type) {
+        case Event::EVENT_SIZING:
+          class_id_ = kSizingEventClassId;
+          break;
+        case Event::EVENT_OPTION_CHANGED:
+          class_id_ = kOptionChangedEventClassId;
+          break;
+        case Event::EVENT_TIMER:
+          class_id_ = kTimerEventClassId;
+          break;
+        case Event::EVENT_PERFMON:
+          class_id_ = kPerfmonEventClassId;
+          break;
+        default:
+          class_id_ = ScriptableEvent::CLASS_ID;
+          break;
+      }
+    }
   }
 
   ScriptableArray *ScriptGetDragFiles() {
@@ -45,7 +79,41 @@ class ScriptableEvent::Impl {
     return_value_ = value ? EVENT_RESULT_HANDLED : EVENT_RESULT_CANCELED;
   }
 
+  ScriptableInterface *GetSrcElement() {
+    return src_element_.Get();
+  }
+
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetEvent, src->impl_->event_, ScriptableEvent, Event);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetMouseEvent, static_cast<const MouseEvent *>(src->impl_->event_),
+      ScriptableEvent, MouseEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetPositionEvent, static_cast<const PositionEvent *>(src->impl_->event_),
+      ScriptableEvent, PositionEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetKeyboardEvent, static_cast<const KeyboardEvent *>(src->impl_->event_),
+      ScriptableEvent, KeyboardEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetSizingEvent, static_cast<const SizingEvent *>(src->impl_->event_),
+      ScriptableEvent, SizingEvent);
+  DEFINE_DELEGATE_GETTER_NO_CONST(
+      GetOutputSizingEvent,
+      static_cast<SizingEvent *>(src->impl_->output_event_),
+      ScriptableEvent, SizingEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetOptionChangedEvent,
+      static_cast<const OptionChangedEvent *>(src->impl_->event_),
+      ScriptableEvent, OptionChangedEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetTimerEvent, static_cast<const TimerEvent *>(src->impl_->event_),
+      ScriptableEvent, TimerEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetPerfmonEvent, static_cast<const PerfmonEvent *>(src->impl_->event_),
+      ScriptableEvent, PerfmonEvent);
+
   const Event *event_;
+  uint64_t class_id_;
   EventResult return_value_;
   ScriptableHolder<ScriptableInterface> src_element_;
   Event *output_event_;
@@ -57,91 +125,87 @@ ScriptableEvent::ScriptableEvent(const Event *event,
     : impl_(new Impl(event, src_element, output_event)) {
 }
 
-void ScriptableEvent::DoRegister() {
+void ScriptableEvent::DoClassRegister() {
   RegisterProperty("returnValue",
-                   NewSlot(impl_, &Impl::ScriptGetReturnValue),
-                   NewSlot(impl_, &Impl::ScriptSetReturnValue));
-  RegisterProperty("srcElement", NewSlot(this, &ScriptableEvent::GetSrcElement),
+                   NewSlot(&Impl::ScriptGetReturnValue,
+                           &ScriptableEvent::impl_),
+                   NewSlot(&Impl::ScriptSetReturnValue,
+                           &ScriptableEvent::impl_));
+  RegisterProperty("srcElement",
+                   NewSlot(&Impl::GetSrcElement, &ScriptableEvent::impl_),
                    NULL);
-  RegisterProperty("type", NewSlot(this, &ScriptableEvent::GetName), NULL);
+  RegisterProperty("type", NewSlot(&ScriptableEvent::GetName), NULL);
 
-  const Event *event = impl_->event_;
-  if (event->IsMouseEvent()) {
-    const MouseEvent *mouse_event = static_cast<const MouseEvent *>(event);
-    const PositionEvent *position_event =
-        static_cast<const PositionEvent *>(event);
-    RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
-    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetY), NULL);
-    RegisterProperty("button",
-                     NewSlot(mouse_event, &MouseEvent::GetButton), NULL);
-    RegisterProperty("wheelDelta",
-                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaY), NULL);
-    RegisterProperty("wheelDeltaX",
-                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaX), NULL);
-    RegisterProperty("wheelDeltaY",
-                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaY), NULL);
-  } else if (event->IsKeyboardEvent()) {
-    const KeyboardEvent *key_event = static_cast<const KeyboardEvent *>(event);
-    RegisterProperty("keyCode",
-                     NewSlot(key_event, &KeyboardEvent::GetKeyCode), NULL);
-  } else if (event->IsDragEvent()) {
-    const PositionEvent *position_event =
-        static_cast<const PositionEvent *>(event);
-    RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
-    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
-    RegisterProperty("dragFiles", NewSlot(impl_, &Impl::ScriptGetDragFiles),
-                     NULL);
-  } else {
-    Event::Type type = event->GetType();
-    switch (type) {
-      case Event::EVENT_SIZING: {
-        ASSERT(impl_->output_event_ &&
-               impl_->output_event_->GetType() == Event::EVENT_SIZING);
-        const SizingEvent *sizing_event =
-            static_cast<const SizingEvent *>(event);
-        SizingEvent *output_sizing_event =
-            static_cast<SizingEvent *>(impl_->output_event_);
-        RegisterProperty("width",
-                         NewSlot(sizing_event, &SizingEvent::GetWidth),
-                         NewSlot(output_sizing_event, &SizingEvent::SetWidth));
-        RegisterProperty("height",
-                         NewSlot(sizing_event, &SizingEvent::GetHeight),
-                         NewSlot(output_sizing_event, &SizingEvent::SetHeight));
-        break;
-      }
-      case Event::EVENT_OPTION_CHANGED: {
-        const OptionChangedEvent *option_changed_event =
-            static_cast<const OptionChangedEvent *>(event);
-        RegisterProperty("propertyName",
-                         NewSlot(option_changed_event,
-                                 &OptionChangedEvent::GetPropertyName),
-                         NULL);
-        break;
-      }
-      case Event::EVENT_TIMER: {
-        const TimerEvent *timer_event = static_cast<const TimerEvent *>(event);
-        RegisterProperty("cookie", NewSlot(timer_event, &TimerEvent::GetToken),
-                         NULL);
-        RegisterProperty("value", NewSlot(timer_event, &TimerEvent::GetValue),
-                         NULL);
-        break;
-      }
-      case Event::EVENT_PERFMON: {
-        const PerfmonEvent *perfmon_event =
-            static_cast<const PerfmonEvent *>(event);
-        RegisterProperty("value", NewSlot(perfmon_event, &PerfmonEvent::GetValue),
-                         NULL);
-        break;
-      }
-      default:
-        break;
-    }
+  switch (impl_->class_id_) {
+    case kMouseEventClassId:
+      RegisterProperty("x",
+          NewSlot(&PositionEvent::GetX, Impl::GetPositionEvent), NULL);
+      RegisterProperty("y",
+          NewSlot(&PositionEvent::GetY, Impl::GetPositionEvent), NULL);
+      RegisterProperty("button",
+          NewSlot(&MouseEvent::GetButton, Impl::GetMouseEvent), NULL);
+      RegisterProperty("wheelDelta",
+          NewSlot(&MouseEvent::GetWheelDeltaY, Impl::GetMouseEvent), NULL);
+      RegisterProperty("wheelDeltaX",
+          NewSlot(&MouseEvent::GetWheelDeltaX, Impl::GetMouseEvent), NULL);
+      RegisterProperty("wheelDeltaY",
+          NewSlot(&MouseEvent::GetWheelDeltaY, Impl::GetMouseEvent), NULL);
+      break;
+    case kKeyboardEventClassId:
+      RegisterProperty("keyCode",
+          NewSlot(&KeyboardEvent::GetKeyCode, Impl::GetKeyboardEvent), NULL);
+      break;
+    case kDragEventClassId:
+      RegisterProperty("x",
+          NewSlot(&PositionEvent::GetX, Impl::GetPositionEvent), NULL);
+      RegisterProperty("y",
+          NewSlot(&PositionEvent::GetY, Impl::GetPositionEvent), NULL);
+      RegisterProperty("dragFiles",
+          NewSlot(&Impl::ScriptGetDragFiles, &ScriptableEvent::impl_), NULL);
+      break;
+    case kSizingEventClassId:
+      ASSERT(impl_->output_event_ &&
+             impl_->output_event_->GetType() == Event::EVENT_SIZING);
+      RegisterProperty("width",
+          NewSlot(&SizingEvent::GetWidth, Impl::GetSizingEvent),
+          NewSlot(&SizingEvent::SetWidth, Impl::GetOutputSizingEvent));
+      RegisterProperty("height",
+          NewSlot(&SizingEvent::GetHeight, Impl::GetSizingEvent),
+          NewSlot(&SizingEvent::SetHeight, Impl::GetOutputSizingEvent));
+      break;
+    case kOptionChangedEventClassId:
+      RegisterProperty("propertyName",
+                       NewSlot(&OptionChangedEvent::GetPropertyName,
+                               Impl::GetOptionChangedEvent),
+                       NULL);
+      break;
+    case kTimerEventClassId:
+      RegisterProperty("cookie",
+          NewSlot(&TimerEvent::GetToken, Impl::GetTimerEvent), NULL);
+      RegisterProperty("value",
+          NewSlot(&TimerEvent::GetValue, Impl::GetTimerEvent), NULL);
+      break;
+    case Event::EVENT_PERFMON:
+      RegisterProperty("value",
+          NewSlot(&PerfmonEvent::GetValue, Impl::GetPerfmonEvent), NULL);
+      break;
+    default:
+      break;
   }
 }
 
 ScriptableEvent::~ScriptableEvent() {
   delete impl_;
   impl_ = NULL;
+}
+
+bool ScriptableEvent::IsInstanceOf(uint64_t class_id) const {
+  return class_id == impl_->class_id_ || class_id == CLASS_ID ||
+         ScriptableInterface::IsInstanceOf(class_id);
+}
+
+uint64_t ScriptableEvent::GetClassId() const {
+  return impl_->class_id_;
 }
 
 const char *ScriptableEvent::GetName() const {
