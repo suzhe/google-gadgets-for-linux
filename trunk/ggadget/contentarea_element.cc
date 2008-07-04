@@ -762,34 +762,38 @@ ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
   SetAutoscroll(true);
 }
 
-void ContentAreaElement::DoRegister() {
-  ScrollingElement::DoRegister();
+void ContentAreaElement::DoClassRegister() {
+  ScrollingElement::DoClassRegister();
   RegisterProperty("contentFlags", NULL, // Write only.
-                   NewSlot(this, &ContentAreaElement::SetContentFlags));
+                   NewSlot(&ContentAreaElement::SetContentFlags));
   RegisterProperty("maxContentItems",
-                   NewSlot(this, &ContentAreaElement::GetMaxContentItems),
-                   NewSlot(this, &ContentAreaElement::SetMaxContentItems));
+                   NewSlot(&ContentAreaElement::GetMaxContentItems),
+                   NewSlot(&ContentAreaElement::SetMaxContentItems));
   RegisterProperty("backgroundColor",
-                   NewSlot(this, &ContentAreaElement::GetBackgroundColor),
-                   NewSlot(this, &ContentAreaElement::SetBackgroundColor));
+                   NewSlot(&ContentAreaElement::GetBackgroundColor),
+                   NewSlot(&ContentAreaElement::SetBackgroundColor));
   RegisterProperty("overColor",
-                   NewSlot(this, &ContentAreaElement::GetOverColor),
-                   NewSlot(this, &ContentAreaElement::SetOverColor));
+                   NewSlot(&ContentAreaElement::GetOverColor),
+                   NewSlot(&ContentAreaElement::SetOverColor));
   RegisterProperty("downColor",
-                   NewSlot(this, &ContentAreaElement::GetDownColor),
-                   NewSlot(this, &ContentAreaElement::SetDownColor));
+                   NewSlot(&ContentAreaElement::GetDownColor),
+                   NewSlot(&ContentAreaElement::SetDownColor));
   RegisterProperty("contentItems",
-                   NewSlot(impl_, &Impl::ScriptGetContentItems),
-                   NewSlot(impl_, &Impl::ScriptSetContentItems));
+                   NewSlot(&Impl::ScriptGetContentItems,
+                           &ContentAreaElement::impl_),
+                   NewSlot(&Impl::ScriptSetContentItems,
+                           &ContentAreaElement::impl_));
   RegisterProperty("pinImages",
-                   NewSlot(impl_, &Impl::ScriptGetPinImages),
-                   NewSlot(impl_, &Impl::ScriptSetPinImages));
+                   NewSlot(&Impl::ScriptGetPinImages,
+                           &ContentAreaElement::impl_),
+                   NewSlot(&Impl::ScriptSetPinImages,
+                           &ContentAreaElement::impl_));
   RegisterMethod("addContentItem",
-                 NewSlot(this, &ContentAreaElement::AddContentItem));
+                 NewSlot(&ContentAreaElement::AddContentItem));
   RegisterMethod("removeContentItem",
-                 NewSlot(this, &ContentAreaElement::RemoveContentItem));
+                 NewSlot(&ContentAreaElement::RemoveContentItem));
   RegisterMethod("removeAllContentItems",
-                 NewSlot(this, &ContentAreaElement::RemoveAllContentItems));
+                 NewSlot(&ContentAreaElement::RemoveAllContentItems));
 }
 
 ContentAreaElement::~ContentAreaElement() {

@@ -123,50 +123,54 @@ class TextFrame::Impl {
 
 TextFrame::TextFrame(BasicElement *owner, View *view)
     : impl_(new Impl(owner, view)) {
-  if (!owner)
-    return;
+}
+
+void TextFrame::RegisterClassProperties(
+    TextFrame *(*delegate_getter)(BasicElement *),
+    const TextFrame *(*delegate_getter_const)(BasicElement *)) {
+  BasicElement *owner = impl_->owner_;
+  ASSERT(owner);
   // Register Properties
   // All properties are registered except for GetText/SetText
   // since some elements call it "caption" while others call it "innerText."
   // Elements may also want to do special handling on SetText.
   owner->RegisterProperty("bold",
-                          NewSlot(this, &TextFrame::IsBold),
-                          NewSlot(this, &TextFrame::SetBold));
+      NewSlot(&TextFrame::IsBold, delegate_getter_const),
+      NewSlot(&TextFrame::SetBold, delegate_getter));
   owner->RegisterProperty("color",
-                          NewSlot(this, &TextFrame::GetColor),
-                          NewSlot<void, const Variant &>(
-                              this, &TextFrame::SetColor));
+      NewSlot(&TextFrame::GetColor, delegate_getter_const),
+      NewSlot<void, const Variant &>(&TextFrame::SetColor, delegate_getter));
   owner->RegisterProperty("font",
-                          NewSlot(this, &TextFrame::GetFont),
-                          NewSlot(this, &TextFrame::SetFont));
+      NewSlot(&TextFrame::GetFont, delegate_getter_const),
+      NewSlot(&TextFrame::SetFont, delegate_getter));
   owner->RegisterProperty("italic",
-                          NewSlot(this, &TextFrame::IsItalic),
-                          NewSlot(this, &TextFrame::SetItalic));
+      NewSlot(&TextFrame::IsItalic, delegate_getter_const),
+      NewSlot(&TextFrame::SetItalic, delegate_getter));
   owner->RegisterProperty("size",
-                          NewSlot(this, &TextFrame::GetSize),
-                          NewSlot(this, &TextFrame::SetSize));
+      NewSlot(&TextFrame::GetSize, delegate_getter_const),
+      NewSlot(&TextFrame::SetSize, delegate_getter));
   owner->RegisterProperty("strikeout",
-                          NewSlot(this, &TextFrame::IsStrikeout),
-                          NewSlot(this, &TextFrame::SetStrikeout));
+      NewSlot(&TextFrame::IsStrikeout, delegate_getter_const),
+      NewSlot(&TextFrame::SetStrikeout, delegate_getter));
   owner->RegisterProperty("underline",
-                          NewSlot(this, &TextFrame::IsUnderline),
-                          NewSlot(this, &TextFrame::SetUnderline));
+      NewSlot(&TextFrame::IsUnderline, delegate_getter_const),
+      NewSlot(&TextFrame::SetUnderline, delegate_getter));
   owner->RegisterProperty("wordWrap",
-                          NewSlot(this, &TextFrame::IsWordWrap),
-                          NewSlot(this, &TextFrame::SetWordWrap));
+      NewSlot(&TextFrame::IsWordWrap, delegate_getter_const),
+      NewSlot(&TextFrame::SetWordWrap, delegate_getter));
 
   owner->RegisterStringEnumProperty("align",
-                                    NewSlot(this, &TextFrame::GetAlign),
-                                    NewSlot(this, &TextFrame::SetAlign),
-                                    kAlignNames, arraysize(kAlignNames));
+      NewSlot(&TextFrame::GetAlign, delegate_getter_const),
+      NewSlot(&TextFrame::SetAlign, delegate_getter),
+      kAlignNames, arraysize(kAlignNames));
   owner->RegisterStringEnumProperty("valign",
-                                    NewSlot(this, &TextFrame::GetVAlign),
-                                    NewSlot(this, &TextFrame::SetVAlign),
-                                    kVAlignNames, arraysize(kVAlignNames));
+      NewSlot(&TextFrame::GetVAlign, delegate_getter_const),
+      NewSlot(&TextFrame::SetVAlign, delegate_getter),
+      kVAlignNames, arraysize(kVAlignNames));
   owner->RegisterStringEnumProperty("trimming",
-                                    NewSlot(this, &TextFrame::GetTrimming),
-                                    NewSlot(this, &TextFrame::SetTrimming),
-                                    kTrimmingNames, arraysize(kTrimmingNames));
+      NewSlot(&TextFrame::GetTrimming, delegate_getter_const),
+      NewSlot(&TextFrame::SetTrimming, delegate_getter),
+      kTrimmingNames, arraysize(kTrimmingNames));
 }
 
 TextFrame::~TextFrame() {

@@ -34,7 +34,7 @@ class ContentAreaElement : public ScrollingElement {
   virtual ~ContentAreaElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   enum ContentFlag {

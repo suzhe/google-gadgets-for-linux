@@ -42,6 +42,10 @@ class AnchorElement::Impl {
     overcolor_texture_ = NULL;
   }
 
+  DEFINE_DELEGATE_GETTER(GetTextFrame,
+                         &(down_cast<AnchorElement *>(src)->impl_->text_),
+                         BasicElement, TextFrame);
+
   TextFrame text_;
   Texture *overcolor_texture_;
   bool mouseover_;
@@ -55,17 +59,19 @@ AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
   SetEnabled(true);
 }
 
-void AnchorElement::DoRegister() {
-  BasicElement::DoRegister();
+void AnchorElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+  impl_->text_.RegisterClassProperties(Impl::GetTextFrame,
+                                       Impl::GetTextFrameConst);
   RegisterProperty("overColor",
-                   NewSlot(this, &AnchorElement::GetOverColor),
-                   NewSlot(this, &AnchorElement::SetOverColor));
+                   NewSlot(&AnchorElement::GetOverColor),
+                   NewSlot(&AnchorElement::SetOverColor));
   RegisterProperty("href",
-                   NewSlot(this, &AnchorElement::GetHref),
-                   NewSlot(this, &AnchorElement::SetHref));
+                   NewSlot(&AnchorElement::GetHref),
+                   NewSlot(&AnchorElement::SetHref));
   RegisterProperty("innerText",
-                   NewSlot(&impl_->text_, &TextFrame::GetText),
-                   NewSlot(&impl_->text_, &TextFrame::SetText));
+                   NewSlot(&TextFrame::GetText, Impl::GetTextFrameConst),
+                   NewSlot(&TextFrame::SetText, Impl::GetTextFrame));
 }
 
 AnchorElement::~AnchorElement() {

@@ -51,6 +51,10 @@ class ButtonElement::Impl {
     DestroyImage(icon_disabled_image_);
   }
 
+  DEFINE_DELEGATE_GETTER(GetTextFrame,
+                         &(down_cast<ButtonElement *>(src)->impl_->text_),
+                         BasicElement, TextFrame);
+
   TextFrame text_;
   bool mousedown_;
   bool mouseover_;
@@ -74,39 +78,41 @@ static const char *kButtonIconPositionNames[] = {
   "left", "right", "top", "bottom"
 };
 
-void ButtonElement::DoRegister() {
-  BasicElement::DoRegister();
+void ButtonElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+  impl_->text_.RegisterClassProperties(Impl::GetTextFrame,
+                                       Impl::GetTextFrameConst);
   RegisterProperty("image",
-                   NewSlot(this, &ButtonElement::GetImage),
-                   NewSlot(this, &ButtonElement::SetImage));
+                   NewSlot(&ButtonElement::GetImage),
+                   NewSlot(&ButtonElement::SetImage));
   RegisterProperty("downImage",
-                   NewSlot(this, &ButtonElement::GetDownImage),
-                   NewSlot(this, &ButtonElement::SetDownImage));
+                   NewSlot(&ButtonElement::GetDownImage),
+                   NewSlot(&ButtonElement::SetDownImage));
   RegisterProperty("overImage",
-                   NewSlot(this, &ButtonElement::GetOverImage),
-                   NewSlot(this, &ButtonElement::SetOverImage));
+                   NewSlot(&ButtonElement::GetOverImage),
+                   NewSlot(&ButtonElement::SetOverImage));
   RegisterProperty("disabledImage",
-                   NewSlot(this, &ButtonElement::GetDisabledImage),
-                   NewSlot(this, &ButtonElement::SetDisabledImage));
+                   NewSlot(&ButtonElement::GetDisabledImage),
+                   NewSlot(&ButtonElement::SetDisabledImage));
 
   RegisterProperty("caption",
-                   NewSlot(&impl_->text_, &TextFrame::GetText),
-                   NewSlot(&impl_->text_, &TextFrame::SetText));
+                   NewSlot(&TextFrame::GetText, Impl::GetTextFrameConst),
+                   NewSlot(&TextFrame::SetText, Impl::GetTextFrame));
   RegisterProperty("stretchMiddle",
-                   NewSlot(this, &ButtonElement::IsStretchMiddle),
-                   NewSlot(this, &ButtonElement::SetStretchMiddle));
+                   NewSlot(&ButtonElement::IsStretchMiddle),
+                   NewSlot(&ButtonElement::SetStretchMiddle));
 
   // iconImage, iconDisabledImage and iconPosition 
   // are currently only supported by GGL.
   RegisterProperty("iconImage",
-                   NewSlot(this, &ButtonElement::GetIconImage),
-                   NewSlot(this, &ButtonElement::SetIconImage));
+                   NewSlot(&ButtonElement::GetIconImage),
+                   NewSlot(&ButtonElement::SetIconImage));
   RegisterProperty("iconDisabledImage",
-                   NewSlot(this, &ButtonElement::GetIconDisabledImage),
-                   NewSlot(this, &ButtonElement::SetIconDisabledImage));
+                   NewSlot(&ButtonElement::GetIconDisabledImage),
+                   NewSlot(&ButtonElement::SetIconDisabledImage));
   RegisterStringEnumProperty("iconPosition",
-                             NewSlot(this, &ButtonElement::GetIconPosition),
-                             NewSlot(this, &ButtonElement::SetIconPosition),
+                             NewSlot(&ButtonElement::GetIconPosition),
+                             NewSlot(&ButtonElement::SetIconPosition),
                              kButtonIconPositionNames,
                              arraysize(kButtonIconPositionNames));
 }

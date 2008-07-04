@@ -32,6 +32,10 @@ class TextFrame {
   TextFrame(BasicElement *owner, View *view);
   ~TextFrame();
 
+  void TextFrame::RegisterClassProperties(
+      TextFrame *(*delegate_getter)(BasicElement *),
+      const TextFrame *(*delegate_getter_const)(BasicElement *));
+
   /** Gets and sets the text of the frame. */
   std::string GetText() const;
   /**

@@ -392,12 +392,12 @@ Elements::Elements(ElementFactory *factory,
     : impl_(new Impl(factory, owner, view)) {
 }
 
-void Elements::DoRegister() {
-  RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
-  RegisterMethod("item", NewSlot(impl_, &Impl::GetItem));
+void Elements::DoClassRegister() {
+  RegisterProperty("count", NewSlot(&Impl::GetCount, &Elements::impl_), NULL);
+  RegisterMethod("item", NewSlot(&Impl::GetItem, &Elements::impl_));
   // Register the "default" method, allowing this object be called directly
   // as a function.
-  RegisterMethod("", NewSlot(impl_, &Impl::GetItem));
+  RegisterMethod("", NewSlot(&Impl::GetItem, &Elements::impl_));
 }
 
 Elements::~Elements() {

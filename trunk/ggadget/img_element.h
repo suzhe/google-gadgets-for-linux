@@ -30,7 +30,7 @@ class ImgElement : public BasicElement {
   virtual ~ImgElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   virtual bool IsPointIn(double x, double y) const;

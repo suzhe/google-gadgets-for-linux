@@ -160,6 +160,23 @@ class ListBoxElement::Impl {
     return NULL;
   }
 
+  ItemElement *GetSelectedItem() {
+    Elements *elements = owner_->GetChildren();
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      BasicElement *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        if (item->IsSelected()) {
+          return item;
+        }
+      } else {
+        LOG(kErrorItemExpected);
+      }
+    }
+    return NULL;
+  }
+
   ListBoxElement *owner_;
   double item_width_, item_height_;
   bool item_width_specified_, item_height_specified_;
@@ -179,48 +196,49 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
   SetEnabled(true);
 }
 
-void ListBoxElement::DoRegister() {
-  DivElement::DoRegister();
+void ListBoxElement::DoClassRegister() {
+  DivElement::DoClassRegister();
   RegisterProperty("itemHeight",
-                   NewSlot(this, &ListBoxElement::GetItemHeight),
-                   NewSlot(this, &ListBoxElement::SetItemHeight));
+                   NewSlot(&ListBoxElement::GetItemHeight),
+                   NewSlot(&ListBoxElement::SetItemHeight));
   RegisterProperty("itemWidth",
-                   NewSlot(this, &ListBoxElement::GetItemWidth),
-                   NewSlot(this, &ListBoxElement::SetItemWidth));
+                   NewSlot(&ListBoxElement::GetItemWidth),
+                   NewSlot(&ListBoxElement::SetItemWidth));
   RegisterProperty("itemOverColor",
-                   NewSlot(this, &ListBoxElement::GetItemOverColor),
-                   NewSlot(this, &ListBoxElement::SetItemOverColor));
+                   NewSlot(&ListBoxElement::GetItemOverColor),
+                   NewSlot(&ListBoxElement::SetItemOverColor));
   RegisterProperty("itemSelectedColor",
-                   NewSlot(this, &ListBoxElement::GetItemSelectedColor),
-                   NewSlot(this, &ListBoxElement::SetItemSelectedColor));
+                   NewSlot(&ListBoxElement::GetItemSelectedColor),
+                   NewSlot(&ListBoxElement::SetItemSelectedColor));
   RegisterProperty("itemSeparator",
-                   NewSlot(this, &ListBoxElement::HasItemSeparator),
-                   NewSlot(this, &ListBoxElement::SetItemSeparator));
+                   NewSlot(&ListBoxElement::HasItemSeparator),
+                   NewSlot(&ListBoxElement::SetItemSeparator));
   RegisterProperty("multiSelect",
-                   NewSlot(this, &ListBoxElement::IsMultiSelect),
-                   NewSlot(this, &ListBoxElement::SetMultiSelect));
+                   NewSlot(&ListBoxElement::IsMultiSelect),
+                   NewSlot(&ListBoxElement::SetMultiSelect));
   RegisterProperty("selectedIndex",
-                   NewSlot(this, &ListBoxElement::GetSelectedIndex),
-                   NewSlot(this, &ListBoxElement::SetSelectedIndex));
+                   NewSlot(&ListBoxElement::GetSelectedIndex),
+                   NewSlot(&ListBoxElement::SetSelectedIndex));
   RegisterProperty("selectedItem",
-                   NewSlot(this, &ListBoxElement::GetSelectedItem),
-                   NewSlot(this, &ListBoxElement::SetSelectedItem));
+                   NewSlot(&Impl::GetSelectedItem, &ListBoxElement::impl_),
+                   NewSlot(&ListBoxElement::SetSelectedItem));
 
   RegisterMethod("clearSelection",
-                 NewSlot(this, &ListBoxElement::ClearSelection));
+                 NewSlot(&ListBoxElement::ClearSelection));
 
   // Version 5.5 newly added methods and properties.
   RegisterProperty("itemSeparatorColor",
-                   NewSlot(this, &ListBoxElement::GetItemSeparatorColor),
-                   NewSlot(this, &ListBoxElement::SetItemSeparatorColor));
+                   NewSlot(&ListBoxElement::GetItemSeparatorColor),
+                   NewSlot(&ListBoxElement::SetItemSeparatorColor));
   RegisterMethod("appendString",
-                 NewSlot(this, &ListBoxElement::AppendString));
+                 NewSlot(&ListBoxElement::AppendString));
   RegisterMethod("insertStringAt",
-                 NewSlot(this, &ListBoxElement::InsertStringAt));
+                 NewSlot(&ListBoxElement::InsertStringAt));
   RegisterMethod("removeString",
-                 NewSlot(this, &ListBoxElement::RemoveString));
+                 NewSlot(&ListBoxElement::RemoveString));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &ListBoxElement::impl_);
 }
 
 ListBoxElement::~ListBoxElement() {
@@ -465,39 +483,11 @@ void ListBoxElement::SetSelectedIndex(int index) {
 }
 
 ItemElement *ListBoxElement::GetSelectedItem() {
-  Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      if (item->IsSelected()) {
-        return item;
-      }
-    } else {
-      LOG(kErrorItemExpected);
-    }
-  }
-
-  return NULL;
+  return impl_->GetSelectedItem();
 }
 
 const ItemElement *ListBoxElement::GetSelectedItem() const {
-  const Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    const BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      const ItemElement *item = down_cast<const ItemElement *>(child);
-      if (item->IsSelected()) {
-        return item;
-      }
-    } else {
-      LOG(kErrorItemExpected);
-    }
-  }
-
-  return NULL;
+  return impl_->GetSelectedItem();
 }
 
 void ListBoxElement::SetSelectedItem(ItemElement *item) {

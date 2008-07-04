@@ -31,7 +31,7 @@ class BrowserElement : public BasicElement {
   virtual ~BrowserElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /**

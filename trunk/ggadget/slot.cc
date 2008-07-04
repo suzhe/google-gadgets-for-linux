@@ -43,8 +43,9 @@ class SlotWithDefaultArgs : public Slot {
     delete slot_;
     slot_ = NULL;
   }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
-    return slot_->Call(argc, argv);
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
+    return slot_->Call(object, argc, argv);
   }
   virtual bool HasMetadata() const {
     return slot_->HasMetadata();

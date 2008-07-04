@@ -80,7 +80,7 @@ class ProgressBarElement : public BasicElement {
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
   virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;

@@ -53,8 +53,8 @@ void TestFileManagerReadFunctions(FileManagerInterface *fm, bool zip) {
 
   EXPECT_FALSE(fm->ReadFile("non-exists", &data));
 
-  ASSERT_TRUE(fm->ReadFile("zh_CN/zh_CN_file", &data));
-  EXPECT_STREQ("zh_CN_file contents\n", data.c_str());
+  ASSERT_TRUE(fm->ReadFile("zh_CN/zh-CN_file", &data));
+  EXPECT_STREQ("zh-CN_file contents\n", data.c_str());
 
   ASSERT_TRUE(fm->ReadFile("zh_CN/2048_file", &data));
   EXPECT_EQ(2048U, data.size());

@@ -35,7 +35,7 @@ namespace internal {
 
 class ScriptableHelperImpl : public ScriptableHelperImplInterface {
  public:
-  ScriptableHelperImpl(Slot0<void> *do_register);
+  ScriptableHelperImpl(ScriptableHelperCallbackInterface *owner);
   virtual ~ScriptableHelperImpl();
 
   virtual void RegisterProperty(const char *name, Slot *getter, Slot *setter);
@@ -45,6 +45,8 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual void RegisterMethod(const char *name, Slot *slot);
   virtual void RegisterSignal(const char *name, Signal *signal);
   virtual void RegisterVariantConstant(const char *name, const Variant &value);
+  virtual void RegisterClassSignal(const char *name,
+                                   ClassSignal *class_signal);
   virtual void SetInheritsFrom(ScriptableInterface *inherits_from);
   virtual void SetArrayHandler(Slot *getter, Slot *setter);
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
@@ -82,6 +84,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   void AddPropertyInfo(const char *name, PropertyType type,
                        const Variant &prototype,
                        Slot *getter, Slot *setter);
+
   struct PropertyInfo {
     PropertyInfo() : type(PROPERTY_NOT_EXIST) {
       memset(&u, 0, sizeof(u));
@@ -119,19 +122,52 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
       } scriptable_info;
     } u;
   };
+
   // Because PropertyInfo is a copy-able struct, we must deallocate the
   // resource outside of the struct instead of in ~PropertyInfo().
   static void DestroyPropertyInfo(PropertyInfo *info);
+  const PropertyInfo *GetPropertyInfoInternal(const char *name);
 
-  Slot0<void> *do_register_;
+  ScriptableHelperCallbackInterface *owner_;
   int ref_count_;
+  bool registering_class_;
 
   typedef std::map<const char *, PropertyInfo,
                    GadgetCharPtrComparator> PropertyInfoMap;
+  typedef std::map<uint64_t, PropertyInfoMap> ClassInfoMap;
 
-  // Index of property slots.  The keys are property names, and the values
-  // are indexes into slot_prototypes_, getter_slots_ and setter_slots_.
-  PropertyInfoMap property_info_map_;
+  // Stores information of all properties of this object.
+  PropertyInfoMap property_info_;
+  // Stores class-based property information for all classes.
+  static ClassInfoMap all_class_info_;
+  // If a class has no class-based property_info, let class_property_info_
+  // point to this map to save duplicated blank maps.
+  static PropertyInfoMap blank_property_info_;
+  PropertyInfoMap *class_property_info_;
+
+#ifdef _DEBUG
+  struct ClassStatInfo {
+    ClassStatInfo()
+        : class_property_count(0), obj_property_count(0), total_created(0) { }
+    int class_property_count;
+    int obj_property_count;
+    int total_created;
+  };
+  typedef std::map<uint64_t, ClassStatInfo> ClassStatMap;
+  struct ClassStat {
+    ~ClassStat() {
+      // Don't use LOG because the logger may be unavailable now.
+      printf("ScriptableHelper class stat: classes: %zu\n", map.size());
+      for (ClassStatMap::iterator it = map.begin(); it != map.end(); ++it) {
+        printf("%jx: class properties: %d object properties: %d objects: %d\n",
+               it->first, it->second.class_property_count,
+               it->second.obj_property_count, it->second.total_created);
+      }
+    }
+    ClassStatMap map;
+  };
+  static ClassStat class_stat_;
+#endif
 
   Signal2<void, int, int> on_reference_change_signal_;
   ScriptableInterface *inherits_from_;
@@ -142,14 +178,24 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   ScriptableInterface *pending_exception_;
 };
 
+ScriptableHelperImpl::ClassInfoMap ScriptableHelperImpl::all_class_info_;
+ScriptableHelperImpl::PropertyInfoMap
+    ScriptableHelperImpl::blank_property_info_;
+#ifdef _DEBUG
+ScriptableHelperImpl::ClassStat ScriptableHelperImpl::class_stat_;
+#endif
+
 ScriptableHelperImplInterface *NewScriptableHelperImpl(
-    Slot0<void> *do_register) {
-  return new ScriptableHelperImpl(do_register);
+    ScriptableHelperCallbackInterface *owner) {
+  return new ScriptableHelperImpl(owner);
 }
 
-ScriptableHelperImpl::ScriptableHelperImpl(Slot0<void> *do_register)
-    : do_register_(do_register),
+ScriptableHelperImpl::ScriptableHelperImpl(
+    ScriptableHelperCallbackInterface *owner)
+    : owner_(owner),
       ref_count_(0),
+      registering_class_(false),
+      class_property_info_(NULL),
       inherits_from_(NULL),
       array_getter_(NULL),
       array_setter_(NULL),
@@ -164,8 +210,8 @@ ScriptableHelperImpl::~ScriptableHelperImpl() {
   ASSERT(ref_count_ == 0);
 
   // Free all owned slots.
-  for (PropertyInfoMap::iterator it = property_info_map_.begin();
-       it != property_info_map_.end(); ++it) {
+  for (PropertyInfoMap::iterator it = property_info_.begin();
+       it != property_info_.end(); ++it) {
     DestroyPropertyInfo(&it->second);
   }
 
@@ -173,14 +219,30 @@ ScriptableHelperImpl::~ScriptableHelperImpl() {
   delete array_setter_;
   delete dynamic_property_getter_;
   delete dynamic_property_setter_;
-  delete do_register_;
 }
 
 void ScriptableHelperImpl::EnsureRegistered() {
-  if (do_register_) {
-    (*do_register_)();
-    delete do_register_;
-    do_register_ = NULL;
+  if (!class_property_info_) {
+    uint64_t class_id = owner_->GetScriptable()->GetClassId();
+    ClassInfoMap::iterator it = all_class_info_.find(class_id);
+    if (it == all_class_info_.end()) {
+      registering_class_ = true;
+      owner_->DoClassRegister();
+      registering_class_ = false;
+      it = all_class_info_.find(class_id);
+      if (it == all_class_info_.end()) {
+        // This class's DoClassRegister() did nothing.
+        class_property_info_ = &blank_property_info_;
+      } else {
+        class_property_info_ = &it->second;
+      }
+    } else {
+      class_property_info_ = &it->second;
+    }
+    owner_->DoRegister();
+#ifdef _DEBUG
+    class_stat_.map[class_id].total_created++;
+#endif
   }
 }
 
@@ -207,7 +269,9 @@ void ScriptableHelperImpl::DestroyPropertyInfo(PropertyInfo *info) {
 void ScriptableHelperImpl::AddPropertyInfo(const char *name, PropertyType type,
                                            const Variant &prototype,
                                            Slot *getter, Slot *setter) {
-  PropertyInfo *info = &property_info_map_[name];
+  uint64_t class_id = owner_->GetScriptable()->GetClassId();
+  PropertyInfo *info = registering_class_ ? &all_class_info_[class_id][name] :
+                       &property_info_[name];
   if (info->type != PROPERTY_NOT_EXIST) {
     // A previously registered property is overriden.
     DestroyPropertyInfo(info);
@@ -230,6 +294,13 @@ void ScriptableHelperImpl::AddPropertyInfo(const char *name, PropertyType type,
     info->u.slots.getter = getter;
     info->u.slots.setter = setter;
   }
+
+#ifdef _DEBUG
+  if (registering_class_)
+    class_stat_.map[class_id].class_property_count++;
+  else
+    class_stat_.map[class_id].obj_property_count++;
+#endif
 }
 
 static Variant DummyGetter() {
@@ -267,8 +338,9 @@ class StringEnumGetter : public Slot0<const char *> {
   virtual ~StringEnumGetter() {
     delete slot_;
   }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
-    int index = VariantValue<int>()(slot_->Call(0, NULL).v());
+  virtual ResultVariant Call(ScriptableInterface *obj,
+                             int argc, const Variant argv[]) const {
+    int index = VariantValue<int>()(slot_->Call(obj, 0, NULL).v());
     return ResultVariant(index >= 0 && index < count_ ?
                          Variant(names_[index]) : Variant(""));
   }
@@ -287,12 +359,13 @@ class StringEnumSetter : public Slot1<void, const char *> {
   virtual ~StringEnumSetter() {
     delete slot_;
   }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *obj,
+                             int argc, const Variant argv[]) const {
     const char *name = VariantValue<const char *>()(argv[0]);
     for (int i = 0; i < count_; i++) {
       if (strcmp(name, names_[i]) == 0) {
         Variant param(i);
-        slot_->Call(1, &param);
+        slot_->Call(obj, 1, &param);
         return ResultVariant();
       }
     }
@@ -322,21 +395,75 @@ void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
 }
 
 void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
+  ASSERT(!registering_class_);
   ASSERT(name);
   ASSERT(signal);
 
   // Create a SignalSlot as the value of the prototype to let others know
-  // the calling convention.  It is owned by slot_prototypes.
+  // the calling convention.  It is owned by property_info_.
   Variant prototype = Variant(new SignalSlot(signal));
-  // Allocate an initially unconnected connection.  This connection is
-  // dedicated to be used by the script.
-  Connection *connection = signal->ConnectGeneral(NULL);
+  Connection *connection = signal->GetDefaultConnection();
   // The getter returns the connected slot of the connection.
   Slot *getter = NewSlot(connection, &Connection::slot);
   // The setter accepts a Slot * parameter and connect it to the signal.
   Slot *setter = NewSlot(connection, &Connection::Reconnect);
 
   AddPropertyInfo(name, PROPERTY_NORMAL, prototype, getter, setter);
+}
+
+class ClassSignalGetter : public Slot0<Slot *> {
+ public:
+  ClassSignalGetter(ClassSignal *class_signal)
+      : class_signal_(class_signal) {
+  }
+  virtual ResultVariant Call(ScriptableInterface *obj,
+                             int argc, const Variant argv[]) const {
+    Connection *connection =
+        class_signal_->GetSignal(obj)->GetDefaultConnection();
+    return ResultVariant(Variant(connection->slot()));
+  }
+  virtual bool operator==(const Slot &another) const {
+    return false; // Not used.
+  }
+ private:
+  ClassSignal *class_signal_;
+};
+
+class ClassSignalSetter : public Slot1<void, Slot *> {
+ public:
+  ClassSignalSetter(ClassSignal *class_signal)
+      : class_signal_(class_signal) {
+  }
+  virtual ~ClassSignalSetter() {
+    // class_signal_ is shared between ClassSignalGetter and ClassSignalSetter.
+    // Let this class care for the deletion.
+    delete class_signal_;
+  }
+  virtual ResultVariant Call(ScriptableInterface *obj,
+                             int argc, const Variant argv[]) const {
+    ASSERT(argc == 1);
+    Connection *connection =
+        class_signal_->GetSignal(obj)->GetDefaultConnection();
+    Slot *slot = VariantValue<Slot *>()(argv[0]);
+    connection->Reconnect(slot);
+    return ResultVariant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    return false; // Not used.
+  }
+ private:
+  ClassSignal *class_signal_;
+};
+
+void ScriptableHelperImpl::RegisterClassSignal(const char *name,
+                                               ClassSignal *class_signal) {
+  ASSERT(registering_class_);
+  ASSERT(name);
+  ASSERT(class_signal);
+  Variant prototype = Variant(class_signal->NewPrototypeSlot());
+  AddPropertyInfo(name, PROPERTY_NORMAL, prototype,
+                  new ClassSignalGetter(class_signal),
+                  new ClassSignalSetter(class_signal));
 }
 
 void ScriptableHelperImpl::RegisterVariantConstant(const char *name,
@@ -349,26 +476,33 @@ void ScriptableHelperImpl::RegisterVariantConstant(const char *name,
 
 void ScriptableHelperImpl::SetInheritsFrom(
     ScriptableInterface *inherits_from) {
+  ASSERT(!registering_class_);
   inherits_from_ = inherits_from;
 }
 
 void ScriptableHelperImpl::SetArrayHandler(Slot *getter, Slot *setter) {
+  ASSERT(!registering_class_);
   ASSERT(getter && getter->GetArgCount() == 1 &&
          getter->GetArgTypes()[0] == Variant::TYPE_INT64);
   ASSERT(!setter || (setter->GetArgCount() == 2 &&
                      setter->GetArgTypes()[0] == Variant::TYPE_INT64 &&
                      setter->GetReturnType() == Variant::TYPE_BOOL));
+  delete array_getter_;
+  delete array_setter_;
   array_getter_ = getter;
   array_setter_ = setter;
 }
 
 void ScriptableHelperImpl::SetDynamicPropertyHandler(
     Slot *getter, Slot *setter) {
+  ASSERT(!registering_class_);
   ASSERT(getter && getter->GetArgCount() == 1 &&
          getter->GetArgTypes()[0] == Variant::TYPE_STRING);
   ASSERT(!setter || (setter->GetArgCount() == 2 &&
                      setter->GetArgTypes()[0] == Variant::TYPE_STRING &&
                      setter->GetReturnType() == Variant::TYPE_BOOL));
+  delete dynamic_property_getter_;
+  delete dynamic_property_setter_;
   dynamic_property_getter_ = getter;
   dynamic_property_setter_ = setter;
 }
@@ -398,20 +532,33 @@ Connection *ScriptableHelperImpl::ConnectOnReferenceChange(
   return on_reference_change_signal_.Connect(slot);
 }
 
+const ScriptableHelperImpl::PropertyInfo *
+ScriptableHelperImpl::GetPropertyInfoInternal(const char *name) {
+  EnsureRegistered();
+  ASSERT(class_property_info_);
+  PropertyInfoMap::const_iterator it = property_info_.find(name);
+  bool found = it != property_info_.end();
+  if (!found) {
+    it = class_property_info_->find(name);
+    found = it != class_property_info_->end();
+  }
+  return found ? &it->second : NULL;
+}
+
 ScriptableInterface::PropertyType ScriptableHelperImpl::GetPropertyInfo(
     const char *name, Variant *prototype) {
-  EnsureRegistered();
-  PropertyInfoMap::const_iterator it = property_info_map_.find(name);
-  if (it != property_info_map_.end()) {
+  const PropertyInfo *info = GetPropertyInfoInternal(name);
+  if (info) {
     if (prototype)
-      *prototype = it->second.prototype;
-    return it->second.type;
+      *prototype = info->prototype;
+    return info->type;
   }
 
   // Try dynamic properties.
   if (dynamic_property_getter_) {
     Variant param(name);
-    Variant dynamic_value = dynamic_property_getter_->Call(1, &param).v();
+    Variant dynamic_value =
+        dynamic_property_getter_->Call(owner_->GetScriptable(), 1, &param).v();
     if (dynamic_value.type() != Variant::TYPE_VOID) {
       if (prototype)
         *prototype = Variant(dynamic_value.type());
@@ -427,14 +574,12 @@ ScriptableInterface::PropertyType ScriptableHelperImpl::GetPropertyInfo(
 
 // NOTE: Must be exception-safe because the handler may throw exceptions.
 ResultVariant ScriptableHelperImpl::GetProperty(const char *name) {
-  EnsureRegistered();
-  PropertyInfoMap::const_iterator it = property_info_map_.find(name);
-  if (it != property_info_map_.end()) {
-    const PropertyInfo *info = &it->second;
+  const PropertyInfo *info = GetPropertyInfoInternal(name);
+  if (info) {
     switch (info->type) {
       case PROPERTY_NORMAL:
         ASSERT(info->u.slots.getter);
-        return info->u.slots.getter->Call(0, NULL);
+        return info->u.slots.getter->Call(owner_->GetScriptable(), 0, NULL);
       case PROPERTY_CONSTANT:
       case PROPERTY_METHOD:
         return ResultVariant(info->prototype);
@@ -445,7 +590,8 @@ ResultVariant ScriptableHelperImpl::GetProperty(const char *name) {
   } else {
     if (dynamic_property_getter_) {
       Variant param(name);
-      ResultVariant result = dynamic_property_getter_->Call(1, &param);
+      ResultVariant result =
+          dynamic_property_getter_->Call(owner_->GetScriptable(), 1, &param);
       if (result.v().type() != Variant::TYPE_VOID)
         return result;
     }
@@ -458,14 +604,12 @@ ResultVariant ScriptableHelperImpl::GetProperty(const char *name) {
 // NOTE: Must be exception-safe because the handler may throw exceptions.
 bool ScriptableHelperImpl::SetProperty(const char *name,
                                        const Variant &value) {
-  EnsureRegistered();
-  PropertyInfoMap::const_iterator it = property_info_map_.find(name);
-  if (it != property_info_map_.end()) {
-    const PropertyInfo *info = &it->second;
+  const PropertyInfo *info = GetPropertyInfoInternal(name);
+  if (info) {
     switch (info->type) {
       case PROPERTY_NORMAL:
         if (info->u.slots.setter) {
-          info->u.slots.setter->Call(1, &value);
+          info->u.slots.setter->Call(owner_->GetScriptable(), 1, &value);
           return true;
         }
         return false;
@@ -479,7 +623,8 @@ bool ScriptableHelperImpl::SetProperty(const char *name,
   } else {
     if (dynamic_property_setter_) {
       Variant params[] = { Variant(name), value };
-      Variant result = dynamic_property_setter_->Call(2, params).v();
+      Variant result = dynamic_property_setter_->Call(
+          owner_->GetScriptable(), 2, params).v();
       ASSERT(result.type() == Variant::TYPE_BOOL);
       if (VariantValue<bool>()(result))
         return true;
@@ -495,7 +640,7 @@ ResultVariant ScriptableHelperImpl::GetPropertyByIndex(int index) {
   EnsureRegistered();
   if (array_getter_) {
     Variant param(index);
-    return array_getter_->Call(1, &param);
+    return array_getter_->Call(owner_->GetScriptable(), 1, &param);
   }
   return ResultVariant();
 }
@@ -506,7 +651,8 @@ bool ScriptableHelperImpl::SetPropertyByIndex(int index,
   EnsureRegistered();
   if (array_setter_) {
     Variant params[] = { Variant(index), value };
-    Variant result = array_setter_->Call(2, params).v();
+    Variant result = array_setter_->Call(owner_->GetScriptable(),
+                                         2, params).v();
     ASSERT(result.type() == Variant::TYPE_BOOL);
     return VariantValue<bool>()(result);
   }
@@ -533,8 +679,10 @@ class ScriptableHelperImpl::InheritedPropertiesCallback {
   }
 
   bool Callback(const char *name, PropertyType type, const Variant &value) {
-    if (owner_->property_info_map_.find(name) ==
-        owner_->property_info_map_.end()) {
+    if (owner_->property_info_.find(name) ==
+            owner_->property_info_.end() &&
+        owner_->class_property_info_->find(name) ==
+            owner_->class_property_info_->end()) {
       // Only emunerate inherited properties which are not overriden by this
       // scriptable object.
       return (*callback_)(name, type, value);
@@ -551,6 +699,9 @@ bool ScriptableHelperImpl::EnumerateProperties(
   ASSERT(callback);
   EnsureRegistered();
 
+  // The algorithm below is not optimal, but is fairly clear and short.
+  // This is not a big problem because this method impl is only used in
+  // unittests.
   if (inherits_from_) {
     InheritedPropertiesCallback inherited_callback(this, callback);
     if (!inherits_from_->EnumerateProperties(
@@ -559,8 +710,18 @@ bool ScriptableHelperImpl::EnumerateProperties(
       return false;
     }
   }
-  for (PropertyInfoMap::const_iterator it = property_info_map_.begin();
-       it != property_info_map_.end(); ++it) {
+  for (PropertyInfoMap::const_iterator it = class_property_info_->begin();
+       it != class_property_info_->end(); ++it) {
+    if (property_info_.find(it->first) == property_info_.end()) {
+      ResultVariant value = GetProperty(it->first);
+      if (!(*callback)(it->first, it->second.type, value.v())) {
+        delete callback;
+        return false;
+      }
+    }
+  }
+  for (PropertyInfoMap::const_iterator it = property_info_.begin();
+       it != property_info_.end(); ++it) {
     ResultVariant value = GetProperty(it->first);
     if (!(*callback)(it->first, it->second.type, value.v())) {
       delete callback;

@@ -59,12 +59,6 @@ ItemElement::ItemElement(BasicElement *parent, View *view,
 
 void ItemElement::DoRegister() {
   BasicElement::DoRegister();
-  RegisterProperty("background",
-                   NewSlot(this, &ItemElement::GetBackground),
-                   NewSlot(this, &ItemElement::SetBackground));
-  RegisterProperty("selected",
-                   NewSlot(this, &ItemElement::IsSelected),
-                   NewSlot(this, &ItemElement::SetSelected));
   if (impl_->parent_) {
     // Disable getters and setters for position and size because they are
     // automatically set by the parent. The script can still use offsetXXXX
@@ -73,12 +67,22 @@ void ItemElement::DoRegister() {
     RegisterProperty("y", NULL, NewSlot(DummySetter));
     RegisterProperty("width", NULL, NewSlot(DummySetter));
     RegisterProperty("height", NULL, NewSlot(DummySetter));
-  }
 
-  if (impl_->parent_->IsImplicit()) {
-    // This Item is in a combobox, so override BasicElement constant.
-    RegisterConstant("parentElement", impl_->parent_->GetParentElement());
+    if (impl_->parent_->IsImplicit()) {
+      // This Item is in a combobox, so override BasicElement constant.
+      RegisterConstant("parentElement", impl_->parent_->GetParentElement());
+    }
   }
+}
+
+void ItemElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
+  RegisterProperty("background",
+                   NewSlot(&ItemElement::GetBackground),
+                   NewSlot(&ItemElement::SetBackground));
+  RegisterProperty("selected",
+                   NewSlot(&ItemElement::IsSelected),
+                   NewSlot(&ItemElement::SetSelected));
 }
 
 ItemElement::~ItemElement() {

@@ -93,9 +93,12 @@ class DOMException : public ScriptableHelperDefault {
   DEFINE_CLASS_ID(0x6486921444b44784, ScriptableInterface);
 
   DOMException(DOMExceptionCode code) : code_(code) {
-    RegisterSimpleProperty("code", &code_);
-    RegisterMethod("toString", NewSlot(this, &DOMException::ToString));
     SetInheritsFrom(GlobalException::Get());
+  }
+
+  virtual void DoClassRegister() {
+    RegisterProperty("code", NewSlot(&DOMException::GetCode), NULL);
+    RegisterMethod("toString", NewSlot(&DOMException::ToString));
   }
 
   std::string ToString() const {
@@ -104,6 +107,8 @@ class DOMException : public ScriptableHelperDefault {
             kExceptionNames[code_] : "unknown";
     return StringPrintf("DOMException: %d(%s)", code_, exception_name);
   }
+
+  DOMExceptionCode GetCode() const { return code_; }
 
  private:
   DOMExceptionCode code_;
@@ -137,15 +142,17 @@ static DOMExceptionCode CheckCommonChildType(DOMNodeInterface *new_child) {
 class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
  public:
   using DOMNodeListInterface::GetItem;
-  virtual void DoRegister() {
-    DOMNodeListInterface *super_ptr =
-        implicit_cast<DOMNodeListInterface *>(this);
-    RegisterProperty("length",
-                     NewSlot(super_ptr, &DOMNodeListInterface::GetLength),
-                     NULL);
-    RegisterMethod("item", NewSlot(super_ptr, &DOMNodeListInterface::GetItem));
-    SetArrayHandler(NewSlot(super_ptr, &DOMNodeListInterface::GetItem), NULL);
+  DOMNodeListBase() {
+    SetArrayHandler(NewSlot(implicit_cast<DOMNodeListInterface *>(this),
+                            &DOMNodeListInterface::GetItem),
+                    NULL);
   }
+  virtual void DoClassRegister() {
+    RegisterProperty("length", NewSlot(&DOMNodeListInterface::GetLength), NULL);
+    RegisterMethod("item", NewSlot(&DOMNodeListBase::GetItemNotConst));
+  }
+ private:
+  DOMNodeInterface *GetItemNotConst(size_t index) { return GetItem(index); }
 };
 
 // The DOMNodeList used as the return value of GetElementsByTagName().
@@ -670,60 +677,55 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   DOMNodeBase(DOMDocumentInterface *owner_document,
               const char *name)
       : impl_(new DOMNodeImpl(this, this, owner_document, name)) {
+    SetInheritsFrom(GlobalNode::Get());
   }
 
-  virtual void DoRegister() {
+  virtual void DoClassRegister() {
     // "baseName" is not in W3C standard. Register it to keep compatibility
     // with the Windows DOM.
-    RegisterConstant("baseName", impl_->local_name_);
-    RegisterConstant("localName", impl_->local_name_);
-    RegisterProperty("nodeName", NewSlot(this, &DOMNodeBase::GetNodeName),
-                     NULL);
-    RegisterProperty("nodeValue", NewSlot(this, &DOMNodeBase::GetNodeValue),
-                     NewSlot(this, &DOMNodeBase::SetNodeValue));
-    RegisterProperty("nodeType",
-                     NewSlot(implicit_cast<DOMNodeInterface *>(this),
-                             &DOMNodeInterface::GetNodeType),
-                     NULL);
+    RegisterProperty("baseName", NewSlot(&DOMNodeBase::GetLocalName), NULL);
+    RegisterProperty("localName", NewSlot(&DOMNodeBase::GetLocalName), NULL);
+    RegisterProperty("nodeName", NewSlot(&DOMNodeBase::GetNodeName), NULL);
+    RegisterProperty("nodeValue", NewSlot(&DOMNodeBase::GetNodeValue),
+                     NewSlot(&DOMNodeBase::SetNodeValue));
+    RegisterProperty("nodeType", NewSlot(&DOMNodeInterface::GetNodeType), NULL);
     // Don't register parentNode as a constant to prevent circular refs.
     RegisterProperty("parentNode",
-                     NewSlot(this, &DOMNodeBase::GetParentNode), NULL);
-    RegisterProperty("childNodes", NewSlot(impl_, &DOMNodeImpl::GetChildNodes),
-                     NULL);
-    RegisterProperty("firstChild", NewSlot(impl_, &DOMNodeImpl::GetFirstChild),
-                     NULL);
-    RegisterProperty("lastChild", NewSlot(impl_, &DOMNodeImpl::GetLastChild),
-                     NULL);
+                     NewSlot(&DOMNodeBase::GetParentNodeNotConst), NULL);
+    RegisterProperty("childNodes",
+                     NewSlot(&DOMNodeImpl::GetChildNodes, StaticGetImpl), NULL);
+    RegisterProperty("firstChild",
+                     NewSlot(&DOMNodeImpl::GetFirstChild, StaticGetImpl), NULL);
+    RegisterProperty("lastChild",
+                     NewSlot(&DOMNodeImpl::GetLastChild, StaticGetImpl), NULL);
     RegisterProperty("previousSibling",
-                     NewSlot(impl_, &DOMNodeImpl::GetPreviousSibling),
+                     NewSlot(&DOMNodeImpl::GetPreviousSibling, StaticGetImpl),
                      NULL);
     RegisterProperty("nextSibling",
-                     NewSlot(impl_, &DOMNodeImpl::GetNextSibling),
+                     NewSlot(&DOMNodeImpl::GetNextSibling, StaticGetImpl),
                      NULL);
-    RegisterProperty("attributes", NewSlot(this, &DOMNodeBase::GetAttributes),
+    RegisterProperty("attributes", NewSlot(&DOMNodeBase::GetAttributesNotConst),
                      NULL);
     // Don't register ownerDocument as a constant to prevent circular refs.
     RegisterProperty("ownerDocument",
-                     NewSlot(this, &DOMNodeBase::GetOwnerDocument), NULL);
-    RegisterProperty("prefix", NewSlot(this, &DOMNodeBase::GetPrefix),
-                     NewSlot(this, &DOMNodeBase::SetPrefix));
-    RegisterProperty("text", NewSlot(this, &DOMNodeBase::GetTextContent),
-                     NewSlot(this, &DOMNodeBase::SetTextContent));
+                     NewSlot(&DOMNodeBase::GetOwnerDocumentNotConst), NULL);
+    RegisterProperty("prefix", NewSlot(&DOMNodeBase::GetPrefix),
+                     NewSlot(&DOMNodeBase::SetPrefix));
+    RegisterProperty("text", NewSlot(&DOMNodeBase::GetTextContent),
+                     NewSlot(&DOMNodeBase::SetTextContent));
     RegisterMethod("insertBefore",
-                   NewSlot(impl_, &DOMNodeImpl::ScriptInsertBefore));
+                   NewSlot(&DOMNodeImpl::ScriptInsertBefore, StaticGetImpl));
     RegisterMethod("replaceChild",
-                   NewSlot(impl_, &DOMNodeImpl::ScriptReplaceChild));
+                   NewSlot(&DOMNodeImpl::ScriptReplaceChild, StaticGetImpl));
     RegisterMethod("removeChild",
-                   NewSlot(impl_, &DOMNodeImpl::ScriptRemoveChild));
+                   NewSlot(&DOMNodeImpl::ScriptRemoveChild, StaticGetImpl));
     RegisterMethod("appendChild",
-                   NewSlot(impl_, &DOMNodeImpl::ScriptAppendChild));
+                   NewSlot(&DOMNodeImpl::ScriptAppendChild, StaticGetImpl));
     RegisterMethod("hasChildNodes",
-                   NewSlot(this, &DOMNodeBase::HasChildNodes));
+                   NewSlot(&DOMNodeBase::HasChildNodes));
     // Register slot of this class to allow subclasses to override.
-    RegisterMethod("cloneNode", NewSlot(this, &DOMNodeBase::CloneNode));
-    RegisterMethod("normalize", NewSlot(this, &DOMNodeBase::Normalize));
-
-    SetInheritsFrom(GlobalNode::Get());
+    RegisterMethod("cloneNode", NewSlot(&DOMNodeBase::CloneNode));
+    RegisterMethod("normalize", NewSlot(&DOMNodeBase::Normalize));
   }
 
   virtual ~DOMNodeBase() {
@@ -731,6 +733,8 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     impl_ = NULL;
   }
 
+  // Used in DoClassRegister().
+  static DOMNodeImpl *StaticGetImpl(DOMNodeBase *node) { return node->impl_; }
   // Returns the address of impl_, to make it possible to access implementation
   // specific things through DOMNodeInterface pointers.
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
@@ -769,6 +773,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual const DOMNodeInterface *GetParentNode() const {
     return impl_->parent_;
   }
+  DOMNodeInterface *GetParentNodeNotConst() { return GetParentNode(); }
 
   virtual DOMNodeListInterface *GetChildNodes() {
     return impl_->GetChildNodes();
@@ -783,18 +788,21 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual const DOMNodeInterface *GetFirstChild() const {
     return impl_->GetFirstChild();
   }
+
   virtual DOMNodeInterface *GetLastChild() {
     return impl_->GetLastChild();
   }
   virtual const DOMNodeInterface *GetLastChild() const {
     return impl_->GetLastChild();
   }
+
   virtual DOMNodeInterface *GetPreviousSibling() {
     return impl_->GetPreviousSibling();
   }
   virtual const DOMNodeInterface *GetPreviousSibling() const {
     return impl_->GetPreviousSibling();
   }
+
   virtual DOMNodeInterface *GetNextSibling() {
     return impl_->GetNextSibling();
   }
@@ -804,12 +812,16 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
 
   virtual DOMNamedNodeMapInterface *GetAttributes() { return NULL; }
   virtual const DOMNamedNodeMapInterface *GetAttributes() const { return NULL; }
+  DOMNamedNodeMapInterface *GetAttributesNotConst() { return GetAttributes(); }
 
   virtual DOMDocumentInterface *GetOwnerDocument() {
     return impl_->owner_document_;
   }
   virtual const DOMDocumentInterface *GetOwnerDocument() const {
     return impl_->owner_document_;
+  }
+  DOMDocumentInterface *GetOwnerDocumentNotConst() {
+    return GetOwnerDocument();
   }
 
   virtual DOMExceptionCode InsertBefore(DOMNodeInterface *new_child,
@@ -849,6 +861,10 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual const DOMNodeListInterface *GetElementsByTagName(
       const char *name) const {
     return new ElementsByTagName(const_cast<DOMNodeBase *>(this), name);
+  }
+
+  DOMNodeListInterface *GetElementsByTagNameNotConst(const char *name) {
+    return GetElementsByTagName(name);
   }
 
   virtual std::string GetTextContent() const {
@@ -926,21 +942,18 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
         data_(data ? data : kBlankUTF16Str) {
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
-    RegisterProperty("data", NewSlot(this, &DOMCharacterData::GetData),
-                     NewSlot(this, &DOMCharacterData::SetData));
-    RegisterProperty("length", NewSlot(this, &DOMCharacterData::GetLength),
-                     NULL);
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
+    RegisterProperty("data", NewSlot(&DOMCharacterData::GetData),
+                     NewSlot(&DOMCharacterData::SetData));
+    RegisterProperty("length", NewSlot(&DOMCharacterData::GetLength), NULL);
     RegisterMethod("substringData",
-                   NewSlot(this, &DOMCharacterData::ScriptSubstringData));
-    RegisterMethod("appendData", NewSlot(this, &DOMCharacterData::AppendData));
-    RegisterMethod("insertData",
-                   NewSlot(this, &DOMCharacterData::ScriptInsertData));
-    RegisterMethod("deleteData",
-                   NewSlot(this, &DOMCharacterData::ScriptDeleteData));
+                   NewSlot(&DOMCharacterData::ScriptSubstringData));
+    RegisterMethod("appendData", NewSlot(&DOMCharacterData::AppendData));
+    RegisterMethod("insertData", NewSlot(&DOMCharacterData::ScriptInsertData));
+    RegisterMethod("deleteData", NewSlot(&DOMCharacterData::ScriptDeleteData));
     RegisterMethod("replaceData",
-                   NewSlot(this, &DOMCharacterData::ScriptReplaceData));
+                   NewSlot(&DOMCharacterData::ScriptReplaceData));
   }
 
   virtual const char *GetNodeValue() const {
@@ -1054,13 +1067,13 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
     SetOwnerElement(owner_element);
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
-    RegisterProperty("name", NewSlot(this, &DOMAttr::GetName), NULL);
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
+    RegisterProperty("name", NewSlot(&DOMAttr::GetName), NULL);
     // Our DOMAttrs are always specified, because we don't support DTD for now.
     RegisterConstant("specified", true);
-    RegisterProperty("value", NewSlot(this, &DOMAttr::GetValue),
-                     NewSlot(this, &DOMAttr::SetValue));
+    RegisterProperty("value", NewSlot(&DOMAttr::GetValue),
+                     NewSlot(&DOMAttr::SetValue));
     // ownerElement is a DOM2 property, so not registered for now.
   }
 
@@ -1133,23 +1146,22 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       : Super(owner_document, tag_name) {
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
-    RegisterProperty("tagName", NewSlot(this, &DOMElement::GetTagName), NULL);
-    RegisterMethod("getAttribute", NewSlot(this, &DOMElement::GetAttribute));
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
+    RegisterProperty("tagName", NewSlot(&DOMElement::GetTagName), NULL);
+    RegisterMethod("getAttribute", NewSlot(&DOMElement::GetAttribute));
     RegisterMethod("setAttribute",
-                   NewSlot(this, &DOMElement::ScriptSetAttribute));
+                   NewSlot(&DOMElement::ScriptSetAttribute));
     RegisterMethod("removeAttribute",
-                   NewSlot(this, &DOMElement::RemoveAttribute));
+                   NewSlot(&DOMElement::RemoveAttribute));
     RegisterMethod("getAttributeNode",
-                   NewSlot(this, &DOMElement::GetAttributeNode));
+                   NewSlot(&DOMElement::GetAttributeNodeNotConst));
     RegisterMethod("setAttributeNode",
-                   NewSlot(this, &DOMElement::ScriptSetAttributeNode));
+                   NewSlot(&DOMElement::ScriptSetAttributeNode));
     RegisterMethod("removeAttributeNode",
-                   NewSlot(this, &DOMElement::ScriptRemoveAttributeNode));
+                   NewSlot(&DOMElement::ScriptRemoveAttributeNode));
     RegisterMethod("getElementsByTagName",
-                   NewSlot(implicit_cast<Super *>(this),
-                           &Super::GetElementsByTagName));
+                   NewSlot(&Super::GetElementsByTagNameNotConst));
   }
 
   ~DOMElement() {
@@ -1300,27 +1312,30 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   virtual bool AllowPrefix() const { return true; }
 
  private:
+  DOMAttrInterface *GetAttributeNodeNotConst(const char *name) {
+    return GetAttributeNode(name);
+  }
+
   class AttrsNamedMap : public ScriptableHelper<DOMNamedNodeMapInterface> {
    public:
     DEFINE_CLASS_ID(0xbe2998ee79754343, DOMNamedNodeMapInterface)
     AttrsNamedMap(DOMElement *element) : element_(element) {
       element->Ref();
+      SetArrayHandler(NewSlot(this, &AttrsNamedMap::GetItemNotConst), NULL);
     }
     virtual ~AttrsNamedMap() {
       element_->Unref();
     }
 
-    virtual void DoRegister() {
-      RegisterProperty("length", NewSlot(this, &AttrsNamedMap::GetLength),
-                       NULL);
+    virtual void DoClassRegister() {
+      RegisterProperty("length", NewSlot(&AttrsNamedMap::GetLength), NULL);
       RegisterMethod("getNamedItem",
-                     NewSlot(this, &AttrsNamedMap::GetNamedItem));
+                     NewSlot(&AttrsNamedMap::GetNamedItemNotConst));
       RegisterMethod("setNamedItem",
-                     NewSlot(this, &AttrsNamedMap::ScriptSetNamedItem));
+                     NewSlot(&AttrsNamedMap::ScriptSetNamedItem));
       RegisterMethod("removeNamedItem",
-                     NewSlot(this, &AttrsNamedMap::ScriptRemoveNamedItem));
-      RegisterMethod("item", NewSlot(this, &AttrsNamedMap::GetItem));
-      SetArrayHandler(NewSlot(this, &AttrsNamedMap::GetItem), NULL);
+                     NewSlot(&AttrsNamedMap::ScriptRemoveNamedItem));
+      RegisterMethod("item", NewSlot(&AttrsNamedMap::GetItemNotConst));
     }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {
@@ -1353,6 +1368,11 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     }
 
    private:
+    DOMNodeInterface *GetItemNotConst(size_t index) { return GetItem(index); }
+    DOMNodeInterface *GetNamedItemNotConst(const char *name) {
+      return GetNamedItem(name);
+    }
+
     DOMNodeInterface *ScriptSetNamedItem(DOMNodeInterface *arg) {
       if (!arg) {
         GlobalCheckException(this, DOM_NULL_POINTER_ERR);
@@ -1482,9 +1502,9 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
       : Super(owner_document, kDOMTextName, data) {
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
-    RegisterMethod("splitText", NewSlot(this, &DOMText::ScriptSplitText));
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
+    RegisterMethod("splitText", NewSlot(&DOMText::ScriptSplitText));
   }
 
   virtual NodeType GetNodeType() const { return TEXT_NODE; }
@@ -1581,7 +1601,7 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
 
 class DOMDocumentFragment : public DOMNodeBase<DOMDocumentFragmentInterface> {
  public:
-  DEFINE_CLASS_ID(0xe6b4c9779b3d4127, DOMDocumentFragmentInterface);
+  DEFINE_CLASS_ID(0x6ba54beef94643d4, DOMDocumentFragmentInterface);
   typedef DOMNodeBase<DOMDocumentFragmentInterface> Super;
 
   DOMDocumentFragment(DOMDocumentInterface *owner_document)
@@ -1622,11 +1642,12 @@ class DOMProcessingInstruction
         data_(data ? data : "") {
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
-    RegisterConstant("target", target_);
-    RegisterProperty("data", NewSlot(this, &DOMProcessingInstruction::GetData),
-                     NewSlot(this, &DOMProcessingInstruction::SetData));
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
+    RegisterProperty("target",
+                     NewSlot(&DOMProcessingInstruction::GetTarget), NULL);
+    RegisterProperty("data", NewSlot(&DOMProcessingInstruction::GetData),
+                     NewSlot(&DOMProcessingInstruction::SetData));
   }
 
   virtual const char *GetNodeValue() const { return data_.c_str(); }
@@ -1666,8 +1687,8 @@ class DOMImplementation
  public:
   DEFINE_CLASS_ID(0xd23149a89cf24e12, DOMImplementationInterface);
 
-  virtual void DoRegister() {
-    RegisterMethod("hasFeature", NewSlot(this, &DOMImplementation::HasFeature));
+  virtual void DoClassRegister() {
+    RegisterMethod("hasFeature", NewSlot(&DOMImplementation::HasFeature));
   }
 
   virtual bool HasFeature(const char *feature, const char *version) const {
@@ -1712,35 +1733,37 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
         xml_parser_(xml_parser) {
   }
 
-  virtual void DoRegister() {
-    Super::DoRegister();
+  virtual void DoClassRegister() {
+    Super::DoClassRegister();
     RegisterConstant("doctype", static_cast<ScriptableInterface *>(NULL));
     RegisterConstant("implementation", &dom_implementation_);
     RegisterProperty("documentElement",
-                     NewSlot(this, &DOMDocument::GetDocumentElement), NULL);
-    RegisterMethod("loadXML", NewSlot(this, &DOMDocument::LoadXML));
+                     NewSlot(&DOMDocument::GetDocumentElementNotConst), NULL);
+    RegisterMethod("loadXML", NewSlot(&DOMDocument::LoadXML));
     RegisterMethod("createElement",
-                   NewSlot(this, &DOMDocument::ScriptCreateElement));
+                   NewSlot(&DOMDocument::ScriptCreateElement));
     RegisterMethod("createDocumentFragment",
-                   NewSlot(this, &DOMDocument::CreateDocumentFragment));
+                   NewSlot(&DOMDocument::CreateDocumentFragment));
     RegisterMethod("createTextNode",
-                   NewSlot(this, &DOMDocument::CreateTextNode));
-    RegisterMethod("createComment", NewSlot(this, &DOMDocument::CreateComment));
+                   NewSlot(&DOMDocument::CreateTextNode));
+    RegisterMethod("createComment", NewSlot(&DOMDocument::CreateComment));
     RegisterMethod("createCDATASection",
-                   NewSlot(this, &DOMDocument::CreateCDATASection));
+                   NewSlot(&DOMDocument::CreateCDATASection));
     RegisterMethod("createProcessingInstruction",
-                   NewSlot(this,
-                           &DOMDocument::ScriptCreateProcessingInstruction));
+                   NewSlot(&DOMDocument::ScriptCreateProcessingInstruction));
     RegisterMethod("createAttribute",
-                   NewSlot(this, &DOMDocument::ScriptCreateAttribute));
+                   NewSlot(&DOMDocument::ScriptCreateAttribute));
     RegisterMethod("createEntityReference",
-                   NewSlot(this, &DOMDocument::ScriptCreateEntityReference));
+                   NewSlot(&DOMDocument::ScriptCreateEntityReference));
     RegisterMethod("getElementsByTagName",
-                   NewSlot(implicit_cast<Super *>(this),
-                           &Super::GetElementsByTagName));
+                   NewSlot(&Super::GetElementsByTagNameNotConst));
     // Compatibility with Microsoft DOM.
     RegisterProperty("async", NULL, NewSlot(&DummySetter));
-    RegisterConstant("parseError", &parse_error_);
+    RegisterProperty("parseError", NewSlot(&DOMDocument::GetParseError), NULL);
+  }
+
+  ParseError *GetParseError() {
+    return &parse_error_;
   }
 
   virtual bool LoadXML(const char *xml) {
@@ -1877,6 +1900,10 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
  private:
+  DOMElementInterface *GetDocumentElementNotConst() {
+    return GetDocumentElement();
+  }
+
   const DOMNodeInterface *FindNodeOfType(NodeType type) const {
     const DOMNodeInterface *result = NULL;
     for (const DOMNodeInterface *item = GetFirstChild(); item;
@@ -1912,9 +1939,11 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
   XMLParserInterface *xml_parser_;
-  DOMImplementation dom_implementation_;
+  static DOMImplementation dom_implementation_;
   ParseError parse_error_;
 };
+
+DOMImplementation DOMDocument::dom_implementation_;
 
 } // namespace internal
 

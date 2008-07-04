@@ -51,29 +51,51 @@ class ScriptableAudioclip : public ScriptableHelperDefault {
   ScriptableAudioclip(AudioclipInterface *clip)
       : clip_(clip) {
     ASSERT(clip);
-    RegisterProperty("balance",
-                     NewSlot(clip_, &AudioclipInterface::GetBalance),
-                     NewSlot(clip_, &AudioclipInterface::SetBalance));
-    RegisterProperty("currentPosition",
-                     NewSlot(clip_, &AudioclipInterface::GetCurrentPosition),
-                     NewSlot(clip_, &AudioclipInterface::SetCurrentPosition));
-    RegisterProperty("duration",
-                     NewSlot(clip_, &AudioclipInterface::GetDuration), NULL);
-    RegisterProperty("error", NewSlot(clip_, &AudioclipInterface::GetError),
-                     NULL);
-    RegisterProperty("src", NewSlot(clip_, &AudioclipInterface::GetSrc),
-                     NewSlot(clip_, &AudioclipInterface::SetSrc));
-    RegisterProperty("state", NewSlot(clip_, &AudioclipInterface::GetState),
-                     NULL);
-    RegisterProperty("volume", NewSlot(clip_, &AudioclipInterface::GetVolume),
-                     NewSlot(clip_, &AudioclipInterface::SetVolume));
-    RegisterSignal("onstatechange", &onstatechange_signal_);
-    RegisterMethod("play", NewSlot(clip_, &AudioclipInterface::Play));
-    RegisterMethod("pause", NewSlot(clip_, &AudioclipInterface::Pause));
-    RegisterMethod("stop", NewSlot(clip_, &AudioclipInterface::Stop));
-
     clip->ConnectOnStateChange(
         NewSlot(this, &ScriptableAudioclip::OnStateChange));
+  }
+
+  virtual void DoClassRegister() {
+    RegisterProperty("balance",
+                     NewSlot(&AudioclipInterface::GetBalance,
+                             &ScriptableAudioclip::clip_),
+                     NewSlot(&AudioclipInterface::SetBalance,
+                             &ScriptableAudioclip::clip_));
+    RegisterProperty("currentPosition",
+                     NewSlot(&AudioclipInterface::GetCurrentPosition,
+                             &ScriptableAudioclip::clip_),
+                     NewSlot(&AudioclipInterface::SetCurrentPosition,
+                             &ScriptableAudioclip::clip_));
+    RegisterProperty("duration",
+                     NewSlot(&AudioclipInterface::GetDuration,
+                             &ScriptableAudioclip::clip_),
+                     NULL);
+    RegisterProperty("error",
+                     NewSlot(&AudioclipInterface::GetError,
+                             &ScriptableAudioclip::clip_),
+                     NULL);
+    RegisterProperty("src",
+                     NewSlot(&AudioclipInterface::GetSrc,
+                             &ScriptableAudioclip::clip_),
+                     NewSlot(&AudioclipInterface::SetSrc,
+                             &ScriptableAudioclip::clip_));
+    RegisterProperty("state",
+                     NewSlot(&AudioclipInterface::GetState,
+                             &ScriptableAudioclip::clip_),
+                     NULL);
+    RegisterProperty("volume",
+                     NewSlot(&AudioclipInterface::GetVolume,
+                             &ScriptableAudioclip::clip_),
+                     NewSlot(&AudioclipInterface::SetVolume,
+                             &ScriptableAudioclip::clip_));
+    RegisterClassSignal("onstatechange",
+                        &ScriptableAudioclip::onstatechange_signal_);
+    RegisterMethod("play", NewSlot(&AudioclipInterface::Play,
+                                   &ScriptableAudioclip::clip_));
+    RegisterMethod("pause", NewSlot(&AudioclipInterface::Pause,
+                                    &ScriptableAudioclip::clip_));
+    RegisterMethod("stop", NewSlot(&AudioclipInterface::Stop,
+                                   &ScriptableAudioclip::clip_));
   }
 
   ~ScriptableAudioclip() {
@@ -146,6 +168,9 @@ class ScriptableAudio::Impl {
 ScriptableAudio::ScriptableAudio(AudioInterface *audio,
                                  Gadget *gadget)
     : impl_(new Impl(audio, gadget)) {
+}
+
+void ScriptableAudio::DoRegister() {
   RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Open),
                                                 kDefaultArgsForSecondSlot));
   RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Play),
@@ -180,23 +205,29 @@ class ScriptableWirelessAccessPoint : public ScriptableHelperDefault {
   ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
       : ap_(ap) {
     ASSERT(ap);
-    RegisterProperty(
-        "name",
-        NewSlot(ap_, &WirelessAccessPointInterface::GetName), NULL);
-    RegisterProperty(
-        "type",
-        NewSlot(ap_, &WirelessAccessPointInterface::GetType), NULL);
-    RegisterProperty(
-        "signalStrength",
-        NewSlot(ap_, &WirelessAccessPointInterface::GetSignalStrength), NULL);
+  }
+
+  virtual void DoClassRegister() {
+    RegisterProperty("name",
+                     NewSlot(&WirelessAccessPointInterface::GetName,
+                             &ScriptableWirelessAccessPoint::ap_),
+                     NULL);
+    RegisterProperty("type",
+                     NewSlot(&WirelessAccessPointInterface::GetType,
+                             &ScriptableWirelessAccessPoint::ap_),
+                     NULL);
+    RegisterProperty("signalStrength",
+                     NewSlot(&WirelessAccessPointInterface::GetSignalStrength,
+                             &ScriptableWirelessAccessPoint::ap_),
+                     NULL);
     RegisterMethod("connect",
-        NewSlotWithDefaultArgs(
-            NewSlot(this, &ScriptableWirelessAccessPoint::Connect),
-            kDefaultArgsForSingleSlot));
+                   NewSlotWithDefaultArgs(
+                       NewSlot(&ScriptableWirelessAccessPoint::Connect),
+                       kDefaultArgsForSingleSlot));
     RegisterMethod("disconnect",
-        NewSlotWithDefaultArgs(
-            NewSlot(this, &ScriptableWirelessAccessPoint::Disconnect),
-            kDefaultArgsForSingleSlot));
+                   NewSlotWithDefaultArgs(
+                       NewSlot(&ScriptableWirelessAccessPoint::Disconnect),
+                       kDefaultArgsForSingleSlot));
   }
 
   virtual ~ScriptableWirelessAccessPoint() {
@@ -405,8 +436,11 @@ class ScriptablePerfmon::Impl {
 ScriptablePerfmon::ScriptablePerfmon(PerfmonInterface *perfmon,
                                      Gadget *gadget)
   : impl_(new Impl(perfmon, gadget)) {
+}
+
+void ScriptablePerfmon::DoRegister() {
   RegisterMethod("currentValue",
-                 NewSlot(perfmon, &PerfmonInterface::GetCurrentValue));
+                 NewSlot(impl_->perfmon_, &PerfmonInterface::GetCurrentValue));
   RegisterMethod("addCounter",
                  NewSlot(impl_, &Impl::AddCounter));
   RegisterMethod("removeCounter",
@@ -659,7 +693,10 @@ class ScriptableGraphics::Impl {
 };
 
 ScriptableGraphics::ScriptableGraphics(Gadget *gadget)
-  : impl_(new Impl(gadget)) {
+    : impl_(new Impl(gadget)) {
+}
+
+void ScriptableGraphics::DoRegister() {
   RegisterMethod("createPoint", NewSlot(impl_, &Impl::CreatePoint));
   RegisterMethod("createSize", NewSlot(impl_, &Impl::CreateSize));
   RegisterMethod("loadImage", NewSlot(impl_, &Impl::LoadImage));

@@ -59,13 +59,15 @@ bool Connection::Reconnect(Slot *slot) {
 class Signal::Impl {
  public:
   Impl()
-      : death_flag_ptr_(NULL) {
+      : default_connection_(NULL),
+        death_flag_ptr_(NULL) {
 #ifdef DEBUG_SIGNALS
     max_connection_length_ = 0;
 #endif
   }
   typedef std::vector<Connection *> Connections;
   Connections connections_;
+  Connection *default_connection_;
 
   // During an Emit() call, this Signal object may be deleted in some slot.
   // Emit() should let this pointer point to a local bool variable. Once
@@ -178,7 +180,7 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
        !*death_flag_ptr && it != impl_->connections_.end(); ++it) {
     Connection *connection = *it;
     if (connection && connection->slot_) {
-      result = connection->slot_->Call(argc, argv);
+      result = connection->slot_->Call(NULL, argc, argv);
     }
   }
 
@@ -226,6 +228,12 @@ bool Signal::Disconnect(Connection *connection) {
   }
   delete connection;
   return true;
+}
+
+Connection *Signal::GetDefaultConnection() {
+  if (!impl_->default_connection_)
+    impl_->default_connection_ = Connect(NULL);
+  return impl_->default_connection_; 
 }
 
 size_t Signal::GetConnectionCount() const {

@@ -30,7 +30,7 @@ class DivElement : public ScrollingElement {
   virtual ~DivElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   enum BackgroundMode {

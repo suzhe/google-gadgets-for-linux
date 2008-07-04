@@ -40,7 +40,7 @@ class ButtonElement : public BasicElement {
   virtual ~ButtonElement();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   /** Lets this button use default images. */

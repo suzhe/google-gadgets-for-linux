@@ -22,6 +22,8 @@ class ScriptableArray::Impl {
  public:
   Impl(ScriptableArray *owner, Variant *array, size_t count)
       : owner_(owner), array_(array), count_(count) {
+    // Simulates JavaScript array.
+    owner_->SetArrayHandler(NewSlot(owner_, &ScriptableArray::GetItem), NULL);
   }
 
   ScriptableArray *ToArray() { return owner_; }
@@ -39,14 +41,13 @@ ScriptableArray::ScriptableArray()
     : impl_(new Impl(this, NULL, 0)) {
 }
 
-void ScriptableArray::DoRegister() {
-  RegisterConstant("count", impl_->count_);
-  RegisterMethod("item", NewSlot(this, &ScriptableArray::GetItem));
+void ScriptableArray::DoClassRegister() {
+  RegisterProperty("count", NewSlot(&ScriptableArray::GetCount), NULL);
+  RegisterMethod("item", NewSlot(&ScriptableArray::GetItem));
   // Simulates JavaScript array.
-  RegisterConstant("length", impl_->count_);
-  SetArrayHandler(NewSlot(this, &ScriptableArray::GetItem), NULL);
+  RegisterProperty("length", NewSlot(&ScriptableArray::GetCount), NULL);
   // Simulates VBArray.
-  RegisterMethod("toArray", NewSlot(impl_, &Impl::ToArray));
+  RegisterMethod("toArray", NewSlot(&Impl::ToArray, &ScriptableArray::impl_));
 }
 
 ScriptableArray::~ScriptableArray() {

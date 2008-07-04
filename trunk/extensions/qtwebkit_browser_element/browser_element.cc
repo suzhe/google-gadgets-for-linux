@@ -43,17 +43,21 @@ BrowserElement::BrowserElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
 }
 
-void BrowserElement::DoRegister() {
-  BasicElement::DoRegister();
+void BrowserElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("contentType",
-                   NewSlot(this, &BrowserElement::GetContentType),
-                   NewSlot(this, &BrowserElement::SetContentType));
+                   NewSlot(&BrowserElement::GetContentType),
+                   NewSlot(&BrowserElement::SetContentType));
   RegisterProperty("innerText", NULL,
-                   NewSlot(this, &BrowserElement::SetContent));
-  RegisterSignal("onGetProperty", &impl_->get_property_signal_);
-  RegisterSignal("onSetProperty", &impl_->set_property_signal_);
-  RegisterSignal("onCallback", &impl_->callback_signal_);
-  RegisterSignal("onOpenURL", &impl_->open_url_signal_);
+                   NewSlot(&BrowserElement::SetContent));
+  RegisterClassSignal("onGetProperty", &Impl::get_property_signal_,
+                      &BrowserElement::impl_);
+  RegisterClassSignal("onSetProperty", &Impl::set_property_signal_,
+                      &BrowserElement::impl_);
+  RegisterClassSignal("onCallback", &Impl::callback_signal_,
+                      &BrowserElement::impl_);
+  RegisterClassSignal("onOpenURL", &Impl::open_url_signal_,
+                      &BrowserElement::impl_);
 }
 
 BrowserElement::~BrowserElement() {

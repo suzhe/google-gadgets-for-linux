@@ -32,6 +32,7 @@ class ScrollingElement : public BasicElement {
                    bool children);
   virtual ~ScrollingElement();
   virtual void DoRegister();
+  virtual void DoClassRegister();
 
  public:
   virtual void MarkRedraw();

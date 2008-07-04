@@ -141,38 +141,40 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  virtual void DoRegister() {
-    RegisterSignal("onreadystatechange", &onreadystatechange_signal_);
-    RegisterReadonlySimpleProperty("readyState", &state_);
+  virtual void DoClassRegister() {
+    RegisterClassEvent("onreadystatechange",
+                       &XMLHttpRequest::onreadystatechange_signal_);
+    RegisterProperty("readyState",
+                     NewSlot(&XMLHttpRequest::GetReadyState), NULL);
     RegisterMethod("open",
-        NewSlotWithDefaultArgs(NewSlot(this, &XMLHttpRequest::ScriptOpen),
+        NewSlotWithDefaultArgs(NewSlot(&XMLHttpRequest::ScriptOpen),
                                kOpenDefaultArgs));
     RegisterMethod("setRequestHeader",
-                   NewSlot(this, &XMLHttpRequest::ScriptSetRequestHeader));
+                   NewSlot(&XMLHttpRequest::ScriptSetRequestHeader));
     RegisterMethod("send",
-        NewSlotWithDefaultArgs(NewSlot(this, &XMLHttpRequest::ScriptSend),
+        NewSlotWithDefaultArgs(NewSlot(&XMLHttpRequest::ScriptSend),
                                kSendDefaultArgs));
-    RegisterMethod("abort", NewSlot(this, &XMLHttpRequest::Abort));
+    RegisterMethod("abort", NewSlot(&XMLHttpRequest::Abort));
     RegisterMethod("getAllResponseHeaders",
-                   NewSlot(this, &XMLHttpRequest::ScriptGetAllResponseHeaders));
+                   NewSlot(&XMLHttpRequest::ScriptGetAllResponseHeaders));
     RegisterMethod("getResponseHeader",
-                   NewSlot(this, &XMLHttpRequest::ScriptGetResponseHeader));
+                   NewSlot(&XMLHttpRequest::ScriptGetResponseHeader));
     RegisterProperty("responseStream",
-                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseBody),
+                     NewSlot(&XMLHttpRequest::ScriptGetResponseBody),
                      NULL);
     RegisterProperty("responseBody",
-                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseBody),
+                     NewSlot(&XMLHttpRequest::ScriptGetResponseBody),
                      NULL);
     RegisterProperty("responseText",
-                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseText),
+                     NewSlot(&XMLHttpRequest::ScriptGetResponseText),
                      NULL);
     RegisterProperty("responseXML",
-                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseXML),
+                     NewSlot(&XMLHttpRequest::ScriptGetResponseXML),
                      NULL);
-    RegisterProperty("status", NewSlot(this, &XMLHttpRequest::ScriptGetStatus),
+    RegisterProperty("status", NewSlot(&XMLHttpRequest::ScriptGetStatus),
                      NULL);
     RegisterProperty("statusText",
-                     NewSlot(this, &XMLHttpRequest::ScriptGetStatusText), NULL);
+                     NewSlot(&XMLHttpRequest::ScriptGetStatusText), NULL);
   }
 
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {

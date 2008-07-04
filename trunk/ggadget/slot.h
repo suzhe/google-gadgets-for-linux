@@ -39,13 +39,16 @@ class Slot : public SmallObject<> {
    * The type of arguments and the return value must be compatible with the
    * actual calling target.
    * @see Variant
+   * @param object the object associated with this invocation. It can be
+   *     @c NULL if this invocation needs no object.
    * @param argc number of arguments.
    * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
    * @return the return value of the @c Slot target. Use @c ResultVariant
    *     instead @c Variant as the result type to ensure scriptable object
    *     to be deleted if the result won't be handled by the caller.
    */
-  virtual ResultVariant Call(int argc, const Variant argv[]) const = 0;
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const = 0;
 
   /**
    * @return @c true if this @c Slot can provide metadata.
@@ -102,7 +105,7 @@ class Slot0 : public Slot {
   R operator()() const {
     ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
              ("Use Call() when the slot returns ScriptableInterface *"));
-    return VariantValue<R>()(Call(0, NULL).v());
+    return VariantValue<R>()(Call(NULL, 0, NULL).v());
   }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
@@ -113,7 +116,24 @@ class Slot0 : public Slot {
 template <>
 class Slot0<void> : public Slot {
  public:
-  void operator()() const { Call(0, NULL); }
+  void operator()() const { Call(NULL, 0, NULL); }
+};
+
+/**
+ * A prototype slot is a slot used to represent a invocation prototype.
+ */
+template <typename R>
+class PrototypeSlot0 : public Slot {
+ public:
+  typedef PrototypeSlot0<R> SelfType;
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
+    ASSERT(false);
+    return ResultVariant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    return down_cast<const SelfType *>(&another);
+  }
 };
 
 /**
@@ -124,7 +144,8 @@ class FunctorSlot0 : public Slot0<R> {
  public:
   typedef FunctorSlot0<R, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return ResultVariant(Variant(functor_()));
   }
@@ -145,10 +166,11 @@ class FunctorSlot0<void, F> : public Slot0<void> {
  public:
   typedef FunctorSlot0<void, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     functor_();
-    return ResultVariant(Variant());
+    return ResultVariant();
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -160,14 +182,18 @@ class FunctorSlot0<void, F> : public Slot0<void> {
 };
 
 /**
- * A @c Slot that is targeted to a C++ non-static method with no parameter.
+ * A @c Slot that is targeted to a C++ non-static method of an object
+ * with no parameter.
  */
 template <typename R, typename T, typename M>
 class MethodSlot0 : public Slot0<R> {
  public:
   typedef MethodSlot0<R, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
+    // object parameter is ignored because object is bound when this object
+    // is constructed.
     ASSERT(argc == 0);
     return ResultVariant(Variant((object_->*method_)()));
   }
@@ -189,10 +215,13 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
  public:
   typedef MethodSlot0<void, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
+    // object parameter is ignored because object is bound when this object
+    // is constructed.
     ASSERT(argc == 0);
     (object_->*method_)();
-    return ResultVariant(Variant());
+    return ResultVariant();
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -204,6 +233,135 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
   M method_;
 };
 
+/**
+ * A @c Slot that is targeted to a C++ non-static method. Object is not bound
+ * when this slot is constructed. An non-NULL object parameter must be given
+ * when @c Call() is called.
+ */
+template <typename R, typename T, typename M>
+class UnboundMethodSlot0 : public Slot0<R> {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  typedef UnboundMethodSlot0<R, T, M> SelfType;
+  UnboundMethodSlot0(M method) : method_(method) { }
+  using Slot0<R>::GetReturnType;
+  R operator()(T *object) const {
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
+             ("Use Call() when the slot returns ScriptableInterface *"));
+    return VariantValue<R>()(Call(object, 0, NULL).v());
+  }
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    ASSERT(object);
+    return ResultVariant(Variant((down_cast<T *>(object)->*method_)()));
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && method_ == a->method_;
+  }
+ private:
+  R operator()() const; // Hide this method.
+  DISALLOW_EVIL_CONSTRUCTORS(UnboundMethodSlot0);
+  M method_;
+};
+
+/**
+ * Partial specialized @c UnboundMethodSlot0 that returns @c void.
+ */
+template <typename T, typename M>
+class UnboundMethodSlot0<void, T, M> : public Slot0<void> {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  typedef UnboundMethodSlot0<void, T, M> SelfType;
+  UnboundMethodSlot0(M method) : method_(method) { }
+  void operator()(T *object) const { Call(object, 0, NULL); }
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    ASSERT(object);
+    (down_cast<T *>(object)->*method_)();
+    return ResultVariant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && method_ == a->method_;
+  }
+ private:
+  void operator()() const; // Hide this method.
+  DISALLOW_EVIL_CONSTRUCTORS(UnboundMethodSlot0);
+  M method_;
+};
+
+/**
+ * Similar to @c UnboundMethodSlot0 except that the calls will be delegated
+ * to another object provided by the @c DelegateGetter.
+ */
+template <typename R, typename T, typename M, typename DelegateGetter>
+class DelegatedMethodSlot0 : public Slot0<R> {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  typedef DelegatedMethodSlot0<R, T, M, DelegateGetter> SelfType;
+  DelegatedMethodSlot0(M method, DelegateGetter delegate_getter)
+      : method_(method), delegate_getter_(delegate_getter) { }
+  using Slot0<R>::GetReturnType;
+  R operator()(T *object) const {
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
+             ("Use Call() when the slot returns ScriptableInterface *"));
+    return VariantValue<R>()(Call(delegate_getter_(object), 0, NULL).v());
+  }
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    ASSERT(object && delegate_getter_(down_cast<T *>(object)));
+    return ResultVariant(Variant(
+        (delegate_getter_(down_cast<T *>(object))->*method_)()));
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && method_ == a->method_ &&
+           delegate_getter_ == a->delegate_getter_;
+  }
+ private:
+  R operator()() const; // Hide this method.
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedMethodSlot0);
+  M method_;
+  DelegateGetter delegate_getter_;
+};
+
+/**
+ * Partial specialized @c UnboundMethodSlot0 that returns @c void.
+ */
+template <typename T, typename M, typename DelegateGetter>
+class DelegatedMethodSlot0<void, T, M, DelegateGetter> : public Slot0<void> {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  typedef DelegatedMethodSlot0<void, T, M, DelegateGetter> SelfType;
+  DelegatedMethodSlot0(M method, DelegateGetter delegate_getter)
+      : method_(method), delegate_getter_(delegate_getter) { }
+  void operator()(T *object) const { Call(object, 0, NULL); }
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    ASSERT(object && delegate_getter_(down_cast<T *>(object)));
+    (delegate_getter_(down_cast<T *>(object))->*method_)();
+    return ResultVariant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && method_ == a->method_ &&
+           delegate_getter_ == a->delegate_getter_;
+  }
+ private:
+  void operator()() const; // Hide this method.
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedMethodSlot0);
+  M method_;
+  DelegateGetter delegate_getter_;
+};
 
 /**
  * A @c Slot that is targeted to another general typed slot with no parameter.
@@ -226,9 +384,10 @@ class SlotProxy0 : public Slot0<R> {
   typedef SlotProxy0<R> SelfType;
   SlotProxy0(Slot* slot) : slot_(slot) { ASSERT(slot); }
   ~SlotProxy0() { delete slot_; slot_ = NULL; }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
-    return slot_->Call(argc, argv);
+    return slot_->Call(object, argc, argv);
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -240,15 +399,16 @@ class SlotProxy0 : public Slot0<R> {
 };
 
 /**
- * A special functor slot that converts a functor taking one argument into a slot
- * taking no argument.
+ * A special functor slot that converts a functor taking one argument into a
+ * slot taking no argument.
  */
 template <typename R, typename F, typename PA>
-class BoundFunctorSlot0 : public Slot0<R> {
+class FunctorSlotClosure0 : public Slot0<R> {
  public:
-  typedef BoundFunctorSlot0<R, F, PA> SelfType;
-  BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  typedef FunctorSlotClosure0<R, F, PA> SelfType;
+  FunctorSlotClosure0(F functor, PA pa) : functor_(functor), pa_(pa) { }
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return ResultVariant(Variant(functor_(pa_)));
   }
@@ -257,20 +417,21 @@ class BoundFunctorSlot0 : public Slot0<R> {
     return a && functor_ == a->functor_ && pa_ == a->pa_;
   }
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot0);
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlotClosure0);
   F functor_;
   PA pa_;
 };
 
 /**
- * Partial specialized @c BoundFunctorSlot0 that returns @c void.
+ * Partial specialized @c FunctorSlotClosure0 that returns @c void.
  */
 template <typename F, typename PA>
-class BoundFunctorSlot0<void, F, PA> : public Slot0<void> {
+class FunctorSlotClosure0<void, F, PA> : public Slot0<void> {
  public:
-  typedef BoundFunctorSlot0<void, F, PA> SelfType;
-  BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  typedef FunctorSlotClosure0<void, F, PA> SelfType;
+  FunctorSlotClosure0(F functor, PA pa) : functor_(functor), pa_(pa) { }
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     functor_(pa_);
     return ResultVariant(Variant());
@@ -280,7 +441,7 @@ class BoundFunctorSlot0<void, F, PA> : public Slot0<void> {
     return a && functor_ == a->functor_ && pa_ == a->pa_;
   }
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot0);
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlotClosure0);
   F functor_;
   PA pa_;
 };
@@ -290,12 +451,13 @@ class BoundFunctorSlot0<void, F, PA> : public Slot0<void> {
  * into a slot taking no argument.
  */
 template <typename R, typename T, typename M, typename PA>
-class BoundMethodSlot0 : public Slot0<R> {
+class MethodSlotClosure0 : public Slot0<R> {
  public:
-  typedef BoundMethodSlot0<R, T, M, PA> SelfType;
-  BoundMethodSlot0(T *obj, M method, PA pa)
+  typedef MethodSlotClosure0<R, T, M, PA> SelfType;
+  MethodSlotClosure0(T *obj, M method, PA pa)
     : obj_(obj), method_(method), pa_(pa) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return ResultVariant(Variant((obj_->*method_)(pa_)));
   }
@@ -304,22 +466,23 @@ class BoundMethodSlot0 : public Slot0<R> {
     return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;
   }
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot0);
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlotClosure0);
   T *obj_;
   M method_;
   PA pa_;
 };
 
 /**
- * Partial specialized @c BoundMethodSlot0 that returns @c void.
+ * Partial specialized @c MethodSlotClosure0 that returns @c void.
  */
 template <typename T, typename M, typename PA>
-class BoundMethodSlot0<void, T, M, PA> : public Slot0<void> {
+class MethodSlotClosure0<void, T, M, PA> : public Slot0<void> {
  public:
-  typedef BoundMethodSlot0<void, T, M, PA> SelfType;
-  BoundMethodSlot0(T *obj, M method, PA pa)
+  typedef MethodSlotClosure0<void, T, M, PA> SelfType;
+  MethodSlotClosure0(T *obj, M method, PA pa)
     : obj_(obj), method_(method), pa_(pa) { }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     (obj_->*method_)(pa_);
     return ResultVariant(Variant());
@@ -329,7 +492,7 @@ class BoundMethodSlot0<void, T, M, PA> : public Slot0<void> {
     return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;
   }
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot0);
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlotClosure0);
   T *obj_;
   M method_;
   PA pa_;
@@ -340,23 +503,24 @@ class BoundMethodSlot0<void, T, M, PA> : public Slot0<void> {
  * taking no argument.
  */
 template <typename R, typename PA>
-class BoundSlotProxy0 : public Slot0<R> {
+class SlotProxyClosure0 : public Slot0<R> {
  public:
-  typedef BoundSlotProxy0<R, PA> SelfType;
-  BoundSlotProxy0(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }
-  ~BoundSlotProxy0() { delete slot_; slot_ = NULL; }
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  typedef SlotProxyClosure0<R, PA> SelfType;
+  SlotProxyClosure0(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }
+  ~SlotProxyClosure0() { delete slot_; slot_ = NULL; }
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     Variant vargs[1];
     vargs[1] = Variant(pa_);
-    return slot_->Call(1, vargs);
+    return slot_->Call(object, 1, vargs);
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
     return a && *slot_ == *a->slot_ && pa_ == a->pa_;
   }
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(BoundSlotProxy0);
+  DISALLOW_EVIL_CONSTRUCTORS(SlotProxyClosure0);
   Slot *slot_;
   PA pa_;
 };
@@ -373,7 +537,7 @@ inline Slot0<R> *NewSlot(R (*functor)()) {
 
 template <typename R, typename PA>
 inline Slot0<R> *NewSlot(R (*functor)(PA), PA pa) {
-  return new BoundFunctorSlot0<R, R (*)(PA), PA>(functor, pa);
+  return new FunctorSlotClosure0<R, R (*)(PA), PA>(functor, pa);
 }
 
 /**
@@ -391,14 +555,65 @@ inline Slot0<R> *NewSlot(const T *object, R (T::*method)() const) {
   return new MethodSlot0<R, const T, R (T::*)() const>(object, method);
 }
 
+template <typename R, typename T>
+inline Slot0<R> *NewSlot(R (T::*method)()) {
+  return new UnboundMethodSlot0<R, T, R (T::*)()>(method);
+}
+template <typename R, typename T>
+inline Slot0<R> *NewSlot(R (T::*method)() const) {
+  return new UnboundMethodSlot0<R, const T, R (T::*)() const>(method);
+}
+
+template <typename R, typename T, typename DT>
+inline Slot0<R> *NewSlot(R (DT::*method)(), DT *(*delegate_getter)(T *)) {
+  return new DelegatedMethodSlot0<R, T, R (DT::*)(), DT *(*)(T *)>(
+      method, delegate_getter);
+}
+template <typename R, typename T, typename DT>
+inline Slot0<R> *NewSlot(R (DT::*method)() const,
+                         const DT *(*delegate_getter)(T *)) {
+  return new DelegatedMethodSlot0<R, T, R (DT::*)() const, const DT *(*)(T *)>(
+      method, delegate_getter);
+}
+
+template <typename T, typename DT>
+struct FieldDelegateGetter {
+  FieldDelegateGetter(DT *T::*field) : field_(field) { }
+  DT *operator()(T *object) const { return object->*field_; }
+  bool operator==(const FieldDelegateGetter &another) const {
+    return another.field_ == field_;
+  }
+  DT *T::*field_;
+};
+template <typename R, typename T, typename DT>
+inline Slot0<R> *NewSlot(R (DT::*method)(), DT *T::*delegate_field) {
+  return new DelegatedMethodSlot0<R, T, R (DT::*)(),
+                                  FieldDelegateGetter<T, DT> >(
+      method, FieldDelegateGetter<T, DT>(delegate_field));
+}
+template <typename R, typename T, typename DT>
+inline Slot0<R> *NewSlot(R (DT::*method)() const,
+                         DT *T::*delegate_field) {
+  return new DelegatedMethodSlot0<R, T, R (DT::*)() const,
+                                  FieldDelegateGetter<T, DT> >(
+      method, FieldDelegateGetter<T, DT>(delegate_field));
+}
+template <typename R, typename T, typename DT>
+inline Slot0<R> *NewSlot(R (DT::*method)() const,
+                         const DT *T::*delegate_field) {
+  return new DelegatedMethodSlot0<R, T, R (DT::*)() const,
+                                  FieldDelegateGetter<T, const DT> >(
+      method, FieldDelegateGetter<T, const DT>(delegate_field));
+}
+
 template <typename R, typename T, typename PA>
 inline Slot0<R> *NewSlot(T *object, R (T::*method)(PA), PA pa) {
-  return new BoundMethodSlot0<R, T, R (T::*)(PA), PA>(object, method, pa);
+  return new MethodSlotClosure0<R, T, R (T::*)(PA), PA>(object, method, pa);
 }
 template <typename R, typename T, typename PA>
 inline Slot0<R> *NewSlot(const T *object, R (T::*method)(PA) const, PA pa) {
-  return new BoundMethodSlot0<R, const T,
-                              R (T::*)(PA) const, PA>(object, method, pa);
+  return new MethodSlotClosure0<R, const T,
+                                R (T::*)(PA) const, PA>(object, method, pa);
 }
 
 /**
@@ -416,7 +631,7 @@ inline Slot0<R> *NewFunctorSlot(F functor) {
 
 template <typename R, typename F, typename PA>
 inline Slot0<R> *NewFunctorSlot(F functor, PA pa) {
-  return new BoundFunctorSlot0<R, F, PA>(functor, pa);
+  return new FunctorSlotClosure0<R, F, PA>(functor, pa);
 }
 
 /**
@@ -438,7 +653,7 @@ class Slot##n : public Slot {                                                 \
              ("Use Call() when the slot returns ScriptableInterface *"));     \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
-    return VariantValue<R>()(Call(n, vargs).v());                             \
+    return VariantValue<R>()(Call(NULL, n, vargs).v());                       \
   }                                                                           \
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \
@@ -453,11 +668,24 @@ class Slot##n<void, _arg_type_names> : public Slot {                          \
   void operator()(_args) const {                                              \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
-    Call(n, vargs);                                                           \
+    Call(NULL, n, vargs);                                                     \
   }                                                                           \
   virtual int GetArgCount() const { return n; }                               \
   virtual const Variant::Type *GetArgTypes() const {                          \
     return ArgTypesHelper<_arg_type_names>();                                 \
+  }                                                                           \
+};                                                                            \
+                                                                              \
+template <typename R, _arg_types>                                             \
+class PrototypeSlot##n : public Slot##n<R, _arg_type_names> {                 \
+ public:                                                                      \
+  typedef PrototypeSlot##n<R, _arg_type_names> SelfType;                      \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
+    ASSERT(false); return ResultVariant();                                    \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return down_cast<const SelfType *>(&another);                             \
   }                                                                           \
 };                                                                            \
                                                                               \
@@ -466,7 +694,8 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
  public:                                                                      \
   typedef FunctorSlot##n<R, _arg_type_names, F> SelfType;                     \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant(functor_(_call_args)));                      \
   }                                                                           \
@@ -485,7 +714,8 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
  public:                                                                      \
   typedef FunctorSlot##n<void, _arg_type_names, F> SelfType;                  \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     functor_(_call_args);                                                     \
     return ResultVariant(Variant());                                          \
@@ -504,7 +734,8 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
   typedef MethodSlot##n<R, _arg_type_names, T, M> SelfType;                   \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant((obj_->*method_)(_call_args)));              \
   }                                                                           \
@@ -524,7 +755,8 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
  public:                                                                      \
   typedef MethodSlot##n<void, _arg_type_names, T, M> SelfType;                \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
     return ResultVariant(Variant());                                          \
@@ -539,15 +771,150 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
   M method_;                                                                  \
 };                                                                            \
                                                                               \
+template <typename R, _arg_types, typename T, typename M>                     \
+class UnboundMethodSlot##n : public Slot##n<R, _arg_type_names> {             \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  typedef UnboundMethodSlot##n<R, _arg_type_names, T, M> SelfType;            \
+  UnboundMethodSlot##n(M method) : method_(method) { }                        \
+  using Slot##n<R, _arg_type_names>::GetReturnType;                           \
+  R operator()(T *obj, _args) const {                                         \
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,                     \
+             ("Use Call() when the slot returns ScriptableInterface *"));     \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    return VariantValue<R>()(Call(obj, n, vargs).v());                        \
+  }                                                                           \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
+    ASSERT(argc == n);                                                        \
+    ASSERT(obj);                                                              \
+    return ResultVariant(Variant(                                             \
+        (down_cast<T *>(obj)->*method_)(_call_args)));                        \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && method_ == a->method_;                                        \
+  }                                                                           \
+ private:                                                                     \
+  R operator()(_args) const;                                                  \
+  DISALLOW_EVIL_CONSTRUCTORS(UnboundMethodSlot##n);                           \
+  M method_;                                                                  \
+};                                                                            \
+                                                                              \
+template <_arg_types, typename T, typename M>                                 \
+class UnboundMethodSlot##n<void, _arg_type_names, T, M> :                     \
+    public Slot##n<void, _arg_type_names> {                                   \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  typedef UnboundMethodSlot##n<void, _arg_type_names, T, M> SelfType;         \
+  UnboundMethodSlot##n(M method) : method_(method) { }                        \
+  void operator()(T *obj, _args) const {                                      \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    Call(obj, n, vargs);                                                      \
+  }                                                                           \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
+    ASSERT(argc == n);                                                        \
+    ASSERT(obj);                                                              \
+    (down_cast<T *>(obj)->*method_)(_call_args);                              \
+    return ResultVariant(Variant());                                          \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && method_ == a->method_;                                        \
+  }                                                                           \
+ private:                                                                     \
+  void operator()(_args) const;                                               \
+  DISALLOW_EVIL_CONSTRUCTORS(UnboundMethodSlot##n);                           \
+  M method_;                                                                  \
+};                                                                            \
+                                                                              \
+template <typename R, _arg_types, typename T, typename M,                     \
+          typename DelegateGetter>                                            \
+class DelegatedMethodSlot##n : public Slot##n<R, _arg_type_names> {           \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  typedef DelegatedMethodSlot##n<R, _arg_type_names, T, M, DelegateGetter>    \
+      SelfType;                                                               \
+  DelegatedMethodSlot##n(M method, DelegateGetter delegate_getter)            \
+      : method_(method), delegate_getter_(delegate_getter) { }                \
+  using Slot##n<R, _arg_type_names>::GetReturnType;                           \
+  R operator()(T *obj, _args) const {                                         \
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,                     \
+             ("Use Call() when the slot returns ScriptableInterface *"));     \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    return VariantValue<R>()(Call(obj, n, vargs).v());                        \
+  }                                                                           \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
+    ASSERT(argc == n);                                                        \
+    ASSERT(obj && delegate_getter_(down_cast<T *>(obj)));                     \
+    return ResultVariant(Variant(                                             \
+        (delegate_getter_(down_cast<T *>(obj))->*method_)(_call_args)));      \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && method_ == a->method_ &&                                      \
+           delegate_getter_ == a->delegate_getter_;                           \
+  }                                                                           \
+ private:                                                                     \
+  R operator()() const;                                                       \
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedMethodSlot##n);                         \
+  M method_;                                                                  \
+  DelegateGetter delegate_getter_;                                            \
+};                                                                            \
+                                                                              \
+template <_arg_types, typename T, typename M, typename DelegateGetter>        \
+class DelegatedMethodSlot##n<void, _arg_type_names, T, M, DelegateGetter>     \
+    : public Slot##n<void, _arg_type_names> {                                 \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  typedef DelegatedMethodSlot##n<void, _arg_type_names, T, M,                 \
+                                 DelegateGetter> SelfType;                    \
+  DelegatedMethodSlot##n(M method, DelegateGetter delegate_getter)            \
+      : method_(method), delegate_getter_(delegate_getter) { }                \
+  using Slot##n<void, _arg_type_names>::GetReturnType;                        \
+  void operator()(T *obj, _args) const {                                      \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    Call(obj, n, vargs);                                                      \
+  }                                                                           \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
+    ASSERT(argc == n);                                                        \
+    ASSERT(obj && delegate_getter_(down_cast<T *>(obj)));                     \
+    (delegate_getter_(down_cast<T *>(obj))->*method_)(_call_args);            \
+    return ResultVariant(Variant());                                          \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && method_ == a->method_ &&                                      \
+           delegate_getter_ == a->delegate_getter_;                           \
+  }                                                                           \
+ private:                                                                     \
+  void operator()() const;                                                    \
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedMethodSlot##n);                         \
+  M method_;                                                                  \
+  DelegateGetter delegate_getter_;                                            \
+};                                                                            \
+                                                                              \
 template <typename R, _arg_types>                                             \
 class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
  public:                                                                      \
   typedef SlotProxy##n<R, _arg_type_names> SelfType;                          \
   SlotProxy##n(Slot* slot) : slot_(slot) { }                                  \
   ~SlotProxy##n() { delete slot_; slot_ = NULL; }                             \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
-    return slot_->Call(argc, argv);                                           \
+    return slot_->Call(obj, argc, argv);                                      \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -559,11 +926,12 @@ class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types, typename F, typename PA>                    \
-class BoundFunctorSlot##n : public Slot##n<R, _arg_type_names> {              \
+class FunctorSlotClosure##n : public Slot##n<R, _arg_type_names> {            \
  public:                                                                      \
-  typedef BoundFunctorSlot##n<R, _arg_type_names, F, PA> SelfType;            \
-  BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  typedef FunctorSlotClosure##n<R, _arg_type_names, F, PA> SelfType;          \
+  FunctorSlotClosure##n(F functor, PA pa) : functor_(functor), pa_(pa) { }    \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant(functor_(_call_args, pa_)));                 \
   }                                                                           \
@@ -572,18 +940,19 @@ class BoundFunctorSlot##n : public Slot##n<R, _arg_type_names> {              \
     return a && functor_ == a->functor_ && pa_ == a->pa_;                     \
   }                                                                           \
  private:                                                                     \
-  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot##n);                            \
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlotClosure##n);                          \
   F functor_;                                                                 \
   PA pa_;                                                                     \
 };                                                                            \
                                                                               \
 template <_arg_types, typename F, typename PA>                                \
-class BoundFunctorSlot##n<void, _arg_type_names, F, PA> :                     \
+class FunctorSlotClosure##n<void, _arg_type_names, F, PA> :                   \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
-  typedef BoundFunctorSlot##n<void, _arg_type_names, F, PA> SelfType;         \
-  BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  typedef FunctorSlotClosure##n<void, _arg_type_names, F, PA> SelfType;       \
+  FunctorSlotClosure##n(F functor, PA pa) : functor_(functor), pa_(pa) { }    \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     functor_(_call_args, pa_);                                                \
     return ResultVariant(Variant());                                          \
@@ -593,18 +962,19 @@ class BoundFunctorSlot##n<void, _arg_type_names, F, PA> :                     \
     return a && functor_ == a->functor_ && pa_ == a->pa_;                     \
   }                                                                           \
  private:                                                                     \
-  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot##n);                            \
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlotClosure##n);                          \
   F functor_;                                                                 \
   PA pa_;                                                                     \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types, typename T, typename M, typename PA>        \
-class BoundMethodSlot##n : public Slot##n<R, _arg_type_names> {               \
+class MethodSlotClosure##n : public Slot##n<R, _arg_type_names> {             \
  public:                                                                      \
-  typedef BoundMethodSlot##n<R, _arg_type_names, T, M, PA> SelfType;          \
-  BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
+  typedef MethodSlotClosure##n<R, _arg_type_names, T, M, PA> SelfType;        \
+  MethodSlotClosure##n(T *obj, M method, PA pa)                               \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant((obj_->*method_)(_call_args, pa_)));         \
   }                                                                           \
@@ -613,20 +983,21 @@ class BoundMethodSlot##n : public Slot##n<R, _arg_type_names> {               \
     return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;    \
   }                                                                           \
  private:                                                                     \
-  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot##n);                             \
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlotClosure##n);                           \
   T *obj_;                                                                    \
   M method_;                                                                  \
   PA pa_;                                                                     \
 };                                                                            \
                                                                               \
 template <_arg_types, typename T, typename M, typename PA>                    \
-class BoundMethodSlot##n<void, _arg_type_names, T, M, PA> :                   \
+class MethodSlotClosure##n<void, _arg_type_names, T, M, PA> :                 \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
-  typedef BoundMethodSlot##n<void, _arg_type_names, T, M, PA> SelfType;       \
-  BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
+  typedef MethodSlotClosure##n<void, _arg_type_names, T, M, PA> SelfType;     \
+  MethodSlotClosure##n(T *obj, M method, PA pa)                               \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  virtual ResultVariant Call(ScriptableInterface *,                           \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args, pa_);                                        \
     return ResultVariant(Variant());                                          \
@@ -636,31 +1007,32 @@ class BoundMethodSlot##n<void, _arg_type_names, T, M, PA> :                   \
     return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;    \
   }                                                                           \
  private:                                                                     \
-  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot##n);                             \
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlotClosure##n);                           \
   T *obj_;                                                                    \
   M method_;                                                                  \
   PA pa_;                                                                     \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types, typename PA>                                \
-class BoundSlotProxy##n : public Slot##n<R, _arg_type_names> {                \
+class SlotProxyClosure##n : public Slot##n<R, _arg_type_names> {              \
  public:                                                                      \
-  typedef BoundSlotProxy##n<R, _arg_type_names, PA> SelfType;                 \
-  BoundSlotProxy##n(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }             \
-  ~BoundSlotProxy##n() { delete slot_; slot_ = NULL; }                        \
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
+  typedef SlotProxyClosure##n<R, _arg_type_names, PA> SelfType;               \
+  SlotProxyClosure##n(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }           \
+  ~SlotProxyClosure##n() { delete slot_; slot_ = NULL; }                      \
+  virtual ResultVariant Call(ScriptableInterface *obj,                        \
+                             int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     Variant vargs[n + 1];                                                     \
     for(size_t i = 0; i < n; ++i) vargs[i] = argv[i];                         \
     vargs[n] = Variant(pa_);                                                  \
-    return slot_->Call(n + 1, vargs);                                         \
+    return slot_->Call(obj, n + 1, vargs);                                    \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
     return a && *slot_ == *a->slot_ && pa_ == a->pa_;                         \
   }                                                                           \
  private:                                                                     \
-  DISALLOW_EVIL_CONSTRUCTORS(BoundSlotProxy##n);                              \
+  DISALLOW_EVIL_CONSTRUCTORS(SlotProxyClosure##n);                            \
   Slot *slot_;                                                                \
   PA pa_;                                                                     \
 };                                                                            \
@@ -682,6 +1054,61 @@ NewSlot(const T *obj, R (T::*method)(_arg_type_names) const) {                \
   return new MethodSlot##n<R, _arg_type_names, const T,                       \
                            R (T::*)(_arg_type_names) const>(obj, method);     \
 }                                                                             \
+template <typename R, _arg_types, typename T>                                 \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (T::*method)(_arg_type_names)) {                                    \
+  return new UnboundMethodSlot##n<R, _arg_type_names, T,                      \
+                                  R (T::*)(_arg_type_names)>(method);         \
+}                                                                             \
+template <typename R, _arg_types, typename T>                                 \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (T::*method)(_arg_type_names) const) {                              \
+  return new UnboundMethodSlot##n<R, _arg_type_names, const T,                \
+                                  R (T::*)(_arg_type_names) const>(method);   \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (DT::*method)(_arg_type_names), DT *(*delegate_getter)(T *)) {      \
+  return new DelegatedMethodSlot##n<R, _arg_type_names, T,                    \
+                                    R (DT::*)(_arg_type_names),               \
+                                    DT *(*)(T *)>(                            \
+      method, delegate_getter);                                               \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (DT::*method)(_arg_type_names) const,                               \
+        const DT *(*delegate_getter)(T *)) {                                  \
+  return new DelegatedMethodSlot##n<R, _arg_type_names, T,                    \
+                                    R (DT::*)(_arg_type_names) const,         \
+                                    const DT *(*)(T *)>(                      \
+      method, delegate_getter);                                               \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (DT::*method)(_arg_type_names), DT *T::*delegate_field) {           \
+  return new DelegatedMethodSlot##n<R, _arg_type_names, T,                    \
+                                    R (DT::*)(_arg_type_names),               \
+                                    FieldDelegateGetter<T, DT> >(             \
+      method, FieldDelegateGetter<T, DT>(delegate_field));                    \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (DT::*method)(_arg_type_names) const,                               \
+        DT *T::*delegate_field) {                                             \
+  return new DelegatedMethodSlot##n<R, _arg_type_names, T,                    \
+                                    R (DT::*)(_arg_type_names) const,         \
+                                    FieldDelegateGetter<T, DT> >(             \
+      method, FieldDelegateGetter<T, DT>(delegate_field));                    \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (DT::*method)(_arg_type_names) const,                               \
+        const DT *T::*delegate_field) {                                       \
+  return new DelegatedMethodSlot##n<R, _arg_type_names, T,                    \
+                                    R (DT::*)(_arg_type_names) const,         \
+                                    FieldDelegateGetter<T, const DT> >(       \
+      method, FieldDelegateGetter<T, const DT>(delegate_field));              \
+}                                                                             \
 template <typename R, _arg_types, typename F>                                 \
 inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
   return new FunctorSlot##n<R, _arg_type_names, F>(f);                        \
@@ -690,25 +1117,25 @@ inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
 template <typename R, _arg_types, typename PA>                                \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewSlot(R (*f)(_arg_type_names, PA), PA pa) {                                 \
-  return new BoundFunctorSlot##n<R, _arg_type_names,                          \
-                                 R (*)(_arg_type_names, PA), PA>(f, pa);      \
+  return new FunctorSlotClosure##n<R, _arg_type_names,                        \
+                                   R (*)(_arg_type_names, PA), PA>(f, pa);    \
 }                                                                             \
 template <typename R, _arg_types, typename T, typename PA>                    \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewSlot(T *obj, R (T::*method)(_arg_type_names, PA), PA pa) {                 \
-  return new BoundMethodSlot##n<R, _arg_type_names, T,                        \
-                          R (T::*)(_arg_type_names, PA), PA>(obj, method, pa);\
+  return new MethodSlotClosure##n<R, _arg_type_names, T,                      \
+                         R (T::*)(_arg_type_names, PA), PA>(obj, method, pa); \
 }                                                                             \
 template <typename R, _arg_types, typename T, typename PA>                    \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewSlot(const T *obj, R (T::*method)(_arg_type_names, PA) const, PA pa) {     \
-  return new BoundMethodSlot##n<R, _arg_type_names, const T,                  \
+  return new MethodSlotClosure##n<R, _arg_type_names, const T,                \
                    R (T::*)(_arg_type_names, PA) const, PA>(obj, method, pa); \
 }                                                                             \
 template <typename R, _arg_types, typename F, typename PA>                    \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewFunctorSlot(F f, PA pa) {                                                  \
-  return new BoundFunctorSlot##n<R, _arg_type_names, F, PA>(f, pa);           \
+  return new FunctorSlotClosure##n<R, _arg_type_names, F, PA>(f, pa);         \
 }
 
 #define INIT_ARG_TYPE(n) VariantType<P##n>::type
@@ -921,6 +1348,22 @@ template <typename T>
 inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
   return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
 }
+
+/**
+ * Helper macro for defining static delegate getters. Both const version and
+ * non-const version will be defined.
+ * @param getter name of the getter.
+ * @param expr the expression to get the object to delegate to.
+ * @param src_type the source object type.
+ * @param dest_type the destination object type.
+ */
+#define DEFINE_DELEGATE_GETTER_NO_CONST(getter, expr, src_type, dest_type) \
+  static dest_type *getter(src_type *src) { return expr; }
+#define DEFINE_DELEGATE_GETTER_CONST(getter, expr, src_type, dest_type)    \
+  static const dest_type *getter(src_type *src) { return expr; }
+#define DEFINE_DELEGATE_GETTER(getter, expr, src_type, dest_type)          \
+  DEFINE_DELEGATE_GETTER_NO_CONST(getter, expr, src_type, dest_type)       \
+  DEFINE_DELEGATE_GETTER_CONST(getter##Const, expr, src_type, dest_type)
 
 /**
  * Create a slot with default arguments.

@@ -32,13 +32,14 @@ class ScriptableMenu : public ScriptableHelperNativeOwnedDefault {
   virtual ~ScriptableMenu();
 
  protected:
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableMenu);
 
   void ScriptAddItem(const char *item_text, int style, Slot *handler);
   ScriptableMenu *ScriptAddPopup(const char *popup_text);
+  void SetItemStyle(const char *item_text, int style);
 
   MenuInterface *menu_;
   std::vector<ScriptableMenu *> submenus_;

@@ -20,6 +20,11 @@
 #include <cassert>
 #include <cstdio>
 #include <stdint.h>
+
+#ifdef _DEBUG
+#include <typeinfo>
+#endif
+
 #include <ggadget/sysdeps.h>
 
 namespace ggadget {
@@ -138,16 +143,36 @@ inline To implicit_cast(From const &f) {
  * Use like this: <code>down_cast<To *>(foo)</code>.
  */
 template<typename To, typename From>
-inline To down_cast(From* f) {          // so we only accept pointers
+inline To down_cast(const From *f) {          // so we only accept pointers
+#ifdef _DEBUG   // RTTI: debug mode only!
   // Ensures that To is a sub-type of From *.  This test is here only
   // for compile-time type checking, and has no overhead in an
   // optimized build at run-time, as it will be optimized away
   // completely.
   if (false) {
-    implicit_cast<From*, To>(0);
+    implicit_cast<const From*, To>(0);
   }
+  if (f != NULL && dynamic_cast<To>(f) == NULL) {
+    fprintf(stderr, "down_cast from %s to %s failed: \n",
+           typeid(*f).name(), typeid(To).name());
+    ASSERT(false);
+  }
+#endif
+  return static_cast<To>(f);
+}
 
-  ASSERT(f == NULL || dynamic_cast<To>(f) != NULL); // RTTI: debug mode only!
+template<typename To, typename From>
+inline To down_cast(From *f) {
+#ifdef _DEBUG   // RTTI: debug mode only!
+  if (false) {
+    implicit_cast<const From *, To>(0);
+  }
+  if (f != NULL && dynamic_cast<To>(f) == NULL) {
+    fprintf(stderr, "down_cast from %s to %s failed: \n",
+           typeid(*f).name(), typeid(To).name());
+    ASSERT(false);
+  }
+#endif
   return static_cast<To>(f);
 }
 

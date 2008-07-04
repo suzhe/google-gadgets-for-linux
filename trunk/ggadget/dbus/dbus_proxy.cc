@@ -236,7 +236,8 @@ class DBusProxy::Impl {
     ~MethodSlot() {
       delete [] arg_types_;
     }
-    virtual ResultVariant Call(int argc, const Variant argv[]) const {
+    virtual ResultVariant Call(ScriptableInterface *,
+                               int argc, const Variant argv[]) const {
       return_values_.clear();
       bool ret = proxy_->Call(prototype_.name.c_str(), true, -1, argv, argc,
                               NewSlot(this, &MethodSlot::GetReturnValue));

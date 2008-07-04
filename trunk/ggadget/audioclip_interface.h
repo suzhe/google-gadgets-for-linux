@@ -88,7 +88,7 @@ class AudioclipInterface {
   virtual void SetSrc(const char *src) = 0;
   virtual State GetState() const = 0;
   virtual int GetVolume() const = 0;
-  virtual void SetVolume(int volume) const = 0;
+  virtual void SetVolume(int volume) = 0;
 
  public:
   virtual void Play() = 0;

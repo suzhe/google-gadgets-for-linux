@@ -102,6 +102,15 @@ class Signal {
   /**
    * Emit the signal in general format.
    * Normally C++ code should use @c operator() in the templated subclasses.
+   * @param argc number of arguments.
+   * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
+   * @return the return value of the connected slots. Use @c ResultVariant
+   *     instead @c Variant as the result type to ensure scriptable object
+   *     to be deleted if the result won't be handled by the caller.
+   *     If there is no active connections, a @c ResultVariant containing
+   *     a @c Variant with the default value of @c GetReturnType() will be
+   *     returned. If there are multiple active connections, the return value
+   *     of the last slot will be returned. 
    */
   ResultVariant Emit(int argc, const Variant argv[]) const;
 
@@ -122,6 +131,12 @@ class Signal {
    * Disconnect a connection from this signal.
    */
   bool Disconnect(Connection *connection);
+
+  /**
+   * Get the single default connection to this signal. It's useful to manage
+   * event handlers that doesn't have multiple instances. 
+   */
+  Connection *GetDefaultConnection();
 
   /**
    * Gets the count of connected connections, including blocked or unblocked.
@@ -147,6 +162,19 @@ class Signal {
 };
 
 /**
+ * A @c ClassSignal implementation should contain a memmber pointer to
+ * a @c Signal member of a class.
+ */
+class ClassSignal {
+ public:
+  virtual ~ClassSignal() { }
+  /** Binds the stored @c Signal member to a particular object. */
+  virtual Signal *GetSignal(ScriptableInterface *object) = 0;
+  /** Creates a @c Slot as the prototype of the contained signal. */
+  virtual Slot *NewPrototypeSlot() = 0;
+};
+
+/**
  * Wrap a @c Signal as a @c Slot to enable complex signal emitting paths.
  */
 class SignalSlot : public Slot {
@@ -159,7 +187,9 @@ class SignalSlot : public Slot {
 
   const Signal *signal() const { return signal_; }
 
-  virtual ResultVariant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(ScriptableInterface *obj,
+                             int argc, const Variant argv[]) const {
+    // A SignalSlot is always bound to an object, so obj is ignored.
     return signal_->Emit(argc, argv);
   }
   virtual Variant::Type GetReturnType() const {
@@ -194,6 +224,8 @@ class Signal0 : public Signal {
     return VariantValue<R>()(Emit(0, NULL).v());
   }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(Signal0);
 };
 
 /**
@@ -202,11 +234,68 @@ class Signal0 : public Signal {
 template <>
 class Signal0<void> : public Signal {
  public:
+  Signal0() { }
   Connection *Connect(Slot0<void> *slot) { return Signal::Connect(slot); }
   void operator()() const { Emit(0, NULL); }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(Signal0);
 };
 
 typedef Signal0<void> EventSignal;
+
+template <typename R, typename T>
+class ClassSignal0 : public ClassSignal {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  ClassSignal0(Signal0<R> T::*signal) : signal_(signal) { }
+  virtual Signal *GetSignal(ScriptableInterface *object) {
+    return &(down_cast<T *>(object)->*signal_);
+  }
+  virtual Slot *NewPrototypeSlot() {
+    return new PrototypeSlot0<R>();
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ClassSignal0);
+  Signal0<R> T::*signal_;
+};
+
+template <typename R, typename T>
+inline ClassSignal *NewClassSignal(Signal0<R> T::*signal) {
+  return new ClassSignal0<R, T>(signal);
+}
+
+template <typename R, typename T, typename DT, typename DelegateGetter>
+class DelegatedClassSignal0 : public ClassSignal {
+ public:
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+  DelegatedClassSignal0(Signal0<R> DT::*signal, DelegateGetter delegate_getter)
+      : signal_(signal), delegate_getter_(delegate_getter) { }
+  virtual Signal *GetSignal(ScriptableInterface *object) {
+    return &(delegate_getter_(down_cast<T *>(object))->*signal_);
+  }
+  virtual Slot *NewPrototypeSlot() {
+    return new PrototypeSlot0<R>();
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedClassSignal0);
+  Signal0<R> DT::*signal_;
+  DelegateGetter delegate_getter_;
+};
+
+template <typename R, typename T, typename DT>
+inline ClassSignal *NewClassSignal(Signal0<R> DT::*signal,
+                                   DT *(*delegate_getter)(T *)) {
+  return new DelegatedClassSignal0<R, T, DT, DT *(*)(T *)>(signal,
+                                                           delegate_getter);
+}
+template <typename R, typename T, typename DT>
+inline ClassSignal *NewClassSignal(Signal0<R> DT::*signal,
+                                   DT *T::*delegate_field) {
+  return new DelegatedClassSignal0<R, T, DT, FieldDelegateGetter<T, DT> >(
+      signal, FieldDelegateGetter<T, DT>(delegate_field));
+}
 
 /**
  * Other <code>Signal</code>s are defined by this macro.
@@ -231,6 +320,8 @@ class Signal##n : public Signal {                                             \
   virtual const Variant::Type *GetArgTypes() const {                          \
     return ArgTypesHelper<_arg_type_names>();                                 \
   }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(Signal##n);                                      \
 };                                                                            \
                                                                               \
 template <_arg_types>                                                         \
@@ -249,7 +340,65 @@ class Signal##n<void, _arg_type_names> : public Signal {                      \
   virtual const Variant::Type *GetArgTypes() const {                          \
     return ArgTypesHelper<_arg_type_names>();                                 \
   }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(Signal##n);                                      \
 };                                                                            \
+                                                                              \
+template <typename R, _arg_types, typename T>                                 \
+class ClassSignal##n : public ClassSignal {                                   \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  ClassSignal##n(Signal##n<R, _arg_type_names> T::*signal)                    \
+      : signal_(signal) { }                                                   \
+  virtual Signal *GetSignal(ScriptableInterface *object) {                    \
+    return &(down_cast<T *>(object)->*signal_);                               \
+  }                                                                           \
+  virtual Slot *NewPrototypeSlot() {                                          \
+    return new PrototypeSlot##n<R, _arg_type_names>();                        \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(ClassSignal##n);                                 \
+  Signal##n<R, _arg_type_names> T::*signal_;                                  \
+};                                                                            \
+template <typename R, _arg_types, typename T>                                 \
+inline ClassSignal *NewClassSignal(Signal##n<R, _arg_type_names> T::*signal) {\
+  return new ClassSignal##n<R, _arg_type_names, T>(signal);                   \
+}                                                                             \
+                                                                              \
+template <typename R, _arg_types, typename T, typename DT,                    \
+          typename DelegateGetter>                                            \
+class DelegatedClassSignal##n : public ClassSignal {                          \
+ public:                                                                      \
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),                  \
+                 T_must_be_ScriptableInterface_or_derived_from_it);           \
+  DelegatedClassSignal##n(Signal##n<R, _arg_type_names> DT::*signal,          \
+                          DelegateGetter delegate_getter)                     \
+      : signal_(signal), delegate_getter_(delegate_getter) { }                \
+  virtual Signal *GetSignal(ScriptableInterface *object) {                    \
+    return &(delegate_getter_(down_cast<T *>(object))->*signal_);             \
+  }                                                                           \
+  virtual Slot *NewPrototypeSlot() {                                          \
+    return new PrototypeSlot##n<R, _arg_type_names>();                        \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(DelegatedClassSignal##n);                        \
+  Signal##n<R, _arg_type_names> DT::*signal_;                                 \
+  DelegateGetter delegate_getter_;                                            \
+};                                                                            \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline ClassSignal *NewClassSignal(                                           \
+    Signal##n<R, _arg_type_names> DT::*signal, DT *(*delegate_getter)(T *)) { \
+  return new DelegatedClassSignal##n<R, _arg_type_names, T, DT, DT *(*)(T *)>(\
+      signal, delegate_getter);                                               \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename DT>                    \
+inline ClassSignal *NewClassSignal(                                           \
+    Signal##n<R, _arg_type_names> DT::*signal, DT *T::*delegate_field) {      \
+  return new DelegatedClassSignal##n<R, _arg_type_names, T, DT,               \
+                                     FieldDelegateGetter<T, DT> >(            \
+      signal, FieldDelegateGetter<T, DT>(delegate_field));                    \
+}                                                                             \
 
 #define INIT_ARG(n)      vargs[n-1] = Variant(p##n)
 

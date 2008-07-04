@@ -36,6 +36,8 @@ namespace ggadget {
 typedef Signal4<std::string, LogLevel, const char *, int,
                 const std::string &> LogSignal;
 
+// Note: because these global objects may be destructed before other
+// global objects, don't call LOG from destructors of other global objects.
 static LogSignal g_global_log_signal;
 typedef std::map<void *, LogSignal *> ContextSignalMap;
 static ContextSignalMap g_context_log_signals;

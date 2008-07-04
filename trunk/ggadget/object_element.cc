@@ -63,11 +63,11 @@ ObjectElement::~ObjectElement() {
   delete impl_;
 }
 
-void ObjectElement::DoRegister() {
-  BasicElement::DoRegister();
+void ObjectElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("classId",
-                   NewSlot(this, &ObjectElement::GetObjectClassId),
-                   NewSlot(this, &ObjectElement::SetObjectClassId));
+                   NewSlot(&ObjectElement::GetObjectClassId),
+                   NewSlot(&ObjectElement::SetObjectClassId));
 }
 
 BasicElement *ObjectElement::CreateInstance(BasicElement *parent, View *view,

@@ -339,62 +339,63 @@ ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
 }
 
-void ScrollBarElement::DoRegister() {
-  BasicElement::DoRegister();
+void ScrollBarElement::DoClassRegister() {
+  BasicElement::DoClassRegister();
   RegisterProperty("background",
-                   NewSlot(this, &ScrollBarElement::GetBackground),
-                   NewSlot(this, &ScrollBarElement::SetBackground));
+                   NewSlot(&ScrollBarElement::GetBackground),
+                   NewSlot(&ScrollBarElement::SetBackground));
   RegisterProperty("grippyImage",
-                   NewSlot(this, &ScrollBarElement::GetGrippyImage),
-                   NewSlot(this, &ScrollBarElement::SetGrippyImage));
+                   NewSlot(&ScrollBarElement::GetGrippyImage),
+                   NewSlot(&ScrollBarElement::SetGrippyImage));
   RegisterProperty("leftDownImage",
-                   NewSlot(this, &ScrollBarElement::GetLeftDownImage),
-                   NewSlot(this, &ScrollBarElement::SetLeftDownImage));
+                   NewSlot(&ScrollBarElement::GetLeftDownImage),
+                   NewSlot(&ScrollBarElement::SetLeftDownImage));
   RegisterProperty("leftImage",
-                   NewSlot(this, &ScrollBarElement::GetLeftImage),
-                   NewSlot(this, &ScrollBarElement::SetLeftImage));
+                   NewSlot(&ScrollBarElement::GetLeftImage),
+                   NewSlot(&ScrollBarElement::SetLeftImage));
   RegisterProperty("leftOverImage",
-                   NewSlot(this, &ScrollBarElement::GetLeftOverImage),
-                   NewSlot(this, &ScrollBarElement::SetLeftOverImage));
+                   NewSlot(&ScrollBarElement::GetLeftOverImage),
+                   NewSlot(&ScrollBarElement::SetLeftOverImage));
   RegisterProperty("lineStep",
-                   NewSlot(this, &ScrollBarElement::GetLineStep),
-                   NewSlot(this, &ScrollBarElement::SetLineStep));
+                   NewSlot(&ScrollBarElement::GetLineStep),
+                   NewSlot(&ScrollBarElement::SetLineStep));
   RegisterProperty("max",
-                   NewSlot(this, &ScrollBarElement::GetMax),
-                   NewSlot(this, &ScrollBarElement::SetMax));
+                   NewSlot(&ScrollBarElement::GetMax),
+                   NewSlot(&ScrollBarElement::SetMax));
   RegisterProperty("min",
-                   NewSlot(this, &ScrollBarElement::GetMin),
-                   NewSlot(this, &ScrollBarElement::SetMin));
+                   NewSlot(&ScrollBarElement::GetMin),
+                   NewSlot(&ScrollBarElement::SetMin));
   RegisterStringEnumProperty("orientation",
-                   NewSlot(this, &ScrollBarElement::GetOrientation),
-                   NewSlot(this, &ScrollBarElement::SetOrientation),
+                   NewSlot(&ScrollBarElement::GetOrientation),
+                   NewSlot(&ScrollBarElement::SetOrientation),
                    kOrientationNames, arraysize(kOrientationNames));
   RegisterProperty("pageStep",
-                   NewSlot(this, &ScrollBarElement::GetPageStep),
-                   NewSlot(this, &ScrollBarElement::SetPageStep));
+                   NewSlot(&ScrollBarElement::GetPageStep),
+                   NewSlot(&ScrollBarElement::SetPageStep));
   RegisterProperty("rightDownImage",
-                   NewSlot(this, &ScrollBarElement::GetRightDownImage),
-                   NewSlot(this, &ScrollBarElement::SetRightDownImage));
+                   NewSlot(&ScrollBarElement::GetRightDownImage),
+                   NewSlot(&ScrollBarElement::SetRightDownImage));
   RegisterProperty("rightImage",
-                   NewSlot(this, &ScrollBarElement::GetRightImage),
-                   NewSlot(this, &ScrollBarElement::SetRightImage));
+                   NewSlot(&ScrollBarElement::GetRightImage),
+                   NewSlot(&ScrollBarElement::SetRightImage));
   RegisterProperty("rightOverImage",
-                   NewSlot(this, &ScrollBarElement::GetRightOverImage),
-                   NewSlot(this, &ScrollBarElement::SetRightOverImage));
+                   NewSlot(&ScrollBarElement::GetRightOverImage),
+                   NewSlot(&ScrollBarElement::SetRightOverImage));
   RegisterProperty("thumbDownImage",
-                   NewSlot(this, &ScrollBarElement::GetThumbDownImage),
-                   NewSlot(this, &ScrollBarElement::SetThumbDownImage));
+                   NewSlot(&ScrollBarElement::GetThumbDownImage),
+                   NewSlot(&ScrollBarElement::SetThumbDownImage));
   RegisterProperty("thumbImage",
-                   NewSlot(this, &ScrollBarElement::GetThumbImage),
-                   NewSlot(this, &ScrollBarElement::SetThumbImage));
+                   NewSlot(&ScrollBarElement::GetThumbImage),
+                   NewSlot(&ScrollBarElement::SetThumbImage));
   RegisterProperty("thumbOverImage",
-                   NewSlot(this, &ScrollBarElement::GetThumbOverImage),
-                   NewSlot(this, &ScrollBarElement::SetThumbOverImage));
+                   NewSlot(&ScrollBarElement::GetThumbOverImage),
+                   NewSlot(&ScrollBarElement::SetThumbOverImage));
   RegisterProperty("value",
-                   NewSlot(this, &ScrollBarElement::GetValue),
-                   NewSlot(this, &ScrollBarElement::SetValue));
+                   NewSlot(&ScrollBarElement::GetValue),
+                   NewSlot(&ScrollBarElement::SetValue));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
+                      &ScrollBarElement::impl_);
 }
 
 ScrollBarElement::~ScrollBarElement() {
