@@ -43,9 +43,9 @@ class ListBoxElement::Impl {
  public:
   Impl(ListBoxElement *owner, View *view) :
     owner_(owner),
-    item_width_(1.), item_height_(0),
+    item_width_(0), item_height_(0),
     item_width_specified_(false), item_height_specified_(false),
-    item_width_relative_(true), item_height_relative_(false),
+    item_width_relative_(false), item_height_relative_(false),
     multiselect_(false), item_separator_(false),
     selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
