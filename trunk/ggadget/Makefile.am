@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . tests
+SUBDIRS = . tests js
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif

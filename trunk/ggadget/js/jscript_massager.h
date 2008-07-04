@@ -14,17 +14,17 @@
   limitations under the License.
 */
 
-#include <cstdio>
-#include "../jscript_massager.h"
+#ifndef GGADGET_JS_JSCRIPT_MASSAGER_H_
+#define GGADGET_JS_JSCRIPT_MASSAGER_H_
 
-int main(int argc, char **argv) {
-  std::string input;
-  char buffer[80];
-  while (fgets(buffer, sizeof(buffer), stdin))
-    input += buffer;
+#include <string>
+namespace ggadget {
+namespace js {
 
-  bool debug = argc > 1 && argv[1][0] == '1';
-  std::string result = ggadget::smjs::MassageJScript(input.c_str(), debug,
-                                                     "", 1);
-  printf("%s", result.c_str());
-}
+std::string MassageJScript(const char *input, bool debug,
+                           const char *filename, int lineno);
+
+} // namespace js
+} // namespace ggadget
+
+#endif // GGADGET_JS_JSCRIPT_MASSAGER_H_

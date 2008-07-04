@@ -328,9 +328,6 @@ static bool ConvertNativeToJSObject(QScriptEngine *engine,
     DLOG("\tscriptable is null!");
   ResolverScriptClass *resolver = new ResolverScriptClass(engine, scriptable);
   *qval = engine->newObject(resolver);
-//  qval->setProperty("Call", engine->newFunction(callFun));
-/*  *qval = engine->newFunction(JSObject);
-  qval->setPrototype(engine->newObject(resolver));*/
   return true;
 }
 

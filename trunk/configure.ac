@@ -123,6 +123,7 @@ build_gst_audio_framework=yes
 build_gst_mediaplayer_element=yes
 build_qt_system_framework=yes
 build_gtk_system_framework=yes
+build_qt_script_runtime=yes
 build_smjs_script_runtime=yes
 build_curl_xml_http_request=yes
 build_qt_xml_http_request=yes
@@ -225,6 +226,12 @@ AC_ARG_ENABLE([smjs-script-runtime],
 	      [build_smjs_script_runtime=$enableval],
 	      [build_smjs_script_runtime=yes])
 
+AC_ARG_ENABLE([qt-script-runtime],
+	      AS_HELP_STRING([--disable-qt-script-runtime],
+			     [don't build qt-script-runtime]),
+	      [build_qt_script_runtime=$enableval],
+	      [build_qt_script_runtime=yes])
+
 AC_ARG_ENABLE([curl-xml-http-request],
 	      AS_HELP_STRING([--disable-curl-xml-http-request],
 			     [don't build curl-xml-http-request]),
@@ -252,6 +259,7 @@ if test x$build_libggadget_qt != xyes; then
   build_qtwebkit_browser_element=no
   build_qt_xml_http_request=no
   build_qt_system_framework=no
+  build_qt_script_runtime=no
 fi
 
 ###########################################################
@@ -431,9 +439,14 @@ if test x$ggl_host_type = xlinux; then
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
 		     [has_qt4=no])
+
   PKG_CHECK_MODULES(QT4WEBKIT, [QtWebKit],
 		    [has_qtwebkit=yes],
 		    [has_qtwebkit=no])
+
+  PKG_CHECK_MODULES(QT4SCRIPT, [QtScript >= 4.4],
+		    [has_qtscript=yes],
+		    [has_qtscript=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
   AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL \
@@ -441,6 +454,9 @@ elif test x$ggl_host_type = xmacosx; then
 		   [has_qt4=yes], [has_qt4=no])
   AC_CHECK_HEADERS([QtWebKit/QtWebKit],
 		   [has_qtwebkit=yes], [has_qtwebkit=no])
+  # FIXME: Version should be checked. Only 4.4 and above are supported
+  AC_CHECK_HEADERS([QtScript/QtScript],
+		   [has_qtscript=yes], [has_qtscript=no])
   if test x$has_qt4 = xyes; then
     QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
               -framework Carbon -framework AppKit -framework QtCore \
@@ -450,6 +466,9 @@ elif test x$ggl_host_type = xmacosx; then
   fi
   if test x$has_qtwebkit = xyes; then
     QT4WEBKIT_LIBS="-$QT4_LIBS -framework QtWebKit"
+  fi
+  if test x$has_qtscript= xyes; then
+    QT4SCRIPT_LIBS="-$QT4_LIBS -framework QtScript"
   fi
 else
   AC_MSG_WARN([Qt support is not available for $ggl_host_type])
@@ -461,6 +480,7 @@ AC_SUBST(MOC)
 if test "x$MOC" = "x"; then
   has_qt4=no
   has_qtwebkit=no
+  has_qtscript=no
 fi
 
 # Check gtk2 related libraries.
@@ -592,16 +612,22 @@ if test x$has_gtk2 != xyes; then
 fi
 
 if test x$has_qt4 != xyes; then
-  AC_MSG_WARN([Library qt-4.3 or above is not available, qt host and libggadget-qt won't be built])
+  AC_MSG_WARN([Library qt-4.3 or above is not available, qt port won't be built])
   build_qt_host=no
   build_libggadget_qt=no
   build_qt_system_framework=no
   build_qt_xml_http_request=no
+  build_qt_script_runtime=no
 fi
 
 if test x$has_qtwebkit != xyes; then
   AC_MSG_WARN([Library qtwebkit or qt-4.4 and above is needed to build qtwebkit_browser_element])
   build_qtwebkit_browser_element=no
+fi
+
+if test x$has_qtscript != xyes; then
+  AC_MSG_WARN([Library qt-4.4 and above is needed to build qt_script_runtime])
+  build_qt_script_runtime=no
 fi
 
 if test x$has_spidermonkey != xyes -a x$build_smjs_script_runtime = xyes; then
@@ -690,6 +716,10 @@ AM_CONDITIONAL(
   [test x$build_smjs_script_runtime = xyes])
 
 AM_CONDITIONAL(
+  [GGL_BUILD_QT_SCRIPT_RUNTIME],
+  [test x$build_qt_script_runtime = xyes])
+
+AM_CONDITIONAL(
   [GGL_BUILD_CURL_XML_HTTP_REQUEST],
   [test x$build_curl_xml_http_request = xyes])
 
@@ -727,8 +757,9 @@ fi
 if test x$build_qt_host = xyes; then
   if test x$build_qt_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
-          x$build_smjs_script_runtime != xyes; then
-    AC_MSG_WARN([qt4, libxml2 or spidermonkey are missing, which are required for qt host.])
+          '(' x$build_smjs_script_runtime != xyes -a \
+	   x$build_qt_script_runtime != xyes ')'; then
+    AC_MSG_WARN([qt4, libxml2 or js runtime are missing, which are required for qt host.])
     build_qt_host=no;
   fi
 fi
@@ -781,6 +812,8 @@ AC_CONFIG_FILES([Makefile
 		 extensions/qt_system_framework/Makefile
 		 extensions/linux_system_framework/Makefile
 		 extensions/linux_system_framework/tests/Makefile
+		 extensions/qt_script_runtime/Makefile
+		 extensions/qt_script_runtime/tests/Makefile
 		 extensions/smjs_script_runtime/Makefile
 		 extensions/smjs_script_runtime/tests/Makefile
 		 extensions/qt_xml_http_request/Makefile
@@ -801,6 +834,8 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/qt/tests/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
+		 ggadget/js/Makefile
+		 ggadget/js/tests/Makefile
 		 hosts/Makefile
 		 hosts/gtk/Makefile
 		 hosts/qt/Makefile
@@ -849,6 +884,7 @@ Build options:
   Build qt-system-framework     $build_qt_system_framework
   Build linux-system-framework  $build_linux_system_framework
   Build smjs-script-runtime     $build_smjs_script_runtime
+  Build qt-script-runtime       $build_qt_script_runtime
   Build curl-xml-http-request   $build_curl_xml_http_request
   Build qt-xml-http-request     $build_qt_xml_http_request
   Build libxml2-xml-parser      $build_libxml2_xml_parser

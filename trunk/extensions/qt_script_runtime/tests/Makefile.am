@@ -15,35 +15,24 @@
 #
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -I$(top_srcdir)/third_party/editline
+			  -I$(top_srcdir)
 
-AM_CPPFLAGS		= @SPIDERMONKEY_CPPFLAGS@ \
+AM_CPPFLAGS		= @QT4_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS) \
+			  -Wno-conversion
 
-AM_LDFLAGS		= @SPIDERMONKEY_LDFLAGS@
-
-LDADD			= @SPIDERMONKEY_LIBS@ \
-			  ../libggadget-smjs.la \
+LDADD			= @QT4_LIBS@ \
+			  @QT4SCRIPT_LIBS@ \
+			  ../qt-script-runtime.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/third_party/editline/libeditline.la
+			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
-check_PROGRAMS		= cross_context_test \
-			  dom_test_shell \
+check_PROGRAMS		= dom_test_shell \
 			  js_shell \
 			  wrapper_test_shell
-
-if GGL_BUILD_LIBGGADGET_DBUS
-check_PROGRAMS += dbus_object_test_shell
-dbus_object_test_shell_SOURCES = js_shell.cc \
-				 dbus_object_test_shell.cc \
-				 $(top_srcdir)/ggadget/tests/native_main_loop.cc
-dbus_object_test_shell_LDADD = $(LDADD) \
-			 $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
-endif
 
 dom_test_shell_SOURCES	= js_shell.cc \
 			  dom_test_shell.cc
@@ -55,35 +44,22 @@ wrapper_test_shell_SOURCES = js_shell.cc \
 			     wrapper_test_shell.cc \
 			     $(top_srcdir)/ggadget/tests/scriptables.cc
 
-cross_context_test_SOURCES = cross_context_test.cc
+#cross_context_test_SOURCES = cross_context_test.cc
 
 TESTS_ENVIRONMENT	= $(SHELL)
-TESTS			= cross_context_test.sh \
-			  dom_test_shell.sh \
+TESTS			= dom_test_shell.sh \
 			  js_shell.sh \
 			  wrapper_test_shell.sh
 
-.PHONY: cross_context_test.sh \
-	dbus_object_test_shell.sh \
-	dom_test_shell.sh \
+.PHONY: dom_test_shell.sh \
 	js_shell.sh \
 	wrapper_test_shell.sh
 
 test_scripts_dir = $(abs_top_srcdir)/ggadget/js/test_scripts
 
-if GGL_BUILD_LIBGGADGET_DBUS
-TESTS += dbus_object_test_shell.sh
-dbus_object_test_shell.sh:
-	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class\
-	      $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
-	      $(abs_builddir)/dbus_object_test_shell \
-	      $(abs_top_srcdir)/unittest/js_unittest.js \
-	      $(test_scripts_dir)/dbus_object_test.js > $@)
-endif
-
-cross_context_test.sh:
-	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
-	      $(abs_builddir)/cross_context_test > $@)
+#cross_context_test.sh:
+#	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+#	      $(abs_builddir)/cross_context_test > $@)
 
 dom_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \

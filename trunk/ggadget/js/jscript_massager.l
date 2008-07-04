@@ -39,7 +39,7 @@
 #define END_NS }
 
 BEGIN_NS(ggadget)
-BEGIN_NS(smjs)
+BEGIN_NS(js)
 
 }
 
@@ -455,5 +455,5 @@ std::string MassageJScript(const char *input, bool debug,
   return give_up ? std::string(input) : output;
 }
 
-END_NS // namespace smjs
+END_NS // namespace js
 END_NS // namespace ggadget

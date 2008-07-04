@@ -14,8 +14,10 @@
   limitations under the License.
 */
 
-#include "unittest/gtest.h"
+#include <unittest/gtest.h>
 #include "../jscript_massager.h"
+
+using namespace ggadget::js;
 
 const char *input =
   "options.item(a(b(c))) = d(e(f) + g)\n"
@@ -162,8 +164,7 @@ const char *output =
   ;
 
 TEST(JScriptMassager, Normal) {
-  std::string result = ggadget::smjs::MassageJScript(input, false,
-                                                     "filename", 1);
+  std::string result = MassageJScript(input, false, "filename", 1);
   ASSERT_STREQ(output, result.c_str());
 }
 
@@ -177,8 +178,7 @@ const char *invalid_output1 =
   ;
 
 TEST(JScriptMassager, Invalid1) {
-  std::string result = ggadget::smjs::MassageJScript(invalid_input1, false,
-                                                     "filename", 1);
+  std::string result = MassageJScript(invalid_input1, false, "filename", 1);
   ASSERT_STREQ(invalid_output1, result.c_str());
 }
 
@@ -192,8 +192,7 @@ const char *invalid_output2 =
   ;
 
 TEST(JScriptMassager, Invalid2) {
-  std::string result = ggadget::smjs::MassageJScript(invalid_input2, false,
-                                                     "filename", 1);
+  std::string result = MassageJScript(invalid_input2, false, "filename", 1);
   ASSERT_STREQ(invalid_output2, result.c_str());
 }
 
@@ -208,8 +207,7 @@ const char *invalid_output3 =
   ;
 
 TEST(JScriptMassager, Invalid3) {
-  std::string result = ggadget::smjs::MassageJScript(invalid_input3, false,
-                                                     "filename", 1);
+  std::string result = MassageJScript(invalid_input3, false, "filename", 1);
   ASSERT_STREQ(invalid_output3, result.c_str());
 }
 
@@ -280,8 +278,7 @@ const char *function_output =
   "}\n";
 
 TEST(JScriptMassager, InnerFunctions) {
-  std::string result = ggadget::smjs::MassageJScript(function_input, false,
-                                                     "filename", 1);
+  std::string result = MassageJScript(function_input, false, "filename", 1);
   ASSERT_STREQ(function_output, result.c_str());
 }
 

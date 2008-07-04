@@ -1,5 +1,5 @@
 #
-#  Copyright 2007 Google Inc.
+#  Copyright 2008 Google Inc.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -14,27 +14,10 @@
 #  limitations under the License.
 #
 
-IF(GGL_BUILD_QT_SCRIPT_RUNTIME)
-
-APPLY_CONFIG(QT)
 ADD_SUBDIRECTORY(tests)
 
-SET(SRCS
-  js_script_context.cc
-  js_script_runtime.cc
-  js_function_slot.cc
-  converter.cc
-  json.cc
-  ../../ggadget/js/jscript_massager.cc
-)
+ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
+  COMMAND flex -o $@ $<
+  MAIN_DEPENDENCY jscript_massager.l
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-ADD_LIBRARY(ggadget-qtscript ${SRCS})
-ADD_MODULE(qt-script-runtime qt_script_runtime.cc)
-TARGET_LINK_LIBRARIES(qt-script-runtime
-  ggadget
-  ggadget-qtscript
-  ${QT_LIBRARIES}
-  )
-OUTPUT_MODULE(qt-script-runtime)
-
-ENDIF(GGL_BUILD_QT_SCRIPT_RUNTIME)

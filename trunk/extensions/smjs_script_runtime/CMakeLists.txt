@@ -30,7 +30,7 @@ SET(SRCS
   js_native_wrapper.cc
   js_script_context.cc
   js_script_runtime.cc
-  jscript_massager.cc
+  ../../ggadget/js/jscript_massager.cc
   json.cc
   native_js_wrapper.cc
 )
@@ -43,10 +43,5 @@ TARGET_LINK_LIBRARIES(smjs-script-runtime
   ggadget
   ggadget-smjs)
 OUTPUT_MODULE(smjs-script-runtime)
-
-ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
-  COMMAND flex -o $@ $<
-  MAIN_DEPENDENCY jscript_massager.l
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 ENDIF(GGL_BUILD_SMJS_SCRIPT_RUNTIME)

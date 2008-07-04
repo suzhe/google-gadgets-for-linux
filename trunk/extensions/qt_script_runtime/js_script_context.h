@@ -23,6 +23,9 @@
 #include <ggadget/script_context_interface.h>
 #include <ggadget/signals.h>
 
+Q_DECLARE_METATYPE(QScriptContext*)
+Q_DECLARE_METATYPE(QScriptValue)
+
 namespace ggadget {
 namespace qt {
 
@@ -34,15 +37,20 @@ class ResolverScriptClass : public QScriptClass {
   ResolverScriptClass(QScriptEngine *engine, ScriptableInterface *object);
   ~ResolverScriptClass();
 
-  QueryFlags queryProperty(const QScriptValue & object,
-                           const QScriptString & name,
-                           QueryFlags flags,
-                           uint * id);
-  QScriptValue property(const QScriptValue & object,
-                        const QScriptString & name, uint id);
-  void setProperty(QScriptValue &object, const QScriptString &name,
-                   uint id, const QScriptValue &value);
+  virtual QueryFlags queryProperty(const QScriptValue & object,
+                                   const QScriptString & name,
+                                   QueryFlags flags,
+                                   uint * id);
+  virtual QScriptValue property(const QScriptValue & object,
+                                const QScriptString & name, uint id);
+  virtual void setProperty(QScriptValue &object, const QScriptString &name,
+                           uint id, const QScriptValue &value);
+  virtual bool supportsExtension(Extension extension) const;
+  virtual QVariant extension(Extension extension,
+                             const QVariant &argument = QVariant());
+
   ScriptableInterface *object_;
+  Slot *call_slot_;
   Connection *on_reference_change_connection_;
   void OnRefChange(int, int);
 };
