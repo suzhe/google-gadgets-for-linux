@@ -25,7 +25,6 @@ SET(SRCS
   js_function_slot.cc
   converter.cc
   json.cc
-  ../../ggadget/js/jscript_massager.cc
 )
 
 ADD_LIBRARY(ggadget-qtscript ${SRCS})
@@ -33,6 +32,7 @@ ADD_MODULE(qt-script-runtime qt_script_runtime.cc)
 TARGET_LINK_LIBRARIES(qt-script-runtime
   ggadget
   ggadget-qtscript
+  ggadget-js
   ${QT_LIBRARIES}
   )
 OUTPUT_MODULE(qt-script-runtime)

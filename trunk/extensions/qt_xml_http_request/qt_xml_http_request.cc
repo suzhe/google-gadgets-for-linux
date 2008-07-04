@@ -142,7 +142,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual void DoClassRegister() {
-    RegisterClassEvent("onreadystatechange",
+    RegisterClassSignal("onreadystatechange",
                        &XMLHttpRequest::onreadystatechange_signal_);
     RegisterProperty("readyState",
                      NewSlot(&XMLHttpRequest::GetReadyState), NULL);

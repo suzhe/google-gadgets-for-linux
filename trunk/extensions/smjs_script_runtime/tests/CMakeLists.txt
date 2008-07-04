@@ -19,6 +19,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
 SET(LIBS
   gtest
   ggadget
+  ggadget-js
   editline
   ggadget-smjs
   ${SMJS_LIBRARIES}

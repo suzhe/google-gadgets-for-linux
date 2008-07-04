@@ -18,15 +18,16 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)/third_party/editline
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
+			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/editline/libeditline.la
 
 check_PROGRAMS		= jscript_massager_test \
 			  massager
 
-massager_SOURCES	= massager.cc ../jscript_massager.cc
+massager_SOURCES	= massager.cc
 
-jscript_massager_test_SOURCES = jscript_massager_test.cc ../jscript_massager.cc
+jscript_massager_test_SOURCES = jscript_massager_test.cc
 
 TESTS			= jscript_massager_test.sh
 
@@ -36,9 +37,11 @@ TESTS			= jscript_massager_test.sh
 jscript_massager_test.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/jscript_massager_test > $@)
+	chmod +x $@
 
 massager.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/massager > $@)
+	chmod +x $@
 
 

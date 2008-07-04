@@ -46,9 +46,10 @@ qt_script_runtime_la_CPPFLAGS = \
 
 qt_script_runtime_la_LIBADD = \
 			  @QT4_LIBS@ \
+			  @QT4SCRIPT_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/js/libjscript-massager.la
+			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
 
 qt_script_runtime_la_LDFLAGS = \
 			  -avoid-version \

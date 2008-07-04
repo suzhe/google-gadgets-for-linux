@@ -37,7 +37,8 @@ class JSFunctionSlot : public Slot {
                  QScriptEngine *engine, QScriptValue function);
   virtual ~JSFunctionSlot();
 
-  virtual ResultVariant Call(int argc, const Variant argv[]) const;
+  virtual ResultVariant Call(ScriptableInterface *object,
+                             int argc, const Variant argv[]) const;
 
   virtual bool HasMetadata() const { return prototype_ != NULL; }
   virtual Variant::Type GetReturnType() const {

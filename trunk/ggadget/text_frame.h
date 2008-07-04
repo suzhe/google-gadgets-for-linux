@@ -32,7 +32,7 @@ class TextFrame {
   TextFrame(BasicElement *owner, View *view);
   ~TextFrame();
 
-  void TextFrame::RegisterClassProperties(
+  void RegisterClassProperties(
       TextFrame *(*delegate_getter)(BasicElement *),
       const TextFrame *(*delegate_getter_const)(BasicElement *));
 
