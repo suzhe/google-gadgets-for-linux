@@ -53,7 +53,7 @@
 static ggadget::gtk::MainLoop g_main_loop;
 
 static const char kOptionsName[] = "gtk-host-options";
-static const char kRunOnceSocketName[] = "gtk-host-socket";
+static const char kRunOnceSocketName[] = "ggl-host-socket";
 
 static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
@@ -192,7 +192,7 @@ static const char *g_help_string =
   "  If any gadgets are specified, they will be installed by using\n"
   "  GadgetManager.\n";
 
-static void Handler(const std::string &data) {
+static void OnClientMessage(const std::string &data) {
   ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
 }
 
@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
       ggadget::BuildFilePath(profile_dir.c_str(),
                              kRunOnceSocketName,
                              NULL).c_str());
-  run_once.ConnectOnMessage(ggadget::NewSlot(Handler));
+  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
