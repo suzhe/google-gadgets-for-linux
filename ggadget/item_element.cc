@@ -233,6 +233,7 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
   switch (event.GetType()) {
    case Event::EVENT_MOUSE_CLICK:
      if (impl_->parent_) {
+       ElementHolder self_holder(this);
        // Need to invoke selection through parent, since
        // parent knows about multiselect status.
        if (event.GetModifier() & Event::MOD_SHIFT) {
@@ -243,8 +244,9 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
          impl_->parent_->SetSelectedItem(this);
        }
 
-       // If inside combobox, turn off droplist on click.
-       if (impl_->parent_->IsImplicit() &&
+       if (self_holder.Get() &&
+           // If inside combobox, turn off droplist on click.
+           impl_->parent_->IsImplicit() &&
            impl_->parent_->GetParentElement() == GetView()->GetPopupElement()) {
          GetView()->SetPopupElement(NULL);
        }

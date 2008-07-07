@@ -113,11 +113,8 @@ class MainLoop::Impl {
     node->data = interval;
     node->callback = callback;
     node->impl = this;
-    node->watch_id = (interval <= 1 ?
-         // Let timeout 0 have higher priority (than e.g. repainting),
-         // because it is often used to post events that need to be processed
-         // immediately in the next event loop.
-         g_idle_add_full(G_PRIORITY_HIGH_IDLE, TimeoutCallback, node, NULL) :
+    node->watch_id = (interval < 1 ?
+         g_idle_add(TimeoutCallback, node) :
          // Lower priority of other timers to prevent them from congesting the
          // event loop.
          g_timeout_add_full(G_PRIORITY_DEFAULT_IDLE, interval, TimeoutCallback,
