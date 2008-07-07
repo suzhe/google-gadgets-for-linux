@@ -250,6 +250,18 @@ AC_ARG_ENABLE([libxml2-xml-parser],
 	      [build_libxml2_xml_parser=$enableval],
 	      [build_libxml2_xml_parser=yes])
 
+AC_ARG_ENABLE([update-mime-database],
+	      AC_HELP_STRING([--disable-update-mime-database],
+			     [don't run update-mime-database after install]),
+	      [enable_update_mime_database=$enableval],
+	      [enable_update_mime_database=yes])
+
+AC_ARG_ENABLE([update-desktop-database],
+	      AC_HELP_STRING([--disable-update-desktop-database],
+			     [don't run update-desktop-database after install]),
+	      [enable_update_desktop_database=$enableval],
+	      [enable_update_desktop_database=yes])
+
 if test x$build_libggadget_gtk != xyes; then
   build_gtk_host=no
 fi
@@ -566,6 +578,21 @@ if test "$LEX" != flex; then
   LEX="$SHELL $abs_top_srcdir/autotools/missing flex"
 fi
 
+# Check update-mime-database
+AC_PATH_PROG(UPDATE_MIME_DATABASE, update-mime-database, no)
+if test x$UPDATE_MIME_DATABASE = xno; then
+  enable_update_mime_database=no
+fi
+AM_CONDITIONAL(ENABLE_UPDATE_MIME_DATABASE, test x$enable_update_mime_database = xyes)
+
+# Check update-desktop-database
+AC_PATH_PROG(UPDATE_DESKTOP_DATABASE, update-desktop-database, no)
+if test x$UPDATE_DESKTOP_DATABASE = xno; then
+  enable_update_desktop_database=no
+fi
+AM_CONDITIONAL(ENABLE_UPDATE_DESKTOP_DATABASE, test x$enable_update_desktop_database = xyes)
+
+
 ###########################################################
 ##                  Process Config options.              ##
 ###########################################################
@@ -854,6 +881,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc
 		 ggadget/qt/libggadget-qt-1.0.pc
+		 xdg/Makefile
 		 ])
 AC_OUTPUT
 

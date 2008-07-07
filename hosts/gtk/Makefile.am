@@ -62,4 +62,25 @@ ggl-gtk.sh: ggl-gtk
 	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-gtk $$@' >> $@; \
 	 chmod 0755 $@)
 
+desktopdir = $(datadir)/applications
+desktop_in_files = ggl-gtk.desktop.in
+desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
+
+ggl-gtk.desktop : ggl-gtk.desktop.in
+	echo $(bindir)
+	$(SED) -e 's|@bindir[@]|$(bindir)|g' -e 's|@datadir[@]|$(datadir)|g' $< > $@.tmp
+	$(top_builddir)/xdg/intl-desktop-file.sh $@.tmp $@
+	rm -f $@.tmp
+
+EXTRA_DIST = $(desktop_in_files)
+CLEANFILES = $(desktop_DATA)
+
+if ENABLE_UPDATE_DESKTOP_DATABASE
+install-data-hook:
+	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+
+uninstall-hook:
+	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+endif
+
 endif

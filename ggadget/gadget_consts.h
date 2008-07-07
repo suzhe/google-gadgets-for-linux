@@ -232,7 +232,7 @@ const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";
 
-const char kGadgetsIcon[] = "resource://gadgets.png";
+const char kGadgetsIcon[] = "resource://google-gadgets.png";
 
 const char kFtpUrlPrefix[] = "ftp://";
 const char kHttpUrlPrefix[] = "http://";

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+_Name=HOST_GTK_DESKTOP_NAME
+_Comment=HOST_GTK_DESKTOP_COMMENT
+TryExec=@bindir@/ggl-gtk
+Exec=@bindir@/ggl-gtk %F
+Icon=@datadir@/pixmaps/google-gadgets.png
+Terminal=false
+StartupNotify=true
+Type=Application
+Categories=GNOME;GTK;Network;Utility;
+MimeType=application/x-google-gadgets;app/gg;
