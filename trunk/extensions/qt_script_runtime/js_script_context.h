@@ -100,9 +100,9 @@ class JSScriptContext : public ScriptContextInterface {
   virtual void GetCurrentFileAndLine(std::string *filename, int *lineno);
 
   class Impl;
+  Impl *impl_;
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
-  Impl *impl_;
 };
 
 } // namespace qt
