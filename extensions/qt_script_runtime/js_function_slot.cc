@@ -22,8 +22,15 @@
 #include "js_script_context.h"
 #include "converter.h"
 
+#if 1
+#undef DLOG
+#define DLOG  true ? (void) 0 : LOG
+#endif
+
 namespace ggadget {
 namespace qt {
+
+extern JSScriptContext *GetEngineContext(QScriptEngine *engine);
 
 JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
                                QScriptEngine *engine,
@@ -34,7 +41,7 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
       engine_(engine),
       code_(true),
       script_(script),
-      file_name_(file_name),
+      file_name_(file_name ? file_name: ""),
       line_no_(lineno) {
 }
 
@@ -52,6 +59,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
+  ScopedLogContext log_context(GetEngineContext(engine_));
   QScriptValue qval;
   if (code_) {
     DLOG("JSFunctionSlot::Call: %s", script_.c_str());

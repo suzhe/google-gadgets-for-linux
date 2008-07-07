@@ -24,10 +24,20 @@
 #include "js_script_runtime.h"
 #include "converter.h"
 
+#if 1
+#undef DLOG
+#define DLOG  true ? (void) 0 : LOG
+#endif
+
 namespace ggadget {
 namespace qt {
 
-static std::map<QScriptEngine*, JSScriptContext::Impl*> g_data;
+static std::map<QScriptEngine*, JSScriptContext*> g_data;
+
+JSScriptContext *GetEngineContext(QScriptEngine *engine) {
+  return g_data[engine];
+}
+
 // String.substr is not ecma standard and qtscript doesn't provide it, so make
 // our own
 static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
@@ -43,6 +53,7 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
 class JSScriptContext::Impl {
  public:
   Impl(): resolver_(NULL), line_number_(0) {}
+
   bool SetGlobalObject(ScriptableInterface *global_object) {
     resolver_ = new ResolverScriptClass(&engine_, global_object);
     engine_.globalObject().setPrototype(engine_.newObject(resolver_));
@@ -63,7 +74,9 @@ class JSScriptContext::Impl {
 
 class SlotCallerWrapper : public QObject {
  public:
-  SlotCallerWrapper(Slot* slot) : slot_(slot) {}
+  SlotCallerWrapper(ScriptableInterface *object, Slot *slot)
+    : object_(object), slot_(slot) {}
+  ScriptableInterface *object_;
   Slot *slot_;
 };
 
@@ -72,10 +85,12 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   SlotCallerWrapper *wrapper =
       static_cast<SlotCallerWrapper*>(callee.data().toQObject());
   ASSERT(wrapper);
+
   Variant *argv = NULL;
   bool ret = ConvertJSArgsToNative(context, wrapper->slot_, &argv);
   ASSERT(ret);
-  ResultVariant res = wrapper->slot_->Call(NULL,
+
+  ResultVariant res = wrapper->slot_->Call(wrapper->object_,
                                            wrapper->slot_->GetArgCount(), argv);
 /*  if (argv) {
     for (int i = 0; i < context->argumentCount(); i++)
@@ -90,7 +105,7 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
     return engine->undefinedValue();
   } else {
     // Update filename and line number
-    JSScriptContext::Impl *impl = g_data[engine];
+    JSScriptContext::Impl *impl = g_data[engine]->impl_;
     QScriptContextInfo info(context);
     impl->file_name_ = info.fileName();
     impl->line_number_ = info.lineNumber();
@@ -144,8 +159,7 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
       name.compare("Trace", Qt::CaseInsensitive) == 0)
     log = false;
   if (log) DLOG("queryProperty %s", sname.c_str());
-  JSScriptContext::Impl *impl = g_data[engine()];
-  ASSERT(impl);
+  JSScriptContext::Impl *impl = g_data[engine()]->impl_;
   if (impl->class_constructors_.find(sname) !=
       impl->class_constructors_.end()) {
     return HandlesReadAccess;
@@ -181,13 +195,13 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
     log = false;
   std::string sname = name.toString().toStdString();
   if (log) DLOG("property %s", sname.c_str());
-  JSScriptContext::Impl *impl = g_data[engine()];
+  JSScriptContext::Impl *impl = g_data[engine()]->impl_;
   if (impl->class_constructors_.find(sname) !=
       impl->class_constructors_.end()) {
     if (log) DLOG("\tctor");
     Slot *slot = impl->class_constructors_[sname];
     QScriptValue value = engine()->newFunction(SlotCaller);
-    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(slot));
+    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(NULL, slot));
     value.setData(data);
     return value;
   }
@@ -205,7 +219,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
     QScriptValue value = engine()->newFunction(SlotCaller);
     Slot *slot = VariantValue<Slot *>()(res.v());
     if (log) DLOG("\tfun::%p", slot);
-    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(slot));
+    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(object_, slot));
     value.setData(data);
     return value;
   } else if (res.v().type() == Variant::TYPE_SCRIPTABLE) {
@@ -223,6 +237,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
     return qval;
   }
 }
+
 void ResolverScriptClass::setProperty(QScriptValue &object,
                                       const QScriptString &name,
                                       uint id,
@@ -256,17 +271,18 @@ QVariant ResolverScriptClass::extension(Extension extension,
   ASSERT(call_slot_ && extension == Callable);
   DLOG("Object called as function");
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
+
   Variant *argv = NULL;
   bool ret = ConvertJSArgsToNative(context, call_slot_, &argv);
-  ResultVariant res = call_slot_->Call(NULL, call_slot_->GetArgCount(), argv);
+  ResultVariant res = call_slot_->Call(object_, call_slot_->GetArgCount(), argv);
   QScriptValue val;
   ret = ConvertNativeToJS(engine(), res.v(), &val);
   ASSERT(ret);
-  return qVariantFromValue(ret);
+  return qVariantFromValue(val);
 }
 
 JSScriptContext::JSScriptContext() : impl_(new Impl()){
-  g_data[&impl_->engine_] = impl_;
+  g_data[&impl_->engine_] = this;
 }
 
 JSScriptContext::~JSScriptContext() {
@@ -284,6 +300,7 @@ QScriptEngine *JSScriptContext::engine() const {
 void JSScriptContext::Execute(const char *script,
                               const char *filename,
                               int lineno) {
+  ScopedLogContext log_context(this);
   DLOG("Execute: (%s, %d)", filename, lineno);
 
   std::string massaged_script = ggadget::js::MassageJScript(script, false,
@@ -302,6 +319,7 @@ void JSScriptContext::Execute(const char *script,
 Slot *JSScriptContext::Compile(const char *script,
                                const char *filename,
                                int lineno) {
+  ScopedLogContext log_context(this);
   DLOG("Compile: (%s, %d)", filename, lineno);
   DLOG("\t%s", script);
 
@@ -337,6 +355,8 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
                                        const char *object_expr,
                                        const char *property,
                                        const Variant &value) {
+  ScopedLogContext log_context(this);
+
   DLOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
       value.Print().c_str());
   QScriptValue obj;
