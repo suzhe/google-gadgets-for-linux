@@ -28,7 +28,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		combo_arrow_down.png \
 		combo_arrow_over.png \
 		common.js \
-		gadgets.png \
+		google-gadgets.png \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
@@ -127,3 +127,6 @@ else
 nobase_resource_DATA = $(RESOURCE_FILES)
 resourcedir=$(GGL_RESOURCE_DIR)/resources
 endif
+
+appicondir = $(datadir)/pixmaps
+appicon_DATA = google-gadgets.png

@@ -103,7 +103,7 @@ static void AppendDateToJSON(QScriptEngine *engine, QScriptValue qval,
   *json += kDatePrefix;
   uint64_t v = static_cast<uint64_t>(qval.toNumber());
   char buf[30];
-  snprintf(buf, 30, "%llu", v);
+  snprintf(buf, 30, "%ju", v);
   *json += buf;
   *json += kDatePostfix;
 }

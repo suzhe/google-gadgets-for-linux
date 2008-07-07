@@ -27,6 +27,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  extensions \
 	  resources \
 	  gadgets \
+	  xdg \
 	  hosts
 
 EXTRA_DIST = autotools

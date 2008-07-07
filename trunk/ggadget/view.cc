@@ -355,6 +355,10 @@ class View::Impl {
         MapChildMouseEvent(event, grabmouse_element_.Get(), &new_event);
         result = grabmouse_element_.Get()->OnMouseEvent(new_event, true,
                                                         &temp, &temp1);
+        // Set correct mouse cursor.
+        if (grabmouse_element_.Get()) {
+          owner_->SetCursor(grabmouse_element_.Get()->GetCursor());
+        }
         // Release the grabbing on EVENT_MOUSE_CLICK not EVENT_MOUSE_UP,
         // otherwise the click event may be sent to wrong element.
         if (type == Event::EVENT_MOUSE_CLICK) {

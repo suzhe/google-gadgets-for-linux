@@ -70,4 +70,25 @@ ggl-qt.sh: ggl-qt
 	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-qt $$@' >> $@; \
 	 chmod 0755 $@)
 
+desktopdir = $(datadir)/applications
+desktop_in_files = ggl-qt.desktop.in
+desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
+
+ggl-qt.desktop : ggl-qt.desktop.in
+	echo $(bindir)
+	$(SED) -e 's|@bindir[@]|$(bindir)|g' -e 's|@datadir[@]|$(datadir)|g' $< > $@.tmp
+	$(top_builddir)/xdg/intl-desktop-file.sh $@.tmp $@
+	rm -f $@.tmp
+
+EXTRA_DIST = $(desktop_in_files)
+CLEANFILES = $(desktop_DATA)
+
+if ENABLE_UPDATE_DESKTOP_DATABASE
+install-data-hook:
+	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+
+uninstall-hook:
+	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+endif
+
 endif
