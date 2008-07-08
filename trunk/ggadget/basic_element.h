@@ -324,15 +324,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void KillFocus();
 
  public:
-  /**
-   * Gets and sets whether this element is an implicit child of its parent.
-   * An implicit child is created by its parent merely for implementation.
-   * It is invisible from the script and the view/element hierarchy.
-   * For example, the div element contains an implicit scrollbar child.
-   */
-  bool IsImplicit() const;
-  void SetImplicit(bool implicit);
-
   /** Get the associated View of the current element. */
   const View *GetView() const;
   /** Get the associated View of the current element. */

@@ -55,7 +55,7 @@
 #endif
 
 static ggadget::qt::QtMainLoop *g_main_loop;
-static const char kRunOnceSocketName[] = "ggl-host-socket";
+static const char kRunOnceSocketName[] = "qt-host-socket";
 
 static const char *kGlobalExtensions[] = {
   "default-framework",
@@ -236,7 +236,7 @@ static bool CheckCompositingManager(Display *dpy) {
 }
 #endif
 
-static void OnClientMessage(const std::string &data) {
+static void Handler(const std::string &data) {
   ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
 }
 
@@ -278,7 +278,7 @@ int main(int argc, char* argv[]) {
       ggadget::BuildFilePath(profile_dir.c_str(),
                              kRunOnceSocketName,
                              NULL).c_str());
-  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
+  run_once.ConnectOnMessage(ggadget::NewSlot(Handler));
 
   ggadget::ConnectGlobalLogListener(ggadget::NewSlot(LogListener));
 

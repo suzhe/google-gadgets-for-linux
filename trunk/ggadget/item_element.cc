@@ -20,6 +20,7 @@
 #include "graphics_interface.h"
 #include "label_element.h"
 #include "listbox_element.h"
+#include "combobox_element.h"
 #include "logger.h"
 #include "texture.h"
 #include "text_frame.h"
@@ -42,6 +43,11 @@ class ItemElement::Impl {
   ~Impl() {
     delete background_;
     background_ = NULL;
+  }
+
+  bool IsInsideComboBox() const {
+    return parent_ && parent_->GetParentElement() &&
+        parent_->GetParentElement()->IsInstanceOf(ComboBoxElement::CLASS_ID);
   }
 
   ListBoxElement *parent_;
@@ -68,7 +74,7 @@ void ItemElement::DoRegister() {
     RegisterProperty("width", NULL, NewSlot(DummySetter));
     RegisterProperty("height", NULL, NewSlot(DummySetter));
 
-    if (impl_->parent_->IsImplicit()) {
+    if (impl_->IsInsideComboBox()) {
       // This Item is in a combobox, so override BasicElement constant.
       RegisterConstant("parentElement", impl_->parent_->GetParentElement());
     }
@@ -244,9 +250,8 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
          impl_->parent_->SetSelectedItem(this);
        }
 
-       if (self_holder.Get() &&
-           // If inside combobox, turn off droplist on click.
-           impl_->parent_->IsImplicit() &&
+       // If inside combobox, turn off droplist on click.
+       if (self_holder.Get() && impl_->IsInsideComboBox() &&
            impl_->parent_->GetParentElement() == GetView()->GetPopupElement()) {
          GetView()->SetPopupElement(NULL);
        }

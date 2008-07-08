@@ -894,54 +894,35 @@ class View::Impl {
       target->PushState();
     }
 
+    BasicElement *popup = popup_element_.Get();
+    double popup_rotation = 0;
+    if (popup) {
+      BasicElement *e = popup;
+      for (; e != NULL; e = e->GetParentElement())
+        popup_rotation += e->GetRotation();
+    }
+
     // No need to draw children if there is a popup element and it's fully
     // opaque and the clip region is inside its extents.
     // If the popup element has non-horizontal/vertical orientation,
     // then the region of the popup element may not cover the whole clip
     // region. In this case it's not safe to skip drawing other children.
-    bool skip_children = false;
-    if (canvas_cache_ && clip_region_enabled_ &&
-        popup_element_.Get() && popup_element_.Get()->IsFullyOpaque() &&
-        clip_region_.IsInside(popup_element_.Get()->GetExtentsInView())) {
-      double rotation = 0;
-      BasicElement *e = popup_element_.Get();
-      for (; e != NULL; e = e->GetParentElement()) {
-        rotation += e->GetRotation();
-      }
-      if (fmod(rotation, 90) == 0) {
-        skip_children = true;
-      } else {
-        DLOG("The popup element has non-horizontal/vertical orientation.");
-      }
+    if (!(canvas_cache_ && clip_region_enabled_ && popup &&
+          popup->IsFullyOpaque() && fmod(popup_rotation, 90) == 0 &&
+          clip_region_.IsInside(popup->GetExtentsInView()))) {
+      children_.Draw(target);
     }
 
-    if (!skip_children)
-      children_.Draw(target);
-
-    if (popup_element_.Get()) {
-      std::vector<BasicElement *> elements;
-      BasicElement *e = popup_element_.Get();
-      for (; e != NULL; e = e->GetParentElement())
-        elements.push_back(e);
-
-      std::vector<BasicElement *>::reverse_iterator it = elements.rbegin();
-      for (; it < elements.rend(); ++it) {
-        BasicElement *element = *it;
-        if (element->GetRotation() == .0) {
-          target->TranslateCoordinates(
-              element->GetPixelX() - element->GetPixelPinX(),
-              element->GetPixelY() - element->GetPixelPinY());
-        } else {
-          target->TranslateCoordinates(element->GetPixelX(),
-                                              element->GetPixelY());
-          target->RotateCoordinates(
-              DegreesToRadians(element->GetRotation()));
-          target->TranslateCoordinates(-element->GetPixelPinX(),
-                                              -element->GetPixelPinY());
-        }
-      }
-
-      popup_element_.Get()->Draw(target);
+    if (popup) {
+      double pin_x = popup->GetPixelPinX();
+      double pin_y = popup->GetPixelPinY();
+      double abs_pin_x = 0;
+      double abs_pin_y = 0;
+      popup->SelfCoordToViewCoord(pin_x, pin_y, &abs_pin_x, &abs_pin_y);
+      target->TranslateCoordinates(abs_pin_x, abs_pin_y);
+      target->RotateCoordinates(DegreesToRadians(popup_rotation));
+      target->TranslateCoordinates(-pin_x, -pin_y);
+      popup->Draw(target);
     }
 
     target->PopState();

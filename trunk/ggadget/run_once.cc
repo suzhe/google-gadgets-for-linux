@@ -31,8 +31,6 @@
 
 namespace ggadget {
 
-const size_t kBufferSize = 4096;
-
 class RunOnce::Impl : public WatchCallbackInterface {
  public:
   struct Session {
@@ -45,7 +43,6 @@ class RunOnce::Impl : public WatchCallbackInterface {
       is_running_(false),
       watch_id_(-1),
       fd_(-1) {
-    ASSERT(path);
     int fd = RunAsServer();
     if (fd == -1) {
       fd = RunAsClient();
@@ -84,6 +81,9 @@ class RunOnce::Impl : public WatchCallbackInterface {
     return is_running_;
   }
 
+  static void DoNothing(int) {
+  }
+
   size_t SendMessage(const std::string &data) {
     if (!is_running_)
       return 0;
@@ -91,7 +91,8 @@ class RunOnce::Impl : public WatchCallbackInterface {
     if (fd_ == -1)
       fd_ = RunAsClient();
 
-    sig_t old_proc = signal(SIGPIPE, SIG_IGN);
+    void (*old_proc)(int);
+    old_proc = signal(SIGPIPE, DoNothing);
 
     fd_set fds;
     FD_ZERO(&fds);
@@ -107,9 +108,7 @@ class RunOnce::Impl : public WatchCallbackInterface {
       if (result == -1 || result == 0) {
         goto end;
       }
-      ssize_t current = write(fd_,
-                              &data.c_str()[written],
-                              data.size() - written);
+      int current = write(fd_, &data.c_str()[written], data.size() - written);
       if (current < 1) {
         goto end;
       }
@@ -125,30 +124,33 @@ end:
   }
 
   Connection *ConnectOnMessage(Slot1<void, const std::string&> *slot) {
-    return on_message_.Connect(slot);
+    return signal_.Connect(slot);
   }
 
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
     int fd;
-    char buf[kBufferSize];
+    char buf;
 
     fd = main_loop->GetWatchData(watch_id);
 
     if (fd_ == fd) {
       socklen_t len;
       fd = accept(fd, NULL, &len);
-      connections_[fd].watch_id =
-          main_loop->AddIOReadWatch(fd, this);
+      main_loop->AddIOReadWatch(fd, this);
+      Session data = {
+        watch_id,
+        std::string()
+      };
+      connections_[fd] = data;
       return true;
     }
 
-    ssize_t size = 0;
-    if ((size = read(fd, &buf, kBufferSize)) > 0) {
-      connections_[fd].data += std::string(buf, size);
+    if (read(fd, &buf, 1) > 0) {
+      connections_[fd].data += buf;
     } else {
       std::map<int, Session>::iterator ite = connections_.find(fd);
       if (ite != connections_.end()) {
-        on_message_(ite->second.data);
+        signal_(ite->second.data);
         main_loop->RemoveWatch(watch_id);
         connections_.erase(ite);
       }
@@ -194,7 +196,7 @@ end:
   int watch_id_;
   int fd_;
   std::map<int, Session> connections_;
-  Signal1<void, const std::string &> on_message_;
+  Signal1<void, const std::string &> signal_;
 };
 
 RunOnce::RunOnce(const char *path)

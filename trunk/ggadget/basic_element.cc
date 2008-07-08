@@ -65,7 +65,6 @@ class BasicElement::Impl {
         opacity_(1.0),
         visible_(true),
         flip_(FLIP_NONE),
-        implicit_(false),
 #ifdef _DEBUG
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()),
@@ -1003,7 +1002,6 @@ class BasicElement::Impl {
   bool visible_;
   std::string tooltip_;
   FlipMode flip_;
-  bool implicit_;
 
 #ifdef _DEBUG
   int debug_color_index_;
@@ -1882,15 +1880,6 @@ Variant BasicElement::GetPixelOrRelative(bool is_relative,
     // FIXME: Is it necessary to do round here?
     return Variant(static_cast<int>(round(pixel)));
   }
-}
-
-bool BasicElement::IsImplicit() const {
-  return impl_->implicit_;
-}
-
-void BasicElement::SetImplicit(bool implicit) {
-  ASSERT(!implicit || impl_->parent_);
-  impl_->implicit_ = implicit;
 }
 
 void BasicElement::OnPopupOff() {

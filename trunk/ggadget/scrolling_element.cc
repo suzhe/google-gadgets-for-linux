@@ -45,7 +45,6 @@ class ScrollingElement::Impl {
   void CreateScrollBar() {
     if (!scrollbar_) {
       scrollbar_ = new ScrollBarElement(owner_, owner_->GetView(), "");
-      scrollbar_->SetImplicit(true);
       scrollbar_->SetPixelHeight(owner_->GetPixelHeight());
       scrollbar_->SetPixelWidth(12); // width of default images
       scrollbar_->SetEnabled(true);
@@ -266,11 +265,10 @@ void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,
                                              double x, double y,
                                              double *child_x,
                                              double *child_y) const {
-  if (child != impl_->scrollbar_ && impl_->scrollbar_) {
+  if (child != impl_->scrollbar_) {
     x += impl_->scroll_pos_x_;
     y += impl_->scroll_pos_y_;
   }
-
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
 }
 
@@ -278,12 +276,11 @@ void ScrollingElement::ChildCoordToSelfCoord(const BasicElement *child,
                                              double x, double y,
                                              double *self_x,
                                              double *self_y) const {
-  if (child != impl_->scrollbar_ && impl_->scrollbar_) {
-    x -= impl_->scroll_pos_x_;
-    y -= impl_->scroll_pos_y_;
-  }
-
   BasicElement::ChildCoordToSelfCoord(child, x, y, self_x, self_y);
+  if (child != impl_->scrollbar_) {
+    *self_x -= impl_->scroll_pos_x_;
+    *self_y -= impl_->scroll_pos_y_;
+  }
 }
 
 void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
