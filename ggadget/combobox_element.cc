@@ -59,7 +59,6 @@ class ComboBoxElement::Impl {
     listbox_->SetVisible(false);
     listbox_->SetAutoscroll(true);
     listbox_->ConnectOnChangeEvent(NewSlot(this, &Impl::ListBoxUpdated));
-    listbox_->SetImplicit(true);
     view->OnElementAdd(listbox_); // ListBox is exposed to the View.
 
     CreateEdit(); // COMBO_DROPDOWN is default.
@@ -107,7 +106,6 @@ class ComboBoxElement::Impl {
     update_edit_value_ = true;
     if (edit_) {
       edit_->ConnectOnChangeEvent(NewSlot(this, &Impl::TextChanged));
-      edit_->SetImplicit(true);
     } else {
       LOG("Failed to create EditElement.");
     }
