@@ -96,8 +96,8 @@ function AddFeedToList(feed) {
   gadget.debug.trace("Adding feed: " + feed.url);
   var title = feed.title;
   if (!title) {
-    title = "&lt;untitled&gt;";
+    title = strings.GADGET_UNTITLED;
   }
-  var item = "<item><label >" + title +  "\n" + feed.url + "</label></item>";
-  feeds.appendElement(item);
+  var item = title +  "\n" + feed.url;
+  feeds.appendString(item);
 }
