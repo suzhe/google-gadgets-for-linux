@@ -66,6 +66,8 @@ class DebugConsole : public QWidget {
     log_conn_ = gadget->ConnectLogListener(NewSlot(this, &DebugConsole::OnDebugConsoleLog));
     if (self_) *self_ = this;
     setAttribute(Qt::WA_DeleteOnClose, true);
+    setWindowTitle(
+        QString::fromUtf8(gadget->GetManifestInfo(kManifestName).c_str()));
   }
   ~DebugConsole() {
     log_conn_->Disconnect();

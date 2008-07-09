@@ -26,7 +26,7 @@
 #include "js_script_context.h"
 #include "json.h"
 
-#if 1
+#if 0
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
@@ -69,7 +69,7 @@ static bool ConvertJSToNativeString(const QScriptValue &qval,
                                     Variant *val) {
   DLOG("ConvertJSToNativeString: %s",
       qval.toString().toStdString().c_str());
-  *val = Variant(qval.toString().toStdString().c_str());
+  *val = Variant(qval.toString().toUtf8().data());
   DLOG("\t%s", val->Print().c_str());
   return true;
 }
@@ -299,7 +299,7 @@ static bool ConvertNativeToJSString(QScriptEngine *engine,
                                     const Variant &val, QScriptValue *qval) {
   DLOG("ConvertNativeToJSString:%s", val.Print().c_str());
   const char *value = VariantValue<const char *>()(val);
-  *qval = QScriptValue(engine, value);
+  *qval = QScriptValue(engine, QString::fromUtf8(value));
   return true;
 }
 
@@ -331,8 +331,8 @@ static bool ConvertNativeToJSObject(QScriptEngine *engine,
   ScriptableInterface *scriptable = VariantValue<ScriptableInterface *>()(val);
   if (!scriptable)
     DLOG("\tscriptable is null!");
-  ResolverScriptClass *resolver = new ResolverScriptClass(engine, scriptable);
-  *qval = engine->newObject(resolver);
+  JSScriptContext *ctx = GetEngineContext(engine);
+  *qval = ctx->GetScriptValueOfNativeObject(scriptable);
   return true;
 }
 

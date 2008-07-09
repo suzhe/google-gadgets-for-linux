@@ -24,7 +24,7 @@
 #include "js_script_runtime.h"
 #include "converter.h"
 
-#if 1
+#if 0
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
@@ -63,8 +63,25 @@ class JSScriptContext::Impl {
     return true;
   }
 
+  ResolverScriptClass *GetScriptClass(ScriptableInterface *obj) {
+    if (script_classes_.find(obj) == script_classes_.end()) {
+      script_classes_[obj] = new ResolverScriptClass(&engine_, obj);
+    }
+    return script_classes_[obj];
+  }
+
+  QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj) {
+    if (native_objects_.find(obj) == native_objects_.end()) {
+      ResolverScriptClass *resolver = new ResolverScriptClass(&engine_, obj);
+      native_objects_[obj] = engine_.newObject(resolver);
+    }
+    return native_objects_[obj];
+  }
+
   QScriptEngine engine_;
   std::map<std::string, Slot*> class_constructors_;
+  std::map<ScriptableInterface*, ResolverScriptClass*> script_classes_;
+  std::map<ScriptableInterface*, QScriptValue> native_objects_;
   Signal1<void, const char *> error_reporter_signal_;
   Signal2<bool, const char *, int> script_blocked_signal_;
   ResolverScriptClass *resolver_;
@@ -98,9 +115,10 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
     delete [] argv;
   }*/
   if (context->isCalledAsConstructor()) {
+    JSScriptContext::Impl *impl = GetEngineContext(engine)->impl_;
     ScriptableInterface *scriptable =
         VariantValue<ScriptableInterface *>()(res.v());
-    ResolverScriptClass *resolver = new ResolverScriptClass(engine, scriptable);
+    ResolverScriptClass *resolver = impl->GetScriptClass(scriptable);
     context->thisObject().setScriptClass(resolver);
     return engine->undefinedValue();
   } else {
@@ -360,7 +378,7 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
   DLOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
       value.Print().c_str());
   QScriptValue obj;
-  if (!object_expr) {
+  if (!object_expr || strcmp("", object_expr) == 0) {
     obj = impl_->engine_.globalObject();
   } else {
     obj = impl_->engine_.globalObject().property(object_expr);
@@ -392,6 +410,11 @@ void JSScriptContext::CollectGarbage() {
 void JSScriptContext::GetCurrentFileAndLine(std::string *fname, int *lineno) {
   *fname = impl_->file_name_.toUtf8().data();
   *lineno = impl_->line_number_;
+}
+
+QScriptValue JSScriptContext::GetScriptValueOfNativeObject(
+    ScriptableInterface *obj) {
+  return impl_->GetScriptValueOfNativeObject(obj);
 }
 
 } // namespace qt
