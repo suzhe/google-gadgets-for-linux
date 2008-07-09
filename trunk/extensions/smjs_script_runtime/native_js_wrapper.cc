@@ -319,7 +319,7 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
        ref_count, change, js_context_, js_object_, this, name_.c_str());
 #endif
 
-  if (ref_count == 0 && change == 0) {
+  if (change == 0) {
     // Remove the wrapper mapping from the context, but leave this wrapper
     // alive to accept mistaken JavaScript calls gracefully.
     JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);

@@ -41,7 +41,7 @@ class CopyElement::Impl {
   }
 
   void OnSourceRefChange(int ref_count, int change) {
-    if (ref_count == 0 && change == 0) {
+    if (change == 0) {
       // The source's destructor is being called.
       refchange_connection_->Disconnect();
       refchange_connection_ = NULL;

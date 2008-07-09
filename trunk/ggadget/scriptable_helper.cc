@@ -93,7 +93,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
     void OnRefChange(int ref_count, int change) {
       // We have a similar mechanism in ScriptableHolder.
       // Please see the comments there.
-      if (ref_count == 0 && change == 0) {
+      if (change == 0) {
         ASSERT(u.scriptable_info.ref_change_connection &&
                u.scriptable_info.scriptable);
         u.scriptable_info.ref_change_connection->Disconnect();

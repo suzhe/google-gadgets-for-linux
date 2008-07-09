@@ -96,7 +96,12 @@ class ScriptableInterface {
    * @param slot the callback. The parameters of the slot are:
    *     - the reference count before change.
    *     - 1 or -1 indicating whether the reference count is about to be
-   *       increased or decreased; or 0 if the object is about to be deleted.
+   *       increased or decreased; or 0 if the object is about to be deleted(
+   *       at this situation, reference count is meaningless).
+   *
+   *       It's possible that a native owned object is about to be deleted but
+   *       the reference count has not reached 0, in which case all reference
+   *       holders must release their references immediately in this callback.
    * @return the connected @c Connection.
    */
   virtual Connection *ConnectOnReferenceChange(
