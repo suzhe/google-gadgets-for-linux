@@ -31,7 +31,8 @@ class RunOnce {
    * object destructs.  So don't create it on stack. Please always use operator
    * @c new to create the instance of this object and don't delete it manually.
    *
-   * @param path the socket path of the application.
+   * @param path the UNIX domain socket for the application.  The caller has to
+   *     ensure that the path is valid.
    */
   RunOnce(const char *path);
   ~RunOnce();
