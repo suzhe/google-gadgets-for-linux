@@ -31,4 +31,5 @@
 <GADGET_REMOVE>Remove</GADGET_REMOVE>
 <GADGET_MAXSHOW>Maximum number of entries to show for a clip:</GADGET_MAXSHOW>
 <GADGET_DEFAULTURL>http://news.google.com/?output=rss</GADGET_DEFAULTURL>
+<GADGET_UNTITLED>&lt;untitled&gt;</GADGET_UNTITLED>
 </strings>
