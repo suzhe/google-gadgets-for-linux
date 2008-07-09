@@ -196,7 +196,8 @@ class View::Impl {
 #endif
       mouse_over_(false),
       last_cursor_type_(-1),
-      hittest_(ViewInterface::HT_CLIENT) {
+      hittest_(ViewInterface::HT_CLIENT),
+      scriptable_view_(NULL) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -1326,6 +1327,8 @@ class View::Impl {
 
   Signal0<void> on_destroy_signal_;
 
+  ScriptableInterface *scriptable_view_;
+
   static const unsigned int kAnimationInterval = 20;
   static const unsigned int kMinInterval = 5;
 };
@@ -1373,6 +1376,16 @@ GraphicsInterface *View::GetGraphics() const {
 
 void View::RegisterProperties(RegisterableInterface *obj) const {
   impl_->RegisterProperties(obj);
+}
+
+void View::SetScriptable(ScriptableInterface *obj) {
+  impl_->scriptable_view_ = obj;
+  if (obj)
+    RegisterProperties(obj->GetRegisterable());
+}
+
+ScriptableInterface *View::GetScriptable() const {
+  return impl_->scriptable_view_;
 }
 
 void View::SetWidth(double width) {

@@ -754,6 +754,10 @@ class BasicElement::Impl {
     return hittest_;
   }
 
+  ScriptableInterface *GetScriptableParent() {
+    return parent_ ? parent_ : view_->GetScriptable();
+  }
+
  public:
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
@@ -1146,8 +1150,7 @@ void BasicElement::DoClassRegister() {
                    NewSlot(&Impl::GetIntOpacity, &BasicElement::impl_),
                    NewSlot(&Impl::SetIntOpacity, &BasicElement::impl_));
   RegisterProperty("parentElement",
-                   NewSlot(static_cast<BasicElement *(BasicElement::*)()>(
-                       &BasicElement::GetParentElement)),
+                   NewSlot(&Impl::GetScriptableParent, &BasicElement::impl_),
                    NULL);
 
   // Note: don't use relative pinX/pinY until they are in the public API.

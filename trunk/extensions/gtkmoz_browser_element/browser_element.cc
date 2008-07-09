@@ -89,8 +89,7 @@ class BrowserElement::Impl {
         controller_(BrowserController::get()),
         browser_id_(controller_->AddBrowserElement(this)),
         x_(0), y_(0), width_(0), height_(0),
-        minimized_(false), popped_out_(false),
-        on_display_target_changed_connection_(NULL) {
+        minimized_(false), popped_out_(false) {
     owner_->GetView()->ConnectOnMinimizeEvent(
         NewSlot(this, &Impl::OnViewMinimized));
     owner_->GetView()->ConnectOnRestoreEvent(
@@ -99,15 +98,13 @@ class BrowserElement::Impl {
         NewSlot(this, &Impl::OnViewPoppedOut));
     owner_->GetView()->ConnectOnPopInEvent(
         NewSlot(this, &Impl::OnViewPoppedIn));
-
-    on_display_target_changed_connection_ =
-        owner_->GetView()->GetGadget()->ConnectOnDisplayTargetChanged(
-            NewSlot(this, &Impl::OnDisplayTargetChanged));
+    owner_->GetView()->ConnectOnDockEvent(
+        NewSlot(this, &Impl::OnViewDockUndock));
+    owner_->GetView()->ConnectOnUndockEvent(
+        NewSlot(this, &Impl::OnViewDockUndock));
   }
 
   ~Impl() {
-    if (on_display_target_changed_connection_)
-      on_display_target_changed_connection_->Disconnect();
     if (GTK_IS_WIDGET(socket_))
       gtk_widget_destroy(socket_);
     controller_->SendCommand(kCloseBrowserCommand, browser_id_, NULL);
@@ -295,6 +292,7 @@ class BrowserElement::Impl {
 
   void OnViewPoppedOut() {
     popped_out_ = true;
+    Layout();
   }
 
   void OnViewPoppedIn() {
@@ -302,9 +300,9 @@ class BrowserElement::Impl {
     Layout();
   }
 
-  void OnDisplayTargetChanged(int target) {
-    // If the display target is changed, the toplevel window might also be
-    // changed, so it's necessary to reparent the browser widget.
+  void OnViewDockUndock() {
+    // The toplevel window might be changed, so it's necessary to reparent the
+    // browser widget.
     Layout();
   }
 
@@ -581,7 +579,6 @@ class BrowserElement::Impl {
   Signal1<bool, const std::string &> open_url_signal_;
   bool minimized_;
   bool popped_out_;
-  Connection *on_display_target_changed_connection_;
 };
 
 BrowserElement::Impl::BrowserController *
