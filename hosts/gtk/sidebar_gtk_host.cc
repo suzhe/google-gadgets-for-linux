@@ -385,8 +385,9 @@ class SideBarGtkHost::Impl {
     view->ViewCoordToNativeWidgetCoord(offset_x, offset_y,
                                        &offset_x, &offset_y);
 
+    View *main_view = info->gadget->GetMainView();
     if (!info->main_decorator->IsMinimized())
-      view = info->gadget->GetMainView();
+      view = main_view;
 
     double width = view->GetWidth();
     view->NativeWidgetCoordToViewCoord(offset_x, offset_y,
@@ -394,9 +395,9 @@ class SideBarGtkHost::Impl {
 
     DecoratedViewHost *new_host = NewFloatingMainViewHost(gadget_id);
     new_host->EnableAutoRestoreViewSize(false);
-    ViewHostInterface *old = view->SwitchViewHost(new_host);
+    ViewHostInterface *old = main_view->SwitchViewHost(new_host);
+    // DisplayTarget and undock event will be set in OnMainViewEndMove();
     // FIXME: How to make sure the browser element can reparent correctly?
-    // DisplayTarget can't be set here.
     if (old) old->Destroy();
 
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
@@ -411,7 +412,7 @@ class SideBarGtkHost::Impl {
         view = down_cast<View *>(info->main_decorator->GetDecoratedView());
         view->SetSize(width, view->GetHeight());
       } else {
-        view = info->gadget->GetMainView();
+        view = main_view;
       }
 
       view->ViewCoordToNativeWidgetCoord(offset_x, offset_y,
@@ -434,6 +435,7 @@ class SideBarGtkHost::Impl {
       gdk_window_raise(info->floating->GetWindow()->window);
     } else {
       info->floating->ShowView(false, 0, NULL);
+      info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     }
   }
 
@@ -757,11 +759,11 @@ class SideBarGtkHost::Impl {
     View *view = info->gadget->GetMainView();
     DecoratedViewHost *new_host = NewFloatingMainViewHost(gadget_id);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
-    // Display target must be set after switching to the new view host and
-    // before destroying the old view host.
+    // Send undock event before destroying the old view host.
     // Browser element relies on it to reparent the browser widget.
     // Otherwise the browser widget might be destroyed along with the old view
     // host.
+    view->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     if (old) old->Destroy();
 
@@ -792,11 +794,11 @@ class SideBarGtkHost::Impl {
     View *view = info->gadget->GetMainView();
     DecoratedViewHost *new_host = NewDockedMainViewHost(gadget_id);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
-    // Display target must be set after switching to the new view host and
-    // before destroying the old view host.
+    // Send dock event before destroying the old view host.
     // Browser element relies on it to reparent the browser widget.
     // Otherwise the browser widget might be destroyed along with the old view
     // host.
+    view->OnOtherEvent(SimpleEvent(Event::EVENT_DOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     if (old) old->Destroy();
     new_host->ShowView(false, 0, NULL);
@@ -881,7 +883,10 @@ class SideBarGtkHost::Impl {
       info->index_in_sidebar = sidebar_->GetIndexOfPosition(h);
       OnMainViewDock(gadget_id);
     } else if (info->undock_by_drag) {
-      // In drag undock mode, OnSideBarUndock() will not set the display target.
+      // In drag undock mode, OnSideBarUndock() will not set the display
+      // target and send undock event.
+      SimpleEvent event(Event::EVENT_UNDOCK);
+      info->gadget->GetMainView()->OnOtherEvent(event);
       info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
       info->main_decorator->EnableAutoRestoreViewSize(true);
       info->main_decorator->RestoreViewSize();
@@ -912,7 +917,8 @@ class SideBarGtkHost::Impl {
 
     View *view = info->gadget->GetMainView();
     DecoratedViewHost *new_host = NewPopOutViewHost(gadget_id);
-    // Send popout event to decorator first.
+    // Send popout event to decorator before switching the view host.
+    // View decorator requires it to work properly.
     SimpleEvent event(Event::EVENT_POPOUT);
     info->main_decorator->GetDecoratedView()->OnOtherEvent(event);
     view->SwitchViewHost(new_host);
@@ -929,6 +935,8 @@ class SideBarGtkHost::Impl {
       View *view = info->gadget->GetMainView();
       info->popout->CloseView();
       ViewHostInterface *old_host = view->SwitchViewHost(info->main_decorator);
+      // Send popin event to decorator after switching the view host.
+      // View decorator requires it to work properly.
       SimpleEvent event(Event::EVENT_POPIN);
       info->main_decorator->GetDecoratedView()->OnOtherEvent(event);
       // The old host must be destroyed after sending onpopin event.

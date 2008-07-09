@@ -92,6 +92,17 @@ class View : public ViewInterface {
    */
   virtual void RegisterProperties(RegisterableInterface *obj) const;
 
+  /**
+   * Sets the corresponding ScriptableView object of this View.
+   * This View doesn't own the reference of specified ScriptableView object.
+   *
+   * RegisterProperties(obj->GetRegisterable()) will be called automatically.
+   */
+  void SetScriptable(ScriptableInterface *obj);
+
+  /** Gets the corresponding ScriptableView object of this View. */
+  ScriptableInterface *GetScriptable() const;
+
  public: // ViewInterface methods.
   virtual Gadget *GetGadget() const;
   virtual GraphicsInterface *GetGraphics() const;

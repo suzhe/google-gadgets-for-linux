@@ -88,7 +88,7 @@ class ScriptableView::Impl {
   void DoRegister() {
     DLOG("Register ScriptableView properties.");
 
-    view_->RegisterProperties(owner_->GetRegisterable());
+    view_->SetScriptable(owner_);
     view_->RegisterProperties(global_object_.GetRegisterable());
 
     // Register view.event property here, because we need set owner_ into
