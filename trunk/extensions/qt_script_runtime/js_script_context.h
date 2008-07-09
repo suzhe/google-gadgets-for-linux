@@ -99,11 +99,14 @@ class JSScriptContext : public ScriptContextInterface {
   virtual void CollectGarbage();
   virtual void GetCurrentFileAndLine(std::string *filename, int *lineno);
 
+  QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj);
   class Impl;
   Impl *impl_;
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
 };
+
+JSScriptContext *GetEngineContext(QScriptEngine *engine);
 
 } // namespace qt
 } // namespace ggadget

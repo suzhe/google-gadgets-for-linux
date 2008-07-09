@@ -22,7 +22,7 @@
 #include "js_script_context.h"
 #include "converter.h"
 
-#if 1
+#if 0
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
