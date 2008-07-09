@@ -74,7 +74,7 @@ class ScriptableHolder {
     // If the program reaches here, the object must be a native owned object,
     // so it can be deleted before refcount reaches 0. We must remove the
     // last reference here.
-    if (ref_count == 0 && change == 0) {
+    if (change == 0) {
       on_refchange_connection_->Disconnect();
       on_refchange_connection_ = NULL;
       ptr_->Unref(true);

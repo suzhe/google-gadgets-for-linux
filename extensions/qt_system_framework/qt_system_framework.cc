@@ -68,7 +68,7 @@ class QtSystemBrowseForFileHelper {
 
   // Function to destroy the helper object when framework is destroyed.
   void OnFrameworkRefChange(int ref, int change) {
-    if (!ref || !change) {
+    if (change == 0) {
       DLOG("Framework destroyed, delete QtSystemBrowseForFileHelper object.");
       delete this;
     }

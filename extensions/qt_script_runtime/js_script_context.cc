@@ -53,6 +53,20 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
 class JSScriptContext::Impl {
  public:
   Impl(): resolver_(NULL), line_number_(0) {}
+  ~Impl() {
+    std::map<ScriptableInterface*, ResolverScriptClass*>::iterator iter;
+    for (iter = script_classes_.begin(); iter != script_classes_.end(); iter++) {
+      delete iter->second;
+    }
+    std::map<ScriptableInterface*, QScriptValue>::iterator iter1;
+    for (iter1 = native_objects_.begin();
+         iter1 != native_objects_.end();
+         iter1++) {
+      QScriptClass *sc = iter1->second.scriptClass();
+      delete sc;
+    }
+    if (resolver_) delete resolver_;
+  }
 
   bool SetGlobalObject(ScriptableInterface *global_object) {
     resolver_ = new ResolverScriptClass(&engine_, global_object);
@@ -140,7 +154,6 @@ ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
     : QScriptClass(engine), object_(object), call_slot_(NULL),
       on_reference_change_connection_(NULL) {
   if (object) {
-    DLOG("Ref:%p, %p,%d", this, object_, object_->GetRefCount());
     object->Ref();
     on_reference_change_connection_ = object->ConnectOnReferenceChange(
         NewSlot(this, &ResolverScriptClass::OnRefChange));
@@ -152,15 +165,17 @@ ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
 }
 
 ResolverScriptClass::~ResolverScriptClass() {
-  DLOG("ResolverScriptClass:Destructed");
-  object_->Unref();
+  if (object_) {
+    on_reference_change_connection_->Disconnect();
+    object_->Unref();
+  }
 }
 
 void ResolverScriptClass::OnRefChange(int ref_count, int change) {
-  if (ref_count == 0 && change == 0) {
-    // LOG("OnRefChange:%p, %p,%d", this, object_, object_->GetRefCount());
-    object_->Unref(true);
+  if (change == 0) {
+    LOG("OnRefChange:%p, %p,%d", this, object_, object_->GetRefCount());
     on_reference_change_connection_->Disconnect();
+    object_->Unref(true);
     object_ = NULL;
   }
 }
@@ -244,7 +259,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
     if (log) DLOG("\tscriptable");
     ScriptableInterface *s = VariantValue<ScriptableInterface*>()(res.v());
     if (s) {
-      return engine()->newObject(new ResolverScriptClass(engine(), s));
+      return impl->GetScriptValueOfNativeObject(s);
     } else {
       return engine()->nullValue();
     }
