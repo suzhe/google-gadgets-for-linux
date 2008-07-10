@@ -203,6 +203,9 @@ class SingleViewHost::Impl {
     g_signal_connect(G_OBJECT(fixed_), "size-request",
                      G_CALLBACK(FixedSizeRequestHandler), this);
 
+    g_signal_connect(G_OBJECT(fixed_), "size-allocate",
+                     G_CALLBACK(FixedSizeAllocateHandler), this);
+
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
     // input event mask effective.
@@ -281,8 +284,10 @@ class SingleViewHost::Impl {
 
   void SetResizable(ViewInterface::ResizableMode mode) {
     ASSERT(GTK_IS_WINDOW(window_));
-    gtk_window_set_resizable(GTK_WINDOW(window_),
-                             mode != ViewInterface::RESIZABLE_FALSE);
+    bool resizable = (mode == ViewInterface::RESIZABLE_TRUE ||
+                      (mode == ViewInterface::RESIZABLE_ZOOM &&
+                       type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
+    gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
   }
 
   void SetCaption(const char *caption) {
@@ -779,9 +784,41 @@ class SingleViewHost::Impl {
   static void FixedSizeRequestHandler(GtkWidget *widget,
                                       GtkRequisition *requisition,
                                       gpointer user_data) {
-    // To make sure that user can resize the toplevel window freely.
-    requisition->width = 1;
-    requisition->height = 1;
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      // Don't allow user to shrink options dialog.
+      double zoom = impl->view_->GetGraphics()->GetZoom();
+      double default_width, default_height;
+      impl->view_->GetDefaultSize(&default_width, &default_height);
+      requisition->width = static_cast<int>(ceil(default_width * zoom));
+      requisition->height = static_cast<int>(ceil(default_height * zoom));
+    } else {
+      // To make sure that user can resize the toplevel window freely.
+      requisition->width = 1;
+      requisition->height = 1;
+    }
+  }
+
+  // Only for options view.
+  static void FixedSizeAllocateHandler(GtkWidget *widget,
+                                       GtkAllocation *allocation,
+                                       gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    DLOG("Size allocate(%d, %d)", allocation->width, allocation->height);
+    if (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS &&
+        impl->view_->GetResizable() == ViewInterface::RESIZABLE_TRUE &&
+        allocation->width > 1 && allocation->height > 1) {
+      double zoom = impl->view_->GetGraphics()->GetZoom();
+      double new_width = allocation->width / zoom;
+      double new_height = allocation->height / zoom;
+      if (new_width != impl->view_->GetWidth() ||
+          new_height != impl->view_->GetHeight()) {
+        if (impl->view_->OnSizing(&new_width, &new_height)) {
+          DLOG("Resize options view to: %lf %lf", new_width, new_height);
+          impl->view_->SetSize(new_width, new_height);
+        }
+      }
+    }
   }
 
   static gboolean StopMoveDragTimeoutHandler(gpointer data) {

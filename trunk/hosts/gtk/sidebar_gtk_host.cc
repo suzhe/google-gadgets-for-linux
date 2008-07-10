@@ -171,6 +171,12 @@ class SideBarGtkHost::Impl {
         NewSlot(this, &Impl::OnSideBarClick));
 
     LoadGlobalOptions();
+
+    // Connect gadget manager related signals.
+    gadget_manager_->ConnectOnNewGadgetInstance(
+        NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    gadget_manager_->ConnectOnRemoveGadgetInstance(
+        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
   ~Impl() {
@@ -613,27 +619,27 @@ class SideBarGtkHost::Impl {
     gtk_window_set_screen(GTK_WINDOW(dialog), screen);
     gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
     gtk_window_set_title(GTK_WINDOW(dialog), GM_("GADGET_CONFIRM_TITLE"));
+    gtk_window_present(GTK_WINDOW(dialog));
     gint result = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
     return result == GTK_RESPONSE_YES;
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
-    if (!AddGadgetInstanceCallback(id))
+    if (!LoadGadgetInstance(id))
       gadget_manager_->RemoveGadgetInstance(id);
     // Return true to continue the enumeration.
     return true;
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
-        ConfirmGadget(id)) {
-      return AddGadgetInstanceCallback(id);
+    if (gadget_manager_->IsGadgetInstanceTrusted(id) || ConfirmGadget(id)) {
+      return LoadGadgetInstance(id);
     }
     return false;
   }
 
-  bool AddGadgetInstanceCallback(int id) {
+  bool LoadGadgetInstance(int id) {
     bool result = false;
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
@@ -1190,13 +1196,6 @@ class SideBarGtkHost::Impl {
     return FALSE;
   }
 
-  void InitGadgets() {
-    gadget_manager_->ConnectOnNewGadgetInstance(
-        NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    gadget_manager_->ConnectOnRemoveGadgetInstance(
-        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
-  }
-
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
@@ -1704,7 +1703,7 @@ SideBarGtkHost::SideBarGtkHost(OptionsInterface *options, bool decorated,
   : impl_(new Impl(this, options, decorated, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();
-  impl_->InitGadgets();
+  impl_->LoadGadgets();
 #if !GTK_CHECK_VERSION(2,10,0) || !defined(GGL_HOST_LINUX)
   impl_->sidebar_host_->ShowView(false, 0, NULL);
 #endif
@@ -1742,7 +1741,6 @@ void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
 }
 
 void SideBarGtkHost::Run() {
-  impl_->LoadGadgets();
   gtk_main();
 }
 
