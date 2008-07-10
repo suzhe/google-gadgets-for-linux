@@ -37,15 +37,20 @@ if (!g_feeds) {
 options.putDefaultValue(kMaxItemsOption, kMaxItemsDefault);
 var g_max_items = options.getValue(kMaxItemsOption);
 
-options.putDefaultValue(kURLOption, strings.GADGET_DEFAULTURL);
+options.putDefaultValue(kURLOption, "unset");
 var url = options.getValue(kURLOption);
 if (url != "unset") {
+  // Gadget added by GadgetManager
   url = NormalizeURL(url);
-  if (FindFeedByURL(url) == -1) {
-    var item = {};
-    item.url = url;
-    g_feeds.push(item);
-  }
+ } else {
+  // Always add the default URL if: 
+  // user added gadget & no feeds are present in feeds list
+  url = strings.GADGET_DEFAULTURL;
+}
+if (g_feeds.length == 0 && url != "unset") {
+  var item = {};
+  item.url = url;
+  g_feeds.push(item);
 }
 
 options.putValue(kPrefsOption, false);
