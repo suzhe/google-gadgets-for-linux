@@ -273,6 +273,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (run_once.IsRunning()) {
+    gdk_notify_startup_complete();
     DLOG("Another instance already exists.");
     exit(0);
   }
@@ -366,10 +367,6 @@ int main(int argc, char* argv[]) {
                                          debug_mode, debug_console);
   }
 
-#ifdef _DEBUG
-  std::vector<ggadget::Gadget *> temp_gadgets;
-#endif
-
   // Load gadget files.
   if (gadget_paths.size()) {
     ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
@@ -378,12 +375,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  gdk_notify_startup_complete();
   host->Run();
-
-#ifdef _DEBUG
-  for (size_t i = 0; i < temp_gadgets.size(); ++i)
-    delete temp_gadgets[i];
-#endif
 
   delete host;
   delete options;

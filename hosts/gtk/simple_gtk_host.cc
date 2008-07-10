@@ -107,6 +107,12 @@ class SimpleGtkHost::Impl {
       options_->GetInternalValue(
           kOptionGadgetsShown).ConvertToBool(&gadgets_shown_);
     }
+
+    // Connect gadget related signals.
+    gadget_manager_->ConnectOnNewGadgetInstance(
+        NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    gadget_manager_->ConnectOnRemoveGadgetInstance(
+        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
   ~Impl() {
@@ -224,48 +230,36 @@ class SimpleGtkHost::Impl {
     gtk_window_set_screen(GTK_WINDOW(dialog), screen);
     gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
     gtk_window_set_title(GTK_WINDOW(dialog), GM_("GADGET_CONFIRM_TITLE"));
+    gtk_window_present(GTK_WINDOW(dialog));
     gint result = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
     return result == GTK_RESPONSE_YES;
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
-    if (!AddGadgetInstanceCallback(id))
+    if (!LoadGadgetInstance(id))
       gadget_manager_->RemoveGadgetInstance(id);
     // Return true to continue the enumeration.
     return true;
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
-        ConfirmGadget(id)) {
-      return AddGadgetInstanceCallback(id);
+    if (gadget_manager_->IsGadgetInstanceTrusted(id) || ConfirmGadget(id)) {
+      return LoadGadgetInstance(id);
     }
     return false;
   }
 
-  bool AddGadgetInstanceCallback(int id) {
+  bool LoadGadgetInstance(int id) {
     bool result = false;
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
       result = LoadGadget(path.c_str(), options.c_str(), id);
-      if (result) {
-        DLOG("SimpleGtkHost: Load gadget %s, with option %s, succeeded",
-             path.c_str(), options.c_str());
-      } else {
-        LOG("SimpleGtkHost: Load gadget %s, with option %s, failed",
-             path.c_str(), options.c_str());
-      }
+      LOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
+          path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
-  }
-
-  void InitGadgets() {
-    gadget_manager_->ConnectOnNewGadgetInstance(
-        NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    gadget_manager_->ConnectOnRemoveGadgetInstance(
-        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
@@ -794,7 +788,7 @@ SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
   : impl_(new Impl(this, options, zoom, decorated, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();
-  impl_->InitGadgets();
+  impl_->LoadGadgets();
 }
 
 SimpleGtkHost::~SimpleGtkHost() {
@@ -820,7 +814,6 @@ bool SimpleGtkHost::LoadFont(const char *filename) {
 }
 
 void SimpleGtkHost::Run() {
-  impl_->LoadGadgets();
   gtk_main();
 }
 
