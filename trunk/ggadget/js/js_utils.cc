@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstring>
 #include <ggadget/common.h>
 #include "js_utils.h"
 
