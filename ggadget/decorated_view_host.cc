@@ -382,6 +382,7 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void CloseDecoratedView() {
+      SaveViewStates();
       // Derived class shall override this method to do more things.
       CloseView();
     }
@@ -1324,6 +1325,12 @@ class DecoratedViewHost::Impl {
     virtual void SetCaption(const char *caption) {
       caption_->GetTextFrame()->SetText(caption);
       ViewDecoratorBase::SetCaption(caption);
+    }
+
+    virtual bool OnAddContextMenuItems(MenuInterface *menu) {
+      ViewDecoratorBase::OnAddContextMenuItems(menu);
+      // Don't show system menu item.
+      return false;
     }
 
    public:

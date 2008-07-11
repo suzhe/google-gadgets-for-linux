@@ -437,6 +437,7 @@ class SimpleGtkHost::Impl {
     if (expanded_popout_)
       OnPopInHandler(expanded_original_);
 
+    DLOG("Exit...");
     gtk_main_quit();
   }
 
