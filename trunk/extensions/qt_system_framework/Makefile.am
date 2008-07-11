@@ -24,8 +24,7 @@ extensiondir		= $(GGL_MODULE_DIR)
 qt_system_framework_la_SOURCES = qt_system_framework.cc
 
 qt_system_framework_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_system_framework_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

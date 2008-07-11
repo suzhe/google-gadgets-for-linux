@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <dirent.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <unittest/gtest.h>
@@ -29,9 +31,9 @@ static const char *kTestDir = "/tmp/GGL_FileSystem_Test";
 class TextStreamTest : public testing::Test {
  protected:
   virtual void SetUp() {
-    std::system("rm -R /tmp/GGL_FileSystem_Test");
-    std::system("touch /tmp/GGL_FileSystem_Test");
-    std::system("echo -n \"line1\nline2\nline3\n\" > /tmp/GGL_FileSystem_Test");
+    system("rm -R /tmp/GGL_FileSystem_Test");
+    system("touch /tmp/GGL_FileSystem_Test");
+    system("echo -n \"line1\nline2\nline3\n\" > /tmp/GGL_FileSystem_Test");
     text_ = filesystem_.CreateTextFile(kTestDir, false, false);
   }
 
@@ -41,7 +43,7 @@ class TextStreamTest : public testing::Test {
       text_->Destroy();
       text_ = NULL;
     }
-    std::system("rm /tmp/GGL_FileSystem_Test");
+    system("rm /tmp/GGL_FileSystem_Test");
   }
 
   FileSystem filesystem_;
@@ -208,13 +210,13 @@ TEST_F(TextStreamTest, ReadAll2) {
   EXPECT_EQ("", text->ReadAll());
   text->Close();
   text->Destroy();
-  std::system("rm /tmp/no_existing_file");
+  system("rm /tmp/no_existing_file");
 }
 
 
 // GGL_FileSystem_Test method Write
 TEST_F(TextStreamTest, Write1) {
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
   TextStreamInterface *text =
       filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
@@ -227,7 +229,7 @@ TEST_F(TextStreamTest, Write1) {
   EXPECT_EQ("new content", text->ReadAll());
   text->Close();
   text->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 // GGL_FileSystem_Test method Write
@@ -261,7 +263,7 @@ TEST_F(TextStreamTest, Write_Failure_1) {
 
 // GGL_FileSystem_Test method WriteLine
 TEST_F(TextStreamTest, WriteLine1) {
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
   TextStreamInterface *text =
       filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
@@ -274,7 +276,7 @@ TEST_F(TextStreamTest, WriteLine1) {
   EXPECT_EQ("new content\n", text->ReadAll());
   text->Close();
   text->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 // GGL_FileSystem_Test method WriteLine
@@ -322,7 +324,7 @@ TEST_F(TextStreamTest, WriteLine_Failure_2) {
 
 // GGL_FileSystem_Test method WriteBlankLines
 TEST_F(TextStreamTest, WriteBlankLines1) {
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
   TextStreamInterface *text =
       filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
@@ -335,11 +337,11 @@ TEST_F(TextStreamTest, WriteBlankLines1) {
   EXPECT_EQ("\n", text->ReadAll());
   text->Close();
   text->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 TEST_F(TextStreamTest, WriteBlankLines1_) {
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
   TextStreamInterface *text =
       filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
@@ -352,7 +354,7 @@ TEST_F(TextStreamTest, WriteBlankLines1_) {
   EXPECT_EQ("\n\n\n", text->ReadAll());
   text->Close();
   text->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 // GGL_FileSystem_Test method WriteBlankLines

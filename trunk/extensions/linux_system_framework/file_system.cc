@@ -1366,7 +1366,7 @@ bool FileSystem::CopyFile(const char *source, const char *dest,
 
   std::string exe_command = "cp " + source_path + " " + dest_path;
 
-  std::system(exe_command.c_str());
+  system(exe_command.c_str());
 
   return true;
 }
@@ -1397,12 +1397,12 @@ bool FileSystem::CopyFolder(const char *source, const char *dest,
       return false;
 
     // if overwrite is true, delete the existing folder
-    std::system(("rm -R " + dest_path).c_str());
+    system(("rm -R " + dest_path).c_str());
   }
 
   std::string exe_command = "cp -R " + source_path + " " + dest_path;
 
-  std::system(exe_command.c_str());
+  system(exe_command.c_str());
 
   return true;
 }

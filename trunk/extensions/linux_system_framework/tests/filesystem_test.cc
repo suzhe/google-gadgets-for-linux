@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <dirent.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <unittest/gtest.h>
@@ -429,22 +431,22 @@ TEST(FileSystem, DriveExists) {
 // test method FileExists
 TEST(FileSystem, FileExists_Accuracy1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file.cc"));
   EXPECT_TRUE(filesystem.FileExists("\\tmp\\GGL_FileSystem_Test\\file.cc"));
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/invalid.cc"));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // if the target is not a file, it should return false
 TEST(FileSystem, FileExists_Accuracy2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // tests with NULL argument
@@ -464,19 +466,19 @@ TEST(FileSystem, FileExists_Failure2) {
 // test method FolderExists
 TEST(FileSystem, FolderExists_Accuracy1) {
   FileSystem filesystem;
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists("/tmp/jfsj213132dlksf"));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // if the target is not a folder, it should return false
 TEST(FileSystem, FolderExists_Accuracy2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // tests with NULL argument
@@ -505,17 +507,17 @@ TEST(FileSystem, GetFile_Accuracy1) {
   FileSystem filesystem;
   EXPECT_TRUE(filesystem.GetFile("/") == NULL);
 
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFile(kTestDir) != NULL);
   EXPECT_TRUE(filesystem.GetFile("\\tmp\\GGL_FileSystem_Test") != NULL);
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method GetFile with non-existing file
 TEST(FileSystem, GetFile_Accuracy2) {
   FileSystem filesystem;
 
-  std::system("rm /tmp/no_exist_file");
+  system("rm /tmp/no_exist_file");
   EXPECT_TRUE(filesystem.GetFile("/tmp/no_exist_file") == NULL);
   EXPECT_TRUE(filesystem.GetFile("\\tmp\\no_exist_file") == NULL);
 }
@@ -524,23 +526,23 @@ TEST(FileSystem, GetFile_Accuracy2) {
 TEST(FileSystem, GetFile_Accuracy3) {
   FileSystem filesystem;
 
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFile(kTestDir) == NULL);
   EXPECT_TRUE(filesystem.GetFile("\\tmp\\GGL_FileSystem_Test") == NULL);
-  std::system("rm -r /tmp/GGL_FileSystem_Test");
+  system("rm -r /tmp/GGL_FileSystem_Test");
 }
 
 // test whether the FileInterface contains correct information
 TEST(FileSystem, GetFile_Accuracy4) {
   FileSystem filesystem;
 
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFile(kTestDir) != NULL);
 
   FileInterface *file = filesystem.GetFile(kTestDir);
   EXPECT_TRUE(file->GetPath() == kTestDir);
 
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // tests with NULL argument
@@ -562,17 +564,17 @@ TEST(FileSystem, GetFolder_Accuracy1) {
   FileSystem filesystem;
   EXPECT_TRUE(filesystem.GetFolder("/") != NULL);
 
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFolder(kTestDir) != NULL);
   EXPECT_TRUE(filesystem.GetFolder("\\tmp\\GGL_FileSystem_Test") != NULL);
-  std::system("rm -r /tmp/GGL_FileSystem_Test");
+  system("rm -r /tmp/GGL_FileSystem_Test");
 }
 
 // test method GetFolder with non-existing file
 TEST(FileSystem, GetFolder_Accuracy2) {
   FileSystem filesystem;
 
-  std::system("rm -r /tmp/no_exist_folder");
+  system("rm -r /tmp/no_exist_folder");
   EXPECT_TRUE(filesystem.GetFolder("/tmp/no_exist_folder") == NULL);
   EXPECT_TRUE(filesystem.GetFolder("\\tmp\\no_exist_folder") == NULL);
 }
@@ -581,23 +583,23 @@ TEST(FileSystem, GetFolder_Accuracy2) {
 TEST(FileSystem, GetFolder_Accuracy3) {
   FileSystem filesystem;
 
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFolder(kTestDir) == NULL);
   EXPECT_TRUE(filesystem.GetFolder("\\tmp\\GGL_FileSystem_Test") == NULL);
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test whether the FolderInterface contains correct information
 TEST(FileSystem, GetFolder_Accuracy4) {
   FileSystem filesystem;
 
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.GetFolder(kTestDir) != NULL);
 
   FolderInterface *folder = filesystem.GetFolder(kTestDir);
   EXPECT_TRUE(folder->GetPath() == kTestDir);
 
-  std::system("rm -r /tmp/GGL_FileSystem_Test");
+  system("rm -r /tmp/GGL_FileSystem_Test");
 }
 
 // tests with NULL argument
@@ -625,34 +627,34 @@ TEST(FileSystem, GetSpecialFolder) {
 // test method DeleteFile with existing file
 TEST(FileSystem, DeleteFile_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
 
   EXPECT_TRUE(filesystem.DeleteFile(kTestDir, true));
 
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFile with existing file
 TEST(FileSystem, DeleteFile_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
 
   EXPECT_TRUE(filesystem.DeleteFile("\\tmp\\GGL_FileSystem_Test", true));
 
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFile with non-existing file
 TEST(FileSystem, DeleteFile_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFile(kTestDir, true));
 }
@@ -660,8 +662,8 @@ TEST(FileSystem, DeleteFile_Accuracy_NonExistingFile_1) {
 // test method DeleteFile with non-existing file
 TEST(FileSystem, DeleteFile_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFile("\\tmp\\GGL_FileSystem_Test", true));
 }
@@ -669,19 +671,19 @@ TEST(FileSystem, DeleteFile_Accuracy_NonExistingFile_2) {
 // test method DeleteFile with existing folder
 TEST(FileSystem, DeleteFile_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFile(kTestDir, true));
-  std::system("rm -r /tmp/GGL_FileSystem_Test");
+  system("rm -r /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFile with existing folder
 TEST(FileSystem, DeleteFile_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFile("\\tmp\\GGL_FileSystem_Test", true));
-  std::system("rm -r /tmp/GGL_FileSystem_Test");
+  system("rm -r /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -701,34 +703,34 @@ TEST(FileSystem, DeleteFile_Failure2) {
 // test method DeleteFolder with existing folder
 TEST(FileSystem, DeleteFolder_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
 
   EXPECT_TRUE(filesystem.DeleteFolder(kTestDir, true));
 
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFolder with existing folder
 TEST(FileSystem, DeleteFolder_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
 
   EXPECT_TRUE(filesystem.DeleteFolder("\\tmp\\GGL_FileSystem_Test", true));
 
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFolder with non-existing file
 TEST(FileSystem, DeleteFolder_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFolder(kTestDir, true));
 }
@@ -736,8 +738,8 @@ TEST(FileSystem, DeleteFolder_Accuracy_NonExistingFile_1) {
 // test method DeleteFolder with non-existing file
 TEST(FileSystem, DeleteFolder_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFolder("\\tmp\\GGL_FileSystem_Test", true));
 }
@@ -745,21 +747,21 @@ TEST(FileSystem, DeleteFolder_Accuracy_NonExistingFile_2) {
 // test method DeleteFolder with existing file
 TEST(FileSystem, DeleteFolder_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFolder(kTestDir, true));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method DeleteFolder with existing file
 TEST(FileSystem, DeleteFolder_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.DeleteFolder("\\tmp\\GGL_FileSystem_Test", true));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -780,11 +782,11 @@ TEST(FileSystem, DeleteFolder_Failure2) {
 // test method MoveFile with existing file
 TEST(FileSystem, MoveFile_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -796,17 +798,17 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_1) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/GGL_FileSystem_Test/subfolder/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with existing file
 TEST(FileSystem, MoveFile_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -818,18 +820,18 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_2) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/GGL_FileSystem_Test/subfolder/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 
 // test method MoveFile with existing file
 TEST(FileSystem, MoveFile_Accuracy_ExistingFile_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -841,18 +843,18 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_3) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with existing file
 TEST(FileSystem, MoveFile_Accuracy_ExistingFile_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -864,16 +866,16 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_4) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with non-existing file
 TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -882,15 +884,15 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with non-existing file
 TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -899,15 +901,15 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with non-existing folder
 TEST(FileSystem, MoveFile_Accuracy_NonExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.MoveFile("/tmp/GGL_FileSystem_Test/subfolder",
@@ -915,15 +917,15 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFolder_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFile with non-existing folder
 TEST(FileSystem, MoveFile_Accuracy_NonExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.MoveFile("\\tmp/GGL_FileSystem_Test\\subfolder",
@@ -931,7 +933,7 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFolder_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -952,11 +954,11 @@ TEST(FileSystem, MoveFile_Failure2) {
 // test method MoveFolder with existing file
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -966,17 +968,17 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_1) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with existing file
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -986,17 +988,17 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_2) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with existing file
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1006,18 +1008,18 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_3) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with existing folder
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1027,17 +1029,17 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_4) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with existing folder
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1049,16 +1051,16 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_1) {
   EXPECT_TRUE(filesystem.FolderExists(
                 "/tmp/GGL_FileSystem_Test/subfolder/folder1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with existing folder
 TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1070,14 +1072,14 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_2) {
   EXPECT_TRUE(filesystem.FolderExists(
                 "/tmp/GGL_FileSystem_Test/subfolder/folder1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with non-existing folder
 TEST(FileSystem, MoveFolder_Accuracy_NonExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/subfolder",
@@ -1085,14 +1087,14 @@ TEST(FileSystem, MoveFolder_Accuracy_NonExistingFolder_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method MoveFolder with non-existing folder
 TEST(FileSystem, MoveFolder_Accuracy_NonExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.MoveFolder("/tmp\\GGL_FileSystem_Test\\subfolder",
@@ -1100,7 +1102,7 @@ TEST(FileSystem, MoveFolder_Accuracy_NonExistingFolder_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -1121,11 +1123,11 @@ TEST(FileSystem, MoveFolder_Failure2) {
 // test method CopyFile with existing file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1138,17 +1140,17 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_1) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/GGL_FileSystem_Test/subfolder/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with existing file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1161,18 +1163,18 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_2) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/GGL_FileSystem_Test/subfolder/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 
 // test method CopyFile with existing file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1185,18 +1187,18 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_3) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with existing file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1209,19 +1211,19 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_4) {
   EXPECT_TRUE(
     filesystem.FileExists("/tmp/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with overwritting file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_5) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1231,18 +1233,18 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_5) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with overwritting file
 TEST(FileSystem, CopyFile_Accuracy_ExistingFile_6) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1265,15 +1267,15 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_6) {
     text = NULL;
   }
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with non-existing file
 TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1283,15 +1285,15 @@ TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with non-existing file
 TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1301,15 +1303,15 @@ TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with existing folder
 TEST(FileSystem, CopyFile_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/subfolder",
@@ -1318,15 +1320,15 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFolder_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFile with existing folder
 TEST(FileSystem, CopyFile_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFile("\\tmp/GGL_FileSystem_Test\\subfolder",
@@ -1335,7 +1337,7 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFolder_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -1360,11 +1362,11 @@ TEST(FileSystem, CopyFile_Failure2) {
 // test method CopyFolder with existing file
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1375,17 +1377,17 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_1) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with existing file
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1396,17 +1398,17 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_2) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with existing file
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1417,18 +1419,18 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_3) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with existing folder
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test/file1");
-  std::system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test/file1");
+  system("echo -n \"sample content\" > /tmp/GGL_FileSystem_Test/file1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1439,17 +1441,17 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_4) {
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
-  std::system("rm -R /tmp/file1");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/file1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with existing folder
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1462,16 +1464,16 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_1) {
   EXPECT_TRUE(filesystem.FolderExists(
                 "/tmp/GGL_FileSystem_Test/subfolder/folder1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with existing folder
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
@@ -1484,17 +1486,17 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_2) {
   EXPECT_TRUE(filesystem.FolderExists(
                 "/tmp/GGL_FileSystem_Test/subfolder/folder1"));
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with overwritting folder
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder/folder1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder/folder1");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/folder1",
@@ -1503,17 +1505,17 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_3) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with overwritting folder
 TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/folder1");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder/folder1");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test/folder1");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder/folder1");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/folder1",
@@ -1522,14 +1524,14 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_4) {
 
   EXPECT_TRUE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with non-existing folder
 TEST(FileSystem, CopyFolder_Accuracy_NonExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/subfolder",
@@ -1538,14 +1540,14 @@ TEST(FileSystem, CopyFolder_Accuracy_NonExistingFolder_1) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CopyFolder with non-existing folder
 TEST(FileSystem, CopyFolder_Accuracy_NonExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
 
   bool result = filesystem.CopyFolder("/tmp\\GGL_FileSystem_Test\\subfolder",
@@ -1554,7 +1556,7 @@ TEST(FileSystem, CopyFolder_Accuracy_NonExistingFolder_2) {
 
   EXPECT_FALSE(result);
 
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -1579,71 +1581,71 @@ TEST(FileSystem, CopyFolder_Failure2) {
 // test method CreateFolder with non-existing folder
 TEST(FileSystem, CreateFolder_Accuracy_NonExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   FolderInterface *folder = filesystem.CreateFolder(kTestDir);
   EXPECT_TRUE(folder != NULL);
   EXPECT_EQ(kTestDir, folder->GetPath());
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateFolder with non-existing folder
 TEST(FileSystem, CreateFolder_Accuracy_NonExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   FolderInterface
       *folder = filesystem.CreateFolder("\\tmp\\GGL_FileSystem_Test");
   EXPECT_TRUE(folder != NULL);
   EXPECT_EQ(kTestDir, folder->GetPath());
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateFolder with existing folder
 TEST(FileSystem, CreateFolder_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   FolderInterface *folder = filesystem.CreateFolder(kTestDir);
   EXPECT_TRUE(folder != NULL);
   EXPECT_EQ(kTestDir, folder->GetPath());
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateFolder with existing folder
 TEST(FileSystem, CreateFolder_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   FolderInterface*folder =filesystem.CreateFolder("\\tmp\\GGL_FileSystem_Test");
   EXPECT_TRUE(folder != NULL);
   EXPECT_EQ(kTestDir, folder->GetPath());
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateFolder with existing file
 TEST(FileSystem, CreateFolder_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   FolderInterface *folder = filesystem.CreateFolder(kTestDir);
   EXPECT_TRUE(folder == NULL);
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateFolder with existing file
 TEST(FileSystem, CreateFolder_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   FolderInterface
@@ -1651,7 +1653,7 @@ TEST(FileSystem, CreateFolder_Accuracy_ExistingFile_2) {
   EXPECT_TRUE(folder == NULL);
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm /tmp/GGL_FileSystem_Test");
+  system("rm /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -1669,7 +1671,7 @@ TEST(FileSystem, CreateFolder_Failure2) {
 // test method CreateTextFile with non-existing file
 TEST(FileSystem, CreateTextFile_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1682,13 +1684,13 @@ TEST(FileSystem, CreateTextFile_Accuracy_NonExistingFile_1) {
   text = NULL;
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateTextFile with non-existing file
 TEST(FileSystem, CreateTextFile_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1701,13 +1703,13 @@ TEST(FileSystem, CreateTextFile_Accuracy_NonExistingFile_2) {
   text = NULL;
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateTextFile with existing file
 TEST(FileSystem, CreateTextFile_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   FILE *fp = fopen(kTestDir, "wb");
   if (!fp)
     return;
@@ -1720,13 +1722,13 @@ TEST(FileSystem, CreateTextFile_Accuracy_ExistingFile_1) {
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("Test for create text file!\n", text->ReadAll());
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateTextFile with existing file
 TEST(FileSystem, CreateTextFile_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   FILE *fp = fopen(kTestDir, "wb");
   if (!fp)
     return;
@@ -1739,14 +1741,14 @@ TEST(FileSystem, CreateTextFile_Accuracy_ExistingFile_2) {
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("Test for create text file!", text->ReadAll());
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateTextFile with existing folder
 TEST(FileSystem, CreateTextFile_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   TextStreamInterface
@@ -1755,14 +1757,14 @@ TEST(FileSystem, CreateTextFile_Accuracy_ExistingFolder_1) {
   EXPECT_TRUE(text == NULL);
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method CreateTextFile with existing folder
 TEST(FileSystem, CreateTextFile_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   TextStreamInterface
@@ -1771,7 +1773,7 @@ TEST(FileSystem, CreateTextFile_Accuracy_ExistingFolder_2) {
   EXPECT_TRUE(text == NULL);
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument
@@ -1789,7 +1791,7 @@ TEST(FileSystem, CreateTextFile_Failure2) {
 // test method OpenTextFile with non-existing file
 TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1802,13 +1804,13 @@ TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_1) {
   text = NULL;
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with non-existing file
 TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1821,13 +1823,13 @@ TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_2) {
   text = NULL;
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with non-existing file with create == false
 TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_3) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1836,13 +1838,13 @@ TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_3) {
   EXPECT_TRUE(text == NULL);
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with non-existing file with create == false
 TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_4) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
   TextStreamInterface
@@ -1851,13 +1853,13 @@ TEST(FileSystem, OpenTextFile_Accuracy_NonExistingFile_4) {
   EXPECT_TRUE(text == NULL);
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   EXPECT_FALSE(filesystem.FolderExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with existing file
 TEST(FileSystem, OpenTextFile_Accuracy_ExistingFile_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   FILE *fp = fopen(kTestDir, "wb");
   if (!fp)
     return;
@@ -1870,13 +1872,13 @@ TEST(FileSystem, OpenTextFile_Accuracy_ExistingFile_1) {
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("Test for create text file!\n", text->ReadAll());
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with existing file
 TEST(FileSystem, OpenTextFile_Accuracy_ExistingFile_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
   FILE *fp = fopen(kTestDir, "wb");
   if (!fp)
     return;
@@ -1889,14 +1891,14 @@ TEST(FileSystem, OpenTextFile_Accuracy_ExistingFile_2) {
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("Test for create text file!", text->ReadAll());
   EXPECT_TRUE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with existing folder
 TEST(FileSystem, OpenTextFile_Accuracy_ExistingFolder_1) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   TextStreamInterface
@@ -1905,14 +1907,14 @@ TEST(FileSystem, OpenTextFile_Accuracy_ExistingFolder_1) {
   EXPECT_TRUE(text == NULL);
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test method OpenTextFile with existing folder
 TEST(FileSystem, OpenTextFile_Accuracy_ExistingFolder_2) {
   FileSystem filesystem;
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("mkdir /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("mkdir /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
   TextStreamInterface
@@ -1921,7 +1923,7 @@ TEST(FileSystem, OpenTextFile_Accuracy_ExistingFolder_2) {
   EXPECT_TRUE(text == NULL);
   EXPECT_TRUE(filesystem.FolderExists(kTestDir));
   EXPECT_FALSE(filesystem.FileExists(kTestDir));
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // test with NULL argument

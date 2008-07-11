@@ -35,8 +35,7 @@ nodist_ggl_qt_SOURCES	= $(MOC_FILES)
 ggl_qt_CPPFLAGS 	= @QT4_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 ggl_qt_LDADD		= @QT4_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
