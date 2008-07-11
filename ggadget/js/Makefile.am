@@ -26,7 +26,7 @@ jsinclude_HEADERS	= jscript_massager.h js_utils.h
 lib_LTLIBRARIES	= libggadget-js@GGL_EPOCH@.la
 
 libggadget_js@GGL_EPOCH@_la_SOURCES = jscript_massager.cc js_utils.cc
-libggadget_js@GGL_EPOCH@_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS) -Wno-conversion
+libggadget_js@GGL_EPOCH@_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
 libggadget_js@GGL_EPOCH@_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 jscript_massager.cc : jscript_massager.l

@@ -58,8 +58,7 @@ nodist_libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  $(MOC_FILES)
 
 libggadget_qt@GGL_EPOCH@_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_qt@GGL_EPOCH@_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

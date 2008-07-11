@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <dirent.h>
 #include "ggadget/common.h"
 #include "ggadget/logger.h"
 #include "unittest/gtest.h"
@@ -29,9 +31,9 @@ static const char *kTestDir = "/tmp/GGL_FileSystem_Test";
 class FileTest : public testing::Test {
  protected:
   virtual void SetUp() {
-    std::system("rm -R /tmp/GGL_FileSystem_Test");
-    std::system("touch /tmp/GGL_FileSystem_Test");
-    std::system("echo -n \"test content: 12345\" > /tmp/GGL_FileSystem_Test");
+    system("rm -R /tmp/GGL_FileSystem_Test");
+    system("touch /tmp/GGL_FileSystem_Test");
+    system("echo -n \"test content: 12345\" > /tmp/GGL_FileSystem_Test");
     file_ = filesystem_.GetFile(kTestDir);
   }
 
@@ -40,7 +42,7 @@ class FileTest : public testing::Test {
       file_->Destroy();
       file_ = NULL;
     }
-    std::system("rm /tmp/GGL_FileSystem_Test");
+    system("rm /tmp/GGL_FileSystem_Test");
   }
 
   FileSystem filesystem_;
@@ -57,15 +59,15 @@ TEST_F(FileTest, File_1) {
 
 // GGL_FileSystem_Test constructor of class File
 TEST_F(FileTest, File_2) {
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
-  std::system("touch /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
+  system("touch /tmp/GGL_FileSystem_Test");
   FileInterface *file = filesystem_.GetFile("\\tmp\\GGL_FileSystem_Test");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ(kTestDir, file->GetPath());
   EXPECT_EQ("GGL_FileSystem_Test", file->GetName());
   EXPECT_TRUE(filesystem_.FileExists(kTestDir));
   file->Destroy();
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method GetPath
@@ -82,14 +84,14 @@ TEST_F(FileTest, GetName) {
 
 // GGL_FileSystem_Test method SetName
 TEST_F(FileTest, SetName_Accuracy) {
-  std::system("rm -R /tmp/new_folder");
+  system("rm -R /tmp/new_folder");
   EXPECT_TRUE(file_ != NULL);
   EXPECT_EQ("GGL_FileSystem_Test", file_->GetName());
   EXPECT_TRUE(file_->SetName("new_name"));
   EXPECT_FALSE(filesystem_.FileExists(kTestDir));
   EXPECT_TRUE(filesystem_.FileExists("/tmp/new_name"));
   EXPECT_EQ("new_name", file_->GetName());
-  std::system("rm -R /tmp/new_name");
+  system("rm -R /tmp/new_name");
 }
 
 // GGL_FileSystem_Test method SetName with same name
@@ -119,67 +121,67 @@ TEST_F(FileTest, SetName_Failure_EmptyString) {
 // GGL_FileSystem_Test method GetShortPath
 TEST_F(FileTest, GetShortPath_Accuracy_1) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/I_love_you_MengMeng");
+  system("touch /tmp/I_love_you_MengMeng");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you_MengMeng");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("/tmp/I_love_you_MengMeng", file->GetPath());
   EXPECT_EQ("/tmp/I_LOVE~1", file->GetShortPath());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you_MengMeng");
+  system("rm -R /tmp/I_love_you_MengMeng");
 }
 
 // GGL_FileSystem_Test method GetShortPath
 TEST_F(FileTest, GetShortPath_Accuracy_2) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/TestCase");
+  system("touch /tmp/TestCase");
   FileInterface *file =
     filesystem_.GetFile("/tmp/TestCase");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("/tmp/TestCase", file->GetPath());
   EXPECT_EQ("/tmp/TESTCASE", file->GetShortPath());
   file->Destroy();
-  std::system("rm -R /tmp/TestCase");
+  system("rm -R /tmp/TestCase");
 }
 
 // GGL_FileSystem_Test method GetShortPath
 TEST_F(FileTest, GetShortPath_Accuracy_3) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/I_love_you.txt");
+  system("touch /tmp/I_love_you.txt");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you.txt");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("/tmp/I_love_you.txt", file->GetPath());
   EXPECT_EQ("/tmp/I_LOVE~1.TXT", file->GetShortPath());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you.txt");
+  system("rm -R /tmp/I_love_you.txt");
 }
 
 // GGL_FileSystem_Test method GetShortPath
 TEST_F(FileTest, GetShortPath_Accuracy_4) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/I_love_you.txt1234");
+  system("touch /tmp/I_love_you.txt1234");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you.txt1234");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("/tmp/I_love_you.txt1234", file->GetPath());
   EXPECT_EQ("/tmp/I_LOVE~1.TXT", file->GetShortPath());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you.txt1234");
+  system("rm -R /tmp/I_love_you.txt1234");
 }
 
 
 
 // GGL_FileSystem_Test method GetShortName
 TEST_F(FileTest, GetShortName_Accuracy_1) {
-  std::system("touch /tmp/I_love_you_MengMeng");
+  system("touch /tmp/I_love_you_MengMeng");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you_MengMeng");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("I_love_you_MengMeng", file->GetName());
   EXPECT_EQ("I_LOVE~1", file->GetShortName());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you_MengMeng");
+  system("rm -R /tmp/I_love_you_MengMeng");
 }
 
 // GGL_FileSystem_Test method GetShortName
@@ -192,27 +194,27 @@ TEST_F(FileTest, GetShortName_Accuracy_2) {
 // GGL_FileSystem_Test method GetShortName
 TEST_F(FileTest, GetShortName_Accuracy_3) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/I_love_you.txt");
+  system("touch /tmp/I_love_you.txt");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you.txt");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("I_love_you.txt", file->GetName());
   EXPECT_EQ("I_LOVE~1.TXT", file->GetShortName());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you.txt");
+  system("rm -R /tmp/I_love_you.txt");
 }
 
 // GGL_FileSystem_Test method GetShortName
 TEST_F(FileTest, GetShortName_Accuracy_4) {
   EXPECT_TRUE(file_ != NULL);
-  std::system("touch /tmp/I_love_you.txt1234");
+  system("touch /tmp/I_love_you.txt1234");
   FileInterface *file =
     filesystem_.GetFile("/tmp/I_love_you.txt1234");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("I_love_you.txt1234", file->GetName());
   EXPECT_EQ("I_LOVE~1.TXT", file->GetShortName());
   file->Destroy();
-  std::system("rm -R /tmp/I_love_you.txt1234");
+  system("rm -R /tmp/I_love_you.txt1234");
 }
 
 
@@ -241,40 +243,40 @@ TEST_F(FileTest, GetAttributes_Accuracy_1) {
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FileTest, GetAttributes_Accuracy_2) {
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
-  std::system("touch /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("touch /tmp/.GGL_FileSystem_Test");
   FileInterface *file = filesystem_.GetFile("/tmp/.GGL_FileSystem_Test");
   EXPECT_EQ(0, file->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_NE(0, file->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_EQ(0, file->GetAttributes() & FILE_ATTR_READONLY);
   file->Destroy();
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FileTest, GetAttributes_Accuracy_3) {
-  std::system("chmod -w /tmp/GGL_FileSystem_Test");
+  system("chmod -w /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(file_ != NULL);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, file_->GetAttributes() & FILE_ATTR_READONLY);
-  std::system("chmod +w /tmp/GGL_FileSystem_Test");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("chmod +w /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FileTest, GetAttributes_Accuracy_4) {
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
-  std::system("touch /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("touch /tmp/.GGL_FileSystem_Test");
   FileInterface *file = filesystem_.GetFile("/tmp/.GGL_FileSystem_Test");
-  std::system("chmod -w /tmp/.GGL_FileSystem_Test");
+  system("chmod -w /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ(0, file->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_NE(0, file->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, file->GetAttributes() & FILE_ATTR_READONLY);
   file->Destroy();
-  std::system("chmod +w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod +w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 
@@ -288,13 +290,13 @@ TEST_F(FileTest, SetAttributes_Accuracy_1) {
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, file_->GetAttributes() & FILE_ATTR_READONLY);
-  std::system("chmod a+w /tmp/GGL_FileSystem_Test");
+  system("chmod a+w /tmp/GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes
 TEST_F(FileTest, SetAttributes_Accuracy_2) {
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(file_ != NULL);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
@@ -304,13 +306,13 @@ TEST_F(FileTest, SetAttributes_Accuracy_2) {
   EXPECT_NE(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_READONLY);
   EXPECT_EQ(".GGL_FileSystem_Test", file_->GetName());
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes
 TEST_F(FileTest, SetAttributes_Accuracy_3) {
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(file_ != NULL);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
@@ -321,8 +323,8 @@ TEST_F(FileTest, SetAttributes_Accuracy_3) {
   EXPECT_NE(0, file_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, file_->GetAttributes() & FILE_ATTR_READONLY);
   EXPECT_EQ(".GGL_FileSystem_Test", file_->GetName());
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes with invalid input argument
@@ -362,13 +364,13 @@ TEST_F(FileTest, GetType1) {
 
 // GGL_FileSystem_Test method GetType
 TEST_F(FileTest, GetType2) {
-  std::system("rm -R /tmp/file.cc");
-  std::system("touch /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
+  system("touch /tmp/file.cc");
   FileInterface *file = filesystem_.GetFile("/tmp/file.cc");
   EXPECT_TRUE(file != NULL);
   EXPECT_EQ("cc", file->GetType());
   file->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 
@@ -389,12 +391,12 @@ TEST_F(FileTest, GetSize1) {
 
 // GGL_FileSystem_Test method GetSize
 TEST_F(FileTest, GetSize2) {
-  std::system("rm -R /tmp/file.cc");
-  std::system("touch /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
+  system("touch /tmp/file.cc");
   FileInterface *file = filesystem_.GetFile("/tmp/file.cc");
   EXPECT_EQ(0, file->GetSize());
   file->Destroy();
-  std::system("rm -R /tmp/file.cc");
+  system("rm -R /tmp/file.cc");
 }
 
 

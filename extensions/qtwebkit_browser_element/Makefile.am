@@ -31,8 +31,7 @@ qtwebkit_browser_element_la_SOURCES = \
 			  browser_element.cc
 
 qtwebkit_browser_element_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+			  $(DEFAULT_COMPILE_FLAGS)
 
 qtwebkit_browser_element_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

@@ -31,8 +31,7 @@ nodist_qt_xml_http_request_la_SOURCES = \
 			  $(MOC_FILES)
 
 qt_xml_http_request_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_xml_http_request_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

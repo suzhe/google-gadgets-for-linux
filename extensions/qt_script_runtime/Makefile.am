@@ -37,8 +37,7 @@ qt_script_runtime_la_SOURCES = \
 			  json.cc
 
 qt_script_runtime_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -Wno-conversion
+			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_script_runtime_la_CPPFLAGS = \
 			  @QT4_CFLAGS@ \

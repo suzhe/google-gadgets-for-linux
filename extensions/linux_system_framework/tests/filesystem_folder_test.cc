@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <dirent.h>
 #include "ggadget/common.h"
 #include "ggadget/logger.h"
 #include "unittest/gtest.h"
@@ -30,7 +32,7 @@ static const char *kTestDir = "/tmp/GGL_FileSystem_Test";
 class FolderTest : public testing::Test {
  protected:
   virtual void SetUp() {
-    std::system("rm -R /tmp/GGL_FileSystem_Test");
+    system("rm -R /tmp/GGL_FileSystem_Test");
     folder_ = filesystem_.CreateFolder(kTestDir);
   }
 
@@ -39,7 +41,7 @@ class FolderTest : public testing::Test {
       folder_->Destroy();
       folder_ = NULL;
     }
-    std::system("rm -R /tmp/GGL_FileSystem_Test");
+    system("rm -R /tmp/GGL_FileSystem_Test");
   }
 
   FileSystem filesystem_;
@@ -78,14 +80,14 @@ TEST_F(FolderTest, GetName) {
 
 // GGL_FileSystem_Test method SetName
 TEST_F(FolderTest, SetName_Accuracy) {
-  std::system("rm -R /tmp/new_folder");
+  system("rm -R /tmp/new_folder");
   EXPECT_TRUE(folder_ != NULL);
   EXPECT_EQ("GGL_FileSystem_Test", folder_->GetName());
   EXPECT_TRUE(folder_->SetName("new_folder"));
   EXPECT_FALSE(filesystem_.FolderExists(kTestDir));
   EXPECT_TRUE(filesystem_.FolderExists("/tmp/new_folder"));
   EXPECT_EQ("new_folder", folder_->GetName());
-  std::system("rm -R /tmp/new_folder");
+  system("rm -R /tmp/new_folder");
 }
 
 // GGL_FileSystem_Test method SetName with same name
@@ -121,7 +123,7 @@ TEST_F(FolderTest, GetShortPath_Accuracy_1) {
   EXPECT_EQ("/tmp/I_love_you_MengMeng", folder->GetPath());
   EXPECT_EQ("/tmp/I_LOVE~1", folder->GetShortPath());
   folder->Destroy();
-  std::system("rm -R /tmp/I_love_you_MengMeng");
+  system("rm -R /tmp/I_love_you_MengMeng");
 }
 
 // GGL_FileSystem_Test method GetShortPath
@@ -133,7 +135,7 @@ TEST_F(FolderTest, GetShortPath_Accuracy_2) {
   EXPECT_EQ("/tmp/TestCase", folder->GetPath());
   EXPECT_EQ("/tmp/TESTCASE", folder->GetShortPath());
   folder->Destroy();
-  std::system("rm -R /tmp/TestCase");
+  system("rm -R /tmp/TestCase");
 }
 
 
@@ -145,7 +147,7 @@ TEST_F(FolderTest, GetShortName_Accuracy_1) {
   EXPECT_EQ("I_love_you_MengMeng", folder->GetName());
   EXPECT_EQ("I_LOVE~1", folder->GetShortName());
   folder->Destroy();
-  std::system("rm -R /tmp/I_love_you_MengMeng");
+  system("rm -R /tmp/I_love_you_MengMeng");
 }
 
 // GGL_FileSystem_Test method GetShortName
@@ -191,38 +193,38 @@ TEST_F(FolderTest, GetAttributes_Accuracy_1) {
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FolderTest, GetAttributes_Accuracy_2) {
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   FolderInterface *folder = filesystem_.CreateFolder("/tmp/.GGL_FileSystem_Test");
   EXPECT_NE(0, folder->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_NE(0, folder->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_EQ(0, folder->GetAttributes() & FILE_ATTR_READONLY);
   folder->Destroy();
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FolderTest, GetAttributes_Accuracy_3) {
-  std::system("chmod -w /tmp/GGL_FileSystem_Test");
+  system("chmod -w /tmp/GGL_FileSystem_Test");
   EXPECT_TRUE(folder_ != NULL);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_READONLY);
-  std::system("chmod +w /tmp/GGL_FileSystem_Test");
-  std::system("rm -R /tmp/GGL_FileSystem_Test");
+  system("chmod +w /tmp/GGL_FileSystem_Test");
+  system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method GetAttributes
 TEST_F(FolderTest, GetAttributes_Accuracy_4) {
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   FolderInterface *folder = filesystem_.CreateFolder("/tmp/.GGL_FileSystem_Test");
-  std::system("chmod -w /tmp/.GGL_FileSystem_Test");
+  system("chmod -w /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(folder != NULL);
   EXPECT_NE(0, folder->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_NE(0, folder->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, folder->GetAttributes() & FILE_ATTR_READONLY);
   folder->Destroy();
-  std::system("chmod +w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod +w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 
@@ -236,13 +238,13 @@ TEST_F(FolderTest, SetAttributes_Accuracy_1) {
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_READONLY);
-  std::system("chmod a+w /tmp/GGL_FileSystem_Test");
+  system("chmod a+w /tmp/GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes
 TEST_F(FolderTest, SetAttributes_Accuracy_2) {
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(folder_ != NULL);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
@@ -252,13 +254,13 @@ TEST_F(FolderTest, SetAttributes_Accuracy_2) {
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_EQ(0, folder_->GetAttributes() & FILE_ATTR_READONLY);
   EXPECT_EQ(".GGL_FileSystem_Test", folder_->GetName());
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes
 TEST_F(FolderTest, SetAttributes_Accuracy_3) {
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
   EXPECT_TRUE(folder_ != NULL);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_DIRECTORY);
   EXPECT_EQ(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
@@ -269,8 +271,8 @@ TEST_F(FolderTest, SetAttributes_Accuracy_3) {
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_HIDDEN);
   EXPECT_NE(0, folder_->GetAttributes() & FILE_ATTR_READONLY);
   EXPECT_EQ(".GGL_FileSystem_Test", folder_->GetName());
-  std::system("chmod a+w /tmp/.GGL_FileSystem_Test");
-  std::system("rm -R /tmp/.GGL_FileSystem_Test");
+  system("chmod a+w /tmp/.GGL_FileSystem_Test");
+  system("rm -R /tmp/.GGL_FileSystem_Test");
 }
 
 // GGL_FileSystem_Test method SetAttributes with invalid input argument
@@ -336,25 +338,25 @@ TEST_F(FolderTest, IsRootFolder2) {
 // GGL_FileSystem_Test method GetSize
 TEST_F(FolderTest, GetSize1) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   EXPECT_EQ(4096 + 5, folder_->GetSize());
 }
 
 // GGL_FileSystem_Test method GetSize
 TEST_F(FolderTest, GetSize2) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_EQ(4096 * 2, folder_->GetSize());
 }
 
 // GGL_FileSystem_Test method GetSize
 TEST_F(FolderTest, GetSize3) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("touch /tmp/GGL_FileSystem_Test/subfolder/subfile");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("touch /tmp/GGL_FileSystem_Test/subfolder/subfile");
   EXPECT_EQ(4096 * 2 + 5 + 0, folder_->GetSize());
 }
 
@@ -378,9 +380,9 @@ TEST_F(FolderTest, GetSubFolders_Empty) {
 // GGL_FileSystem_Test method GetSubFolders
 TEST_F(FolderTest, GetSubFolders1) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   FoldersInterface *subfolders = folder_->GetSubFolders();
   EXPECT_TRUE(subfolders != NULL);
   EXPECT_EQ(1, subfolders->GetCount());
@@ -397,11 +399,11 @@ TEST_F(FolderTest, GetSubFolders1) {
 // TODO: check whether count of subfolders is 2 under windows
 TEST_F(FolderTest, GetSubFolders2) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder/subsubfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/subfolder/subsubfolder/subsubfile");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder/subsubfolder");
+  system("touch /tmp/GGL_FileSystem_Test/subfolder/subsubfolder/subsubfile");
   FoldersInterface *subfolders = folder_->GetSubFolders();
   EXPECT_TRUE(subfolders != NULL);
   EXPECT_EQ(2, subfolders->GetCount());
@@ -433,9 +435,9 @@ TEST_F(FolderTest, GetFiles_Empty) {
 // GGL_FileSystem_Test method GetFiles
 TEST_F(FolderTest, GetFiles1) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   FilesInterface *files = folder_->GetFiles();
   EXPECT_TRUE(files != NULL);
   EXPECT_EQ(1, files->GetCount());
@@ -453,11 +455,11 @@ TEST_F(FolderTest, GetFiles1) {
 // TODO: check whether count of files is 2 under windows
 TEST_F(FolderTest, GetFiles2) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder/subsubfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/subfolder/subsubfolder/subsubfile");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder/subsubfolder");
+  system("touch /tmp/GGL_FileSystem_Test/subfolder/subsubfolder/subsubfile");
   FilesInterface *files = folder_->GetFiles();
   EXPECT_TRUE(files != NULL);
   EXPECT_EQ(2, files->GetCount());
@@ -474,9 +476,9 @@ TEST_F(FolderTest, GetFiles2) {
 // GGL_FileSystem_Test method CreateTextFile with relative path
 TEST_F(FolderTest, CreateTextFile_Accuracy1) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   TextStreamInterface *text = folder_->CreateTextFile("file.cc", false, false);
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("12345", text->ReadAll());
@@ -487,9 +489,9 @@ TEST_F(FolderTest, CreateTextFile_Accuracy1) {
 // GGL_FileSystem_Test method CreateTextFile with absolute path
 TEST_F(FolderTest, CreateTextFile_Accuracy2) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   TextStreamInterface *text = folder_->CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
                                                       false,
                                                       false);
@@ -502,8 +504,8 @@ TEST_F(FolderTest, CreateTextFile_Accuracy2) {
 // GGL_FileSystem_Test method CreateTextFile with empty file
 TEST_F(FolderTest, CreateTextFile_Accuracy3) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
   TextStreamInterface *text = folder_->CreateTextFile("file.cc",
                                                       false,
                                                       false);
@@ -516,9 +518,9 @@ TEST_F(FolderTest, CreateTextFile_Accuracy3) {
 // GGL_FileSystem_Test method CreateTextFile with absolute path
 TEST_F(FolderTest, CreateTextFile_Accuracy4) {
   EXPECT_TRUE(folder_ != NULL);
-  std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
-  std::system("touch /tmp/GGL_FileSystem_Test/file.cc");
-  std::system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
+  system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
+  system("touch /tmp/GGL_FileSystem_Test/file.cc");
+  system("echo -n \"12345\" > /tmp/GGL_FileSystem_Test/file.cc");
   TextStreamInterface *text = folder_->CreateTextFile("\\tmp\\GGL_FileSystem_Test\\file.cc",
                                                       false,
                                                       false);
