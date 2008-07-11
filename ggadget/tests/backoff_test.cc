@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstdlib>
 #include "ggadget/backoff.h"
 #include "ggadget/string_utils.h"
 #include "unittest/gtest.h"

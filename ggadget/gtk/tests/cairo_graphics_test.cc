@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstdlib>
 #include <cstdio>
 #include <cairo.h>
 #include <glib-object.h>

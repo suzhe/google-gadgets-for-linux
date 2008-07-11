@@ -49,10 +49,10 @@ TEST(HotKeyTest, KeyEvent) {
   ASSERT_STREQ("Ctrl-Alt-t", key.GetKeyString().c_str());
   ASSERT_TRUE(key.IsNormalKey());
   key.Reset();
-  key.AppendKeyEvent(KeyEvent(GDK_Control_L, 0));
+  key.AppendKeyEvent(KeyEvent(GDK_Control_L, 0), true);
   ASSERT_EQ(static_cast<unsigned int>(GDK_Control_L), key.GetKeyValue());
   ASSERT_EQ(0u, key.GetKeyMask());
-  key.AppendKeyEvent(KeyEvent(GDK_t, KEY_ControlMask));
+  key.AppendKeyEvent(KeyEvent(GDK_t, KEY_ControlMask), false);
   ASSERT_EQ(static_cast<unsigned int>(GDK_t), key.GetKeyValue());
   ASSERT_EQ(static_cast<unsigned int>(KEY_ControlMask), key.GetKeyMask());
 }
