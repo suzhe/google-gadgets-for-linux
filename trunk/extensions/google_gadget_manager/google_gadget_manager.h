@@ -202,9 +202,10 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   /**
    * Creates an instance of a gadget.
    * @param gadget_id gadget id or location of a gadget file.
+   * @param fire_signal If it's true then fire OnNewGadgetInstance signal.
    * @return the gadget instance id (>=0) of the new instance, or -1 on error.
    */
-  int NewGadgetInstance(const char *gadget_id);
+  int NewGadgetInstance(const char *gadget_id, bool fire_signal);
 
   /**
    * Updates a running gadget instances by reloading the gadget file.

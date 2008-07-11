@@ -20,13 +20,13 @@ PROJECT(google_gadgets_for_linux)
 
 SET(LIBGGADGET_BINARY_VERSION \"1.0.0\")
 SET(GGL_MAJOR_VERSION 0)
-SET(GGL_MINOR_VERSION 9)
-SET(GGL_MICRO_VERSION 3)
+SET(GGL_MINOR_VERSION 10)
+SET(GGL_MICRO_VERSION 0)
 SET(GGL_VERSION \"${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}\")
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-SET(GGL_VERSION_TIMESTAMP \"080613-000000\")
+SET(GGL_VERSION_TIMESTAMP \"080711-000000\")
 
 # Define the version of Google Desktop Gadget API that this release supports.
 SET(GGL_API_MAJOR_VERSION 5)

@@ -127,6 +127,10 @@ void GoogleGadgetManager::Init() {
   global_options_->PutValue(kRunCountOption, Variant(run_count + 1));
 
   if (first_run_) {
+    // Add some default built-in gadgets.
+    // Don't fire NewGadgetInstance signal at this point.
+    NewGadgetInstance("analog_clock", false);
+    NewGadgetInstance("rss", false);
     // Schedule an immediate update if it is first run.
     ScheduleUpdate(0);
   } else {
@@ -416,7 +420,8 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
   return true;
 }
 
-int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
+int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id,
+                                           bool fire_signal) {
   DLOG("Adding gadget %s", gadget_id);
   if (!gadget_id || !*gadget_id)
     return -1;
@@ -436,7 +441,7 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
       active_gadgets_.insert(gadget_id);
       if (!InitInstanceOptions(gadget_id, i))
         return -1;
-      if (new_instance_signal_(i)) {
+      if (!fire_signal || new_instance_signal_(i)) {
         return i;
       } else {
         RemoveGadgetInstance(i);
@@ -458,7 +463,7 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   SetInstanceStatus(instance_id, kInstanceStatusActive);
   SaveInstanceGadgetId(instance_id, gadget_id);
   active_gadgets_.insert(gadget_id);
-  if (new_instance_signal_(instance_id)) {
+  if (!fire_signal || new_instance_signal_(instance_id)) {
     return instance_id;
   }
 
@@ -468,7 +473,7 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
 }
 
 int GoogleGadgetManager::NewGadgetInstanceFromFile(const char *file) {
-  return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file) : -1;
+  return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file, true) : -1;
 }
 
 bool GoogleGadgetManager::RemoveGadgetInstance(int instance_id) {
@@ -728,13 +733,7 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
 
 Connection *GoogleGadgetManager::ConnectOnNewGadgetInstance(
     Slot1<bool, int> *callback) {
-  Connection *connection = new_instance_signal_.Connect(callback);
-  if (first_run_) {
-    // Add some default built-in gadgets.
-    NewGadgetInstance("analog_clock");
-    NewGadgetInstance("rss");
-  }
-  return connection;
+  return new_instance_signal_.Connect(callback);
 }
 
 Connection *GoogleGadgetManager::ConnectOnRemoveGadgetInstance(
@@ -900,7 +899,8 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
     RegisterMethod("saveGadget",
         NewSlot(this, &GadgetBrowserScriptUtils::SaveGadget));
     RegisterMethod("addGadget",
-        NewSlot(gadget_manager_, &GoogleGadgetManager::NewGadgetInstance));
+        NewSlot(gadget_manager_, &GoogleGadgetManager::NewGadgetInstance,
+                true));
     RegisterMethod("updateMetadata",
         NewSlot(gadget_manager_, &GoogleGadgetManager::UpdateGadgetsMetadata));
     RegisterSignal("onMetadataUpdated",
