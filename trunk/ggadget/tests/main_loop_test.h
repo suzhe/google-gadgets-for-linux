@@ -17,6 +17,7 @@
 #ifndef GGADGET_TESTS_MAIN_LOOP_TEST_H__
 #define GGADGET_TESTS_MAIN_LOOP_TEST_H__
 #include <unistd.h>
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 #include <string>

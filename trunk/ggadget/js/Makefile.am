@@ -18,11 +18,7 @@ SUBDIRS 		= tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-EXTRA_DIST		= jscript_massager.l
-			  test_scripts/dbus_object_test.js \
-			  test_scripts/dom1_test.js \
-			  test_scripts/json_test.js \
-			  test_scripts/wrapper_test.js
+EXTRA_DIST		= jscript_massager.l test_scripts
 
 jsincludedir		= $(GGL_INCLUDE_DIR)/ggadget/js
 jsinclude_HEADERS	= jscript_massager.h js_utils.h

@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <limits.h>
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/types.h>
