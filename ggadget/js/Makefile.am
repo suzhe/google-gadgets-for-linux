@@ -36,3 +36,5 @@ libggadget_js@GGL_EPOCH@_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOC
 jscript_massager.cc : jscript_massager.l
 	$(LEX) -o $@ $<
 
+pkgconfigdir= $(libdir)/pkgconfig
+pkgconfig_DATA= libggadget-js@GGL_EPOCH@.pc

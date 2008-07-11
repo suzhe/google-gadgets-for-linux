@@ -64,7 +64,7 @@ static const char kOptionDisplayTarget[]  = "display_target";
 static const char kOptionPositionInSideBar[] = "position_in_sidebar";
 
 static const int kAutoHideTimeout         = 200;
-static const int kAutoShowTimeout         = 500;
+static const int kAutoShowTimeout         = 200;
 static const int kDefaultFontSize         = 14;
 static const int kDefaultSideBarWidth     = 200;
 static const int kDefaultMonitor          = 0;
