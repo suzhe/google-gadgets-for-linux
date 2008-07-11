@@ -18,6 +18,7 @@
 #include <cstring>
 #include <vector>
 #include <ggadget/common.h>
+#include <ggadget/js/js_utils.h>
 #include "json.h"
 
 namespace ggadget {
@@ -26,9 +27,7 @@ namespace smjs {
 // Use Microsoft's method to encode/decode Date object in JSON.
 // See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
 static const char kDatePrefix[] = "\"\\/Date(";
-static const char kDatePrefixReplace[] = "new Date(";
 static const char kDatePostfix[] = ")\\/\"";
-static const char kDatePostfixReplace[] = ")";
 
 static void AppendJSON(JSContext *cx, jsval js_val, std::string *json,
                        std::vector<jsval> *stack);
@@ -190,73 +189,9 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
     *js_val = JSVAL_VOID;
     return JS_TRUE;
   }
-
-  // Valid chars in state 0.
-  // Our JSON decoding is stricter than the standard, according to the
-  // format we are outputing.
-  static const char *kValidChars = ",:{}[]0123456789.-+eE ";
-  // State: 0: normal; 1: in word; 2: in string.
-  int state = 0;
-  const char *word_start = json;
-  for (const char *p = json; *p; p++) {
-    switch (state) {
-      case 0:
-        if (*p >= 'a' && *p <= 'z') {
-          word_start = p;
-          state = 1;
-        } else if (*p == '"') {
-          state = 2;
-        } else if (strchr(kValidChars, *p) == NULL) {
-          // Invalid JSON format.
-          return JS_FALSE;
-        }
-        break;
-      case 1:
-        if (*p < 'a' || *p > 'z') {
-          state = 0;
-          if (strncmp("true", word_start, 4) != 0 &&
-              strncmp("false", word_start, 5) != 0 &&
-              strncmp("null", word_start, 4) != 0)
-            return JS_FALSE;
-        }
-        break;
-      case 2:
-        if (*p == '\\')
-          p++;  // Omit the next char. Also works for \x, \" and \uXXXX cases.
-        else if (*p == '\n' || *p == '\r')
-          return JS_FALSE;
-        else if (*p == '"')
-          state = 0;
-        break;
-      default:
-        break;
-    }
-  }
-
-  // Add '()' around the expression to avoid ambiguity of '{}'.
-  // See http://www.json.org/json.js.
-  std::string json_script(1, '(');
-  json_script += json;
-  json_script += ')';
-
-  // Now change all "\/Date(.......)\/" into new Date(.......).
-  std::string::size_type pos = 0;
-  while (pos != std::string::npos) {
-    pos = json_script.find(kDatePrefix, pos);
-    if (pos != std::string::npos) {
-      json_script.replace(pos, arraysize(kDatePrefix) - 1, kDatePrefixReplace);
-      pos += arraysize(kDatePrefixReplace) - 1;
-
-      while (json_script[pos] >= '0' && json_script[pos] <= '9')
-        pos++;
-      if (strncmp(kDatePostfix, json_script.c_str() + pos,
-                  arraysize(kDatePostfix) - 1) != 0)
-        return JS_FALSE;
-      json_script.replace(pos, arraysize(kDatePostfix) - 1,
-                          kDatePostfixReplace);
-      pos += arraysize(kDatePostfixReplace) - 1;
-    }
-  }
+  std::string json_script;
+  if (!ggadget::js::ConvertJSONToJavaScript(json, &json_script))
+    return JS_FALSE;
 
   std::string json_filename("JSON:");
   json_filename += json;

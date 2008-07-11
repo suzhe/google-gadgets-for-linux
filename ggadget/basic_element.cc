@@ -1169,8 +1169,6 @@ void BasicElement::DoClassRegister() {
   RegisterProperty("visible",
                    NewSlot(&BasicElement::IsVisible),
                    NewSlot(&BasicElement::SetVisible));
-  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
-  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
   // Note: don't use 'flip' property until it is in the public API.
   RegisterStringEnumProperty("flip",

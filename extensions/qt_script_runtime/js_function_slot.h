@@ -60,7 +60,7 @@ class JSFunctionSlot : public Slot {
   const Slot *prototype_;
   QScriptEngine *engine_;
   bool code_; // true if set by src code
-  std::string script_;
+  QString script_;
   std::string file_name_;
   int line_no_;
   QScriptValue function_;

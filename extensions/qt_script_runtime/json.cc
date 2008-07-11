@@ -17,6 +17,8 @@
 #include <vector>
 #include <QtScript/QScriptValueIterator>
 #include <ggadget/common.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/js/js_utils.h>
 #include "json.h"
 
 namespace ggadget {
@@ -25,14 +27,12 @@ namespace qt {
 // Use Microsoft's method to encode/decode Date object in JSON.
 // See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
 static const char kDatePrefix[] = "\"\\/Date(";
-static const char kDatePrefixReplace[] = "new Date(";
 static const char kDatePostfix[] = ")\\/\"";
-static const char kDatePostfixReplace[] = ")";
 
-static void AppendJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendJSON(QScriptEngine *engine, const QScriptValue &qval,
                        std::string *json, std::vector<QScriptValue> *stack);
 
-static void AppendArrayToJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendArrayToJSON(QScriptEngine *engine, const QScriptValue &qval,
                               std::string *json, std::vector<QScriptValue> *stack) {
   (*json) += '[';
   int length = qval.property("length").toInt32();
@@ -45,35 +45,15 @@ static void AppendArrayToJSON(QScriptEngine *engine, QScriptValue qval,
   (*json) += ']';
 }
 
-static void AppendStringToJSON(QScriptEngine *engine, const QString &str,
+static void AppendStringToJSON(QScriptEngine *engine, QString str,
                                std::string *json) {
   *json += '"';
-  std::string s = str.toStdString().c_str();
-  const char *chars = s.c_str();
-  if (chars) {
-    for (const char *p = chars; *p; p++) {
-      switch (*p) {
-        // The following special chars are not so complete, but also works.
-        case '"': *json += "\\\""; break;
-        case '\\': *json += "\\\\"; break;
-        case '\n': *json += "\\n"; break;
-        case '\r': *json += "\\r"; break;
-        default:
-          if (*p >= 0x7f || *p < 0x20) {
-            char buf[10];
-            snprintf(buf, sizeof(buf), "\\u%04X", *p);
-            *json += buf;
-          } else {
-            *json += *p;
-          }
-          break;
-      }
-    }
-  }
+  std::string s = EncodeJavaScriptString(str.utf16());
+  *json += s;
   *json += '"';
 }
 
-static void AppendObjectToJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendObjectToJSON(QScriptEngine *engine, const QScriptValue &qval,
                                std::string *json, std::vector<QScriptValue> *stack) {
   (*json) += '{';
   QScriptValueIterator it(qval);
@@ -93,12 +73,16 @@ static void AppendObjectToJSON(QScriptEngine *engine, QScriptValue qval,
   (*json) += '}';
 }
 
-static void AppendNumberToJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendNumberToJSON(QScriptEngine *engine, const QScriptValue &qval,
                                std::string *json) {
-  *json += qval.toString().toStdString();
+  std::string str = qval.toString().toStdString();
+  if (str.empty() || str[0] == 'I' || str[1] == 'I' || str[0] == 'N')
+    *json += '0';
+  else
+    *json += str;
 }
 
-static void AppendDateToJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendDateToJSON(QScriptEngine *engine, const QScriptValue &qval,
                                std::string *json) {
   *json += kDatePrefix;
   uint64_t v = static_cast<uint64_t>(qval.toNumber());
@@ -108,18 +92,11 @@ static void AppendDateToJSON(QScriptEngine *engine, QScriptValue qval,
   *json += kDatePostfix;
 }
 
-static void AppendJSON(QScriptEngine *engine, QScriptValue qval,
+static void AppendJSON(QScriptEngine *engine, const QScriptValue &qval,
                        std::string *json, std::vector<QScriptValue> *stack) {
-  if (qval.isObject()) {
-    for (size_t i = 0; i < stack->size(); i++) {
-      if ((*stack)[i].strictlyEquals(qval)) {
-        (*json) += "null";
-        return;
-      }
-    }
-    stack->push_back(qval);
-    AppendObjectToJSON(engine, qval, json, stack);
-    stack->pop_back();
+  // Object should be handled after function, string, array ...
+  if (qval.isFunction()) {
+    (*json) += "null";
   } else if (qval.isDate()) {
     AppendDateToJSON(engine, qval, json);
   } else if (qval.isString()) {
@@ -130,6 +107,16 @@ static void AppendJSON(QScriptEngine *engine, QScriptValue qval,
     (*json) += qval.toBoolean() ? "true" : "false";
   } else if (qval.isArray()) {
     AppendArrayToJSON(engine, qval, json, stack);
+  } else if (qval.isObject()) {
+    for (size_t i = 0; i < stack->size(); i++) {
+      if ((*stack)[i].strictlyEquals(qval)) {
+        (*json) += "null";
+        return;
+      }
+    }
+    stack->push_back(qval);
+    AppendObjectToJSON(engine, qval, json, stack);
+    stack->pop_back();
   } else {
     (*json) += "null";
   }
@@ -144,8 +131,17 @@ bool JSONEncode(QScriptEngine *engine, const QScriptValue &qval,
 }
 
 bool JSONDecode(QScriptEngine* engine, const char *json, QScriptValue *qval) {
-  *qval = engine->evaluate(json);
-  return true;
+  if (!json || !json[0]) {
+    *qval = engine->nullValue();
+    return true;
+  }
+  std::string script;
+  if (ggadget::js::ConvertJSONToJavaScript(json, &script)) {
+    *qval = engine->evaluate(script.c_str());
+    return true;
+  } else {
+    return false;
+  }
 }
 } // namespace qt
 } // namespace ggadget

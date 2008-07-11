@@ -22,7 +22,7 @@
 #include "js_script_context.h"
 #include "converter.h"
 
-#if 0
+#if 1
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
@@ -40,7 +40,7 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
     : prototype_(prototype),
       engine_(engine),
       code_(true),
-      script_(script),
+      script_(QString::fromUtf8(script)),
       file_name_(file_name ? file_name: ""),
       line_no_(lineno) {
 }
@@ -62,8 +62,8 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
   ScopedLogContext log_context(GetEngineContext(engine_));
   QScriptValue qval;
   if (code_) {
-    DLOG("JSFunctionSlot::Call: %s", script_.c_str());
-    qval = engine_->evaluate(script_.c_str(), file_name_.c_str(), line_no_);
+    DLOG("JSFunctionSlot::Call: %s", script_.toUtf8().data());
+    qval = engine_->evaluate(script_, file_name_.c_str(), line_no_);
   } else {
     DLOG("JSFunctionSlot::Call function");
     QScriptValue fun(function_);
@@ -73,9 +73,9 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
   }
   if (engine_->hasUncaughtException()) {
     QStringList bt = engine_->uncaughtExceptionBacktrace();
-    LOG("Backtrace:");
+    LOGE("Backtrace:");
     for (int i = 0; i < bt.size(); i++) {
-      LOG("\t%s", bt[i].toStdString().c_str());
+      LOGE("\t%s", bt[i].toStdString().c_str());
     }
   }
 

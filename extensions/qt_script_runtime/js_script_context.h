@@ -29,32 +29,6 @@ Q_DECLARE_METATYPE(QScriptValue)
 namespace ggadget {
 namespace qt {
 
-class JSScriptRuntime;
-class JSFunctionSlot;
-
-class ResolverScriptClass : public QScriptClass {
- public:
-  ResolverScriptClass(QScriptEngine *engine, ScriptableInterface *object);
-  ~ResolverScriptClass();
-
-  virtual QueryFlags queryProperty(const QScriptValue & object,
-                                   const QScriptString & name,
-                                   QueryFlags flags,
-                                   uint * id);
-  virtual QScriptValue property(const QScriptValue & object,
-                                const QScriptString & name, uint id);
-  virtual void setProperty(QScriptValue &object, const QScriptString &name,
-                           uint id, const QScriptValue &value);
-  virtual bool supportsExtension(Extension extension) const;
-  virtual QVariant extension(Extension extension,
-                             const QVariant &argument = QVariant());
-
-  ScriptableInterface *object_;
-  Slot *call_slot_;
-  Connection *on_reference_change_connection_;
-  void OnRefChange(int, int);
-};
-
 /**
  * @c ScriptContext implementation for QtScript engine.
  */
@@ -107,6 +81,7 @@ class JSScriptContext : public ScriptContextInterface {
 };
 
 JSScriptContext *GetEngineContext(QScriptEngine *engine);
+ScriptableInterface *GetNativeObject(const QScriptValue &qval);
 
 } // namespace qt
 } // namespace ggadget
