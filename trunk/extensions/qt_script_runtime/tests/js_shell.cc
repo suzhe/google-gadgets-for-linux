@@ -14,15 +14,16 @@
   limitations under the License.
 */
 
-// This file was written using SpiderMonkey's js.c as a sample.
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <ggadget/common.h>
 #include <ggadget/unicode_utils.h>
+#include <ggadget/qt/qt_main_loop.h>
 #include "../js_script_context.h"
 #include "../js_script_runtime.h"
 #include "../converter.h"
@@ -42,7 +43,7 @@ QuitCode g_quit_code = DONT_QUIT;
 
 static const size_t kBufferSize = 655360;
 static char g_buffer[kBufferSize];
-static void Process(QScriptEngine *engine, const char *filename) {
+static void Process(JSScriptContext *context, const char *filename) {
   FILE *file;
   file = fopen(filename, "r");
   if (!file) {
@@ -53,21 +54,19 @@ static void Process(QScriptEngine *engine, const char *filename) {
 
   size_t s = fread(g_buffer, 1,  kBufferSize, file);
   if (s == kBufferSize) {
-    printf("Buffer is too small for script to be run\n");
+    std::cout << "Buffer is too small for script to be run\n";
     exit(1);
   }
 
-//  ggadget::UTF16String utf16_string;
-//  ggadget::ConvertStringUTF8ToUTF16(g_buffer, strlen(g_buffer),
-//                                    &utf16_string);
-  engine->evaluate(g_buffer, filename, 1);
+  g_buffer[s] = '\0';
+
+  context->Execute(g_buffer, filename, 1);
 }
 
 static QScriptValue Print(QScriptContext *ctx, QScriptEngine *engine) {
   for (int i = 0; i < ctx->argumentCount(); i++)
-    printf("%s ", ctx->argument(0).toString().toStdString().c_str());
-  putchar('\n');
-  fflush(stdout);
+    std::cout << ctx->argument(i).toString().toStdString() << " ";
+  std::cout << "\n";
   return engine->undefinedValue();
 }
 
@@ -90,6 +89,17 @@ const char kAssertFailurePrefix[] = "Failure\n";
 // on success or otherwise a string containing the assertion failure message.
 // Usage: ASSERT(EQ(a, b), "Test a and b");
 static QScriptValue Assert(QScriptContext *ctx, QScriptEngine *engine) {
+  QScriptValue arg0 = ctx->argument(0);
+  if (!arg0.isNull()) {
+    g_quit_code = QUIT_ASSERT;
+    std::cout << kAssertFailurePrefix << arg0.toString().toStdString();
+    if (ctx->argumentCount() > 1) {
+      QScriptValue arg1 = ctx->argument(1);
+      std::cout << " " << arg1.toString().toStdString();
+    }
+    std::cout << "\n";
+    ctx->throwError("");
+  }
   return engine->undefinedValue();
 }
 
@@ -108,6 +118,7 @@ static QScriptValue JSONEncodeFunc(QScriptContext *ctx, QScriptEngine *engine) {
   if (ggadget::qt::JSONEncode(engine, arg0, &json)) {
     return QScriptValue(engine, json.c_str());
   } else {
+    ctx->throwError("");
     return engine->undefinedValue();
   }
 }
@@ -118,7 +129,8 @@ static QScriptValue JSONDecodeFunc(QScriptContext *ctx, QScriptEngine *engine) {
   if (!arg0.isString()) return engine->undefinedValue();
   std::string str = arg0.toString().toStdString();
   QScriptValue ret;
-  ggadget::qt::JSONDecode(engine, str.c_str(), &ret);
+  if (!ggadget::qt::JSONDecode(engine, str.c_str(), &ret))
+    ctx->throwError("");
   return ret;
 }
 
@@ -139,17 +151,6 @@ static FunctionSpec global_functions[] = {
   { 0 }
 };
 
-/*
-class GlobalObject : public ScriptableHelperNativeOwnedDefault {
- public:
-  DEFINE_CLASS_ID(0xfd70820c5bbf11dc, ScriptableInterface);
- public:
-  GlobalObject() {
-    RegisterMethod("print", NewSlot(this, &GlobalObject::Print));
-  }
-  void Print(
-};*/
-
 static void DefineGlobalFunctions(QScriptEngine *engine) {
   QScriptValue global = engine->globalObject();
   for (int i = 0; global_functions[i].name != 0; i++) {
@@ -164,6 +165,10 @@ void DestroyCustomObjects(JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
+  QCoreApplication app(argc, argv);
+  ggadget::qt::QtMainLoop g_main_loop;
+  ggadget::SetGlobalMainLoop(&g_main_loop);
+
   JSScriptRuntime *runtime = new JSScriptRuntime();
   JSScriptContext *context = ggadget::down_cast<JSScriptContext *>(
       runtime->CreateContext());
@@ -172,10 +177,9 @@ int main(int argc, char *argv[]) {
   if (!InitCustomObjects(context))
     return QUIT_ERROR;
 
-
   if (argc > 1) {
     for (int i = 1; i < argc; i++) {
-      Process(context->engine(), argv[i]);
+      Process(context, argv[i]);
       if (g_quit_code != DONT_QUIT)
         break;
     }

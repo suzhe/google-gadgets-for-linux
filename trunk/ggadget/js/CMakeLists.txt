@@ -21,6 +21,6 @@ ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
   MAIN_DEPENDENCY jscript_massager.l
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-ADD_LIBRARY(ggadget-js SHARED jscript_massager.cc)
+ADD_LIBRARY(ggadget-js SHARED jscript_massager.cc js_utils.cc)
 TARGET_LINK_LIBRARIES(ggadget-js ggadget)
 OUTPUT_LIBRARY(ggadget-js)

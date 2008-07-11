@@ -37,16 +37,6 @@ bool ConvertJSToNative(QScriptEngine *e,
                        Variant *val);
 
 /**
- * Converts a @c jsval to a @c Variant depending source @c jsval type.
- * @param cx JavaScript context.
- * @param js_val source @c jsval value.
- * @param[out] native_val result @c Variant value.
- * @return @c JS_TRUE if succeeds.
- */
-bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
-                              Variant *val);
-
-/**
  * Frees a native value that was created by @c ConvertJSToNative(),
  * if some failed conditions preventing this value from successfully
  * passing to the native code.
