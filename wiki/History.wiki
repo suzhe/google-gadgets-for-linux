@@ -23,3 +23,15 @@ This page is dedicated for recording notable changes of each release.
   * 0.9.3 -- Jun 13th 2008
     * Fixed many issues, such as: 96, 122, 128, 133, 135, 137, 139, 142, 143, 145, 149, 152, 156, 157
     * And now gadgets will show in all virtual desktops.
+
+  * 0.10.0 - July 12th 2008
+    * Memory consumption and performance have been improved by introducing class based property registration.
+    * Several built-in gadgets have been added, such as Web Clip, Analog Clock, etc.
+    * Most issues of SideBar have been resolved.
+    * SideBar now supports auto hide mode.
+    * ggl-gtk now supports hotkey.
+    * Compatibility issues with xulrunner 1.9 have been resolved.
+    * Desktop entries for ggl-gtk and ggl-qt have been added.
+    * Debug Console has been added for both ggl-gtk and ggl-qt. Use -dc command option to enable it.
+    * qt_script_runtime has been added, though there are still some bugs.
+    * Many other bugfixes.
