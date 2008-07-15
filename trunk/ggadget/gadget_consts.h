@@ -39,7 +39,6 @@ const char kMainXML[]         = "main.xml";
 const char kOptionsXML[]      = "options.xml";
 const char kStringsXML[]      = "strings.xml";
 const char kGadgetGManifest[] = "gadget.gmanifest";
-const char kGManifestExt[]    = ".gmanifest";
 const char kXMLExt[]          = ".xml";
 
 /** Information XPath identifiers in gadget.gmanifest file. */

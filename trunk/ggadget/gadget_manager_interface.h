@@ -82,14 +82,17 @@ class GadgetManagerInterface {
 
   /**
    * Shows the gadget browser dialog.
-   * TODO: parameters and return values.
    */
   virtual void ShowGadgetBrowserDialog(HostInterface *host) = 0;
 
   /**
-   * Checks if a gadget instance can be safely trusted.
+   * Gets the trustiness of a gadget instance.
+   * @param instance_id id of an active instance.
+   * @return the trustiness of a gadget instance, which is combination of
+   *     feature bits indicating which features can be safely trusted for
+   *     this gadget instance.
    */
-  virtual bool IsGadgetInstanceTrusted(int instance_id) = 0;
+  virtual uint64_t GetGadgetInstanceTrustedFeatures(int instance_id) = 0;
 
   /**
    * Gets information of a gadget instance.

@@ -103,13 +103,13 @@ class Gadget {
    * @param instance_id An unique id to identify this Gadget instance. It can
    *        be used to remove this Gadget instance by calling
    *        HostInteface::RemoveGadget() method.
-   * @param trusted whether this gadget instance can be safely trusted.
+   * @param allowed_features
    */
   Gadget(HostInterface *host,
          const char *base_path,
          const char *options_name,
          int instance_id,
-         bool trusted);
+         uint64_t allowed_features);
 
   /** Destructor */
   ~Gadget();

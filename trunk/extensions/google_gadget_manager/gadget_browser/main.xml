@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   Copyright 2008 Google Inc.
 
@@ -20,18 +21,18 @@
    <img width="100%" height="100%" src="images/background.png" stretchMiddle="true"/>
    <div x="100" y="200" width="514" height="155" name="updating" visible="false">
      <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
-     <label width="100%" height="100%" align="center" valign="middle" bold="true"
+     <label width="100%" height="100%" align="center" vAlign="middle" bold="true"
        color="#FFFFFF" size="12" wordwrap="true">&UPDATING_METADATA;</label>
    </div>
    <div x="100" y="200" width="514" height="155" name="update_fail" visible="false">
      <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
-     <label width="100%" height="100%" align="center" valign="middle" bold="true"
+     <label width="100%" height="100%" align="center" vAlign="middle" bold="true"
        color="#D04040" size="12" wordwrap="true">&UPDATE_METADATA_FAILED;</label>
    </div>
    <div width="100%" height="100%" name="main_ui" visible="false">
     <label enabled="true" name="language_label" x="10" y="19"
       onsize="language_label_onsize()" color="#FFFFFF"
-      valign="middle">&SHOW_ONLY_LABEL;
+      vAlign="middle">&SHOW_ONLY_LABEL;
     </label>
     <div height="23" name="language_box_div" width="166" x="82" y="17">
       <img width="100%" height="100%" src="images/control_border.png" stretchMiddle="true"/>
@@ -69,7 +70,7 @@
       overImage="images/previous_hover.png"/>
     <label enabled="true" height="39" name="page_label" x="620" y="511"
       onsize="page_label_onsize()" align="center" color="#FFFFFF"
-      valign="middle"/>
+      vAlign="middle"/>
     <button name="next_button" x="665" y="511" onclick="next_button_onclick()"
       downImage="images/next_down.png" image="images/next_default.png"
       overImage="images/next_hover.png"/>

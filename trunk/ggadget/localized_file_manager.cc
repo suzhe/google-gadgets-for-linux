@@ -28,6 +28,7 @@
 #include "locales.h"
 #include "gadget_consts.h"
 #include "logger.h"
+#include "slot.h"
 #include "system_utils.h"
 
 namespace ggadget {
@@ -212,6 +213,12 @@ uint64_t LocalizedFileManager::GetLastModifiedTime(const char *file) {
   // This file manager doesn't support localized feature of this function.
   return impl_->file_manager_ ?
          impl_->file_manager_->GetLastModifiedTime(file) : 0;
+}
+
+bool LocalizedFileManager::EnumerateFiles(const char *dir,
+                                          Slot1<bool, const char *> *callback) {
+  return impl_->file_manager_ &&
+         impl_->file_manager_->EnumerateFiles(dir, callback);
 }
 
 } // namespace ggadget

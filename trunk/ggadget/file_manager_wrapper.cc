@@ -14,11 +14,15 @@
   limitations under the License.
 */
 
-#include <vector>
-
 #include "file_manager_wrapper.h"
-#include "string_utils.h"
+
+#include <set>
+#include <vector>
+#include "gadget_consts.h"
 #include "logger.h"
+#include "slot.h"
+#include "string_utils.h"
+#include "system_utils.h"
 
 namespace ggadget {
 
@@ -202,6 +206,65 @@ class FileManagerWrapper::Impl {
     return std::string("");
   }
 
+  class EnumProxy {
+   public:
+    EnumProxy(std::set<std::string> *history, const std::string &prefix,
+              Slot1<bool, const char *> *callback)
+        : history_(history), prefix_(prefix), callback_(callback) {
+    }
+    bool Callback(const char *name) {
+      std::string path = BuildFilePath(prefix_.c_str(), name, NULL);
+      if (history_->find(path) == history_->end()) {
+        history_->insert(path);
+        return (*callback_)(BuildFilePath(prefix_.c_str(), name, NULL).c_str());
+      }
+      return true;
+    }
+   private:
+    std::set<std::string> *history_;
+    std::string prefix_;
+    Slot1<bool, const char *> *callback_;
+  };
+
+  bool EnumerateFiles(const char *dir, Slot1<bool, const char *> *callback) {
+    ASSERT(dir);
+    std::string dir_name(dir);
+    std::string dir_name_with_sep(dir_name);
+    if (!dir_name.empty() && dir_name[dir_name.size() - 1] == kDirSeparator)
+      dir_name.erase(dir_name.size() - 1);
+    if (!dir_name_with_sep.empty() &&
+        dir_name_with_sep[dir_name_with_sep.size() - 1] != kDirSeparator)
+      dir_name += kDirSeparator;
+
+    // Record enumrated files to prevent duplication in multiple managers.
+    bool result = true;
+    std::set<std::string> history;
+    for (size_t i = 0; result && i < file_managers_.size(); i++) {
+      const std::string &prefix = file_managers_[i].first;
+      FileManagerInterface *fm = file_managers_[i].second;
+      if (GadgetStrNCmp(prefix.c_str(), dir_name.c_str(), prefix.size()) == 0) {
+        // Dir is under this file manager.
+        EnumProxy proxy(&history, "", callback);
+        result = fm->EnumerateFiles(dir_name.c_str() + prefix.size(),
+                                    NewSlot(&proxy, &EnumProxy::Callback));
+      } else if (GadgetStrNCmp(prefix.c_str(), dir_name_with_sep.c_str(),
+                               dir_name_with_sep.size()) == 0) {
+        // This file manager is under dir.
+        EnumProxy proxy(&history, prefix.substr(dir_name_with_sep.size()),
+                        callback);
+        result = fm->EnumerateFiles("", NewSlot(&proxy, &EnumProxy::Callback));
+      }
+    }
+
+    if (result && default_) {
+      EnumProxy proxy(&history, "", callback);
+      result = default_->EnumerateFiles(dir_name.c_str(),
+                                        NewSlot(&proxy, &EnumProxy::Callback));
+    }
+    delete callback;
+    return result;
+  }
+
   uint64_t GetLastModifiedTime(const char *file) {
     size_t index = 0;
     FileManagerInterface *fm = NULL;
@@ -301,6 +364,11 @@ std::string FileManagerWrapper::GetFullPath(const char *file) {
 
 uint64_t FileManagerWrapper::GetLastModifiedTime(const char *file) {
   return impl_->GetLastModifiedTime(file);
+}
+
+bool FileManagerWrapper::EnumerateFiles(const char *dir,
+                                        Slot1<bool, const char *> *callback) {
+  return impl_->EnumerateFiles(dir, callback);
 }
 
 } // namespace ggadget

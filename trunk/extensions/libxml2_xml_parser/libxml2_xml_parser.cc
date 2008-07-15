@@ -293,7 +293,7 @@ static xmlDoc *ParseXML(const std::string &xml,
     ASSERT(ctxt->sax);
     ContextData data;
     ctxt->_private = &data;
-    if (extra_entities && !extra_entities->empty()) {
+    if (extra_entities) {
       // Hook getEntity handler to provide extra entities.
       data.extra_entities = extra_entities;
       data.original_get_entity_handler = ctxt->sax->getEntity;

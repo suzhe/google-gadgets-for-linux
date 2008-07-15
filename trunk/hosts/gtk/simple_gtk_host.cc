@@ -244,7 +244,8 @@ class SimpleGtkHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->IsGadgetInstanceTrusted(id) || ConfirmGadget(id)) {
+    if (gadget_manager_->GetGadgetInstanceTrustedFeatures(id) ||
+        ConfirmGadget(id)) {
       return LoadGadgetInstance(id);
     }
     return false;
@@ -268,10 +269,11 @@ class SimpleGtkHost::Impl {
       return true;
     }
 
+    // TODO ACL.
+    uint64_t trusted_features =
+        gadget_manager_->GetGadgetInstanceTrustedFeatures(instance_id);
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                // We still don't trust any user added gadgets
-                                // at gadget runtime level.
-                                false);
+                                trusted_features);
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {

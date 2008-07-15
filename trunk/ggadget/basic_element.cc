@@ -1874,11 +1874,13 @@ Variant BasicElement::GetPixelOrRelative(bool is_relative,
     return Variant();
 
   if (is_relative) {
-    char buf[20];
-    snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
-    return Variant(std::string(buf));
+    // FIXME: Is it necessary to do round here?
+    // Answer: to be compatible with Windows version.
+    return Variant(StringPrintf("%d%%",
+                                static_cast<int>(round(relative * 100))));
   } else {
     // FIXME: Is it necessary to do round here?
+    // Answer: to be compatible with Windows version.
     return Variant(static_cast<int>(round(pixel)));
   }
 }

@@ -14,8 +14,11 @@
   limitations under the License.
 */
 
+#include "dir_file_manager.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <cstring>
 #include <vector>
@@ -25,8 +28,8 @@
 
 #include "common.h"
 #include "logger.h"
-#include "dir_file_manager.h"
 #include "gadget_consts.h"
+#include "slot.h"
 #include "system_utils.h"
 
 namespace ggadget {
@@ -200,47 +203,7 @@ class DirFileManager::Impl {
       *into_file = BuildFilePath(dir.c_str(), file_name.c_str(), NULL);
     }
 
-    FILE *in_fp = fopen(path.c_str(), "r");
-    if (!in_fp) {
-      LOG("Can't open file %s for reading.", path.c_str());
-      return false;
-    }
-
-    FILE *out_fp = fopen(into_file->c_str(), "w");
-    if (!out_fp) {
-      LOG("Can't open file %s for writing.", into_file->c_str());
-      fclose(in_fp);
-      return false;
-    }
-
-    const size_t kChunkSize = 8192;
-    char buffer[kChunkSize];
-    bool result = true;
-    while(true) {
-      size_t read_size = fread(buffer, 1, kChunkSize, in_fp);
-      if (read_size) {
-        if (fwrite(buffer, read_size, 1, out_fp) != 1) {
-          LOG("Error when writing to file %s", into_file->c_str());
-          result = false;
-          break;
-        }
-      }
-      if (read_size < kChunkSize)
-        break;
-    }
-
-    if (ferror(in_fp)) {
-      LOG("Error when reading file: %s", path.c_str());
-      result = false;
-    }
-
-    fclose(in_fp);
-    fclose(out_fp);
-
-    if (!result)
-      ::unlink(into_file->c_str());
-
-    return result;
+    return CopyFile(path.c_str(), into_file->c_str());
   }
 
   bool FileExists(const char *file, std::string *path) {
@@ -328,6 +291,62 @@ class DirFileManager::Impl {
            stat_value.st_mtime * UINT64_C(1000) : 0;
   }
 
+  bool EnumerateFiles(const char *dir, Slot1<bool, const char *> *callback) {
+    std::string path;
+    if (!dir || !*dir) {
+      path = base_path_;
+    } else if (!CheckFilePath(dir, &path)) {
+      delete callback;
+      // Enumeration non-exist directory succeeds with empty result.
+      return true;
+    }
+
+    bool result = EnumerateFilesInternal("", path, callback);
+    delete callback;
+    return result;
+  }
+
+  bool EnumerateFilesInternal(const std::string &relative_dir,
+                              const std::string &absolute_dir,
+                              Slot1<bool, const char *> *callback) {
+    DIR *dir = opendir(absolute_dir.c_str());
+    if (dir) {
+      struct dirent *dir_ent = readdir(dir);
+      while (dir_ent) {
+        if (dir_ent->d_name[0] != '.') {
+          std::string absolute_file(BuildFilePath(absolute_dir.c_str(),
+                                                  dir_ent->d_name, NULL));
+          std::string relative_file(BuildFilePath(relative_dir.c_str(),
+                                                  dir_ent->d_name, NULL));
+          struct stat stat_value;
+          memset(&stat_value, 0, sizeof(stat_value));
+          if (::stat(absolute_file.c_str(), &stat_value) == 0) {
+            if (S_ISREG(stat_value.st_mode)) {
+              if (!(*callback)(relative_file.c_str())) {
+                closedir(dir);
+                return false;
+              }
+            } else if (S_ISDIR(stat_value.st_mode)) {
+              if (!EnumerateFilesInternal(relative_file, absolute_file,
+                                          callback)) {
+                closedir(dir);
+                return false;
+              }
+            }
+          }
+        }
+        dir_ent = readdir(dir);
+      }
+      closedir(dir);
+      return true;
+    } else {
+      DLOG("Failed to list directory %s: %s.", absolute_dir.c_str(),
+           strerror(errno));
+      // Enumeration non-exist directory succeeds with empty result.
+      return true;
+    }
+  }
+
   std::string temp_dir_;
   std::string base_path_;
 };
@@ -381,6 +400,11 @@ std::string DirFileManager::GetFullPath(const char *file) {
 
 uint64_t DirFileManager::GetLastModifiedTime(const char *file) {
   return impl_->GetLastModifiedTime(file);
+}
+
+bool DirFileManager::EnumerateFiles(const char *dir,
+                                    Slot1<bool, const char *> *callback) {
+  return impl_->EnumerateFiles(dir, callback);
 }
 
 FileManagerInterface *DirFileManager::Create(const char *base_path,

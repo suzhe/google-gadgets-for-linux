@@ -137,7 +137,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
        const char *base_path,
        const char *options_name,
        int instance_id,
-       bool trusted)
+       uint64_t allowed_features)
       : owner_(owner),
         host_(host),
         element_factory_(new ElementFactory()),
@@ -156,7 +156,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         plugin_flags_(0),
         display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
-        trusted_(trusted),
+        allowed_features_(allowed_features),
         in_user_interaction_(false),
         remove_me_timer_(0),
         debug_console_config_(0) {
@@ -204,14 +204,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                                          const char *file,
                                          std::string *path) {
     path->clear();
-    if (fm->IsDirectlyAccessible(file, path))
-      return true;
-
-    path->clear();
-    if (fm->ExtractFile(file, path))
-      return true;
-
-    return false;
+    return fm->ExtractFile(file, path);
   }
 
   // Do real initialize.
@@ -273,14 +266,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
-        if (trusted_) {
+        if (allowed_features_ & 0x10000000) { // TODO: ACL
           // Only trusted gadget can load local extensions.
           const char *module_name = i->second.c_str();
           std::string path;
           if (ExtractFileFromFileManager(file_manager_, module_name, &path))
             extension_manager_->LoadExtension(path.c_str(), false);
         } else {
-          DLOG("Local extension module is forbidden for untrusted gadgets.");
+          LOG("Local extension module is forbidden for untrusted gadgets.");
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
         if (i->second == "no") {
@@ -288,9 +281,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           return false;
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformMinVersion)) {
-        if (!CompareVersion(i->second.c_str(), GGL_VERSION, 
-                            &compare_result)
-            || compare_result > 0) {
+        if (!CompareVersion(i->second.c_str(), GGL_VERSION, &compare_result) ||
+            compare_result > 0) {
           LOG("Gadget required platform version %s higher than supported "
               "version %s", i->second.c_str(), GGL_VERSION);
           return false;
@@ -307,9 +299,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     MultipleExtensionRegisterWrapper register_wrapper;
     ElementExtensionRegister element_register(element_factory_);
     FrameworkExtensionRegister framework_register(&framework_, owner_);
+    FileManagerExtensionRegister fm_register(file_manager_);
 
     register_wrapper.AddExtensionRegister(&element_register);
     register_wrapper.AddExtensionRegister(&framework_register);
+    register_wrapper.AddExtensionRegister(&fm_register);
 
     if (global_manager)
       global_manager->RegisterLoadedExtensions(&register_wrapper);
@@ -898,11 +892,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     SplitFilePath(base_path, &path, &filename);
 
     // Uses the parent path of base_path if it refers to a manifest file.
-    if (filename.length() <= strlen(kGManifestExt) ||
-        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
-                   kGManifestExt) != 0) {
+    if (filename != kGadgetGManifest)
       path = base_path;
-    }
 
     FileManagerInterface *fm = CreateFileManager(path.c_str());
     return fm ? new LocalizedFileManager(fm) : NULL;
@@ -946,7 +937,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   int plugin_flags_;
   DisplayTarget display_target_;
   int xml_http_request_session_;
-  bool trusted_;
+  uint64_t allowed_features_;
   bool in_user_interaction_;
   int remove_me_timer_;
   Signal2<void, LogLevel, const std::string &> log_signal_;
@@ -957,9 +948,9 @@ Gadget::Gadget(HostInterface *host,
                const char *base_path,
                const char *options_name,
                int instance_id,
-               bool trusted)
+               uint64_t allowed_features)
     : impl_(new Impl(this, host, base_path, options_name, instance_id,
-                     trusted)) {
+                     allowed_features)) {
   impl_->initialized_ = impl_->Initialize();
 }
 

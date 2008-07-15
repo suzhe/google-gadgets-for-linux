@@ -163,7 +163,7 @@ void TextFrame::RegisterClassProperties(
       NewSlot(&TextFrame::GetAlign, delegate_getter_const),
       NewSlot(&TextFrame::SetAlign, delegate_getter),
       kAlignNames, arraysize(kAlignNames));
-  owner->RegisterStringEnumProperty("valign",
+  owner->RegisterStringEnumProperty("vAlign",
       NewSlot(&TextFrame::GetVAlign, delegate_getter_const),
       NewSlot(&TextFrame::SetVAlign, delegate_getter),
       kVAlignNames, arraysize(kVAlignNames));

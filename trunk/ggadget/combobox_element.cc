@@ -129,13 +129,12 @@ class ComboBoxElement::Impl {
   }
 
   void SetListBoxHeight() {
-    double elem_height = owner_->BasicElement::GetPixelHeight();
-    double max_height = max_items_ * item_pixel_height_;
-    double height = std::min(max_height, elem_height - item_pixel_height_);
-    if (height < 0) {
-      height = 0;
+    double height = std::max(
+        0.0, owner_->BasicElement::GetPixelHeight() - item_pixel_height_);
+    if (max_items_ > 0) {
+      double items = std::min(listbox_->GetChildren()->GetCount(), max_items_);
+      height = std::min(height, items * item_pixel_height_);
     }
-
     listbox_->SetPixelHeight(height);
   }
 

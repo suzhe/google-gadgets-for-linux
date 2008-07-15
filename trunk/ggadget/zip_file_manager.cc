@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include "zip_file_manager.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -22,19 +24,28 @@
 #include <string>
 #include <cstdio>
 #include <cerrno>
+#include <ctime>
 
 #include <third_party/unzip/zip.h>
 #include <third_party/unzip/unzip.h>
 #include "common.h"
 #include "logger.h"
-#include "zip_file_manager.h"
 #include "gadget_consts.h"
+#include "slot.h"
+#include "string_utils.h"
 #include "system_utils.h"
 
 namespace ggadget {
 
-static const char *kZipGlobalComment = "Created by Google Gadgets for Linux.";
-static const char *kZipReadMeFile = ".readme";
+#ifdef GADGET_CASE_SENSITIVE
+static const int kZipCaseSensitivity = 1;
+#else
+static const int kZipCaseSensitivity = 2;
+#endif
+
+static const char kZipGlobalComment[] = "Created by Google Gadgets for Linux.";
+static const char kZipReadMeFile[] = ".readme";
+static const char kTempZipFile[] = "%%Temp%%.zip";
 
 class ZipFileManager::Impl {
  public:
@@ -105,7 +116,7 @@ class ZipFileManager::Impl {
         LOG("Failed to open zip file %s for writing", path.c_str());
         return false;
       }
-      AddReadMeFileInZip(zip_handle);
+      AddReadMeFileInZip(zip_handle, path.c_str());
     } else {
       LOG("Failed to open zip file %s: %s", path.c_str(), strerror(errno));
       return false;
@@ -133,7 +144,8 @@ class ZipFileManager::Impl {
     if (!SwitchToRead())
       return false;
 
-    if (unzLocateFile(unzip_handle_, relative_path.c_str(), 2) != UNZ_OK)
+    if (unzLocateFile(unzip_handle_, relative_path.c_str(),
+                      kZipCaseSensitivity) != UNZ_OK)
       return false;
 
     if (unzOpenCurrentFile(unzip_handle_) != UNZ_OK) {
@@ -174,45 +186,122 @@ class ZipFileManager::Impl {
     if (!CheckFilePath(file, &relative_path, NULL))
       return false;
 
-    // The 'overwrite' parameter is ignored here.
     if (FileExists(file, NULL)) {
-      LOG("Can't overwrite an existing file %s in zip archive %s.",
-          relative_path.c_str(), base_path_.c_str());
-      return false;
+      if (!overwrite) {
+        LOG("Can't overwrite an existing file %s in zip archive %s.",
+            relative_path.c_str(), base_path_.c_str());
+        return false;
+      }
+      if (!RemoveFile(file))
+        return false;
     }
 
     if (!SwitchToWrite())
       return false;
 
-    if (zipOpenNewFileInZip(zip_handle_, relative_path.c_str(),
-                            NULL, // zipfi
-                            NULL, // extrafield_local
-                            0,    // size_extrafield_local
-                            NULL, // extrafield_global
-                            0,    // size_extrafield_global
-                            NULL, // comment
-                            Z_DEFLATED,
-                            Z_DEFAULT_COMPRESSION) != ZIP_OK) {
-      LOG("Can't add new file %s in zip archive %s.",
-           relative_path.c_str(), base_path_.c_str());
-      return false;
-    }
-
-    int result = zipWriteInFileInZip(zip_handle_, data.c_str(),
-                                     static_cast<unsigned int>(data.length()));
-    zipCloseFileInZip(zip_handle_);
-
-    if (result != ZIP_OK) {
-      LOG("Failed to write file %s into zip archive %s.",
-          relative_path.c_str(), base_path_.c_str());
-    }
-
-    return result == ZIP_OK;
+    return AddFileInZip(zip_handle_, base_path_.c_str(), relative_path.c_str(),
+                        data.c_str(), data.length());
   }
 
+  class CopyZipFile {
+   public:
+    CopyZipFile(Impl *impl, zipFile dest, const char *excluded_file)
+        : impl_(impl), dest_(dest), excluded_file_(excluded_file) {
+    }
+    bool Copy(const char *filename) {
+      if (GadgetStrCmp(filename, excluded_file_) == 0) {
+        // Don't copy this excluded file;
+        return true;
+      }
+
+      unz_file_info unz_info;
+      if (unzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info,
+                                NULL, 0, NULL, 0, NULL, 0) != UNZ_OK)
+        return false;
+      char *extra = new char[unz_info.size_file_extra];
+      char *comment = new char[unz_info.size_file_comment + 1];
+      if (unzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info, NULL, 0,
+                                extra, unz_info.size_file_extra,
+                                comment, unz_info.size_file_comment + 1)
+          != UNZ_OK) {
+        delete [] extra;
+        delete [] comment;
+        return false;
+      }
+
+      zip_fileinfo zip_info;
+      memset(&zip_info, 0, sizeof(zip_info));
+      zip_info.dosDate = unz_info.dosDate;
+      zip_info.internal_fa = unz_info.internal_fa;
+      zip_info.external_fa = unz_info.external_fa;
+      std::string content;
+      bool result = zipOpenNewFileInZip(dest_, filename, &zip_info,
+                                        extra, unz_info.size_file_extra,
+                                        NULL, 0, comment,
+                                        unz_info.compression_method,
+                                        Z_DEFAULT_COMPRESSION) == ZIP_OK &&
+                    impl_->ReadFile(filename, &content) &&
+                    zipWriteInFileInZip(
+                        dest_, content.c_str(),
+                        static_cast<unsigned>(content.size())) == UNZ_OK;
+      if (!result)
+        LOG("Failed to copy file %s from zip to temp zip", filename); 
+      delete [] extra;
+      delete [] comment;
+      zipCloseFileInZip(dest_);
+      return result;
+    }
+   private:
+    Impl *impl_;
+    zipFile dest_;
+    const char *excluded_file_;
+  };
+
   bool RemoveFile(const char *file) {
-    LOG("Can't remove a file in a zip archive.");
-    return false;
+    if (!FileExists(file, NULL) || !SwitchToRead() || !EnsureTempDirectory())
+      return false;
+
+    unz_global_info global_info;
+    char *global_comment = NULL;
+    if (unzGetGlobalInfo(unzip_handle_, &global_info) == UNZ_OK) {
+      global_comment = new char[global_info.size_comment + 1];
+      if (unzGetGlobalComment(unzip_handle_, global_comment,
+                              global_info.size_comment + 1) < 0) {
+        delete [] global_comment;
+        global_comment = NULL;
+      }
+    }
+
+    std::string temp_file = BuildFilePath(temp_dir_.c_str(),
+                                          kTempZipFile, NULL);
+    unlink(temp_file.c_str());
+    zipFile temp_zip = zipOpen(temp_file.c_str(), APPEND_STATUS_CREATE);
+    if (!temp_zip) {
+      LOG("Can't create temp zip file: %s", temp_file.c_str());
+      return false;
+    }
+    AddReadMeFileInZip(temp_zip, temp_file.c_str());
+
+    CopyZipFile copy_zip_file(this, temp_zip, file);
+    bool res =
+        EnumerateFiles("", NewSlot(&copy_zip_file, &CopyZipFile::Copy)) == 0;
+    zipClose(temp_zip, global_comment);
+    delete [] global_comment;
+
+    if (res) {
+      // Copy the temp zip file over the original zip.
+      unzClose(unzip_handle_);
+      unzip_handle_ = NULL;
+      res = unlink(base_path_.c_str()) == 0;
+      if (res) {
+        CopyFile(temp_file.c_str(), base_path_.c_str());
+      } else {
+        LOG("Failed to copy temp zip file %s to original zip file %s: %s",
+            temp_file.c_str(), base_path_.c_str(), strerror(errno));
+      }
+    }
+    unlink(temp_file.c_str());
+    return res;
   }
 
   bool ExtractFile(const char *file, std::string *into_file) {
@@ -225,7 +314,8 @@ class ZipFileManager::Impl {
     if (!SwitchToRead())
       return false;
 
-    if (unzLocateFile(unzip_handle_, relative_path.c_str(), 2) != UNZ_OK)
+    if (unzLocateFile(unzip_handle_, relative_path.c_str(),
+                      kZipCaseSensitivity) != UNZ_OK)
       return false;
 
     if (into_file->empty()) {
@@ -296,9 +386,9 @@ class ZipFileManager::Impl {
     bool result = CheckFilePath(file, &relative_path, &full_path);
     if (path) *path = full_path;
 
-    // Case insensitive.
     return result && SwitchToRead() &&
-           unzLocateFile(unzip_handle_, relative_path.c_str(), 2) == UNZ_OK;
+           unzLocateFile(unzip_handle_, relative_path.c_str(),
+                         kZipCaseSensitivity) == UNZ_OK;
   }
 
   bool IsDirectlyAccessible(const char *file, std::string *path) {
@@ -313,6 +403,76 @@ class ZipFileManager::Impl {
     else if (CheckFilePath(file, NULL, &path))
       return path;
     return std::string("");
+  }
+
+  uint64_t GetLastModifiedTime(const char *file) {
+    std::string full_path, relative_path;
+    bool result = CheckFilePath(file, &relative_path, &full_path);
+
+    unz_file_info file_info;
+    if (result && SwitchToRead() &&
+        unzLocateFile(unzip_handle_, relative_path.c_str(),
+                      kZipCaseSensitivity) == UNZ_OK &&
+        unzGetCurrentFileInfo(unzip_handle_, &file_info,
+                              NULL, 0, NULL, 0, NULL, 0) == UNZ_OK) {
+      struct tm tm;
+      memset(&tm, 0, sizeof(tm));
+      tm.tm_year = file_info.tmu_date.tm_year - 1900;
+      tm.tm_mon = file_info.tmu_date.tm_mon;
+      tm.tm_mday = file_info.tmu_date.tm_mday;
+      tm.tm_hour = file_info.tmu_date.tm_hour;
+      tm.tm_min = file_info.tmu_date.tm_min;
+      tm.tm_sec = file_info.tmu_date.tm_sec;
+      return mktime(&tm) * UINT64_C(1000);
+    }
+    return 0;
+  }
+
+  // Returns -1 on error, 0 on success, 1 on canceled.
+  int EnumerateFiles(const char *dir, Slot1<bool, const char *> *callback) {
+    ASSERT(dir);
+    std::string dir_name(dir);
+    // Make sure dir_name is ended with '/' if it is not empty to make the
+    // prefix matching works for files under the directory.
+    if (!dir_name.empty() && dir_name[dir_name.size() - 1] != kDirSeparator)
+      dir_name += kDirSeparator;
+
+    if (!SwitchToRead())
+      return -1;
+
+    int res = unzGoToFirstFile(unzip_handle_);
+    while (res == UNZ_OK) {
+      unz_file_info file_info;
+      char filename[256];
+      res = unzGetCurrentFileInfo(unzip_handle_, &file_info,
+                                  filename, sizeof(filename),
+                                  NULL, 0, NULL, 0);
+      if (res != UNZ_OK)
+        break;
+      char *filename_ptr = filename;
+      size_t filename_size = static_cast<size_t>(file_info.size_filename + 1);
+      // In most cases filename buffer is big enough to contain the file name.
+      if (filename_size > sizeof(filename)) {
+        filename_ptr = new char[filename_size];
+        res = unzGetCurrentFileInfo(unzip_handle_, &file_info,
+                                    filename_ptr, filename_size,
+                                    NULL, 0, NULL, 0);
+        if (res != UNZ_OK)
+          break;
+      }
+      if (filename_ptr[filename_size - 1] != kDirSeparator &&
+          strcmp(filename_ptr, kZipReadMeFile) != 0 &&
+          GadgetStrNCmp(dir_name.c_str(), filename_ptr, dir_name.size()) == 0 &&
+          !(*callback)(filename_ptr + dir_name.size())) {
+        if (filename_ptr != filename) delete [] filename_ptr;
+        delete callback;
+        return 1;
+      }
+      if (filename_ptr != filename) delete [] filename_ptr;
+      res = unzGoToNextFile(unzip_handle_);
+    }
+    delete callback;
+    return res == UNZ_OK || res == UNZ_END_OF_LIST_OF_FILE ? 0 : -1;
   }
 
   // Check if the given file path is valid and return the full path and
@@ -410,7 +570,7 @@ class ZipFileManager::Impl {
     } else {
       zip_handle_ = zipOpen(base_path_.c_str(), APPEND_STATUS_CREATE);
       if (zip_handle_)
-        AddReadMeFileInZip(zip_handle_);
+        AddReadMeFileInZip(zip_handle_, base_path_.c_str());
     }
 
     if (!zip_handle_)
@@ -419,30 +579,39 @@ class ZipFileManager::Impl {
     return zip_handle_ != NULL;
   }
 
-  // At least one file must be added to an empty zip archive, otherwise the
-  // archive will become invalid and can't be opened again.
-  bool AddReadMeFileInZip(zipFile zip) {
+  bool AddFileInZip(zipFile zip, const char *zip_path,
+                    const char *file, const char *data, size_t size) {
     ASSERT(zip);
-    if (zipOpenNewFileInZip(zip, kZipReadMeFile,
-                            NULL, // zipfi
-                            NULL, // extrafield_local
-                            0,    // size_extrafield_local
-                            NULL, // extrafield_global
-                            0,    // size_extrafield_global
-                            NULL, // comment
-                            Z_DEFLATED,
-                            Z_DEFAULT_COMPRESSION) != ZIP_OK) {
-      LOG("Can't add .readme file in newly created zip archive.");
+    zip_fileinfo info;
+    memset(&info, 0, sizeof(info));
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    info.tmz_date.tm_sec = tm->tm_sec;
+    info.tmz_date.tm_min = tm->tm_min;
+    info.tmz_date.tm_hour = tm->tm_hour;
+    info.tmz_date.tm_mday = tm->tm_mday;
+    info.tmz_date.tm_mon = tm->tm_mon;
+    info.tmz_date.tm_year = tm->tm_year + 1900;
+    if (zipOpenNewFileInZip(zip, file, &info, NULL, 0, NULL, 0, NULL,
+                            Z_DEFLATED, Z_DEFAULT_COMPRESSION) != ZIP_OK) {
+      LOG("Can't add new file %s in zip archive %s.", file, zip_path);
       return false;
     }
-    int result = zipWriteInFileInZip(zip, kZipGlobalComment,
-                        static_cast<unsigned int>(strlen(kZipGlobalComment)));
+
+    int result = zipWriteInFileInZip(zip, data, static_cast<unsigned>(size));
     zipCloseFileInZip(zip);
-
-    if (result != ZIP_OK)
-      LOG("Error when adding .readme file in newly created zip archive.");
-
-    return result == ZIP_OK;
+    if (result != ZIP_OK) {
+      LOG("Error when adding %s file in zip archive %s.", file, zip_path);
+      return false;
+    }
+    return true;
+  }
+    
+  // At least one file must be added to an empty zip archive, otherwise the
+  // archive will become invalid and can't be opened again.
+  bool AddReadMeFileInZip(zipFile zip, const char *zip_path) {
+    return AddFileInZip(zip, zip_path, kZipReadMeFile,
+                        kZipGlobalComment, sizeof(kZipGlobalComment) - 1);
   }
 
   std::string temp_dir_;
@@ -499,9 +668,14 @@ std::string ZipFileManager::GetFullPath(const char *file) {
   return impl_->GetFullPath(file);
 }
 
-uint64_t ZipFileManager::GetLastModifiedTime(const char *base_path) {
-  // Not implemented.
-  return 0;
+uint64_t ZipFileManager::GetLastModifiedTime(const char *file) {
+  return impl_->GetLastModifiedTime(file);
+}
+
+bool ZipFileManager::EnumerateFiles(const char *dir,
+                                    Slot1<bool, const char *> *callback) {
+  // Errors during enumeration are ignored.
+  return impl_->EnumerateFiles(dir, callback) != 1;
 }
 
 FileManagerInterface *ZipFileManager::Create(const char *base_path,

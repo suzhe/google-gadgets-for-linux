@@ -128,7 +128,7 @@ function UpdateLanguageBox() {
     var language = languages[i].lang;
     language_box.appendElement(
       "<item name='" + language +
-      "'><label valign='middle'>" + languages[i].disp +
+      "'><label vAlign='middle'>" + languages[i].disp +
       "</label></item>");
 
     if (default_language == language)
@@ -145,7 +145,7 @@ function SelectLanguage(language) {
 
 function AddCategoryButton(category, y) {
   categories_div.appendElement(
-    "<label align='left' valign='middle' enabled='true' color='#FFFFFF' name='" +
+    "<label align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
     category +
     "' width='100%' height='" + kCategoryButtonHeight + "' y='" + y +
     "' onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +

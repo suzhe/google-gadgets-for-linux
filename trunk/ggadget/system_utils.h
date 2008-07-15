@@ -157,6 +157,12 @@ bool GetSystemLocaleInfo(std::string *language, std::string *territory);
  */
 void Daemonize();
 
+/**
+ * Copies source file to the dest.
+ * @return true if succeeded.
+ */
+bool CopyFile(const char *src, const char *dest);
+
 } // namespace ggadget
 
 #endif // GGADGET_SYSTEM_UTILS_H__

@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+template <typename R, typename P1> class Slot1;
+
 /**
  * Handles all file resources and file access used by a gadget.
  */
@@ -144,6 +146,18 @@ class FileManagerInterface {
    *     The time value is number of milliseconds since EPOCH.
    */
   virtual uint64_t GetLastModifiedTime(const char *file) = 0;
+
+  /**
+   * Enumerates all files recursively in a directory.
+   * @param dir relative directory name.
+   * @param callback its prototype is like:<code>
+   *     bool Callback(const char *relative_name);
+   *     </code>. The callback can return false to break the enumeration loop.
+   *     @c relative_name is the part of file path under @c dir.
+   * @return true if the enumration is not canceled by callback.
+   */
+  virtual bool EnumerateFiles(const char *dir,
+                              Slot1<bool, const char *> *callback) = 0;
 
 };
 

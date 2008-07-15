@@ -53,7 +53,10 @@ class MockedFileManager : public ggadget::FileManagerInterface {
   }
   virtual std::string GetFullPath(const char *file) { return file; }
   virtual uint64_t GetLastModifiedTime(const char *file) { return 0; }
-
+  virtual bool EnumerateFiles(const char *dir,
+                              ggadget::Slot1<bool, const char *> *callback) {
+    return false;
+  }
   bool should_fail_;
   std::map<std::string, std::string> data_;
   std::string requested_file_;

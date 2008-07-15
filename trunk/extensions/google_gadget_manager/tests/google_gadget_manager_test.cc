@@ -267,8 +267,9 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
   CheckGadgetInfo("nl", manager, 0, "Author1", "/url&",
                   "Title1", "Description1");
   CheckGadgetInfo("en", manager, 2, "", GADGET_ID2, "gadget2", "summary2");
-  ASSERT_TRUE(manager->IsGadgetInstanceTrusted(0));
-  ASSERT_FALSE(manager->IsGadgetInstanceTrusted(2));
+  // TODO: Use ACL constants or operators.
+  ASSERT_EQ(1U, manager->GetGadgetInstanceTrustedFeatures(0));
+  ASSERT_EQ(0U, manager->GetGadgetInstanceTrustedFeatures(2));
 
   ASSERT_EQ(std::string(GADGET_ID1), manager->GetGadgetInfo(GADGET_ID1)->id);
   ASSERT_EQ(std::string(GADGET_ID2), manager->GetGadgetInfo(GADGET_ID2)->id);

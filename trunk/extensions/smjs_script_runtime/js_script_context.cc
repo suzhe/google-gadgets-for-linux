@@ -112,9 +112,12 @@ class JSScriptContext::JSClassWithNativeCtor {
     ++ref_count_;
   }
 
-  void Unref() {
-    if (--ref_count_ == 0)
+  bool Unref() {
+    if (--ref_count_ == 0) {
       delete this;
+      return true;
+    }
+    return false;
   }
 
   static JSClassWithNativeCtor *CastFrom(JSClass *cls) {
@@ -348,10 +351,10 @@ void JSScriptContext::FinalizeJSNativeWrapper(JSContext *cx,
     context_wrapper->FinalizeJSNativeWrapperInternal(wrapper);
 }
 
-void JSScriptContext::UnrefJSObjectClass(JSContext *cx, JSObject *object) {
+bool JSScriptContext::UnrefJSObjectClass(JSContext *cx, JSObject *object) {
   JSClassWithNativeCtor *c =
       JSClassWithNativeCtor::CastFrom(JS_GET_CLASS(cx, object));
-  if (c) c->Unref();
+  return c ? c->Unref() : false;
 }
 
 void JSScriptContext::Destroy() {

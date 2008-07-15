@@ -669,21 +669,23 @@ std::string GoogleGadgetManager::GetDownloadedGadgetLocation(
   return path;
 }
 
-bool GoogleGadgetManager::IsGadgetInstanceTrusted(int instance_id) {
+uint64_t GoogleGadgetManager::GetGadgetInstanceTrustedFeatures(
+    int instance_id) {
+  // TODO: ACL.
   const GadgetInfo *info = GetGadgetInfoOfInstance(instance_id);
   if (!info || info->source == SOURCE_LOCAL_FILE)
-    return false;
+    return 0;
 
   if (info->source == SOURCE_BUILTIN)
-    return true;
+    return UINT64_C(0xFFFFFFFFFFFFFFFF);
 
   StringMap::const_iterator it = info->attributes.find("category");
   if (it != info->attributes.end()) {
     std::string category = ',' + it->second + ',';
     if (category.find(",google,") != category.npos)
-      return true;
+      return 1;
   }
-  return false;
+  return 0;
 }
 
 bool GoogleGadgetManager::GetGadgetInstanceInfo(
@@ -989,7 +991,9 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
         new Gadget(host,
                    GetSystemGadgetPath(kGoogleGadgetBrowserName).c_str(),
                    kGoogleGadgetBrowserOptionsName,
-                   kGoogleGadgetBrowserInstanceId, true);
+                   kGoogleGadgetBrowserInstanceId,
+                   // TODO: ACL.
+                   UINT64_C(0xFFFFFFFFFFFFFFFF));
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
       browser_gadget_->GetMainView()->
