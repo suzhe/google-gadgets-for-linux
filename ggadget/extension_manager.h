@@ -23,6 +23,7 @@
 namespace ggadget {
 
 class ElementFactory;
+class FileManagerWrapper;
 class ScriptContextInterface;
 class ScriptableInterface;
 class ScriptRuntimeManager;
@@ -35,6 +36,8 @@ static const char kFrameworkExtensionSymbolName[] =
     "RegisterFrameworkExtension";
 static const char kScriptRuntimeExtensionSymbolName[] =
     "RegisterScriptRuntimeExtension";
+static const char kFileManagerExtensionSymbolName[] =
+    "RegisterFileManagerExtension";
 
 /**
  * Interface of real ExtensionRegister classes.
@@ -86,24 +89,30 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *    Please refer to extensions/default_framework/default_framework.cc for
  *    how to implement a framework extension.
  *
- * - ScriptRuntime extension module
- *   A ScriptRuntime extension module can be used to provide specified
- *   implementation of ScriptRuntimeInterface.
- *   This kind of extension modules must provide following symbol:
- *   - bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager);
- *   The extension module shall register its static allocated ScriptRuntime
- *   object to the specified ScriptRuntimeManager object.
- *   The ScriptRuntime object shall be singleton and shared by all gadgets.
- *   So each ScriptRuntime extension shall only be registered one time.
+ *  - ScriptRuntime extension module
+ *    A ScriptRuntime extension module can be used to provide specified
+ *    implementation of ScriptRuntimeInterface.
+ *    This kind of extension modules must provide following symbol:
+ *    - bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager);
+ *    The extension module shall register its static allocated ScriptRuntime
+ *    object to the specified ScriptRuntimeManager object.
+ *    The ScriptRuntime object shall be singleton and shared by all gadgets.
+ *    So each ScriptRuntime extension shall only be registered one time.
  *
- * - Extension modules that registers global resources in Initialize()
- *   Some extension modules don't need to provide additional symbols, but
- *   register global resources with certain global functions provided by
- *   the main library:
- *   - XMLHttpRequest extension module: SetXMLHttpRequestFactory()
- *   - XMLParser extension module: SetXMLParser()
- *   - Options extension module: SetOptionsFactory()
- *   - Encryptor extension module: SetEncryptor()
+ *  - FileManager extension module
+ *    A FileManager extension module can add file manager into the gadget
+ *    file manager.
+ *    This kind of extension modules must provide following symbol:
+ *    - bool RegisterFileManagerExtension(FileManagerWrapper *fm_wrapper);
+ *
+ *  - Extension modules that registers global resources in Initialize()
+ *    Some extension modules don't need to provide additional symbols, but
+ *    register global resources with certain global functions provided by
+ *    the main library:
+ *    - XMLHttpRequest extension module: SetXMLHttpRequestFactory()
+ *    - XMLParser extension module: SetXMLParser()
+ *    - Options extension module: SetOptionsFactory()
+ *    - Encryptor extension module: SetEncryptor()
  *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.
@@ -191,6 +200,20 @@ class ScriptRuntimeExtensionRegister : public ExtensionRegisterInterface {
 
  private:
   ScriptRuntimeManager *manager_;
+};
+
+/**
+ * Register class for FileManager extension modules.
+ */
+class FileManagerExtensionRegister : public ExtensionRegisterInterface {
+ public:
+  FileManagerExtensionRegister(FileManagerWrapper *fm_wrapper);
+  virtual bool RegisterExtension(const Module *extension);
+
+  typedef bool (*RegisterFileManagerExtensionFunc)(FileManagerWrapper *);
+
+ private:
+  FileManagerWrapper *fm_wrapper_;
 };
 
 /**

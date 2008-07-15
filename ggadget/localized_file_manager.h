@@ -72,6 +72,8 @@ class LocalizedFileManager : public FileManagerInterface {
   virtual bool IsDirectlyAccessible(const char *file, std::string *path);
   virtual std::string GetFullPath(const char *file);
   virtual uint64_t GetLastModifiedTime(const char *file);
+  virtual bool EnumerateFiles(const char *dir,
+                              Slot1<bool, const char *> *callback);
 
  private:
   class Impl;

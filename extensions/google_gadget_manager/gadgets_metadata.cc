@@ -73,7 +73,7 @@ static bool FillGadgetInfoFromManifest(const char *gadget_path,
   info->attributes["name"] = manifest[kManifestName];
   info->attributes["product_summary"] = manifest[kManifestDescription];
   info->attributes["version"] = manifest[kManifestVersion];
-  info->attributes["rank"] = "1.0";
+  info->attributes["rank"] = "1.1";
   info->attributes["sidebar"] = "true";
   info->attributes["type"] = "sidebar";
   info->attributes["download_url"] = gadget_path;

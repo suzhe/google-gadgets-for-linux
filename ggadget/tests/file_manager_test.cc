@@ -14,8 +14,10 @@
   limitations under the License.
 */
 
-#include <iostream>
 #include <locale.h>
+#include <unistd.h>
+#include <set>
+#include <iostream>
 
 #include "ggadget/logger.h"
 #include "ggadget/file_manager_interface.h"
@@ -25,6 +27,7 @@
 #include "ggadget/zip_file_manager.h"
 #include "ggadget/locales.h"
 #include "ggadget/localized_file_manager.h"
+#include "ggadget/slot.h"
 #include "ggadget/system_utils.h"
 #include "unittest/gtest.h"
 
@@ -36,123 +39,179 @@ const char *base_gg_path  = "file_manager_test_data_dest.gg";
 const char *base_new_dir_path = "file_manager_test_data_new";
 const char *base_new_gg_path  = "file_manager_test_data_new.gg";
 
-void TestFileManagerReadFunctions(FileManagerInterface *fm, bool zip) {
+const char *filenames[] = {
+    "main.xml",
+    "strings.xml",
+    "global_file",
+    "1033/1033_file",
+    "2052/2052_file",
+    "en/en_file",
+    "en/global_file",
+    "zh_CN/2048_file",
+    "zh_CN/big_file",
+    "zh_CN/global_file",
+    "zh_CN/zh-CN_file",
+    "zh_CN/strings.xml",
+};
+
+void TestFileManagerReadFunctions(const std::string &prefix,
+                                  const std::string &base_path,
+                                  FileManagerInterface *fm, bool zip) {
   ASSERT_TRUE(fm->IsValid());
   std::string data;
+  std::string full_base_path = BuildFilePath(GetCurrentDirectory().c_str(),
+                                             base_path.c_str(), NULL);
   std::string path;
-  std::string base_path;
   std::string base_filename;
-  base_path = fm->GetFullPath(NULL);
-  SplitFilePath(base_path.c_str(), &path, &base_filename);
+  EXPECT_EQ(full_base_path, fm->GetFullPath(prefix.c_str()));
+  SplitFilePath(full_base_path.c_str(), &path, &base_filename);
   ASSERT_TRUE(base_path.length());
-  ASSERT_TRUE(fm->ReadFile("global_file", &data));
+  ASSERT_TRUE(fm->ReadFile((prefix + "global_file").c_str(), &data));
   EXPECT_STREQ("global_file at top\n", data.c_str());
 
-  ASSERT_TRUE(fm->ReadFile("zh_CN/./../global_file", &data));
+  ASSERT_TRUE(fm->ReadFile((prefix + "zh_CN/./../global_file").c_str(), &data));
   EXPECT_STREQ("global_file at top\n", data.c_str());
 
-  EXPECT_FALSE(fm->ReadFile("non-exists", &data));
+  EXPECT_FALSE(fm->ReadFile((prefix + "non-exists").c_str(), &data));
 
-  ASSERT_TRUE(fm->ReadFile("zh_CN/zh-CN_file", &data));
+  ASSERT_TRUE(fm->ReadFile((prefix + "zh_CN/zh-CN_file").c_str(), &data));
   EXPECT_STREQ("zh-CN_file contents\n", data.c_str());
 
-  ASSERT_TRUE(fm->ReadFile("zh_CN/2048_file", &data));
+  ASSERT_TRUE(fm->ReadFile((prefix + "zh_CN/2048_file").c_str(), &data));
   EXPECT_EQ(2048U, data.size());
 
-  ASSERT_TRUE(fm->ReadFile("zh_CN/big_file", &data));
+  ASSERT_TRUE(fm->ReadFile((prefix + "zh_CN/big_file").c_str(), &data));
   EXPECT_EQ(32616U, data.size());
 
-  EXPECT_TRUE(fm->FileExists("global_file", &path));
-  EXPECT_STREQ((base_path + "/global_file").c_str(), path.c_str());
-  EXPECT_STREQ(fm->GetFullPath("global_file").c_str(), path.c_str());
+  EXPECT_TRUE(fm->FileExists((prefix + "global_file").c_str(), &path));
+  EXPECT_STREQ((full_base_path + "/global_file").c_str(),
+               path.c_str());
+  EXPECT_STREQ(fm->GetFullPath((prefix + "global_file").c_str()).c_str(),
+               path.c_str());
 
-  EXPECT_FALSE(fm->FileExists("non-exists", &path));
-  EXPECT_STREQ((base_path + "/non-exists").c_str(), path.c_str());
-  EXPECT_STREQ(fm->GetFullPath("non-exists").c_str(), path.c_str());
+  EXPECT_FALSE(fm->FileExists((prefix + "non-exists").c_str(), &path));
+  EXPECT_STREQ((full_base_path + "/non-exists").c_str(),
+               path.c_str());
+  EXPECT_STREQ(fm->GetFullPath((prefix + "non-exists").c_str()).c_str(),
+               path.c_str());
 
   EXPECT_FALSE(fm->FileExists(("../" + base_filename).c_str(), &path));
-  EXPECT_STREQ(base_path.c_str(), path.c_str());
+  EXPECT_STREQ(full_base_path.c_str(), path.c_str());
 
   if (zip) {
-    ASSERT_TRUE(fm->ReadFile("gLoBaL_FiLe", &data));
-    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(),
-                 fm->GetFullPath("gLoBaL_FiLe").c_str());
+    ASSERT_TRUE(fm->ReadFile((prefix + "gLoBaL_FiLe").c_str(), &data));
+    EXPECT_STREQ((full_base_path + "/gLoBaL_FiLe").c_str(),
+                 fm->GetFullPath((prefix + "gLoBaL_FiLe").c_str()).c_str());
     EXPECT_STREQ("global_file at top\n", data.c_str());
-    EXPECT_TRUE(fm->FileExists("1033/1033_FiLe", &path));
-    EXPECT_STREQ((base_path + "/1033/1033_FiLe").c_str(), path.c_str());
-    EXPECT_FALSE(fm->IsDirectlyAccessible("gLoBaL_FiLe", &path));
-    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(), path.c_str());
+    EXPECT_TRUE(fm->FileExists((prefix + "1033/1033_FiLe").c_str(), &path));
+    EXPECT_STREQ((full_base_path + "/1033/1033_FiLe").c_str(),
+                 path.c_str());
+    EXPECT_FALSE(fm->IsDirectlyAccessible((prefix + "gLoBaL_FiLe").c_str(),
+                                          &path));
+    EXPECT_STREQ((full_base_path + "/gLoBaL_FiLe").c_str(),
+                 path.c_str());
   } else {
     // Case sensitive may not be available on some platforms.
     //EXPECT_FALSE(fm->FileExists("1033/1033_FiLe", &path));
     //EXPECT_STREQ((base_path + "/1033/1033_FiLe").c_str(), path.c_str());
-    EXPECT_TRUE(fm->IsDirectlyAccessible("gLoBaL_FiLe", &path));
-    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(), path.c_str());
+    EXPECT_TRUE(fm->IsDirectlyAccessible((prefix + "gLoBaL_FiLe").c_str(),
+                                         &path));
+    EXPECT_STREQ((full_base_path + "/gLoBaL_FiLe").c_str(),
+                 path.c_str());
   }
 }
 
-void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
+void TestFileManagerWriteFunctions(const std::string &prefix,
+                                   const std::string &base_path,
+                                   FileManagerInterface *fm, bool zip) {
   ASSERT_TRUE(fm->IsValid());
   std::string data;
   std::string path;
   std::string path2;
-  std::string base_path;
-  base_path = fm->GetFullPath(NULL);
-  ASSERT_TRUE(base_path.length());
-
+  std::string full_base_path = BuildFilePath(GetCurrentDirectory().c_str(),
+                                             base_path.c_str(), NULL);
   // Test write file in top dir.
   data = "new_file contents\n";
-  ASSERT_TRUE(fm->WriteFile("new_file", data, false));
-  ASSERT_TRUE(fm->FileExists("new_file", &path));
-  EXPECT_STREQ((base_path + "/new_file").c_str(), path.c_str());
-  ASSERT_TRUE(fm->ReadFile("new_file", &data));
+  uint64_t t = time(NULL) * UINT64_C(1000);
+  ASSERT_TRUE(fm->WriteFile((prefix + "new_file").c_str(), data, false));
+  ASSERT_TRUE(fm->FileExists((prefix + "new_file").c_str(), &path));
+  EXPECT_NEAR(fm->GetLastModifiedTime((prefix + "new_file").c_str()), t,
+              UINT64_C(1000));
+  EXPECT_STREQ((full_base_path + "/new_file").c_str(), path.c_str());
+  ASSERT_TRUE(fm->ReadFile((prefix + "new_file").c_str(), &data));
   EXPECT_STREQ("new_file contents\n", data.c_str());
   path.clear();
-  ASSERT_TRUE(fm->ExtractFile("new_file", &path));
+  ASSERT_TRUE(fm->ExtractFile((prefix + "new_file").c_str(), &path));
   ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
   EXPECT_STREQ("new_file contents\n", data.c_str());
   ::unlink(path.c_str());
   EXPECT_FALSE(ReadFileContents(path.c_str(), &data));
   path2 = path;
-  ASSERT_TRUE(fm->ExtractFile("new_file", &path));
+  ASSERT_TRUE(fm->ExtractFile((prefix + "new_file").c_str(), &path));
   EXPECT_STREQ(path2.c_str(), path.c_str());
   ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
   EXPECT_STREQ("new_file contents\n", data.c_str());
-  ASSERT_TRUE(fm->FileExists("new_file", &path));
+  ASSERT_TRUE(fm->FileExists((prefix + "new_file").c_str(), &path));
 
   // Test write file in sub dir.
   data = "en_new_file contents\n";
-  ASSERT_TRUE(fm->WriteFile("en/new_file", data, false));
-  ASSERT_TRUE(fm->FileExists("en/new_file", &path));
-  EXPECT_STREQ((base_path + "/en/new_file").c_str(), path.c_str());
-  ASSERT_TRUE(fm->ReadFile("en/new_file", &data));
+  ASSERT_TRUE(fm->WriteFile((prefix + "en/new_file").c_str(), data, false));
+  ASSERT_TRUE(fm->FileExists((prefix + "en/new_file").c_str(), &path));
+  EXPECT_STREQ((full_base_path + "/en/new_file").c_str(),
+               path.c_str());
+  ASSERT_TRUE(fm->ReadFile((prefix + "en/new_file").c_str(), &data));
   EXPECT_STREQ("en_new_file contents\n", data.c_str());
   path.clear();
-  ASSERT_TRUE(fm->ExtractFile("en/new_file", &path));
+  ASSERT_TRUE(fm->ExtractFile((prefix + "en/new_file").c_str(), &path));
   ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
   EXPECT_STREQ("en_new_file contents\n", data.c_str());
   ::unlink(path.c_str());
   EXPECT_FALSE(ReadFileContents(path.c_str(), &data));
   path2 = path;
-  ASSERT_TRUE(fm->ExtractFile("en/new_file", &path));
+  ASSERT_TRUE(fm->ExtractFile((prefix + "en/new_file").c_str(), &path));
   EXPECT_STREQ(path2.c_str(), path.c_str());
   ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
   EXPECT_STREQ("en_new_file contents\n", data.c_str());
-  ASSERT_TRUE(fm->FileExists("en/new_file", &path));
+  ASSERT_TRUE(fm->FileExists((prefix + "en/new_file").c_str(), &path));
 
   // Test overwrite an existing file.
-  EXPECT_FALSE(fm->WriteFile("en/new_file", data, false));
+  EXPECT_FALSE(fm->WriteFile((prefix + "en/new_file").c_str(), data, false));
 
-  if (zip) {
-    EXPECT_FALSE(fm->RemoveFile("new_file"));
-    EXPECT_FALSE(fm->RemoveFile("en/new_file"));
-  } else {
-    EXPECT_TRUE(fm->WriteFile("en/new_file", data, true));
-    EXPECT_TRUE(fm->RemoveFile("new_file"));
-    EXPECT_TRUE(fm->RemoveFile("en/new_file"));
-    EXPECT_FALSE(fm->FileExists("new_file", &path));
-    EXPECT_FALSE(fm->FileExists("en/new_file", &path));
-  }
+  EXPECT_TRUE(fm->WriteFile((prefix + "en/new_file").c_str(), data, true));
+  EXPECT_TRUE(fm->RemoveFile((prefix + "new_file").c_str()));
+  EXPECT_TRUE(fm->RemoveFile((prefix + "en/new_file").c_str()));
+  EXPECT_FALSE(fm->FileExists((prefix + "new_file").c_str(), &path));
+  EXPECT_FALSE(fm->FileExists((prefix + "en/new_file").c_str(), &path));
+}
+
+std::set<std::string> actual_set;
+bool EnumerateCallback(const char *name) {
+  LOG("EnumerateCallback: %zu %s", actual_set.size(), name);
+  EXPECT_TRUE(actual_set.find(name) == actual_set.end()); 
+  actual_set.insert(name);
+  return true;
+}
+
+void TestFileManagerEnumerate(FileManagerInterface *fm) {
+  actual_set.clear();
+  std::set<std::string> expected_set;
+  for (size_t i = 0; i < arraysize(filenames); i++)
+    expected_set.insert(filenames[i]);
+  EXPECT_TRUE(fm->EnumerateFiles("", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+
+  actual_set.clear();
+  expected_set.clear();
+  expected_set.insert("2048_file");
+  expected_set.insert("big_file");
+  expected_set.insert("global_file");
+  expected_set.insert("zh-CN_file");
+  expected_set.insert("strings.xml");
+  EXPECT_TRUE(fm->EnumerateFiles("zh_CN", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zh_CN/", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
 }
 
 void TestFileManagerLocalized(FileManagerInterface *fm,
@@ -187,21 +246,21 @@ void TestFileManagerLocalized(FileManagerInterface *fm,
 TEST(FileManager, DirRead) {
   FileManagerInterface *fm = new DirFileManager();
   ASSERT_TRUE(fm->Init(base_dir_path, false));
-  TestFileManagerReadFunctions(fm, false);
+  TestFileManagerReadFunctions("", base_dir_path, fm, false);
   delete fm;
 }
 
 TEST(FileManager, ZipRead) {
   FileManagerInterface *fm = new ZipFileManager();
   ASSERT_TRUE(fm->Init(base_gg_path, false));
-  TestFileManagerReadFunctions(fm, true);
+  TestFileManagerReadFunctions("", base_gg_path, fm, true);
   delete fm;
 }
 
 TEST(FileManager, DirWrite) {
   FileManagerInterface *fm = new DirFileManager();
   ASSERT_TRUE(fm->Init(base_new_dir_path, true));
-  TestFileManagerWriteFunctions(fm, false);
+  TestFileManagerWriteFunctions("", base_new_dir_path, fm, false);
   delete fm;
   RemoveDirectory(base_new_dir_path);
 }
@@ -209,9 +268,23 @@ TEST(FileManager, DirWrite) {
 TEST(FileManager, ZipWrite) {
   FileManagerInterface *fm = new ZipFileManager();
   ASSERT_TRUE(fm->Init(base_new_gg_path, true));
-  TestFileManagerWriteFunctions(fm, true);
+  TestFileManagerWriteFunctions("", base_new_gg_path, fm, true);
   delete fm;
   ::unlink(base_new_gg_path);
+}
+
+TEST(FileManager, DirEnumerate) {
+  FileManagerInterface *fm = new DirFileManager();
+  ASSERT_TRUE(fm->Init(base_dir_path, true));
+  TestFileManagerEnumerate(fm);
+  delete fm;
+}
+
+TEST(FileManager, ZipEnumerate) {
+  FileManagerInterface *fm = new ZipFileManager();
+  ASSERT_TRUE(fm->Init(base_gg_path, true));
+  TestFileManagerEnumerate(fm);
+  delete fm;
 }
 
 TEST(FileManager, LocalizedFile) {
@@ -234,7 +307,70 @@ TEST(FileManager, LocalizedFile) {
   }
 }
 
+TEST(FileManager, FileManagerWrapper) {
+  FileManagerWrapper *fm = new FileManagerWrapper();
+  FileManagerInterface *dir_fm = new DirFileManager();
+  ASSERT_TRUE(dir_fm->Init(base_dir_path, true));
+  FileManagerInterface *zip_fm = new ZipFileManager();
+  ASSERT_TRUE(zip_fm->Init(base_gg_path, true));
+  FileManagerInterface *dir_write_fm = new DirFileManager();
+  ASSERT_TRUE(dir_write_fm->Init(base_new_dir_path, true));
+  FileManagerInterface *zip_write_fm = new ZipFileManager();
+  ASSERT_TRUE(zip_write_fm->Init(base_new_gg_path, true));
+  EXPECT_TRUE(fm->RegisterFileManager("", dir_fm));
+  EXPECT_TRUE(fm->RegisterFileManager("zip/", zip_fm));
+  EXPECT_TRUE(fm->RegisterFileManager("dir_write/", dir_write_fm));
+  EXPECT_TRUE(fm->RegisterFileManager("zip_write/", zip_write_fm));
+
+  TestFileManagerReadFunctions("", base_dir_path, fm, false);
+  TestFileManagerWriteFunctions("dir_write/", base_new_dir_path, fm, false);
+  TestFileManagerReadFunctions("zip/", base_gg_path, fm, true);
+  // TestFileManagerWriteFunctions("zip_write/", base_new_gg_path, fm, true);
+
+  actual_set.clear();
+  std::set<std::string> expected_set;
+  for (size_t i = 0; i < arraysize(filenames); i++) {
+    expected_set.insert(filenames[i]);
+    expected_set.insert(std::string("zip/") + filenames[i]);
+  }
+  EXPECT_TRUE(fm->EnumerateFiles("", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+
+  actual_set.clear();
+  expected_set.clear();
+  expected_set.insert("2048_file");
+  expected_set.insert("big_file");
+  expected_set.insert("global_file");
+  expected_set.insert("zh-CN_file");
+  expected_set.insert("strings.xml");
+  EXPECT_TRUE(fm->EnumerateFiles("zh_CN", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zip/zh_CN", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zh_CN/", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zip/zh_CN/", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+
+  expected_set.clear();
+  for (size_t i = 0; i < arraysize(filenames); i++)
+    expected_set.insert(filenames[i]);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zip", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  actual_set.clear();
+  EXPECT_TRUE(fm->EnumerateFiles("zip/", NewSlot(EnumerateCallback)));
+  EXPECT_TRUE(expected_set == actual_set);
+  delete fm;
+  RemoveDirectory(base_new_dir_path);
+  ::unlink(base_new_gg_path);
+}
+
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
+  
   return RUN_ALL_TESTS();
 }

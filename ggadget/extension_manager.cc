@@ -82,6 +82,20 @@ ScriptRuntimeExtensionRegister::RegisterExtension(const Module *extension) {
   return func ? func(manager_) : false;
 }
 
+FileManagerExtensionRegister::FileManagerExtensionRegister(
+    FileManagerWrapper *fm_wrapper)
+  : fm_wrapper_(fm_wrapper) {
+}
+
+bool FileManagerExtensionRegister::RegisterExtension(const Module *extension) {
+  ASSERT(extension);
+  // reinterpret_cast<> doesn't work on gcc 3.x
+  RegisterFileManagerExtensionFunc func =
+      (RegisterFileManagerExtensionFunc)(
+          extension->GetSymbol(kFileManagerExtensionSymbolName));
+  return func ? func(fm_wrapper_) : false;
+}
+
 class MultipleExtensionRegisterWrapper::Impl {
  public:
   typedef std::vector<ExtensionRegisterInterface *> ExtRegisterVector;

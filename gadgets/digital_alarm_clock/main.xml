@@ -37,8 +37,8 @@
   <div name="eButtons" x="11" y="17" width="124" height="70" visible="false">
     <button x="6" y="0" image="images\button_default.png" overImage="images\button_hover.png" downImage="images\button_down.png" onclick="_alarmOff()"/>
     <button x="6" y="28" image="images\button_default.png" overImage="images\button_hover.png" downImage="images\button_down.png" onclick="_alarmSnooze()"/>
-    <label name="eAlarmOff" x="0" y="0" width="124" height="30" align="center" valign="middle" color="#ffffff" size="8"></label>
-    <label name="eAlarmSnooze" x="0" y="28" width="124" height="30" align="center" valign="middle" color="#ffffff" size="8"></label>
+    <label name="eAlarmOff" x="0" y="0" width="124" height="30" align="center" vAlign="middle" color="#ffffff" size="8"></label>
+    <label name="eAlarmSnooze" x="0" y="28" width="124" height="30" align="center" vAlign="middle" color="#ffffff" size="8"></label>
   </div>
   <img name="eLights" x="12" y="12" src="images\flashing_lights.png" visible="false"/>
   </div>

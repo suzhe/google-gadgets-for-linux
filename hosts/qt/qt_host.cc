@@ -142,21 +142,21 @@ class QtHost::Impl {
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
-    if (!AddGadgetInstanceCallback(id))
+    if (!LoadGadgetInstance(id))
       gadget_manager_->RemoveGadgetInstance(id);
     // Return true to continue the enumeration.
     return true;
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
+    if (gadget_manager_->GetGadgetInstanceTrustedFeatures(id) ||
         ConfirmGadget(id)) {
-      return AddGadgetInstanceCallback(id);
+      return LoadGadgetInstance(id);
     }
     return false;
   }
 
-  bool AddGadgetInstanceCallback(int id) {
+  bool LoadGadgetInstance(int id) {
     bool result = false;
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
@@ -180,10 +180,11 @@ class QtHost::Impl {
       return true;
     }
 
-    Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
-                                // We still don't trust any user added gadgets
-                                // at gadget runtime level.
-                                false);
+    // TODO ACL.
+    uint64_t trusted_features =
+        gadget_manager_->GetGadgetInstanceTrustedFeatures(instance_id);
+    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
+                                trusted_features);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);

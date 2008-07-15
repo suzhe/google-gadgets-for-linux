@@ -70,7 +70,7 @@ class JSScriptContext : public ScriptContextInterface {
                                                ScriptableInterface *scriptable);
 
   /**
-   * Called when JavaScript engine is to finalized a JavaScript object wrapper
+   * Called when JavaScript engine is to finalized a JavaScript object wrapper.
    */
   static void FinalizeNativeJSWrapper(JSContext *cx, NativeJSWrapper *wrapper);
 
@@ -93,8 +93,10 @@ class JSScriptContext : public ScriptContextInterface {
   /**
    * When a JSObject is to be finalized, unref its class structure if the
    * class is a registered native class.
+   * Returns true if the class is deleted because its reference count reaches
+   * zero.
    */
-  static void UnrefJSObjectClass(JSContext *cx, JSObject *object);
+  static bool UnrefJSObjectClass(JSContext *cx, JSObject *object);
 
   JSContext *context() const { return context_; }
 

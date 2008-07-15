@@ -185,7 +185,7 @@ void ScriptableEvent::DoClassRegister() {
       RegisterProperty("value",
           NewSlot(&TimerEvent::GetValue, Impl::GetTimerEvent), NULL);
       break;
-    case Event::EVENT_PERFMON:
+    case kPerfmonEventClassId:
       RegisterProperty("value",
           NewSlot(&PerfmonEvent::GetValue, Impl::GetPerfmonEvent), NULL);
       break;

@@ -465,4 +465,52 @@ void Daemonize() {
 #endif
 }
 
+bool CopyFile(const char *src, const char *dest) {
+  ASSERT(src && dest);
+  if (!src || !dest)
+    return false;
+
+  FILE *in_fp = fopen(src, "r");
+  if (!in_fp) {
+    LOG("Can't open file %s for reading.", src);
+    return false;
+  }
+
+  FILE *out_fp = fopen(dest, "w");
+  if (!out_fp) {
+    LOG("Can't open file %s for writing.", dest);
+    fclose(in_fp);
+    return false;
+  }
+
+  const size_t kChunkSize = 8192;
+  char buffer[kChunkSize];
+  bool result = true;
+  while(true) {
+    size_t read_size = fread(buffer, 1, kChunkSize, in_fp);
+    if (read_size) {
+      if (fwrite(buffer, read_size, 1, out_fp) != 1) {
+        LOG("Error when writing to file %s", dest);
+        result = false;
+        break;
+      }
+    }
+    if (read_size < kChunkSize)
+      break;
+  }
+
+  if (ferror(in_fp)) {
+    LOG("Error when reading file: %s", src);
+    result = false;
+  }
+
+  fclose(in_fp);
+  fclose(out_fp);
+
+  if (!result)
+    unlink(dest);
+
+  return result;
+}
+
 }  // namespace ggadget

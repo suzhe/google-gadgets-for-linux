@@ -267,7 +267,8 @@ JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  JSScriptContext::UnrefJSObjectClass(cx, obj);
+  if (JSScriptContext::UnrefJSObjectClass(cx, obj))
+    return;
 
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
