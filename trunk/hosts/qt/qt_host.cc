@@ -183,7 +183,7 @@ class QtHost::Impl {
     // TODO ACL.
     uint64_t trusted_features =
         gadget_manager_->GetGadgetInstanceTrustedFeatures(instance_id);
-    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
+    Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
                                 trusted_features);
 
     if (!gadget->IsValid()) {
