@@ -203,9 +203,9 @@ class SideBarGtkHost::Impl {
 
   void OnHotKeyPressed() {
     if (!gadgets_shown_ || sidebar_->IsMinimized())
-      ShowOrHideAllGadgets(true);
+      ShowOrHideAll(true);
     else
-      ShowOrHideAllGadgets(false);
+      ShowOrHideAll(false);
   }
 
   void OnWorkAreaChange() {
@@ -356,9 +356,9 @@ class SideBarGtkHost::Impl {
 
   void OnSideBarClose() {
     if (!gadgets_shown_ || sidebar_->IsMinimized())
-      ShowOrHideAllGadgets(true);
+      ShowOrHideAll(true);
     else
-      ShowOrHideAllGadgets(false);
+      ShowOrHideAll(false);
   }
 
   void OnSideBarSizeEvent() {
@@ -1142,9 +1142,14 @@ class SideBarGtkHost::Impl {
     return false;
   }
 
-  void ShowOrHideAllGadgets(bool show) {
-    DLOG("ShowOrHideAllGadgets(%d)", show);
+  void ShowOrHideAll(bool show) {
+    DLOG("ShowOrHideAll(%d)", show);
     ShowOrHideSideBar(show);
+    ShowOrHideAllGadgets(show);
+    gadgets_shown_ = show;
+  }
+
+  void ShowOrHideAllGadgets(bool show) {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->second.gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR) {
@@ -1158,7 +1163,6 @@ class SideBarGtkHost::Impl {
         OnMainViewPopIn(it->first);
       }
     }
-    gadgets_shown_ = show;
   }
 
   void ShowOrHideSideBar(bool show) {
@@ -1421,11 +1425,11 @@ class SideBarGtkHost::Impl {
   }
 
   void ShowAllMenuHandler(const char *str) {
-    ShowOrHideAllGadgets(true);
+    ShowOrHideAll(true);
   }
 
   void HideAllMenuHandler(const char *str) {
-    ShowOrHideAllGadgets(false);
+    ShowOrHideAll(false);
   }
 
   void AutoHideMenuHandler(const char *str) {
@@ -1551,6 +1555,9 @@ class SideBarGtkHost::Impl {
       g_source_remove(impl->auto_hide_source_);
       impl->auto_hide_source_ = 0;
     }
+    if (widget == impl->sidebar_window_ && !impl->sidebar_->IsMinimized()) {
+      impl->ShowOrHideAllGadgets(true);
+    }
     return FALSE;
   }
 
@@ -1613,9 +1620,9 @@ class SideBarGtkHost::Impl {
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   static void StatusIconActivateHandler(GtkWidget *widget, Impl *impl) {
     if (!impl->gadgets_shown_ || impl->sidebar_->IsMinimized())
-      impl->ShowOrHideAllGadgets(true);
+      impl->ShowOrHideAll(true);
     else
-      impl->ShowOrHideAllGadgets(false);
+      impl->ShowOrHideAll(false);
   }
 
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,

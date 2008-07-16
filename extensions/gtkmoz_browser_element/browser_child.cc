@@ -25,12 +25,18 @@
 #include <gtk/gtk.h>
 
 #define MOZILLA_CLIENT
+
+#ifdef XPCOM_GLUE
+#include <gtkmozembed_glue.cpp>
+#endif
+
 #include <mozilla-config.h>
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
 #include <jsconfig.h>
 
+#include <nsComponentManagerUtils.h>
 #include <nsCOMPtr.h>
 #include <nsCRT.h>
 #include <nsEvent.h>
@@ -772,9 +778,9 @@ static nsresult InitCustomComponents() {
   // Register external object (Javascript window.external object).
   g_external_object.AddRef();
   nsCOMPtr<nsIGenericFactory> factory;
-  rv = NS_NewGenericFactory(getter_AddRefs(factory),
-                            &kExternalObjectComponentInfo);
+  factory = do_CreateInstance ("@mozilla.org/generic-factory;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
+  factory->SetComponentInfo(&kExternalObjectComponentInfo);
   rv = registrar->RegisterFactory(kExternalObjectComponentInfo.mCID,
                                   EXTOBJ_CLASSNAME, EXTOBJ_CONTRACTID,
                                   factory);
@@ -787,9 +793,9 @@ static nsresult InitCustomComponents() {
 
   // Register customized content policy.
   g_content_policy.AddRef();
-  rv = NS_NewGenericFactory(getter_AddRefs(factory),
-                            &kContentPolicyComponentInfo);
+  factory = do_CreateInstance ("@mozilla.org/generic-factory;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
+  factory->SetComponentInfo(&kContentPolicyComponentInfo);
   rv = registrar->RegisterFactory(kContentPolicyComponentInfo.mCID,
                                   CONTENT_POLICY_CLASSNAME,
                                   CONTENT_POLICY_CONTRACTID,
@@ -803,8 +809,64 @@ static nsresult InitCustomComponents() {
   return rv;
 }
 
+static bool InitGecko() {
+#ifdef XPCOM_GLUE
+  nsresult rv;
+
+  NS_LogInit();
+  static const GREVersionRange kGREVersion = {
+    "1.9a", PR_TRUE,
+    "1.9.*", PR_TRUE
+  };
+
+  char xpcom_location[4096];
+  rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0, xpcom_location, 4096);
+  if (NS_FAILED(rv)) {
+    g_warning("Failed to find proper Gecko Runtime Environment!");
+    return false;
+  }
+
+  // Startup the XPCOM Glue that links us up with XPCOM.
+  rv = XPCOMGlueStartup(xpcom_location);
+  if (NS_FAILED(rv)) {
+    g_warning("Failed to startup XPCOM Glue!");
+    return false;
+  }
+
+  rv = GTKEmbedGlueStartup();
+  if (NS_FAILED(rv)) {
+    g_warning("Failed to startup Gtk Embed Glue!");
+    return false;
+  }
+
+  rv = GTKEmbedGlueStartupInternal();
+  if (NS_FAILED(rv)) {
+    g_warning("Failed to startup Gtk Embed Glue (internal)!");
+    return false;
+  }
+
+  char *last_slash = strrchr(xpcom_location, '/');
+  if (last_slash)
+    *last_slash = '\0';
+
+  gtk_moz_embed_set_path(xpcom_location);
+#elif defined(MOZILLA_FIVE_HOME)
+  gtk_moz_embed_set_comp_path(MOZILLA_FIVE_HOME);
+#endif
+  return true;
+}
+
 int main(int argc, char **argv) {
+  if (!g_thread_supported())
+    g_thread_init(NULL);
+
   gtk_init(&argc, &argv);
+
+  if (!InitGecko()) {
+    g_warning("Failed to initialize Gecko.");
+    return 1;
+  }
+
   signal(SIGPIPE, OnSigPipe);
   if (argc >= 2)
     g_down_fd = g_ret_fd = static_cast<int>(strtol(argv[1], NULL, 0));

@@ -551,15 +551,25 @@ fi
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
 
 # Check gtkmozembed
-PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
-		  [has_gtkmozembed=xulrunner-gtkmozembed],
-  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
-		     [has_gtkmozembed=firefox2-gtkmozembed],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
-		       [has_gtkmozembed=firefox-gtkmozembed],
-      [PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed mozilla-js],
-		         [has_gtkmozembed=mozilla-gtkmozembed],
-      [has_gtkmozembed=no])])])])
+# Check priority:
+#  xulrunner 1.9: mozilla-gtkmozembed-embedding and mozilla-js
+#  xulrunner 1.9: libxul-embedding-unstable and mozilla-js
+#  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
+#  firefox 2.0: firefox2-gtkmozembed and firefox2-js
+#  firefox 1.5: firefox-gtkmozembed and firefox-js
+#
+# Add more rules here if your distribution doesn't support above rules.
+PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
+		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
+  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
+		     [has_gtkmozembed=libxul-embedding-unstable],
+    [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
+		       [has_gtkmozembed=xulrunner-gtkmozembed],
+      [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
+			 [has_gtkmozembed=firefox2-gtkmozembed],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
+			   [has_gtkmozembed=firefox-gtkmozembed],
+	  [has_gtkmozembed=no])])])])])
 
 if test x$has_dbus = xyes; then
   AC_DEFINE(HAVE_DBUS_LIBRARY,1,[Have dbus library])
@@ -677,21 +687,26 @@ else
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/widget"
+  GTKMOZEMBED_LDFLAGS=""
   MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
   if test "x$MOZILLA_FIVE_HOME" = "x"; then
 # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+# It usually occurs on some pre xulrunner 1.9 versions.
 # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+# FIXME: Following method might not work on systems other than Linux.
     MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | sed -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
-    if test ! -e "$MOZILLA_FIVE_HOME"; then
-      MOZILLA_FIVE_HOME=""
+    # Try to find out the correct xulrunner path.
+    if test -e "$MOZILLA_FIVE_HOME/libxpcom.so"; then
+      XPCOM_PATH=`readlink -f $MOZILLA_FIVE_HOME/libxpcom.so`
+      MOZILLA_FIVE_HOME=`dirname $XPCOM_PATH`
     fi
   fi
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
-  AC_SUBST(MOZILLA_FIVE_HOME)
-  if test "x$MOZILLA_FIVE_HOME" != "x"; then
+  if test "x$MOZILLA_FIVE_HOME" != "x" -a -d "$MOZILLA_FIVE_HOME"; then
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
     GTKMOZEMBED_LDFLAGS="$GTKMOZEMBED_LDFLAGS -R$MOZILLA_FIVE_HOME"
-    AC_SUBST(GTKMOZEMBED_LDFLAGS)
   fi
+
+  AC_SUBST(GTKMOZEMBED_LDFLAGS)
 fi
 
 AM_CONDITIONAL(
