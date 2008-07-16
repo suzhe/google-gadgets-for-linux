@@ -23,6 +23,7 @@ noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
 			  js_script_runtime.h \
 			  js_script_context.h \
+			  js_native_wrapper.h \
 			  json.h
 
 extension_LTLIBRARIES	= qt-script-runtime.la
@@ -33,6 +34,7 @@ qt_script_runtime_la_SOURCES = \
 			  converter.cc \
 			  js_function_slot.cc \
 			  js_script_context.cc \
+			  js_native_wrapper.cc \
 			  js_script_runtime.cc \
 			  json.cc
 

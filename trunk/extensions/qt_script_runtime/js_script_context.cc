@@ -21,10 +21,11 @@
 #include <ggadget/js/jscript_massager.h>
 #include "js_script_context.h"
 #include "js_function_slot.h"
+#include "js_native_wrapper.h"
 #include "js_script_runtime.h"
 #include "converter.h"
 
-#if 0
+#if 1
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
@@ -50,16 +51,33 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
   return QScriptValue(engine, self.toString().mid(start, length));
 }
 
-enum {
-  kGlobal,
-  kClass,
-  kObject
-};
+// Check if obj has pending exception, if so, raise exception with ctx and
+// return false.
+// NOTE: Due to QT4's problem, sometimes calling throwValue/throwError is not
+// enough. The exception has to be returned to JS as return value. In this
+// case, you should provide ex so the exception will be stored to it.
+static bool CheckException(QScriptContext *ctx, ScriptableInterface *object,
+                           QScriptValue *ex) {
+  if (!object) return true;
+  ScriptableInterface *exception = object->GetPendingException(true);
+  if (!exception) return true;
+
+  QScriptValue qt_exception;
+  qt_exception = QScriptValue(ctx->engine(), "Error...");
+  if (!ConvertNativeToJS(ctx->engine(), Variant(exception), &qt_exception)) {
+    qt_exception =
+        ctx->throwError("Failed to convert native exception to QScriptValue");
+  } else {
+    qt_exception = ctx->throwValue(qt_exception);
+  }
+  if (ex) *ex = qt_exception;
+  return false;
+}
 
 class ResolverScriptClass : public QScriptClass {
  public:
   ResolverScriptClass(QScriptEngine *engine, ScriptableInterface *object,
-                      int type);
+                      bool global);
   ~ResolverScriptClass();
 
   virtual QueryFlags queryProperty(const QScriptValue & object,
@@ -74,49 +92,30 @@ class ResolverScriptClass : public QScriptClass {
   virtual QVariant extension(Extension extension,
                              const QVariant &argument = QVariant());
 
-  // if return false, should not do further processing
-  bool CheckException(QScriptContext *ctx) {
-    if (!object_) return true;
-    ScriptableInterface *exception = object_->GetPendingException(true);
-    if (!exception) return true;
-
-    QScriptValue qt_exception;
-    if (!ConvertNativeToJS(engine(), Variant(exception), &qt_exception)) {
-      ctx->throwError("Failed to convert native exception to QScriptValue");
-    } else {
-      ctx->throwValue(qt_exception);
-    }
-    return false;
-  }
-
   ScriptableInterface *object_;
   Slot *call_slot_;
-  int type_;
+  bool global_;
   Connection *on_reference_change_connection_;
   void OnRefChange(int, int);
 };
 
 class JSScriptContext::Impl {
  public:
-  Impl(): resolver_(NULL), line_number_(0) {}
+  Impl(JSScriptContext *parent)
+      : parent_(parent), resolver_(NULL), line_number_(0) {}
   ~Impl() {
     std::map<ScriptableInterface*, ResolverScriptClass*>::iterator iter;
     for (iter = script_classes_.begin(); iter != script_classes_.end(); iter++) {
       delete iter->second;
     }
-    std::map<ScriptableInterface*, QScriptValue>::iterator iter1;
-    for (iter1 = native_objects_.begin();
-         iter1 != native_objects_.end();
-         iter1++) {
-      QScriptClass *sc = iter1->second.scriptClass();
-      delete sc;
-    }
     if (resolver_) delete resolver_;
   }
 
   bool SetGlobalObject(ScriptableInterface *global_object) {
-    resolver_ = new ResolverScriptClass(&engine_, global_object, kGlobal);
+    resolver_ = new ResolverScriptClass(&engine_, global_object, true);
     engine_.globalObject().setPrototype(engine_.newObject(resolver_));
+
+    // Add non-standard method substr to String
     QScriptValue string_prototype =
         engine_.globalObject().property("String").property("prototype");
     string_prototype.setProperty("substr", engine_.newFunction(substr));
@@ -125,40 +124,71 @@ class JSScriptContext::Impl {
 
   ResolverScriptClass *GetScriptClass(ScriptableInterface *obj) {
     if (script_classes_.find(obj) == script_classes_.end()) {
-      script_classes_[obj] = new ResolverScriptClass(&engine_, obj, kClass);
+      script_classes_[obj] = new ResolverScriptClass(&engine_, obj, false);
     }
     return script_classes_[obj];
   }
 
-  QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj) {
-    if (native_objects_.find(obj) == native_objects_.end()) {
-      ResolverScriptClass *resolver =
-          new ResolverScriptClass(&engine_, obj, kObject);
-      native_objects_[obj] = engine_.newObject(resolver);
-    }
-    return native_objects_[obj];
-  }
-
-  // When native object is being removed, corresponding ResolverClass instance will
-  // notice that at OnRefChange. It should remove corresponding QScriptValue by
-  // calling this method.
-  void RemoveScriptValueOfNativeObject(ScriptableInterface *obj) {
-    LOG("RemoveScriptValueOfNativeObject: %p", obj);
-    ASSERT(native_objects_.find(obj) != native_objects_.end());
-    native_objects_.erase(obj);
-  }
-  // Same as above methods, should be called by ResolverClass::OnRefChange when obj
-  // is being removed
-  void RemoveScriptClass(ScriptableInterface *obj) {
-    LOG("RemoveScriptClass: %p", obj);
+  // When native object is being destroyed, corresponding ResolverClass instance
+  // will notice that through OnRefChange. It should remove corresponding
+  // ResolverScriptClass and QScriptValue from JSContext by calling this method.
+  void RemoveNativeObjectFromJSContext(ScriptableInterface *obj) {
+    DLOG("RemoveNativeObjectFromJSContext: %p", obj);
     ASSERT(script_classes_.find(obj) != script_classes_.end());
     script_classes_.erase(obj);
+    ASSERT(script_values_.find(obj) != script_values_.end());
+    script_values_.erase(obj);
+  }
+
+  class JSObjectData : public QObject {
+   public:
+    JSObjectData(ScriptableInterface *data) : data_(data) { }
+    ScriptableInterface *data_;
+  };
+  ScriptableInterface *WrapJSObject(const QScriptValue& qval) {
+    QScriptValue data = qval.data();
+    if (data.isQObject()) {
+      JSObjectData *obj_data = static_cast<JSObjectData*>(data.toQObject());
+      LOG("Reuse jsobj wrapper:%p", obj_data->data_);
+      return obj_data->data_;
+    }
+    ScriptableInterface *wrapper = new JSNativeWrapper(parent_, qval);
+    data = engine_.newQObject(new JSObjectData(wrapper));
+    QScriptValue newVal(qval);
+    newVal.setData(data);
+    LOG("Wrap JS Object:%p", wrapper);
+    return wrapper;
+  }
+
+  // 3 kinds of native objects
+  //  - real native objects
+  //  - wrapper of js object from this js runtime
+  //  - wrapper of js object from another js runtime
+  QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj) {
+    if (obj->IsInstanceOf(JSNativeWrapper::CLASS_ID)) {
+      JSNativeWrapper *wrapper = static_cast<JSNativeWrapper*>(obj);
+      if (wrapper->context() == parent_)
+        return wrapper->js_object();
+    }
+
+    if (script_values_.find(obj) == script_values_.end()) {
+      ResolverScriptClass *resolver = GetScriptClass(obj);
+      script_values_[obj] = engine_.newObject(resolver);
+    }
+    return script_values_[obj];
+  }
+
+  void SetScriptValueOfNativeObject(ScriptableInterface *obj,
+                                    const QScriptValue& qval) {
+    ASSERT(script_values_.find(obj) == script_values_.end());
+    script_values_[obj] = qval;
   }
 
   QScriptEngine engine_;
+  JSScriptContext *parent_;
   std::map<std::string, Slot*> class_constructors_;
   std::map<ScriptableInterface*, ResolverScriptClass*> script_classes_;
-  std::map<ScriptableInterface*, QScriptValue> native_objects_;
+  std::map<ScriptableInterface*, QScriptValue> script_values_;
   Signal1<void, const char *> error_reporter_signal_;
   Signal2<bool, const char *, int> script_blocked_signal_;
   ResolverScriptClass *resolver_;
@@ -182,21 +212,28 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
 
   Variant *argv = NULL;
   bool ret = ConvertJSArgsToNative(context, wrapper->slot_, &argv);
-  ASSERT(ret);
+  if (!ret) return engine->undefinedValue();
 
   ResultVariant res = wrapper->slot_->Call(wrapper->object_,
                                            wrapper->slot_->GetArgCount(), argv);
-/*  if (argv) {
-    for (int i = 0; i < context->argumentCount(); i++)
-      FreeNativeValue(argv[i]);
+  if (argv) {
+    /* for (int i = 0; i < context->argumentCount(); i++)
+      FreeNativeValue(argv[i]); */
     delete [] argv;
-  }*/
+  }
+  QScriptValue exception;
+  if (!CheckException(context, wrapper->object_, &exception))
+    return exception;
+
   if (context->isCalledAsConstructor()) {
     JSScriptContext::Impl *impl = GetEngineContext(engine)->impl_;
     ScriptableInterface *scriptable =
         VariantValue<ScriptableInterface *>()(res.v());
-    ResolverScriptClass *resolver = impl->GetScriptClass(scriptable);
-    context->thisObject().setScriptClass(resolver);
+    if (scriptable) {
+      ResolverScriptClass *resolver = impl->GetScriptClass(scriptable);
+      context->thisObject().setScriptClass(resolver);
+      impl->SetScriptValueOfNativeObject(scriptable, context->thisObject());
+    }
     return engine->undefinedValue();
   } else {
     // Update filename and line number
@@ -214,17 +251,17 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
 
 ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
                                          ScriptableInterface *object,
-                                         int type)
-    : QScriptClass(engine), object_(object), call_slot_(NULL), type_(type),
+                                         bool global)
+    : QScriptClass(engine), object_(object), call_slot_(NULL), global_(global),
       on_reference_change_connection_(NULL) {
-  if (object) {
-    object->Ref();
-    on_reference_change_connection_ = object->ConnectOnReferenceChange(
-        NewSlot(this, &ResolverScriptClass::OnRefChange));
-    if (object->GetPropertyInfo("", NULL) == ScriptableInterface::PROPERTY_METHOD) {
-      ResultVariant p = object->GetProperty("");
-      call_slot_ = VariantValue<Slot*>()(p.v());
-    }
+  ASSERT(object);
+  object->Ref();
+  on_reference_change_connection_ = object->ConnectOnReferenceChange(
+      NewSlot(this, &ResolverScriptClass::OnRefChange));
+  if (object->GetPropertyInfo("", NULL) ==
+      ScriptableInterface::PROPERTY_METHOD) {
+    ResultVariant p = object->GetProperty("");
+    call_slot_ = VariantValue<Slot*>()(p.v());
   }
 }
 
@@ -241,12 +278,12 @@ void ResolverScriptClass::OnRefChange(int ref_count, int change) {
     on_reference_change_connection_->Disconnect();
     object_->Unref(true);
     JSScriptContext::Impl *impl = GetEngineContext(engine())->impl_;
-    if (type_ == kObject)
-      impl->RemoveScriptValueOfNativeObject(object_);
-    else if (type_ == kClass)
-      impl->RemoveScriptClass(object_);
+    if (!global_) {
+      impl->RemoveNativeObjectFromJSContext(object_);
+    }
     object_ = NULL;
-  //  delete this;
+    //  FIXME: we should delete this but it seems to cause crash
+    //  delete this;
   }
 }
 
@@ -267,7 +304,7 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
   if (name.compare("trap") == 0)
     return HandlesReadAccess|HandlesWriteAccess;
 
-  if (type_ == kGlobal) {
+  if (global_) {
     JSScriptContext::Impl *impl = g_data[engine()]->impl_;
     if (impl->class_constructors_.find(sname) !=
         impl->class_constructors_.end()) {
@@ -309,7 +346,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
 
   JSScriptContext::Impl *impl = g_data[engine()]->impl_;
 
-  if (type_ == kGlobal) {
+  if (global_) {
     if (impl->class_constructors_.find(sname) !=
         impl->class_constructors_.end()) {
       if (log) DLOG("\tctor");
@@ -329,6 +366,10 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
   } else {
     res = object_->GetProperty(sname.c_str());
   }
+  QScriptValue exception;
+  if (!CheckException(engine()->currentContext(), object_, &exception))
+    return exception;
+
   if (res.v().type() == Variant::TYPE_VOID) {
     return QScriptValue();
   } else if (res.v().type() == Variant::TYPE_SLOT) {
@@ -349,7 +390,9 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
   } else {
     if (log) DLOG("\tothers:%s", res.v().Print().c_str());
     QScriptValue qval;
-    ConvertNativeToJS(engine(), res.v(), &qval);
+    if (!ConvertNativeToJS(engine(), res.v(), &qval))
+      return engine()->currentContext()->throwError(
+          "Failed to convert property to QScriptValue");
     return qval;
   }
 }
@@ -362,6 +405,7 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
   // Remove me when code is stable
   if (sname.compare("trap") == 0)
     return;
+
   DLOG("setProperty:%s", sname.c_str());
   Variant val;
   bool ok;
@@ -373,12 +417,17 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
     DLOG("setPropertyByIndex:%s=%s", sname.c_str(), val.Print().c_str());
   } else {
     Variant proto;
-    object_->GetPropertyInfo(sname.c_str(), &proto);
-    ConvertJSToNative(engine(), proto, value, &val);
+    if (object_->GetPropertyInfo(sname.c_str(), &proto)
+        == ScriptableInterface::PROPERTY_DYNAMIC) {
+      ConvertJSToNativeVariant(engine(), value, &val);
+    } else {
+      ConvertJSToNative(engine(), proto, value, &val);
+    }
     DLOG("setProperty:proto:%s", proto.Print().c_str());
     object_->SetProperty(sname.c_str(), val);
     DLOG("setProperty:%s=%s", sname.c_str(), val.Print().c_str());
   }
+  CheckException(engine()->currentContext(), object_, NULL);
 }
 
 bool ResolverScriptClass::supportsExtension(Extension extension) const {
@@ -388,19 +437,24 @@ bool ResolverScriptClass::supportsExtension(Extension extension) const {
 QVariant ResolverScriptClass::extension(Extension extension,
                                         const QVariant &argument) {
   ASSERT(call_slot_ && extension == Callable);
-  DLOG("Object called as function");
+  LOG("Object called as function");
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
 
   Variant *argv = NULL;
-  bool ret = ConvertJSArgsToNative(context, call_slot_, &argv);
+  if (!ConvertJSArgsToNative(context, call_slot_, &argv))
+    return QVariant();
+
   ResultVariant res = call_slot_->Call(object_, call_slot_->GetArgCount(), argv);
+  if (!CheckException(context, object_, NULL))
+    return QVariant();
+
   QScriptValue val;
-  ret = ConvertNativeToJS(engine(), res.v(), &val);
+  bool ret = ConvertNativeToJS(engine(), res.v(), &val);
   ASSERT(ret);
   return qVariantFromValue(val);
 }
 
-JSScriptContext::JSScriptContext() : impl_(new Impl()){
+JSScriptContext::JSScriptContext() : impl_(new Impl(this)){
   g_data[&impl_->engine_] = this;
 }
 
@@ -476,7 +530,7 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
                                        const Variant &value) {
   ScopedLogContext log_context(this);
 
-  DLOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
+  LOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
       value.Print().c_str());
   QScriptValue obj;
   if (!object_expr || strcmp("", object_expr) == 0) {
@@ -516,6 +570,10 @@ void JSScriptContext::GetCurrentFileAndLine(std::string *fname, int *lineno) {
 QScriptValue JSScriptContext::GetScriptValueOfNativeObject(
     ScriptableInterface *obj) {
   return impl_->GetScriptValueOfNativeObject(obj);
+}
+
+ScriptableInterface *JSScriptContext::WrapJSObject(const QScriptValue &qval) {
+  return impl_->WrapJSObject(qval);
 }
 
 ScriptableInterface *GetNativeObject(const QScriptValue &qval) {

@@ -32,7 +32,8 @@ LDADD			= @QT4_LIBS@ \
 
 check_PROGRAMS		= dom_test_shell \
 			  js_shell \
-			  wrapper_test_shell
+			  wrapper_test_shell \
+			  cross_context_test
 
 dom_test_shell_SOURCES	= js_shell.cc \
 			  dom_test_shell.cc
@@ -44,22 +45,24 @@ wrapper_test_shell_SOURCES = js_shell.cc \
 			     wrapper_test_shell.cc \
 			     $(top_srcdir)/ggadget/tests/scriptables.cc
 
-#cross_context_test_SOURCES = cross_context_test.cc
+cross_context_test_SOURCES = cross_context_test.cc
 
 TESTS_ENVIRONMENT	= $(SHELL)
 TESTS			= dom_test_shell.sh \
 			  js_shell.sh \
-			  wrapper_test_shell.sh
+			  wrapper_test_shell.sh \
+			  cross_context_test.sh
 
 .PHONY: dom_test_shell.sh \
 	js_shell.sh \
-	wrapper_test_shell.sh
+	wrapper_test_shell.sh \
+	cross_context_test.sh
 
 test_scripts_dir = $(abs_top_srcdir)/ggadget/js/test_scripts
 
-#cross_context_test.sh:
-#	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
-#	      $(abs_builddir)/cross_context_test > $@)
+cross_context_test.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/cross_context_test > $@)
 
 dom_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \

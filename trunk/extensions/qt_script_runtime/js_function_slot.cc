@@ -60,6 +60,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
   ScopedLogContext log_context(GetEngineContext(engine_));
+  Variant return_value(GetReturnType());
   QScriptValue qval;
   if (code_) {
     DLOG("JSFunctionSlot::Call: %s", script_.toUtf8().data());
@@ -68,7 +69,19 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
     DLOG("JSFunctionSlot::Call function");
     QScriptValue fun(function_);
     QScriptValueList args;
-    ConvertNativeArgvToJS(engine_, argc, argv, &args);
+
+    for (int i = 0; i < argc; i++) {
+      QScriptValue qval;
+      if (!ConvertNativeToJS(engine_, argv[i], &qval)) {
+        LOGE("Failed to convert native parameter %d to QScriptValue", i);
+        engine_->currentContext()->throwError(
+            QString("Failed to convert native parameter %1 to QScriptValue")
+            .arg(i));
+        return ResultVariant(return_value);
+      }
+      args << qval;
+    }
+
     qval = fun.call(QScriptValue(), args);
   }
   if (engine_->hasUncaughtException()) {
@@ -79,9 +92,11 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
     }
   }
 
-  Variant return_value(GetReturnType());
-  ConvertJSToNative(engine_, return_value, qval, &return_value);
-  DLOG("JSFunctionSlot:end");
+  if (!ConvertJSToNative(engine_, return_value, qval, &return_value)) {
+    LOGE("Failed to convert returned value to native");
+    engine_->currentContext()->throwError(
+        "Failed to convert returned value to native");
+  }
   return ResultVariant(return_value);
 }
 

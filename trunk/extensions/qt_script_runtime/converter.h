@@ -26,16 +26,26 @@ namespace qt {
 
 /**
  * Converts a @c QScriptValue to a @c Variant of desired type.
+ * @param engine JavaScript engine.
  * @param prototype providing the desired target type information.
  * @param qval source @c QScriptValue value.
  * @param[out] val result @c Variant value.
  * @return @c true if succeeds.
  */
-bool ConvertJSToNative(QScriptEngine *e,
+bool ConvertJSToNative(QScriptEngine *engine,
                        const Variant &prototype,
                        const QScriptValue &qval,
                        Variant *val);
 
+/**
+ * Converts a @c QScriptValue to a @c Variant based on source @c qval type.
+ * @param engine JavaScript engine.
+ * @param qval source @c QScriptValue value.
+ * @param[out] val result @c Variant value.
+ * @return @c true if succeeds.
+ */
+bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
+                              Variant *val);
 /**
  * Frees a native value that was created by @c ConvertJSToNative(),
  * if some failed conditions preventing this value from successfully
@@ -50,16 +60,13 @@ bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot, Variant **argv);
 
 /**
  * Converts a @c Variant to a @c jsval.
- * @param cx JavaScript context.
- * @param native_val source @c Variant value.
- * @param[out] js_val result @c jsval value.
- * @return @c JS_TRUE if succeeds.
+ * @param engine JavaScript engine.
+ * @param val source @c Variant value.
+ * @param[out] qval result @c QScriptValue.
+ * @return @c true if succeeds.
  */
 bool ConvertNativeToJS(QScriptEngine *engine, const Variant &val,
                        QScriptValue *qval);
-
-bool ConvertNativeArgvToJS(QScriptEngine *e, int argc, const Variant argv[],
-                           QScriptValueList *list);
 
 } // namespace qt
 } // namespace ggadget

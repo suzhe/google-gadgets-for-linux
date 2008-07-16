@@ -74,6 +74,8 @@ class JSScriptContext : public ScriptContextInterface {
   virtual void GetCurrentFileAndLine(std::string *filename, int *lineno);
 
   QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj);
+  ScriptableInterface* WrapJSObject(const QScriptValue &qval);
+
   class Impl;
   Impl *impl_;
  private:
