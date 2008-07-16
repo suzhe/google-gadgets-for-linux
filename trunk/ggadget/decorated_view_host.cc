@@ -82,6 +82,7 @@ class DecoratedViewHost::Impl {
         hittest_(HT_CLIENT),
         child_resizable_(ViewInterface::RESIZABLE_ZOOM),
         auto_restore_view_size_(true),
+        view_state_restored_(false),
         child_view_(NULL),
         view_element_(new ViewElement(NULL, this, NULL, false)) {
       view_element_->SetVisible(true);
@@ -104,6 +105,7 @@ class DecoratedViewHost::Impl {
         child_view_ = child_view;
         view_element_->SetChildView(child_view);
 
+        view_state_restored_ = false;
         if (child_view_) {
           child_resizable_ = child_view_->GetResizable();
 
@@ -401,7 +403,8 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void SaveViewStates() {
-      if (!auto_restore_view_size_)
+      // Don't save view state if the view state is not restored yet.
+      if (!auto_restore_view_size_ || !view_state_restored_)
         return;
       View *child = GetChildView();
       Gadget *gadget = child ? child->GetGadget() : NULL;
@@ -430,7 +433,8 @@ class DecoratedViewHost::Impl {
       View *child = GetChildView();
       Gadget *gadget = child ? child->GetGadget() : NULL;
       // Only load view states when the original size has been saved.
-      if (gadget) {
+      // Only restore view state once.
+      if (gadget && !view_state_restored_) {
         OptionsInterface *opt = gadget->GetOptions();
         ViewElement *elm = GetViewElement();
         std::string prefix(option_prefix_);
@@ -458,6 +462,9 @@ class DecoratedViewHost::Impl {
         DLOG("RestoreViewStates(%d): w:%.0lf h:%.0lf s: %.2lf",
              gadget->GetInstanceID(), elm->GetPixelWidth(),
              elm->GetPixelHeight(), elm->GetScale());
+
+        // It's safe to save view state from now on.
+        view_state_restored_ = true;
         UpdateViewSize();
         UpdateChildViewSize();
       }
@@ -533,6 +540,7 @@ class DecoratedViewHost::Impl {
     HitTest hittest_;
     ViewInterface::ResizableMode child_resizable_;
     bool auto_restore_view_size_;
+    bool view_state_restored_;
 
     View *child_view_;
     ViewElement *view_element_;
@@ -850,7 +858,7 @@ class DecoratedViewHost::Impl {
 
     virtual void SaveViewStates() {
       Gadget *gadget = GetGadget();
-      if (gadget) {
+      if (gadget && minimized_state_loaded_) {
         OptionsInterface *opt = gadget->GetOptions();
         opt->PutInternalValue("main_view_minimized", Variant(minimized_));
         DLOG("SaveViewStates(%d): main view minimized: %s",

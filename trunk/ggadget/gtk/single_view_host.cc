@@ -339,9 +339,9 @@ class SingleViewHost::Impl {
     if (record_states_)
       LoadWindowStates();
 
-    // Show window immediately. So that following calls against the window can
-    // take effect immediately.
-    gtk_widget_show_now(window_);
+    // Can't use gtk_widget_show_now() here, because in some cases, it'll cause
+    // nested main loop and prevent ggl-gtk from being quitted.
+    gtk_widget_show(window_);
     gtk_window_present(GTK_WINDOW(window_));
     gdk_window_raise(window_->window);
 
