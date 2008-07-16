@@ -59,6 +59,11 @@ ADD_EXECUTABLE(dom_test_shell
 TARGET_LINK_LIBRARIES(dom_test_shell ${LIBS})
 TEST_WRAPPER(dom_test_shell)
 
+# Cross Context 
+ADD_EXECUTABLE(cross_context_test cross_context_test.cc)
+TARGET_LINK_LIBRARIES(cross_context_test ${LIBS})
+TEST_WRAPPER(cross_context_test TRUE)
+
 JS_TEST_WRAPPER(js_shell json_test.js TRUE)
 JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)
 JS_TEST_WRAPPER(dom_test_shell dom1_test.js TRUE)

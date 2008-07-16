@@ -15,6 +15,7 @@
 */
 
 #include <cmath>
+#include <QtDebug>
 #include <QtCore/QDateTime>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
@@ -23,10 +24,11 @@
 #include <ggadget/unicode_utils.h>
 #include "converter.h"
 #include "js_function_slot.h"
+#include "js_native_wrapper.h"
 #include "js_script_context.h"
 #include "json.h"
 
-#if 1
+#if 0
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif
@@ -60,22 +62,37 @@ static bool ConvertJSToNativeDouble(const QScriptValue &qval,
 
 static bool ConvertJSToNativeString(const QScriptValue &qval,
                                     Variant *val) {
-  *val = Variant(qval.toString().toUtf8().data());
+  if (qval.isNull())
+    *val = Variant(static_cast<const char*>(NULL));
+  else
+    *val = Variant(qval.toString().toUtf8().data());
   return true;
 }
 
 static bool ConvertJSToNativeUTF16String(const QScriptValue &qval,
                                          Variant *val) {
-  std::string str = qval.toString().toUtf8().data();
-  UTF16String utf16_text;
-  ConvertStringUTF8ToUTF16(str.c_str(), str.length(), &utf16_text);
-  *val = Variant(utf16_text);
+  if (qval.isNull()) {
+    *val = Variant(static_cast<const UTF16Char *>(NULL));
+  } else {
+    std::string str = qval.toString().toUtf8().data();
+    UTF16String utf16_text;
+    ConvertStringUTF8ToUTF16(str.c_str(), str.length(), &utf16_text);
+    *val = Variant(utf16_text);
+  }
   return true;
 }
 
-static bool ConvertJSToScriptable(const QScriptValue &qval,
+static bool ConvertJSToScriptable(QScriptEngine *e,
+                                  const QScriptValue &qval,
                                   Variant *val) {
-  *val = Variant(GetNativeObject(qval));
+  // 2 kinds of js objects.
+  //  - real js object
+  //  - wrapper of native object
+  ScriptableInterface *obj = GetNativeObject(qval);
+  if (obj == NULL)
+    obj = GetEngineContext(e)->WrapJSObject(qval);
+  ASSERT(obj);
+  *val = Variant(obj);
   return true;
 }
 
@@ -90,7 +107,7 @@ static bool ConvertJSToSlot(QScriptEngine *e,
   } else if (qval.isFunction()) {
     slot = new JSFunctionSlot(VariantValue<Slot*>()(prototype), e, qval);
   } else if (!qval.isNull()) {
-    DLOG("ConvertJSToSlot failed:%s", qval.toString().toStdString().c_str());
+    DLOG("ConvertJSToSlot failed:%s", qval.toString().toUtf8().data());
     return false;
   }
   *val = Variant(slot);
@@ -112,7 +129,7 @@ static bool ConvertJSToJSON(const QScriptValue &qval, Variant *val) {
   return true;
 }
 
-static bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
+bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
                               Variant *val) {
   if (qval.isNull() || !qval.isValid() || qval.isUndefined())
     return ConvertJSToNativeVoid(qval, val);
@@ -124,13 +141,10 @@ static bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
     return ConvertJSToNativeDouble(qval, val);
   if (qval.isString())
     return ConvertJSToNativeString(qval, val);
-  if (qval.isObject())
-    return ConvertJSToScriptable(qval, val);
-
-  if (qval.isFunction()) {
+ /* if (qval.isFunction()) {
     DLOG("Function not supported");
     ASSERT(0);
-  }
+  } */
   if (qval.isQObject()) {
     DLOG("QObject not supported");
     ASSERT(0);
@@ -143,6 +157,8 @@ static bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
     DLOG("Array not supported");
     ASSERT(0);
   }
+  if (qval.isObject())
+    return ConvertJSToScriptable(e, qval, val);
   return false;
 }
 
@@ -164,7 +180,7 @@ bool ConvertJSToNative(QScriptEngine *e, const Variant &prototype,
     case Variant::TYPE_UTF16STRING:
       return ConvertJSToNativeUTF16String(qval, val);
     case Variant::TYPE_SCRIPTABLE:
-      return ConvertJSToScriptable(qval, val);
+      return ConvertJSToScriptable(e, qval, val);
     case Variant::TYPE_SLOT:
       return ConvertJSToSlot(e, prototype, qval, val);
     case Variant::TYPE_DATE:
@@ -274,7 +290,10 @@ static bool ConvertNativeToJSNumber(QScriptEngine *engine,
 static bool ConvertNativeToJSString(QScriptEngine *engine,
                                     const Variant &val, QScriptValue *qval) {
   const char *value = VariantValue<const char *>()(val);
-  *qval = QScriptValue(engine, QString::fromUtf8(value));
+  if (value)
+    *qval = QScriptValue(engine, QString::fromUtf8(value));
+  else
+    *qval = engine->nullValue();
   return true;
 }
 
@@ -353,25 +372,12 @@ bool ConvertNativeToJS(QScriptEngine *engine,
       return ConvertNativeToJSFunction(engine, val, qval);
     case Variant::TYPE_DATE:
       return ConvertNativeToJSDate(engine, val, qval);
-    case Variant::TYPE_ANY:
-    case Variant::TYPE_CONST_ANY:
-      return false;
     case Variant::TYPE_VARIANT:
       // Normally there is no real value of this type, so convert it to void.
       return ConvertNativeToJSVoid(engine, val, qval);
     default:
       return false;
   }
-}
-
-bool ConvertNativeArgvToJS(QScriptEngine *e, int argc,
-                           const Variant argv[], QScriptValueList *list) {
-  for (int i = 0; i < argc; i++) {
-    QScriptValue qval;
-    ConvertNativeToJS(e, argv[i], &qval);
-    (*list) << qval;
-  }
-  return true;
 }
 
 } // namespace qt
