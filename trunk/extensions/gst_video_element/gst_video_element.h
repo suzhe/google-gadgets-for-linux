@@ -14,31 +14,31 @@
   limitations under the License.
 */
 
-#ifndef EXTENSIONS_GST_MEDIAPLAYER_ELEMENT_H__
-#define EXTENSIONS_GST_MEDIAPLAYER_ELEMENT_H__
+#ifndef EXTENSIONS_GST_VIDEO_ELEMENT_H__
+#define EXTENSIONS_GST_VIDEO_ELEMENT_H__
 
 #include <gst/gst.h>
 #include <string>
 
 #include <ggadget/view.h>
 #include <ggadget/basic_element.h>
-#include <ggadget/mediaplayer_element_base.h>
+#include <ggadget/video_element_base.h>
 #include "gadget_videosink.h"
 
 namespace ggadget {
 namespace gst {
 
 /**
- * Implements mediaplayer element based on gstreamer.
+ * Implements video element based on gstreamer.
  * Any thread using this implementation must run in the default
  * g_main_loop context.
  */
-class GstMediaPlayerElement: public MediaPlayerElementBase {
+class GstVideoElement: public VideoElementBase {
  public:
-  DEFINE_CLASS_ID(0xc67e3d7bbc7283a9, MediaPlayerElementBase);
+  DEFINE_CLASS_ID(0xc67e3d7bbc7283a9, VideoElementBase);
 
-  GstMediaPlayerElement(BasicElement *parent, View *view, const char *name);
-  virtual ~GstMediaPlayerElement();
+  GstVideoElement(BasicElement *parent, View *view, const char *name);
+  virtual ~GstVideoElement();
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent,
@@ -51,25 +51,31 @@ class GstMediaPlayerElement: public MediaPlayerElementBase {
   virtual void Pause();
   virtual void Stop();
 
-  virtual int GetCurrentPosition();
-  virtual void SetCurrentPosition(int position);
+  virtual double GetCurrentPosition();
+  virtual void SetCurrentPosition(double position);
 
-  virtual int GetDuration();
+  virtual double GetDuration();
+  virtual ErrorCode GetErrorCode();
+  virtual State GetState();
+  virtual bool Seekable();
+
+  virtual std::string GetSrc();
+  virtual void SetSrc(const std::string &src);
+
+  virtual double GetVolume();
+  virtual void SetVolume(double volume);
+
   virtual std::string GetTagInfo(TagType tag);
-  virtual void SetGeometry(int width, int height);
-
-  virtual int GetVolume();
-  virtual void SetVolume(int volume);
-  virtual int GetBalance();
-  virtual void SetBalance(int balance);
+  virtual double GetBalance();
+  virtual void SetBalance(double balance);
   virtual bool GetMute();
   virtual void SetMute(bool mute);
 
-  virtual PlayState GetPlayState();
-  virtual ErrorCode GetErrorCode();
+ protected:
+  virtual void SetGeometry(double width, double height);
 
  private:
-  static PlayState GstStateToLocalState(GstState state);
+  static State GstStateToLocalState(GstState state);
   static gboolean OnNewMessage(GstBus *bus, GstMessage *msg, gpointer data);
 
   void OnError(GstMessage *msg);
@@ -79,9 +85,11 @@ class GstMediaPlayerElement: public MediaPlayerElementBase {
   void OnTagInfo(GstMessage *msg);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(GstMediaPlayerElement);
+  DISALLOW_EVIL_CONSTRUCTORS(GstVideoElement);
 
   std::string src_;  // Media source to play.
+
+  bool geometry_initialized_;
 
   GstElement *playbin_;
   GstElement *videosink_;
@@ -95,11 +103,11 @@ class GstMediaPlayerElement: public MediaPlayerElementBase {
   bool media_changed_;
   bool position_changed_;
 
-  PlayState local_state_;
+  State local_state_;
   ErrorCode local_error_;
 };
 
 } // namespace gst
 } // namespace ggadget
 
-#endif // EXTENSIONS_GST_MEDIAPLAYER_ELEMENT_H__
+#endif // EXTENSIONS_GST_VIDEO_ELEMENT_H__

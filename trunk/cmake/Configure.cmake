@@ -107,7 +107,7 @@ SET(GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT 0)
 SET(GGL_BUILD_QT_SCRIPT_RUNTIME 0)
 SET(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT 1)
 SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 1)
-SET(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT 1)
+SET(GGL_BUILD_GST_VIDEO_ELEMENT 1)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 1)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 1)
 SET(GGL_BUILD_LIBXML2_XML_PARSER 1)
@@ -148,20 +148,20 @@ GET_CONFIG(gstreamer-plugins-base-0.10 0.10.0 GSTREAMER_PLUGINS_BASE GSTREAMER_P
 IF(GSTREAMER_FOUND AND GSTREAMER_PLUGINS_BASE_FOUND)
   FIND_LIBRARY(VIDEOSINK_LIBRARY NAMES gstvideo-0.10 PATH /usr/lib /usr/lib/gstreamer-0.10 /usr/local/lib /usr/local/lib/gstreamer-0.10)
   IF(VIDEOSINK_LIBRARY)
-    SET(GSTREAMER_MEDIAPLAYER_LIBRARIES "${GSTREAMER_LIBRARIES}  -lgstvideo-0.10")
+    SET(GSTREAMER_VIDEO_LIBRARIES "${GSTREAMER_LIBRARIES}  -lgstvideo-0.10")
   ELSE(VIDEOSINK_LIBRARY)
-    MESSAGE("Libgstreamer-plugins-base-dev is not available, gst-mediaplayer-element extension won't be built.")
-    SET(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT 0)
+    MESSAGE("Libgstreamer-plugins-base-dev is not available, gst-video-element extension won't be built.")
+    SET(GGL_BUILD_GST_VIDEO_ELEMENT 0)
   ENDIF(VIDEOSINK_LIBRARY)
 ELSE(GSTREAMER_FOUND AND GSTREAMER_PLUGINS_BASE_FOUND)
   IF(GGL_BUILD_GST_AUDIO_FRAMEWORK)
     MESSAGE("Library gstreamer-plugins-base(>=0.10.0) is not available, gst-audio-framework extension won't be built.")
     SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 0)
   ENDIF(GGL_BUILD_GST_AUDIO_FRAMEWORK)
-  IF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
-    MESSAGE("Library gstreamer-plugins-base(>=0.10.0) is not available, gst-mediaplayer-element extension won't be built.")
-    SET(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT 0)
-  ENDIF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
+  IF(GGL_BUILD_GST_VIDEO_ELEMENT)
+    MESSAGE("Library gstreamer-plugins-base(>=0.10.0) is not available, gst-video-element extension won't be built.")
+    SET(GGL_BUILD_GST_VIDEO_ELEMENT 0)
+  ENDIF(GGL_BUILD_GST_VIDEO_ELEMENT)
 ENDIF(GSTREAMER_FOUND AND GSTREAMER_PLUGINS_BASE_FOUND)
 
 GET_CONFIG(pango 1.10.0 PANGO PANGO_FOUND)
@@ -271,7 +271,7 @@ Build options:
   Build dbus-script-class          ${GGL_BUILD_LIBGGADGET_DBUS}
   Build gtkmoz-browser-element     ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
   Build gst-audio-framework        ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
-  Build gst-mediaplayer-element    ${GGL_BUILD_GST_MEDIAPLAYER_ELEMENT}
+  Build gst-video-element          ${GGL_BUILD_GST_VIDEO_ELEMENT}
   Build linux-system-framework     ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
   Build smjs-script-runtime        ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
   Build curl-xml-http-request      ${GGL_BUILD_CURL_XML_HTTP_REQUEST}

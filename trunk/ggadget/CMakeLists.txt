@@ -84,12 +84,13 @@ SET(SRCS
   item_element.cc
   label_element.cc
   listbox_element.cc
-  mediaplayer_element_base.cc
   object_element.cc
+  object_videoplayer.cc
   progressbar_element.cc
   run_once.cc
   scrollbar_element.cc
   scrolling_element.cc
+  video_element_base.cc
   view_element.cc
 
   dir_file_manager.cc

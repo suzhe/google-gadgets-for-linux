@@ -32,6 +32,7 @@
 #include "label_element.h"
 #include "listbox_element.h"
 #include "object_element.h"
+#include "object_videoplayer.h"
 #include "progressbar_element.h"
 #include "scrollbar_element.h"
 
@@ -81,6 +82,9 @@ ElementFactory::ElementFactory()
   RegisterElementClass("listbox", &ListBoxElement::CreateInstance);
   RegisterElementClass("listitem", &ItemElement::CreateListItemInstance);
   RegisterElementClass("object", &ObjectElement::CreateInstance);
+  // Video player object hosted by the object element.
+  RegisterElementClass("clsid:6BF52A52-394A-11d3-B153-00C04F79FAA6", &ObjectVideoPlayer::CreateInstance);
+  RegisterElementClass("progid:WMPlayer.OCX.7", &ObjectVideoPlayer::CreateInstance);
   RegisterElementClass("progressbar", &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);

@@ -120,7 +120,7 @@ build_libggadget_qt=yes
 build_gtkmoz_browser_element=yes
 build_qtwebkit_browser_element=yes
 build_gst_audio_framework=yes
-build_gst_mediaplayer_element=yes
+build_gst_video_element=yes
 build_qt_system_framework=yes
 build_gtk_system_framework=yes
 build_qt_script_runtime=yes
@@ -196,11 +196,11 @@ AC_ARG_ENABLE([gst-audio-framework],
 	      [build_gst_audio_framework=$enableval],
 	      [build_gst_audio_framework=yes])
 
-AC_ARG_ENABLE([gst-mediaplayer-element],
-	      AS_HELP_STRING([--disable-gst-mediaplayer-element],
-			     [don't build gst-mediaplayer-element]),
-	      [build_gst_mediaplayer_element=$enableval],
-	      [build_gst_mediaplayer_element=yes])
+AC_ARG_ENABLE([gst-video-element],
+	      AS_HELP_STRING([--disable-gst-video-element],
+			     [don't build gst-video-element]),
+	      [build_gst_video_element=$enableval],
+	      [build_gst_video_element=yes])
 
 AC_ARG_ENABLE([qt-system-framework],
 	      AS_HELP_STRING([--disable-qt-system-framework],
@@ -628,16 +628,16 @@ if test x$has_gstreamer_plugins_base != xyes -a x$build_gst_audio_framework = xy
   build_gst_audio_framework=no
 fi
 
-if test x$build_gst_mediaplayer_element = xyes; then
-  build_gst_mediaplayer_element=no
+if test x$build_gst_video_element = xyes; then
+  build_gst_video_element=no
   if test x$has_gstreamer_plugins_base = xyes; then
     if test x$has_gstreamer_video = xyes; then
-      build_gst_mediaplayer_element=yes
+      build_gst_video_element=yes
     else
-      AC_MSG_WARN([Libgstreamer-plugins-base-dev is not available, gst-mediaplayer-element extension will not be built.])
+      AC_MSG_WARN([Libgstreamer-plugins-base-dev is not available, gst-video-element extension will not be built.])
     fi
   else
-    AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-mediaplayer-element extension will not be built.])
+    AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-video-element extension will not be built.])
   fi
 fi
 
@@ -738,8 +738,8 @@ AM_CONDITIONAL(
   [test x$build_gst_audio_framework = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_GST_MEDIAPLAYER_ELEMENT],
-  [test x$build_gst_mediaplayer_element = xyes])
+  [GGL_BUILD_GST_VIDEO_ELEMENT],
+  [test x$build_gst_video_element = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
@@ -849,7 +849,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/gtkmoz_browser_element/Makefile
 		 extensions/qtwebkit_browser_element/Makefile
 		 extensions/gst_audio_framework/Makefile
-		 extensions/gst_mediaplayer_element/Makefile
+		 extensions/gst_video_element/Makefile
 		 extensions/gtk_system_framework/Makefile
 		 extensions/qt_system_framework/Makefile
 		 extensions/linux_system_framework/Makefile
@@ -923,7 +923,7 @@ Build options:
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
   Build qtwebkit-browser        $build_qtwebkit_browser_element
   Build gst-audio-framework     $build_gst_audio_framework
-  Build gst-mediaplayer-element $build_gst_mediaplayer_element
+  Build gst-video-element       $build_gst_video_element
   Build gtk-system-framework    $build_gtk_system_framework
   Build qt-system-framework     $build_qt_system_framework
   Build linux-system-framework  $build_linux_system_framework

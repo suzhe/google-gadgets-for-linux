@@ -22,7 +22,7 @@ SUBDIRS = dbus_script_class \
 	  qtwebkit_browser_element \
 	  default_framework \
 	  gst_audio_framework \
-	  gst_mediaplayer_element \
+	  gst_video_element \
 	  gtk_system_framework \
 	  qt_system_framework \
 	  linux_system_framework \

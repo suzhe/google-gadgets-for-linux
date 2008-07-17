@@ -81,13 +81,13 @@ gglinclude_HEADERS	= anchor_element.h \
 			  localized_file_manager.h \
 			  logger.h \
 			  main_loop_interface.h \
-			  mediaplayer_element_base.h \
 			  messages.h \
 			  math_utils.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
 			  object_element.h \
+			  object_videoplayer.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
@@ -120,6 +120,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
+			  video_element_base.h \
 			  variant.h \
 			  view.h \
 			  view_element.h \
@@ -175,11 +176,11 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  logger.cc \
 			  main_loop.cc \
 			  math_utils.cc \
-			  mediaplayer_element_base.cc \
 			  memory_options.cc \
 			  messages.cc \
 			  module.cc \
 			  object_element.cc \
+			  object_videoplayer.cc \
 			  options_factory.cc \
 			  progressbar_element.cc \
 			  run_once.cc \
@@ -205,6 +206,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  texture.cc \
 			  unicode_utils.cc \
 			  variant.cc \
+			  video_element_base.cc \
 			  view.cc \
 			  view_element.cc \
 			  xml_dom.cc \

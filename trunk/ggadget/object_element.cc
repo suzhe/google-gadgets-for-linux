@@ -41,8 +41,10 @@ class ObjectElement::Impl {
     } else {
       object_ = view_->GetElementFactory()->CreateElement(
           classid.c_str(), owner_, view_, owner_->GetName().c_str());
-      if (!object_)
+      if (!object_) {
+        LOG("Failed to get the object with classid: %s.", classid.c_str());
         return;
+      }
       classid_ = classid;
     }
   }

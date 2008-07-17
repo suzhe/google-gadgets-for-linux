@@ -13,30 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if GGL_BUILD_GST_MEDIAPLAYER_ELEMENT
+if GGL_BUILD_GST_VIDEO_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 noinst_HEADERS		= gadget_videosink.h \
-			  gst_mediaplayer_element.h
+			  gst_video_element.h
 
-extension_LTLIBRARIES	= gst-mediaplayer-element.la
+extension_LTLIBRARIES	= gst-video-element.la
 extensiondir		= $(GGL_MODULE_DIR)
 
-gst_mediaplayer_element_la_SOURCES = gadget_videosink.cc \
-				     gst_mediaplayer_element.cc
+gst_video_element_la_SOURCES = gadget_videosink.cc \
+			       gst_video_element.cc
 
-gst_mediaplayer_element_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
+gst_video_element_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
 
-gst_mediaplayer_element_la_CPPFLAGS = @GSTREAMER_CFLAGS@ \
-				      $(PREDEFINED_MACROS)
+gst_video_element_la_CPPFLAGS = @GSTREAMER_CFLAGS@ \
+				$(PREDEFINED_MACROS)
 
-gst_mediaplayer_element_la_LIBADD = @GSTREAMER_LIBS@ \
-				    $(GSTVIDEOSINK_LIBRARIES) \
-				    $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+gst_video_element_la_LIBADD = @GSTREAMER_LIBS@ \
+			      $(GSTVIDEOSINK_LIBRARIES) \
+			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-gst_mediaplayer_element_la_LDFLAGS = -avoid-version \
-				     -module
+gst_video_element_la_LDFLAGS = -avoid-version \
+			       -module
 
 endif

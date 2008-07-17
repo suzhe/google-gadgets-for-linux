@@ -14,19 +14,19 @@
 # limitations under the License.
 #
 
-IF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
+IF(GGL_BUILD_GST_VIDEO_ELEMENT)
 
 APPLY_CONFIG(GSTREAMER)
 APPLY_CONFIG(GSTREAMER_PLUGINS_BASE)
 
 SET(SRCS
   gadget_videosink.cc
-  gst_mediaplayer_element.cc
+  gst_video_element.cc
 )
-ADD_MODULE(gst-mediaplayer-element ${SRCS})
-TARGET_LINK_LIBRARIES(gst-mediaplayer-element
-  ${GSTREAMER_MEDIAPLAYER_LIBRARIES} ggadget)
+ADD_MODULE(gst-video-element ${SRCS})
+TARGET_LINK_LIBRARIES(gst-video-element
+  ${GSTREAMER_VIDEO_LIBRARIES} ggadget)
 
-OUTPUT_MODULE(gst-mediaplayer-element)
+OUTPUT_MODULE(gst-video-element)
 
-ENDIF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
+ENDIF(GGL_BUILD_GST_VIDEO_ELEMENT)
