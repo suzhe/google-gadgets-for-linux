@@ -150,26 +150,6 @@ class GadgetVideoSink::ImageBuffer {
     return recycle_flag_;
   }
 
-#ifdef GGL_BIG_ENDIAN
-  void RGB24Convert() {
-    char *row = reinterpret_cast<char*>(GST_BUFFER_DATA(this));
-    for (int yy = 0; yy < height_; yy++) {
-      char *s = row;
-      for (int xx = 0; xx < width_ ; xx++) {
-        // s[3] is alpha.
-        char c = s[3];
-        s[3] = s[0];
-        s[0] = c;
-        c = s[2];
-        s[2] = s[1];
-        s[1] = c;
-        s += 4;
-      }
-      row += bytes_per_line_;
-    }
-  }
-#endif
-
   // Must be the first non-static property.
   GstBuffer buffer_;
   GadgetVideoSink *videosink_;
@@ -518,8 +498,6 @@ gboolean GadgetVideoSink::SetCaps(GstBaseSink *bsink, GstCaps *caps) {
 
   if (GST_VIDEO_SINK_WIDTH(videosink) <= 0 ||
       GST_VIDEO_SINK_HEIGHT(videosink) <= 0) {
-    //GST_ELEMENT_ERROR (videosink, CORE, NEGOTIATION, (NULL),
-    //                   ("Invalid image size."));
     return FALSE;
   }
 
@@ -650,8 +628,8 @@ GstFlowReturn GadgetVideoSink::BufferAlloc(GstBaseSink * bsink,
       src.x = src.y = dst.x = dst.y = 0;
       gst_video_sink_center_rect(src, dst, &result, TRUE);
     } else {
-      GST_LOG_OBJECT (videosink, "trying to resize to window geometry "
-          "ignoring aspect ratio");
+      GST_LOG_OBJECT(videosink, "trying to resize to window geometry "
+                     "ignoring aspect ratio");
       result.x = result.y = 0;
       result.w = dst.w;
       result.h = dst.h;
@@ -913,10 +891,6 @@ gboolean GadgetVideoSink::PutImage(ImageBuffer *image) {
   if (g_slist_find(buffer_pool_, image) || image_queue_->DupImage(image)) {
     return TRUE;
   }
-
-#ifdef GGL_BIG_ENDIAN
-  image->RGB24Convert();
-#endif
 
   GstVideoRectangle dst, src, result;
   src.w = image->width_;

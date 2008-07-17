@@ -118,7 +118,7 @@ bool Power::IsCharging() {
 }
 
 bool Power::IsPluggedIn() {
-  if (!battery_) return true;
+//  if (!battery_) return true;
   if (!ac_adapter_) return false;
 
   DBusBooleanReceiver result;
