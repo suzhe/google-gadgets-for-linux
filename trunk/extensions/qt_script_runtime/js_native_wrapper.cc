@@ -20,16 +20,26 @@
 
 namespace ggadget {
 namespace qt {
-
+static int i = 0;
 JSNativeWrapper::JSNativeWrapper(JSScriptContext *context,
                                  const QScriptValue &qval)
     : context_(context),
       qval_(qval) {
   Ref();
   ASSERT(GetRefCount() == 1);
+
+  object_data_.wrapper = this;
+  QScriptValue data = context->engine()->newQObject(&object_data_);
+
+  qval_.setData(data);
+  LOG("Create Wrapper: %d", ++i);
 }
 
 JSNativeWrapper::~JSNativeWrapper() {
+  LOG("Delete Wrapper: %d", --i);
+  QScriptValue data = qval_.data();
+  ASSERT(data.isQObject());
+  qval_.setData(context_->engine()->undefinedValue());
 }
 
 void JSNativeWrapper::Ref() {
@@ -159,6 +169,17 @@ bool JSNativeWrapper::SetPropertyByIndex(int index, const Variant &value) {
   }
   qval_.setProperty(index, qval);
   return true;
+}
+
+ScriptableInterface *JSNativeWrapper::UnwrapJSObject(const QScriptValue &qval) {
+  QScriptValue data = qval.data();
+  if (data.isQObject()) {
+    JSObjectData *obj_data = static_cast<JSObjectData*>(data.toQObject());
+    LOG("Reuse jsobj wrapper:%p", obj_data->wrapper);
+    return obj_data->wrapper;
+  } else {
+    return NULL;
+  }
 }
 
 } // namespace qt

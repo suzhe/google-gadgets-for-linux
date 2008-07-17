@@ -32,6 +32,7 @@ namespace qt {
 
 extern JSScriptContext *GetEngineContext(QScriptEngine *engine);
 
+static int i = 0;
 JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
                                QScriptEngine *engine,
                                const char *script,
@@ -43,6 +44,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
       script_(QString::fromUtf8(script)),
       file_name_(file_name ? file_name: ""),
       line_no_(lineno) {
+  i++;
+  LOG("New JSFunctionSlot:#%d", i);
 }
 
 JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
@@ -51,10 +54,14 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
       engine_(engine),
       code_(false),
       function_(function) {
+  i++;
+  LOG("New JSFunctionSlot:#%d", i);
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
   DLOG("JSFunctionSlot deleted");
+  i--;
+  LOG("Delete JSFunctionSlot:#%d", i);
 }
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,

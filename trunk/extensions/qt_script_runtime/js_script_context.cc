@@ -140,23 +140,9 @@ class JSScriptContext::Impl {
     script_values_.erase(obj);
   }
 
-  class JSObjectData : public QObject {
-   public:
-    JSObjectData(ScriptableInterface *data) : data_(data) { }
-    ScriptableInterface *data_;
-  };
   ScriptableInterface *WrapJSObject(const QScriptValue& qval) {
-    QScriptValue data = qval.data();
-    if (data.isQObject()) {
-      JSObjectData *obj_data = static_cast<JSObjectData*>(data.toQObject());
-      LOG("Reuse jsobj wrapper:%p", obj_data->data_);
-      return obj_data->data_;
-    }
-    ScriptableInterface *wrapper = new JSNativeWrapper(parent_, qval);
-    data = engine_.newQObject(new JSObjectData(wrapper));
-    QScriptValue newVal(qval);
-    newVal.setData(data);
-    LOG("Wrap JS Object:%p", wrapper);
+    ScriptableInterface *wrapper = JSNativeWrapper::UnwrapJSObject(qval);
+    if (!wrapper)  wrapper = new JSNativeWrapper(parent_, qval);
     return wrapper;
   }
 
@@ -196,10 +182,19 @@ class JSScriptContext::Impl {
   int line_number_;
 };
 
+static int count = 0;
 class SlotCallerWrapper : public QObject {
  public:
   SlotCallerWrapper(ScriptableInterface *object, Slot *slot)
-    : object_(object), slot_(slot) {}
+    : object_(object), slot_(slot) {
+    count++;
+    LOG("SlotCallerWrapper:%d", count);
+  }
+  ~SlotCallerWrapper() {
+    count--;
+    LOG("delete SlotCallerWrapper:%d", count);
+  }
+
   ScriptableInterface *object_;
   Slot *slot_;
 };
@@ -217,8 +212,8 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   ResultVariant res = wrapper->slot_->Call(wrapper->object_,
                                            wrapper->slot_->GetArgCount(), argv);
   if (argv) {
-    /* for (int i = 0; i < context->argumentCount(); i++)
-      FreeNativeValue(argv[i]); */
+    // for (int i = 0; i < context->argumentCount(); i++)
+    //   FreeNativeValue(argv[i]);
     delete [] argv;
   }
   QScriptValue exception;
@@ -282,53 +277,58 @@ void ResolverScriptClass::OnRefChange(int ref_count, int change) {
       impl->RemoveNativeObjectFromJSContext(object_);
     }
     object_ = NULL;
-    //  FIXME: we should delete this but it seems to cause crash
-    //  delete this;
+    // global object will be deleted in JSScriptContext destructor
+    if (!global_) delete this;
   }
 }
+
+enum {
+  PT_NAME,
+  PT_INDEX,
+  PT_GLOBAL
+};
 
 QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
     const QScriptValue &object,
     const QScriptString &property_name,
     QueryFlags flags,
     uint *id) {
+  if (!object_) return 0;
+
   QString name = property_name.toString();
-  std::string sname = name.toStdString();
 
   // Remove me when code is stable
-  bool log = true;
-  if (name.compare("debug", Qt::CaseInsensitive) == 0 ||
-      name.compare("Trace", Qt::CaseInsensitive) == 0)
-    log = false;
-  if (log) DLOG("queryProperty %s", sname.c_str());
   if (name.compare("trap") == 0)
     return HandlesReadAccess|HandlesWriteAccess;
 
+  // if property_name is an index
+  bool ok;
+  name.toLong(&ok, 0);
+  if (ok) {
+    *id = PT_INDEX; // access by index
+    return HandlesReadAccess|HandlesWriteAccess; // Accessed as array
+  }
+
+  std::string sname = name.toStdString();
   if (global_) {
     JSScriptContext::Impl *impl = g_data[engine()]->impl_;
     if (impl->class_constructors_.find(sname) !=
         impl->class_constructors_.end()) {
+      *id = PT_GLOBAL; // access class constructors
       return HandlesReadAccess;
     }
   }
 
-  if (!object_) {
-    LOG("%s not found", sname.c_str());
-    return 0;
-  }
-
+  *id = PT_NAME; // access by name
   ScriptableInterface::PropertyType pt =
       object_->GetPropertyInfo(sname.c_str(), NULL);
-  if (pt == ScriptableInterface::PROPERTY_NOT_EXIST) {
-    bool ok;
-    name.toLong(&ok, 0);
-    if (!ok) {
-      LOG("%s not found", sname.c_str());
-      return 0;  // This property is not maintained by resolver
-    }
-    return HandlesReadAccess|HandlesWriteAccess; // Accessed as array
-  }
-  if (pt == ScriptableInterface::PROPERTY_CONSTANT)
+  if (!CheckException(engine()->currentContext(), object_, NULL))
+    return 0;
+
+  if (pt == ScriptableInterface::PROPERTY_NOT_EXIST)
+    return 0;  // This property is not maintained by resolver
+  if (pt == ScriptableInterface::PROPERTY_CONSTANT ||
+      pt == ScriptableInterface::PROPERTY_METHOD)
     return HandlesReadAccess;
   return HandlesReadAccess|HandlesWriteAccess;
 }
@@ -336,59 +336,43 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
 QScriptValue ResolverScriptClass::property(const QScriptValue & object,
                                            const QScriptString & name,
                                            uint id) {
-  // Remove me when code is stable
-  bool log = true;
-  if (name.toString().compare("debug", Qt::CaseInsensitive) == 0||
-      name.toString().compare("Trace", Qt::CaseInsensitive) == 0)
-    log = false;
   std::string sname = name.toString().toStdString();
-  if (log) DLOG("property %s", sname.c_str());
 
   JSScriptContext::Impl *impl = g_data[engine()]->impl_;
 
-  if (global_) {
-    if (impl->class_constructors_.find(sname) !=
-        impl->class_constructors_.end()) {
-      if (log) DLOG("\tctor");
-      Slot *slot = impl->class_constructors_[sname];
-      QScriptValue value = engine()->newFunction(SlotCaller);
-      QScriptValue data = engine()->newQObject(new SlotCallerWrapper(NULL, slot));
-      value.setData(data);
-      return value;
-    }
+  if (id == PT_GLOBAL) {
+    Slot *slot = impl->class_constructors_[sname];
+    QScriptValue value = engine()->newFunction(SlotCaller);
+    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(NULL, slot),
+                                             QScriptEngine::ScriptOwnership);
+    value.setData(data);
+    return value;
   }
 
-  bool ok;
-  long i = name.toString().toLong(&ok, 0);
   ResultVariant res;
-  if (ok) {
+  if (id == PT_INDEX) {
+    bool ok;
+    long i = name.toString().toLong(&ok, 0);
+    ASSERT(ok);
     res = object_->GetPropertyByIndex(i);
   } else {
+    ASSERT(id == PT_NAME);
     res = object_->GetProperty(sname.c_str());
   }
   QScriptValue exception;
   if (!CheckException(engine()->currentContext(), object_, &exception))
     return exception;
 
-  if (res.v().type() == Variant::TYPE_VOID) {
-    return QScriptValue();
-  } else if (res.v().type() == Variant::TYPE_SLOT) {
+  if (res.v().type() == Variant::TYPE_SLOT) {
     QScriptValue value = engine()->newFunction(SlotCaller);
     Slot *slot = VariantValue<Slot *>()(res.v());
-    if (log) DLOG("\tfun::%p", slot);
-    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(object_, slot));
+    LOG("\tfun::%p", slot);
+    QScriptValue data = engine()->newQObject(new SlotCallerWrapper(object_, slot),
+                                             QScriptEngine::ScriptOwnership);
     value.setData(data);
     return value;
-  } else if (res.v().type() == Variant::TYPE_SCRIPTABLE) {
-    if (log) DLOG("\tscriptable");
-    ScriptableInterface *s = VariantValue<ScriptableInterface*>()(res.v());
-    if (s) {
-      return impl->GetScriptValueOfNativeObject(s);
-    } else {
-      return engine()->nullValue();
-    }
   } else {
-    if (log) DLOG("\tothers:%s", res.v().Print().c_str());
+    DLOG("\tothers:%s", res.v().Print().c_str());
     QScriptValue qval;
     if (!ConvertNativeToJS(engine(), res.v(), &qval))
       return engine()->currentContext()->throwError(
@@ -408,10 +392,11 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
 
   DLOG("setProperty:%s", sname.c_str());
   Variant val;
+  Variant proto;
   bool ok;
   long i = name.toString().toLong(&ok, 0);
   if (ok) {
-    Variant proto(Variant::TYPE_INT64);
+    proto = object_->GetPropertyByIndex(i).v();
     ConvertJSToNative(engine(), proto, value, &val);
     object_->SetPropertyByIndex(i, val);
     DLOG("setPropertyByIndex:%s=%s", sname.c_str(), val.Print().c_str());
