@@ -24,7 +24,7 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 LDADD			= @QT4_LIBS@ \
 			  @QT4SCRIPT_LIBS@ \
-			  ../qt-script-runtime.la \
+			  ../libggadget-qtjs.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \

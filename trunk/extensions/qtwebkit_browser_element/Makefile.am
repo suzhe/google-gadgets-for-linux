@@ -34,12 +34,10 @@ qtwebkit_browser_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qtwebkit_browser_element_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
 			  @QT4WEBKIT_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 qtwebkit_browser_element_la_LIBADD = \
-			  @QT4_LIBS@ \
 			  @QT4WEBKIT_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 			  $(top_builddir)/ggadget/libggadget-qt@GGL_EPOCH@.la

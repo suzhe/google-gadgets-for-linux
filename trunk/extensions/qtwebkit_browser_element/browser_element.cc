@@ -13,8 +13,14 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+#include <QtCore/QtGlobal>
+#if QT_VERSION < 0x040400
 #include <QtWebKit/qwebview.h>
 #include <QtWebKit/qwebpage.h>
+#else
+#include <QtWebKit/QWebView>
+#include <QtWebKit/QWebPage>
+#endif
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
