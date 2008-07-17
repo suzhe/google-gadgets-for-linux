@@ -51,11 +51,18 @@ class JSNativeWrapper : public ScriptableHelperDefault {
   QScriptValue js_object() { return qval_; }
   JSScriptContext *context() { return context_; }
 
+  static ScriptableInterface* UnwrapJSObject(const QScriptValue& qval);
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSNativeWrapper);
 
   JSScriptContext *context_;
   QScriptValue qval_;
+  class JSObjectData : public QObject {
+   public:
+    JSNativeWrapper *wrapper;
+  };
+  JSObjectData object_data_;
 };
 
 } // namespace qt
