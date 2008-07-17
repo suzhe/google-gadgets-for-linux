@@ -446,24 +446,25 @@ fi
 
 # Check qt4
 if test x$ggl_host_type = xlinux; then
-  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3,
-			  QtNetwork >= 4.3],
+  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtOpenGL >= 4.3 QtNetwork >= 4.3],
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
-		     [has_qt4=no])
-
-  PKG_CHECK_MODULES(QT4WEBKIT, [QtWebKit],
+		    [has_qt4=no])
+  PKG_CHECK_MODULES(QT4NETWORK, [QtCore >= 4.3 QtNetwork >= 4.3],
+		    [has_qtnetwork=yes],
+		    [has_qtnetwork=no])
+  PKG_CHECK_MODULES(QT4WEBKIT, [QtGUI >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit >= 4.4],
 		    [has_qtwebkit=yes],
 		    [has_qtwebkit=no])
-
-  PKG_CHECK_MODULES(QT4SCRIPT, [QtScript >= 4.4],
+  PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.3 QtScript >= 4.4],
 		    [has_qtscript=yes],
 		    [has_qtscript=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
-  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL \
-		    QtNetwork/QtNetwork],
+  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL QtNetwork/QtNetwork],
 		   [has_qt4=yes], [has_qt4=no])
+  AC_CHECK_HEADERS([QtNetwork/QtNetwork],
+		   [has_qtnetwork=yes], [has_qtnetwork=no])
   AC_CHECK_HEADERS([QtWebKit/QtWebKit],
 		   [has_qtwebkit=yes], [has_qtwebkit=no])
   # FIXME: Version should be checked. Only 4.4 and above are supported
@@ -472,15 +473,20 @@ elif test x$ggl_host_type = xmacosx; then
   if test x$has_qt4 = xyes; then
     QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
               -framework Carbon -framework AppKit -framework QtCore \
-	      -framework QtNetwork \
+              -framework QtNetwork \
               -framework ApplicationServices -lz -lm"
     AC_PATH_PROG([MOC], [moc])
   fi
-  if test x$has_qtwebkit = xyes; then
-    QT4WEBKIT_LIBS="-$QT4_LIBS -framework QtWebKit"
+  if test x$has_qtnetwork = xyes; then
+    QT4NETWORK_LIBS="-framework QtCore -framework QtNetwork -lz -lm"
   fi
-  if test x$has_qtscript= xyes; then
-    QT4SCRIPT_LIBS="-$QT4_LIBS -framework QtScript"
+  if test x$has_qtwebkit = xyes; then
+    QT4WEBKIT_LIBS="-framework QtGUI -framework Carbon -framework AppKit \
+                    -framework QtCore -framework QtNetwork \
+                    -framework QtWebKit -lz -lm"
+  fi
+  if test x$has_qtscript = xyes; then
+    QT4SCRIPT_LIBS="-framework QtCore -framework QtScript -lz -lm"
   fi
 else
   AC_MSG_WARN([Qt support is not available for $ggl_host_type])
@@ -490,7 +496,9 @@ AC_SUBST(MOC)
 
 # MOC is mandatory to build qt related code.
 if test "x$MOC" = "x"; then
+  AC_MSG_WARN([Can not find moc command, which is mandatory for Qt support])
   has_qt4=no
+  has_qtnetwork=no
   has_qtwebkit=no
   has_qtscript=no
 fi
@@ -507,7 +515,7 @@ PKG_CHECK_MODULES(GTK2,
 
 # Check gstreamer-0.10 related libraries.
 PKG_CHECK_MODULES(GSTREAMER,
-		  [gstreamer-0.10 >= 0.10.0, gstreamer-plugins-base-0.10 >= 0.10.0],
+		  [gstreamer-0.10 >= 0.10.0 gstreamer-plugins-base-0.10 >= 0.10.0],
 		  [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
 if test x$has_gstreamer_plugins_base = xyes; then
   CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
@@ -537,7 +545,7 @@ AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 
 # Check D-Bus library
-PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.2, [has_dbus=yes], [has_dbus=no])
+PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes], [has_dbus=no])
 
 if test x$has_dbus = xyes; then
   CFLAGS="$CFLAGS $DBUS_CFLAGS"
@@ -548,7 +556,7 @@ if test x$has_dbus = xyes; then
 fi
 
 # Check librsvg
-PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
+PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0], [has_rsvg=yes], [has_rsvg=no])
 
 # Check gtkmozembed
 # Check priority:
@@ -655,14 +663,15 @@ if test x$has_qt4 != xyes; then
   build_qt_system_framework=no
   build_qt_xml_http_request=no
   build_qt_script_runtime=no
+  build_qtwebkit_browser_element=no
 fi
 
-if test x$has_qtwebkit != xyes; then
+if test x$has_qtwebkit != xyes -a x$build_qtwebkit_browser_element = xyes; then
   AC_MSG_WARN([Library qtwebkit or qt-4.4 and above is needed to build qtwebkit_browser_element])
   build_qtwebkit_browser_element=no
 fi
 
-if test x$has_qtscript != xyes; then
+if test x$has_qtscript != xyes -a x$build_qt_script_runtime = xyes; then
   AC_MSG_WARN([Library qt-4.4 and above is needed to build qt_script_runtime])
   build_qt_script_runtime=no
 fi

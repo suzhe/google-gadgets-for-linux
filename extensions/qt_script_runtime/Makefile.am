@@ -26,11 +26,9 @@ noinst_HEADERS		= converter.h \
 			  js_native_wrapper.h \
 			  json.h
 
-extension_LTLIBRARIES	= qt-script-runtime.la
-extensiondir		= $(GGL_MODULE_DIR)
+noinst_LTLIBRARIES	= libggadget-qtjs.la
 
-qt_script_runtime_la_SOURCES = \
-			  qt_script_runtime.cc \
+libggadget_qtjs_la_SOURCES = \
 			  converter.cc \
 			  js_function_slot.cc \
 			  js_script_context.cc \
@@ -38,19 +36,35 @@ qt_script_runtime_la_SOURCES = \
 			  js_script_runtime.cc \
 			  json.cc
 
+libggadget_qtjs_la_CXXFLAGS = \
+			  $(DEFAULT_COMPILE_FLAGS)
+
+libggadget_qtjs_la_CPPFLAGS = \
+			  @QT4SCRIPT_CFLAGS@ \
+			  $(PREDEFINED_MACROS)
+
+libggadget_qtjs_la_LIBADD = \
+			  @QT4SCRIPT_LIBS@ \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
+
+extension_LTLIBRARIES	= qt-script-runtime.la
+extensiondir		= $(GGL_MODULE_DIR)
+
+qt_script_runtime_la_SOURCES = \
+			  qt_script_runtime.cc
+
 qt_script_runtime_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_script_runtime_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
+			  @QT4SCRIPT_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 qt_script_runtime_la_LIBADD = \
-			  @QT4_LIBS@ \
 			  @QT4SCRIPT_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
+			  libggadget-qtjs.la
 
 qt_script_runtime_la_LDFLAGS = \
 			  -avoid-version \

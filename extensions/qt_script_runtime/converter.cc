@@ -15,7 +15,7 @@
 */
 
 #include <cmath>
-#include <QtDebug>
+#include <QtCore/QtDebug>
 #include <QtCore/QDateTime>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>

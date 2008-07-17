@@ -34,11 +34,11 @@ qt_xml_http_request_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_xml_http_request_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
+			  @QT4NETWORK_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 qt_xml_http_request_la_LIBADD = \
-			  @QT4_LIBS@ \
+			  @QT4NETWORK_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 qt_xml_http_request_la_LDFLAGS = \
