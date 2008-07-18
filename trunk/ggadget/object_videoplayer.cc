@@ -299,7 +299,7 @@ class ObjectVideoPlayer::Impl {
   }
 
   void OnMediaChange() {
-    ASSERT(impl_->current_media_);
+    ASSERT(current_media_);
     current_media_->duration_ = video_element_->GetDuration();
     current_media_->author_ =
         video_element_->GetTagInfo(VideoElementBase::tagAuthor);
