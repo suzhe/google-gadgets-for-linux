@@ -453,7 +453,7 @@ if test x$ggl_host_type = xlinux; then
   PKG_CHECK_MODULES(QT4NETWORK, [QtCore >= 4.3 QtNetwork >= 4.3],
 		    [has_qtnetwork=yes],
 		    [has_qtnetwork=no])
-  PKG_CHECK_MODULES(QT4WEBKIT, [QtGUI >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit >= 4.4],
+  PKG_CHECK_MODULES(QT4WEBKIT, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit >= 4.4],
 		    [has_qtwebkit=yes],
 		    [has_qtwebkit=no])
   PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.3 QtScript >= 4.4],
@@ -481,7 +481,7 @@ elif test x$ggl_host_type = xmacosx; then
     QT4NETWORK_LIBS="-framework QtCore -framework QtNetwork -lz -lm"
   fi
   if test x$has_qtwebkit = xyes; then
-    QT4WEBKIT_LIBS="-framework QtGUI -framework Carbon -framework AppKit \
+    QT4WEBKIT_LIBS="-framework QtGui -framework Carbon -framework AppKit \
                     -framework QtCore -framework QtNetwork \
                     -framework QtWebKit -lz -lm"
   fi
