@@ -24,7 +24,7 @@
   gadget directory under the resource directory.
 -->
 <plugins>
-  <plugin id="analog_clock" category="tools" thumbnail_url="resource://analog_clock_sm.jpg"
+  <plugin id="analog_clock" category="tools" thumbnail_url="resource://analog_clock_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale="el">Αναλογικό ρολόι</title>
     <description locale="el">Δείτε την ώρα με μια γρήγορη ματιά – παλιά σχολή</description>
@@ -89,7 +89,7 @@
     <title locale="sl">Analogna ura</title>
     <description locale="sl">Bodite vedno na tekočem s časom – tokrat starodobnim</description>
   </plugin>
-  <plugin id="digital_alarm_clock" category="tools" thumbnail_url="resource://digital_alarm_clock_sm.jpg"
+  <plugin id="digital_alarm_clock" category="tools" thumbnail_url="resource://digital_alarm_clock_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale='el'>Παγκόσμιο ξυπνητήρι ηλιοφάνειας</title>
     <description locale='el'>Ένα ξυπνητήρι με χάρτη της γης που εμφανίζει τις περιοχές όπου έχει ξημερώσει.</description>
@@ -156,7 +156,7 @@
     <title locale='sl'>Budilka s prikazovalnikom dnevnega časa po svetu</title>
     <description locale='sl'>Budilka z zemljevidom sveta, ki prikazuje področja, kjer je dan.</description>
   </plugin>
-  <plugin id="email" category="communication" thumbnail_url="resource://email_sm.jpg"
+  <plugin id="email" category="communication" thumbnail_url="resource://email_sm.jpg" rank="1"
     language="bg,ca,cs,da,de,el,en,en-gb,es,fi,fr,hi,hr,hu,id,it,ja,ko,nl,no,pl,pt-br,ro,ru,sk,sl,sv,th,tr,zh-cn,zh-tw">
     <title locale="bg">Ел. поща</title>
     <description locale="bg">Показва последните непрочетени съобщения от ел. поща</description>
@@ -221,7 +221,7 @@
     <title locale="zh-tw">電子郵件</title>
     <description locale="zh-tw">顯示最新的未讀取電子郵件</description>
   </plugin>
-  <plugin id="photos" category="fun_games" thumbnail_url="resource://photos_sm.jpg"
+  <plugin id="photos" category="fun_games" thumbnail_url="resource://photos_sm.jpg" rank="1"
     language="bg,ca,cs,da,de,el,en,en-gb,es,fi,fr,hi,hr,hu,id,it,ja,ko,nl,no,pl,pt-br,ro,ru,sk,sl,sv,th,tr,zh-cn,zh-tw">
     <title locale="bg">Снимки</title>
     <description locale="bg">Снимки от компютъра и Интернет</description>
@@ -286,7 +286,7 @@
     <title locale="zh-tw">相片</title>
     <description locale="zh-tw">來自您電腦和網路的相片</description>
   </plugin>
-  <plugin id="rss" category="tools" thumbnail_url="resource://rss_sm.jpg"
+  <plugin id="rss" category="tools" thumbnail_url="resource://rss_sm.jpg" rank="1"
     language="bg,ca,cs,da,de,el,en,en-gb,es,fi,fr,hi,hr,hu,id,it,ja,ko,nl,no,pl,pt-br,ro,ru,sk,sl,sv,th,tr,zh-cn,zh-tw">
     <title locale="bg">Уеб клипове</title>
     <description locale="bg">Показва статиите от избраните уеб клипове</description>
@@ -351,7 +351,7 @@
     <title locale="zh-tw">網頁剪輯</title>
     <description locale="zh-tw">顯示選取的 web 剪輯中的文章</description>
   </plugin>
-  <plugin id="scratchpad" category="tools" thumbnail_url="resource://scratchpad_sm.jpg"
+  <plugin id="scratchpad" category="tools" thumbnail_url="resource://scratchpad_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale="bg">Записник</title>
     <description locale="bg">Пишете бързи бележки</description>
@@ -416,7 +416,7 @@
     <title locale="zh-tw">便條簿</title>
     <description locale="zh-tw">為自己撰寫速記</description>
   </plugin>
-  <plugin id="todo" category="tools" thumbnail_url="resource://todo_sm.jpg"
+  <plugin id="todo" category="tools" thumbnail_url="resource://todo_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale="bg">Задачи</title>
     <description locale="bg">Управление на списък със задачи.</description>
@@ -482,7 +482,7 @@
     <description locale="zh-tw">管理待辦項目清單</description>
   </plugin>
   <!-- TODO: add weather gadget after we remove all incompatible things.
-    plugin id="weather" category="tools" thumbnail_url="resource://weather_sm.jpg"
+    plugin id="weather" category="tools" thumbnail_url="resource://weather_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale="el">Καιρός</title>
     <description locale="el">Εμφανίζει τον καιρό για επιλεγμένες τοποθεσίες</description>
@@ -547,4 +547,9 @@
     <title locale="sl">Vreme</title>
     <description locale="sl">Prikaz vremenskih informacij za izbrane kraje</description>
   </plugin-->
+  <plugin id="designer" category="tools" thumbnail_url="resource://designer_sm.jpg" rank="1"
+    language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
+    <description locale="en">Gadget designer</description>
+    <title locale="en">Gadget designer</title>
+  </plugin>
 </plugins>

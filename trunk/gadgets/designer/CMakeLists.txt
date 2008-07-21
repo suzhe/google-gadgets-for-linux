@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(designer)
+ADD_MODULE(designer-script-utils designer_script_utils.cc)
+TARGET_LINK_LIBRARIES(designer-script-utils ggadget)
 
-ADD_DIR_TO_ZIP(analog_clock ../output/bin/analog_clock.gg)
-ADD_DIR_TO_ZIP(digital_alarm_clock ../output/bin/digital_alarm_clock.gg)
-ADD_DIR_TO_ZIP(igoogle ../output/bin/igoogle.gg)
-ADD_DIR_TO_ZIP(rss ../output/bin/rss.gg)
+ADD_DIR_TO_ZIP(gadget ../../output/bin/designer.gg)
+ADD_TARGET_TO_ZIP(designer-script-utils ../../output/bin/designer.gg)

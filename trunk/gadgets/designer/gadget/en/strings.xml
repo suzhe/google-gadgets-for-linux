@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2008 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<strings>
+  <GADGET_DESCRIPTION>Gadget designer</GADGET_DESCRIPTION>
+  <GADGET_TITLE>Gadget designer</GADGET_TITLE>
+  <ABOUT_TEXT>Gadget designer</ABOUT_TEXT>
+  <MENU_NEW_GADGET>New Gadget...</MENU_NEW_GADGET>
+  <MENU_OPEN_GADGET>Open Gadget...</MENU_OPEN_GADGET>
+  <MENU_CLOSE_GADGET>Close Gadget</MENU_CLOSE_GADGET>
+  <MENU_SAVE_CURRENT_FILE>Save Current File</MENU_SAVE_CURRENT_FILE>
+  <MENU_EDIT_SOURCE>Edit Source</MENU_EDIT_SOURCE>
+  <MENU_RENAME>Rename</MENU_RENAME>
+  <MENU_MOVE_BACK>Move Back</MENU_MOVE_BACK>
+  <MENU_MOVE_FRONT>Bring Front</MENU_MOVE_FRONT>
+  <MENU_MOVE_BOTTOM>Move to Bottom</MENU_MOVE_BOTTOM>
+  <MENU_MOVE_TOP>Bring to Top</MENU_MOVE_TOP>
+  <MENU_MOVE_UP_LEVEL>Move Up One Level</MENU_MOVE_UP_LEVEL>
+  <MENU_MOVE_DOWN_LEVEL>Move Down One Level</MENU_MOVE_DOWN_LEVEL>
+  <TYPE_ALL_GADGET>All Gadget Files</TYPE_ALL_GADGET>
+  <TYPE_GG>Gadget Package Files</TYPE_GG>
+  <TYPE_GMANIFEST>Gadget Manifest Files</TYPE_GMANIFEST>
+  <TOOL_DIV>Div</TOOL_DIV>
+  <TOOL_IMG>Image</TOOL_IMG>
+  <TOOL_BUTTON>Button</TOOL_BUTTON>
+  <TOOL_EDIT>Edit</TOOL_EDIT>
+  <TOOL_CHECKBOX>Check</TOOL_CHECKBOX>
+  <TOOL_RADIO>Radio</TOOL_RADIO>
+  <TOOL_A>Link</TOOL_A>
+  <TOOL_LABEL>Label</TOOL_LABEL>
+  <TOOL_CONTENTAREA>Content</TOOL_CONTENTAREA>
+  <TOOL_LISTBOX>List</TOOL_LISTBOX>
+  <TOOL_COMBOBOX>Combo</TOOL_COMBOBOX>
+  <TOOL_PROGRESSBAR>Progress</TOOL_PROGRESSBAR>
+  <TOOL_SCROLLBAR>Scroll</TOOL_SCROLLBAR>
+  <PROPERTIES>Properties</PROPERTIES>
+  <EVENTS>Events</EVENTS>
+  <ELEMENTS>Elements</ELEMENTS>
+  <CONFIRM_DISCARD>Your current file has not been saved.&#10;&#10;Discard changes?</CONFIRM_DISCARD>
+  <CONFIRM_CHANGED>The current file has been changed on the file system.&#10;&#10;Do you want to refresh it?</CONFIRM_CHANGED>
+</strings>
