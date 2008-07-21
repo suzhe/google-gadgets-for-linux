@@ -35,6 +35,9 @@ static const char kOnMediaChangeEvent[]  = "MediaChange";
 static const char kOnPlaylistChangeEvent[]  = "PlaylistChange";
 static const char kOnPlayerDockedStateChangeEvent[]  = "PlayerDockedStateChange";
 
+static const int kMaxWmpVolume = 100;
+static const int kMinWmpVolume = 0;
+
 // Definition of wmplayer play state.
 enum wmpState {
   wmpStateUndefined,
@@ -156,7 +159,7 @@ class ObjectVideoPlayer::Impl {
     int previous_, next_;
   };
 
-  Impl(BasicElement *parent, ObjectVideoPlayer *owner, View *view)
+  Impl(ObjectVideoPlayer *owner, View *view)
       : owner_(owner), view_(view),
         current_media_(NULL),
         current_playlist_(NULL) {
@@ -191,10 +194,9 @@ class ObjectVideoPlayer::Impl {
         "autoStart",
         NewSlot(video_element_, &VideoElementBase::GetAutoPlay),
         NewSlot(video_element_, &VideoElementBase::SetAutoPlay));
-    settings_.RegisterProperty(
-        "volume",
-        NewSlot(video_element_, &VideoElementBase::GetVolume),
-        NewSlot(video_element_, &VideoElementBase::SetVolume));
+    settings_.RegisterProperty("volume",
+                               NewSlot(this, &Impl::GetVolume),
+                               NewSlot(this, &Impl::SetVolume));
     settings_.RegisterProperty(
         "balance",
         NewSlot(video_element_, &VideoElementBase::GetBalance),
@@ -212,6 +214,23 @@ class ObjectVideoPlayer::Impl {
       current_media_->Unref();
     if (current_playlist_)
       current_playlist_->Unref();
+  }
+
+  int GetVolume() {
+    double volume = video_element_->GetVolume();
+    return static_cast<int>(((volume - VideoElementBase::kMinVolume) /
+                             (VideoElementBase::kMaxVolume -
+                              VideoElementBase::kMinVolume)) *
+                            (kMaxWmpVolume - kMinWmpVolume));
+  }
+
+  void SetVolume(int volume) {
+    double fvolume = ((((static_cast<double>(volume - kMinWmpVolume)) /
+                        (kMaxWmpVolume - kMinWmpVolume)) *
+                       (VideoElementBase::kMaxVolume -
+                        VideoElementBase::kMinVolume)) +
+                      VideoElementBase::kMinVolume);
+    video_element_->SetVolume(fvolume);
   }
 
   bool IsAvailable(const std::string &name) {
@@ -264,6 +283,21 @@ class ObjectVideoPlayer::Impl {
     Media *next;
     if (current_playlist_ && (next = current_playlist_->GetNextMedia())) {
       SetCurrentMedia(next);
+      if (video_element_->GetAutoPlay())
+        Play();
+    }
+  }
+
+  const char *GetURL() {
+    return video_element_->GetSrc().c_str();
+  }
+
+  void SetURL(const char *url) {
+    if (!url || !*url)
+      return;
+    Media *media = NewMedia(url);
+    if (media) {
+      SetCurrentMedia(media);
       if (video_element_->GetAutoPlay())
         Play();
     }
@@ -449,7 +483,7 @@ ObjectVideoPlayer::ObjectVideoPlayer(BasicElement *parent, View *view,
     return;
   }
 
-  impl_ = new Impl(parent, this, view);
+  impl_ = new Impl(this, view);
   if (!impl_->video_element_)
     return;
 
@@ -493,6 +527,11 @@ void ObjectVideoPlayer::DoRegister() {
 
   RegisterConstant("controls", &impl_->controls_);
   RegisterConstant("settings", &impl_->settings_);
+  RegisterProperty("autoStart",
+                   NewSlot(impl_->video_element_,
+                           &VideoElementBase::GetAutoPlay),
+                   NewSlot(impl_->video_element_,
+                           &VideoElementBase::SetAutoPlay));
   RegisterProperty("currentMedia",
                    NewSlot(impl_, &Impl::GetCurrentMedia),
                    NewSlot(impl_, &Impl::SetCurrentMedia));
@@ -502,6 +541,9 @@ void ObjectVideoPlayer::DoRegister() {
   RegisterProperty("playState",
                    NewSlot(impl_, &Impl::GetState),
                    NULL);
+  RegisterProperty("URL",
+                   NewSlot(impl_, &Impl::GetURL),
+                   NewSlot(impl_, &Impl::SetURL));
 
   RegisterMethod("close", NewSlot(impl_, &Impl::CloseCurrentPlaylist));
   RegisterMethod("newMedia", NewSlot(impl_, &Impl::NewMedia));
@@ -531,7 +573,7 @@ void ObjectVideoPlayer::DoRegister() {
   RegisterProperty("enableErrorDialogs",
                    NewSlot(impl_, &Impl::GetEnableErrorDialogs),
                    NewSlot(impl_, &Impl::SetEnableErrorDialogs));
-  RegisterProperty("uiMode",
+  RegisterProperty("UIMode",
                    NewSlot(impl_, &Impl::GetUIMode),
                    NewSlot(impl_, &Impl::SetUIMode));
 }

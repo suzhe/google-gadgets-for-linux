@@ -250,6 +250,7 @@ void GstVideoElement::Play() {
     else
       LOG("No media source.");
   }
+  QueueDraw();
 }
 
 void GstVideoElement::Pause() {
@@ -372,7 +373,8 @@ double GstVideoElement::GetVolume() {
     g_object_get(G_OBJECT(playbin_), "volume", &volume, NULL);
     int gg_volume = static_cast<int>((volume / kMaxGstVolume) *
                                      (kMaxVolume - kMinVolume) + kMinVolume);
-    return static_cast<double>(Clamp(gg_volume, kMinVolume, kMaxVolume));
+    return static_cast<double>(Clamp(gg_volume, static_cast<int>(kMinVolume),
+                                     static_cast<int>(kMaxVolume)));
   }
   DLOG("Playbin was not initialized correctly.");
   return static_cast<double>(kMinVolume);
@@ -382,9 +384,10 @@ void GstVideoElement::SetVolume(double volume) {
   if (playbin_) {
     int gg_volume = static_cast<int>(volume);
     if (gg_volume < kMinVolume || gg_volume > kMaxVolume) {
-      LOG("Invalid volume value, range: [%d, %d].",
+      LOG("Invalid volume value, range: [%f, %f].",
           kMinVolume, kMaxVolume);
-      gg_volume = Clamp(gg_volume, kMinVolume, kMaxVolume);
+      gg_volume = Clamp(gg_volume, static_cast<int>(kMinVolume),
+                        static_cast<int>(kMaxVolume));
     }
     gdouble gst_volume = ((gdouble(gg_volume - kMinVolume) /
                            (kMaxVolume - kMinVolume)) * kMaxGstVolume);
@@ -414,7 +417,9 @@ double GstVideoElement::GetBalance() {
     int gg_balance = static_cast<int>(((balance + 1) / 2) *
                                       (kMaxBalance - kMinBalance) +
                                       kMinBalance);
-    return static_cast<double>(Clamp(gg_balance, kMinBalance, kMaxBalance));
+    return static_cast<double>(Clamp(gg_balance,
+                                     static_cast<int>(kMinBalance),
+                                     static_cast<int>(kMaxBalance)));
   }
 
   if (!playbin_)
@@ -429,9 +434,10 @@ void GstVideoElement::SetBalance(double balance) {
   if (playbin_ && panorama_) {
     int gg_balance = static_cast<int>(balance);
     if (gg_balance < kMinBalance || gg_balance > kMaxBalance) {
-      LOG("Invalid balance value, range: [%d, %d].",
+      LOG("Invalid balance value, range: [%f, %f].",
           kMinBalance, kMaxBalance);
-      gg_balance = Clamp(gg_balance, kMinBalance, kMaxBalance);
+      gg_balance = Clamp(gg_balance, static_cast<int>(kMinBalance),
+                         static_cast<int>(kMaxBalance));
     }
     gfloat gst_balance = (gfloat(gg_balance - kMinBalance) /
                           (kMaxBalance - kMinBalance)) * 2 - 1;
