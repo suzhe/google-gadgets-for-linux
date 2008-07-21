@@ -60,10 +60,10 @@ class VideoElementBase : public BasicElement {
   };
 
   /** Ranges of balance and volume. */
-  static const double kMinBalance = -10000;
-  static const double kMaxBalance = 10000;
-  static const double kMinVolume = -10000;
-  static const double kMaxVolume = 0;
+  static const int kMinBalance = -10000;
+  static const int kMaxBalance = 10000;
+  static const int kMinVolume = -10000;
+  static const int kMaxVolume = 0;
 
  public:
   VideoElementBase(BasicElement *parent, View *view,
@@ -134,8 +134,8 @@ class VideoElementBase : public BasicElement {
   virtual void SetSrc(const std::string &src) = 0;
 
   /** Gets/sets the volume. */
-  virtual double GetVolume() = 0;
-  virtual void SetVolume(double volume) = 0;
+  virtual int GetVolume() = 0;
+  virtual void SetVolume(int volume) = 0;
 
   /** Sets callbacks. */
   Connection *ConnectOnStateChangeEvent(Slot0<void> *handler);
@@ -145,8 +145,8 @@ class VideoElementBase : public BasicElement {
    */
 
   virtual std::string GetTagInfo(TagType tag) = 0;
-  virtual double GetBalance() = 0;
-  virtual void SetBalance(double balance) = 0;
+  virtual int GetBalance() = 0;
+  virtual void SetBalance(int balance) = 0;
   virtual bool GetMute() = 0;
   virtual void SetMute(bool mute) = 0;
 

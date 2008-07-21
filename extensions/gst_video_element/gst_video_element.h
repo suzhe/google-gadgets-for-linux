@@ -62,12 +62,12 @@ class GstVideoElement: public VideoElementBase {
   virtual std::string GetSrc();
   virtual void SetSrc(const std::string &src);
 
-  virtual double GetVolume();
-  virtual void SetVolume(double volume);
+  virtual int GetVolume();
+  virtual void SetVolume(int volume);
 
   virtual std::string GetTagInfo(TagType tag);
-  virtual double GetBalance();
-  virtual void SetBalance(double balance);
+  virtual int GetBalance();
+  virtual void SetBalance(int balance);
   virtual bool GetMute();
   virtual void SetMute(bool mute);
 

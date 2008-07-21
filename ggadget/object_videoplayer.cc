@@ -217,20 +217,19 @@ class ObjectVideoPlayer::Impl {
   }
 
   int GetVolume() {
-    double volume = video_element_->GetVolume();
-    return static_cast<int>(((volume - VideoElementBase::kMinVolume) /
-                             (VideoElementBase::kMaxVolume -
-                              VideoElementBase::kMinVolume)) *
-                            (kMaxWmpVolume - kMinWmpVolume));
+    int volume = video_element_->GetVolume();
+    double percent =
+        static_cast<double>(volume - VideoElementBase::kMinVolume) /
+        (VideoElementBase::kMaxVolume - VideoElementBase::kMinVolume);
+    return static_cast<int>(percent * (kMaxWmpVolume - kMinWmpVolume));
   }
 
   void SetVolume(int volume) {
-    double fvolume = ((((static_cast<double>(volume - kMinWmpVolume)) /
-                        (kMaxWmpVolume - kMinWmpVolume)) *
-                       (VideoElementBase::kMaxVolume -
-                        VideoElementBase::kMinVolume)) +
-                      VideoElementBase::kMinVolume);
-    video_element_->SetVolume(fvolume);
+    double percent = static_cast<double>(volume - kMinWmpVolume) /
+        (kMaxWmpVolume - kMinWmpVolume);
+    double fvolume = VideoElementBase::kMinVolume +
+        percent * (VideoElementBase::kMaxVolume - VideoElementBase::kMinVolume);
+    video_element_->SetVolume(static_cast<int>(fvolume));
   }
 
   bool IsAvailable(const std::string &name) {
