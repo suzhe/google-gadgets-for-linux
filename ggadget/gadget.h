@@ -34,6 +34,7 @@ class View;
 class Connection;
 class OptionsInterface;
 class DOMDocumentInterface;
+class ScriptableInterface;
 class XMLHttpRequestInterface;
 
 /**
@@ -188,6 +189,19 @@ class Gadget {
    * @return @c true if succeeded.
    */
   bool ShowOptionsDialog();
+
+  /**
+   * Shows an XML view as a modal options dialog.
+   * @param flags combination of @c ViewInterface::OptionsViewFlags values to
+   *     indicate which dialog buttons should be displayed.
+   * @param xml_file the file name within the current gadget.
+   * @param param the param to be registered as a variable named
+   *     "optionsViewData" in the options view script context. It can be used
+   *     to pass parameters and return values to and from the dialog.
+   * @return @c true if OK button is clicked, otherwise @c false.
+   */
+  bool ShowXMLOptionsDialog(int flags, const char *xml_file,
+                            ScriptableInterface *param);
 
   /**
    * Displays a details view containing the specified details control and the

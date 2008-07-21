@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-INCLUDE(Configure)
-
 ADD_DIR_TO_ZIP(analog_clock ../output/bin/analog_clock.gg)
 ADD_DIR_TO_ZIP(digital_alarm_clock ../output/bin/digital_alarm_clock.gg)
 ADD_DIR_TO_ZIP(igoogle ../output/bin/igoogle.gg)

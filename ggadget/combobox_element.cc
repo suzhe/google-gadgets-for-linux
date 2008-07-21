@@ -88,10 +88,11 @@ class ComboBoxElement::Impl {
   void SetDroplistVisible(bool visible) {
     if (listbox_->IsVisible() != visible) {
       if (visible) {
-        listbox_->ScrollToIndex(listbox_->GetSelectedIndex());
+        listbox_->ScrollToSelectedItem();
         listbox_->SetVisible(true);
-        owner_->GetView()->SetPopupElement(owner_);
-      } else {
+        if (!owner_->IsDesignerMode())
+          owner_->GetView()->SetPopupElement(owner_);
+      } else if (!owner_->IsDesignerMode()) {
         // popup_out handler will turn off listbox
         owner_->GetView()->SetPopupElement(NULL);
       }
@@ -149,7 +150,7 @@ class ComboBoxElement::Impl {
     index += count + (down ? 1 : -1);
     index %= count;
     listbox_->SetSelectedIndex(index);
-    listbox_->ScrollToIndex(index);
+    listbox_->ScrollToSelectedItem();
   }
 
   ImageInterface *GetButtonImage() {
@@ -269,14 +270,6 @@ void ComboBoxElement::DoClassRegister() {
                  NewSlot(&ListBoxElement::InsertStringAt, Impl::GetListBox));
   RegisterMethod("removeString",
                  NewSlot(&ListBoxElement::RemoveString, Impl::GetListBox));
-
-  // Disabled
-  RegisterProperty("autoscroll",
-                   NewSlot(&ComboBoxElement::IsAutoscroll),
-                   NewSlot(&ComboBoxElement::SetAutoscroll));
-  RegisterProperty("multiSelect",
-                   NewSlot(&ComboBoxElement::IsMultiSelect),
-                   NewSlot(&ComboBoxElement::SetMultiSelect));
 
   RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
                       &ComboBoxElement::impl_);
@@ -434,22 +427,6 @@ void ComboBoxElement::SetValue(const char *value) {
   }
   // The release notes are wrong here: the value property can be read
   // but not modified in droplist mode.
-}
-
-bool ComboBoxElement::IsAutoscroll() const {
-  return false; // Disabled
-}
-
-void ComboBoxElement::SetAutoscroll(bool autoscroll) {
-  // Disabled
-}
-
-bool ComboBoxElement::IsMultiSelect() const {
-  return false; // Disabled
-}
-
-void ComboBoxElement::SetMultiSelect(bool multiselect) {
-  // Disabled
 }
 
 Variant ComboBoxElement::GetBackground() const {

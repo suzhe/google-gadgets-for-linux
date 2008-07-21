@@ -78,12 +78,6 @@ class ComboBoxElement : public BasicElement {
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
 
-  // Disabled methods.
-  bool IsAutoscroll() const;
-  void SetAutoscroll(bool autoscroll);
-  bool IsMultiSelect() const;
-  void SetMultiSelect(bool multiselect);
-
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);

@@ -24,7 +24,7 @@ function onopen() {
   browser.innerText = detailsViewData.getValue("content");
 
   browser.onGetProperty = function(name) {
-    if (external[name] == undefined) return "\"undefined\"";
+    if (external[name] === undefined) return "\"undefined\"";
     if (typeof external[name] == "function") return "\"function\"";
     return external[name];
   };

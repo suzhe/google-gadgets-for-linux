@@ -146,7 +146,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         options_(CreateOptions(options_name)),
         scriptable_options_(new ScriptableOptions(options_, false)),
         main_view_(NULL),
-        options_view_(NULL),
         details_view_(NULL),
         old_details_view_(NULL),
         base_path_(base_path),
@@ -180,8 +179,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     old_details_view_ = NULL;
     delete details_view_;
     details_view_ = NULL;
-    delete options_view_;
-    options_view_ = NULL;
     delete main_view_;
     main_view_ = NULL;
     delete scriptable_options_;
@@ -673,24 +670,24 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return has_options_xml_ || onshowoptionsdlg_signal_.HasActiveConnections();
   }
 
-  void OptionsDialogCallback(int flag) {
-    if (options_view_) {
+  static void OptionsDialogCallback(int flag, ViewBundle *options_view) {
+    if (options_view) {
       SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
                         Event::EVENT_OK : Event::EVENT_CANCEL);
-      options_view_->view()->OnOtherEvent(event);
+      options_view->view()->OnOtherEvent(event);
     }
   }
 
   bool ShowOptionsDialog() {
     bool ret = false;
-    int flag = ViewInterface::OPTIONS_VIEW_FLAG_OK |
-               ViewInterface::OPTIONS_VIEW_FLAG_CANCEL;
+    int flags = ViewInterface::OPTIONS_VIEW_FLAG_OK |
+                ViewInterface::OPTIONS_VIEW_FLAG_CANCEL;
 
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
-      options_view_ = new ViewBundle(
+      ViewBundle options_view(
           host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, NULL, NULL, false);
-      View *view = options_view_->view();
+      View *view = options_view.view();
       DisplayWindow *window = new DisplayWindow(view);
       Variant result = onshowoptionsdlg_signal_(window);
       if ((result.type() != Variant::TYPE_BOOL ||
@@ -698,42 +695,52 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
           view->SetCaption(main_view_->view()->GetCaption().c_str());
-        ret = view->ShowView(true, flag,
-                             NewSlot(this, &Impl::OptionsDialogCallback));
+        ret = view->ShowView(true, flags,
+                             NewSlot(OptionsDialogCallback, &options_view));
       } else {
         DLOG("gadget cancelled the options dialog.");
       }
       delete window;
-      delete options_view_;
-      options_view_ = NULL;
     } else if (has_options_xml_) {
-      std::string xml;
-      if (file_manager_->ReadFile(kOptionsXML, &xml)) {
-        options_view_ = new ViewBundle(
-            host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
-            owner_, element_factory_, &global_, NULL, true);
-        View *view = options_view_->view();
-        RegisterScriptExtensions(options_view_->context());
-        std::string full_path = file_manager_->GetFullPath(kOptionsXML);
-        if (options_view_->scriptable()->InitFromXML(xml, full_path.c_str())) {
-          // Allow XML options dialog to resize, but not zoom.
-          if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
-            view->SetResizable(ViewInterface::RESIZABLE_FALSE);
-          if (view->GetCaption().empty())
-            view->SetCaption(main_view_->view()->GetCaption().c_str());
-          ret = view->ShowView(true, flag,
-                               NewSlot(this, &Impl::OptionsDialogCallback));
-        } else {
-          LOG("Failed to setup the options view");
-        }
-        delete options_view_;
-        options_view_ = NULL;
-      } else {
-        LOG("Failed to load options.xml file from gadget package.");
-      }
+      ret = ShowXMLOptionsDialog(flags, kOptionsXML, NULL);
     } else {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");
+    }
+    return ret;
+  }
+
+  bool ShowXMLOptionsDialog(int flags, const char *xml_file,
+                            ScriptableInterface *param) {
+    bool ret = false;
+    std::string xml;
+    if (file_manager_->ReadFile(xml_file, &xml)) {
+      ViewBundle options_view(
+          host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
+          owner_, element_factory_, &global_, NULL, true);
+      View *view = options_view.view();
+      RegisterScriptExtensions(options_view.context());
+      std::string full_path = file_manager_->GetFullPath(xml_file);
+      if (options_view.scriptable()->InitFromXML(xml, full_path.c_str())) {
+        // Allow XML options dialog to resize, but not zoom.
+        if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
+          view->SetResizable(ViewInterface::RESIZABLE_FALSE);
+        if (view->GetCaption().empty())
+          view->SetCaption(main_view_->view()->GetCaption().c_str());
+
+        if (param) {
+          // Set up the param variable in the opened options view.
+          options_view.context()->AssignFromNative(NULL, "", "optionsViewData",
+                                                   Variant(param));
+        }
+
+        ret = view->ShowView(true, flags,
+                             NewSlot(OptionsDialogCallback, &options_view));
+      } else {
+        LOG("Failed to setup the XML view: %s", xml_file);
+      }
+    } else {
+      LOG("Failed to load %s file from gadget package.", xml_file);
     }
     return ret;
   }
@@ -926,7 +933,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   ScriptableOptions *scriptable_options_;
 
   ViewBundle *main_view_;
-  ViewBundle *options_view_;
   ViewBundle *details_view_;
   ViewBundle *old_details_view_;
 
@@ -1027,6 +1033,11 @@ bool Gadget::HasOptionsDialog() const {
 
 bool Gadget::ShowOptionsDialog() {
   return impl_->ShowOptionsDialog();
+}
+
+bool Gadget::ShowXMLOptionsDialog(int flags, const char *xml_file,
+                                  ScriptableInterface *param) {
+  return impl_->ShowXMLOptionsDialog(flags, xml_file, param);
 }
 
 bool Gadget::ShowDetailsView(DetailsViewData *details_view_data,

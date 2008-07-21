@@ -902,6 +902,31 @@ TEST(XMLDOM, Others) {
   doc->Unref();
 }
 
+TEST(XMLDOM, TestCommentSerialize) {
+  DOMDocumentInterface *doc = CreateDocument();
+  doc->Ref();
+  UTF16Char src[] = {
+    '-', '-', 'a', '-', '-', '-', 'b', '-', '-', '-', '-',
+    'c', '-', '-', 0
+  };
+  DOMCommentInterface *comment = doc->CreateComment(src);
+  EXPECT_STREQ("--a---b----c--", comment->GetNodeValue());
+  EXPECT_STREQ("--a---b----c--", comment->GetTextContent().c_str());
+  EXPECT_STREQ("<!--- -a- - -b- - - -c- - -->\n",
+               comment->GetXML().c_str());
+}
+
+TEST(XMLDOM, TestCDataSerialize) {
+  DOMDocumentInterface *doc = CreateDocument();
+  doc->Ref();
+  UTF16Char src[] = { ']', ']', '>', '>', ']', ']', ']', '>', 0 };
+  DOMCDATASectionInterface *cdata = doc->CreateCDATASection(src);
+  EXPECT_STREQ("]]>>]]]>", cdata->GetNodeValue());
+  EXPECT_STREQ("]]>>]]]>", cdata->GetTextContent().c_str());
+  EXPECT_STREQ("<![CDATA[]]]]><![CDATA[>>]]]]]><![CDATA[>]]>\n",
+               cdata->GetXML().c_str());
+}
+
 TEST(XMLDOM, TestXMLLoadAndSerialize) {
   const char *xml =
     "<?pi pi=\"pi\"?>\n"

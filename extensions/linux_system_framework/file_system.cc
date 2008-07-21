@@ -31,16 +31,6 @@ namespace ggadget {
 namespace framework {
 namespace linux_system {
 
-
-//******************************
-std::string ToUpper(const std::string &s) {
-  std::string result(s);
-  std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-  return result;
-}
-//******************************
-
-
 // utility function for replace all char1 to char2
 static void ReplaceAll(std::string *str_ptr,
                        const char char1,

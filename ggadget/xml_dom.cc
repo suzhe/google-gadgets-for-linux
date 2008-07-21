@@ -231,13 +231,13 @@ class ElementsByTagName : public DOMNodeListBase {
 static void AppendIndentNewLine(size_t indent, std::string *xml) {
   if (!xml->empty() && *(xml->end() - 1) != '\n')
     xml->append(1, '\n');
-  xml->append(indent, ' ');
+  xml->append(indent * 2, ' ');
 }
 
 // Append indent if the current position is a new line.
 static void AppendIndentIfNewLine(size_t indent, std::string *xml) {
   if (xml->empty() || *(xml->end() - 1) == '\n')
-    xml->append(indent, ' ');
+    xml->append(indent * 2, ' ');
 }
 
 // Interface for DOMNodeImpl callbacks to its node.
@@ -684,6 +684,9 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     // "baseName" is not in W3C standard. Register it to keep compatibility
     // with the Windows DOM.
     RegisterProperty("baseName", NewSlot(&DOMNodeBase::GetLocalName), NULL);
+    // Windows DOM.
+    RegisterProperty("xml", NewSlot(&DOMNodeBase::GetXML), NULL);
+
     RegisterProperty("localName", NewSlot(&DOMNodeBase::GetLocalName), NULL);
     RegisterProperty("nodeName", NewSlot(&DOMNodeBase::GetNodeName), NULL);
     RegisterProperty("nodeValue", NewSlot(&DOMNodeBase::GetNodeValue),
@@ -1558,7 +1561,22 @@ class DOMComment : public DOMCharacterData<DOMCommentInterface> {
     // Omit the indent parameter, let the parent deal with it.
     AppendIndentNewLine(indent, xml);
     xml->append("<!--");
-    xml->append(EncodeXMLString(GetNodeValue()));
+    // Replace all '--'s in the comment into '- -'s.
+    const char *value = GetNodeValue();
+    bool last_dash = false;
+    while (*value) {
+      char c = *value++;
+      if (c == '-') {
+        if (last_dash)
+          xml->append(1, ' ');
+        last_dash = true;
+      } else {
+        last_dash = false;
+      }
+      xml->append(1, c);
+    }
+    if (last_dash)
+      xml->append(1, ' ');
     xml->append("-->\n");
   }
 
@@ -1586,11 +1604,23 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
   }
 
   virtual void AppendXML(size_t indent, std::string *xml) {
-    // Omit the indent parameter, let the parent deal with it.
     AppendIndentNewLine(indent, xml);
-    xml->append("<![CDATA[");
-    xml->append(GetNodeValue());
-    xml->append("]]>\n");
+    const char *value = GetNodeValue();
+    while (true) {
+      const char *pos = strstr(value, "]]>");
+      if (pos) {
+        xml->append("<![CDATA[");
+        // Output until "]]" and leave ">" to the next section.
+        xml->append(value, pos - value + 2);
+        xml->append("]]>");
+        value = pos + 2;
+      } else {
+        xml->append("<![CDATA[");
+        xml->append(value);
+        xml->append("]]>\n");
+        break;
+      }
+    }
   }
 
  protected:

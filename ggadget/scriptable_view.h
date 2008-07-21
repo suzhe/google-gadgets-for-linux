@@ -63,6 +63,8 @@ class ScriptableView : public ScriptableHelperNativeOwnedDefault {
    */
   bool InitFromXML(const std::string &xml, const char *filename);
 
+  View *view();
+
  protected:
   virtual void DoRegister();
 
