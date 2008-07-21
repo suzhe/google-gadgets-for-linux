@@ -25,11 +25,6 @@
 #include "js_script_runtime.h"
 #include "converter.h"
 
-#if 1
-#undef DLOG
-#define DLOG  true ? (void) 0 : LOG
-#endif
-
 namespace ggadget {
 namespace qt {
 
@@ -63,7 +58,6 @@ static bool CheckException(QScriptContext *ctx, ScriptableInterface *object,
   if (!exception) return true;
 
   QScriptValue qt_exception;
-  qt_exception = QScriptValue(ctx->engine(), "Error...");
   if (!ConvertNativeToJS(ctx->engine(), Variant(exception), &qt_exception)) {
     qt_exception =
         ctx->throwError("Failed to convert native exception to QScriptValue");
@@ -74,7 +68,7 @@ static bool CheckException(QScriptContext *ctx, ScriptableInterface *object,
   return false;
 }
 
-class ResolverScriptClass : public QScriptClass {
+class ResolverScriptClass : public QScriptClass, public QObject {
  public:
   ResolverScriptClass(QScriptEngine *engine, ScriptableInterface *object,
                       bool global);
@@ -95,7 +89,9 @@ class ResolverScriptClass : public QScriptClass {
   ScriptableInterface *object_;
   Slot *call_slot_;
   bool global_;
+  bool js_own_;
   Connection *on_reference_change_connection_;
+  QScriptValue script_value_;
   void OnRefChange(int, int);
 };
 
@@ -122,9 +118,13 @@ class JSScriptContext::Impl {
     return true;
   }
 
-  ResolverScriptClass *GetScriptClass(ScriptableInterface *obj) {
+  ResolverScriptClass *GetScriptClass(ScriptableInterface *obj,
+                                      bool create_script_value_if_not_exist) {
     if (script_classes_.find(obj) == script_classes_.end()) {
-      script_classes_[obj] = new ResolverScriptClass(&engine_, obj, false);
+      ResolverScriptClass *cls = new ResolverScriptClass(&engine_, obj, false);
+      script_classes_[obj] = cls;
+      if (create_script_value_if_not_exist)
+        cls->script_value_ = engine_.newObject(cls);
     }
     return script_classes_[obj];
   }
@@ -136,8 +136,6 @@ class JSScriptContext::Impl {
     DLOG("RemoveNativeObjectFromJSContext: %p", obj);
     ASSERT(script_classes_.find(obj) != script_classes_.end());
     script_classes_.erase(obj);
-    ASSERT(script_values_.find(obj) != script_values_.end());
-    script_values_.erase(obj);
   }
 
   ScriptableInterface *WrapJSObject(const QScriptValue& qval) {
@@ -153,28 +151,20 @@ class JSScriptContext::Impl {
   QScriptValue GetScriptValueOfNativeObject(ScriptableInterface *obj) {
     if (obj->IsInstanceOf(JSNativeWrapper::CLASS_ID)) {
       JSNativeWrapper *wrapper = static_cast<JSNativeWrapper*>(obj);
+      // if it's just the wrapper of js object from this runtime, return the
+      // wrappered object
       if (wrapper->context() == parent_)
         return wrapper->js_object();
     }
 
-    if (script_values_.find(obj) == script_values_.end()) {
-      ResolverScriptClass *resolver = GetScriptClass(obj);
-      script_values_[obj] = engine_.newObject(resolver);
-    }
-    return script_values_[obj];
-  }
-
-  void SetScriptValueOfNativeObject(ScriptableInterface *obj,
-                                    const QScriptValue& qval) {
-    ASSERT(script_values_.find(obj) == script_values_.end());
-    script_values_[obj] = qval;
+    ResolverScriptClass *resolver = GetScriptClass(obj, true);
+    return resolver->script_value_;
   }
 
   QScriptEngine engine_;
   JSScriptContext *parent_;
   std::map<std::string, Slot*> class_constructors_;
   std::map<ScriptableInterface*, ResolverScriptClass*> script_classes_;
-  std::map<ScriptableInterface*, QScriptValue> script_values_;
   Signal1<void, const char *> error_reporter_signal_;
   Signal2<bool, const char *, int> script_blocked_signal_;
   ResolverScriptClass *resolver_;
@@ -182,18 +172,24 @@ class JSScriptContext::Impl {
   int line_number_;
 };
 
-static int count = 0;
+#ifdef _DEBUG
+static int scw_count = 0;
+#endif
 class SlotCallerWrapper : public QObject {
  public:
   SlotCallerWrapper(ScriptableInterface *object, Slot *slot)
     : object_(object), slot_(slot) {
-    count++;
-    LOG("SlotCallerWrapper:%d", count);
+#ifdef _DEBUG
+    scw_count++;
+    DLOG("SlotCallerWrapper:%d", scw_count);
+#endif
   }
+#ifdef _DEBUG
   ~SlotCallerWrapper() {
-    count--;
-    LOG("delete SlotCallerWrapper:%d", count);
+    scw_count--;
+    DLOG("delete SlotCallerWrapper:%d", scw_count);
   }
+#endif
 
   ScriptableInterface *object_;
   Slot *slot_;
@@ -211,11 +207,8 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
 
   ResultVariant res = wrapper->slot_->Call(wrapper->object_,
                                            wrapper->slot_->GetArgCount(), argv);
-  if (argv) {
-    // for (int i = 0; i < context->argumentCount(); i++)
-    //   FreeNativeValue(argv[i]);
-    delete [] argv;
-  }
+  delete [] argv;
+
   QScriptValue exception;
   if (!CheckException(context, wrapper->object_, &exception))
     return exception;
@@ -225,9 +218,9 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
     ScriptableInterface *scriptable =
         VariantValue<ScriptableInterface *>()(res.v());
     if (scriptable) {
-      ResolverScriptClass *resolver = impl->GetScriptClass(scriptable);
+      ResolverScriptClass *resolver = impl->GetScriptClass(scriptable, false);
       context->thisObject().setScriptClass(resolver);
-      impl->SetScriptValueOfNativeObject(scriptable, context->thisObject());
+      resolver->script_value_ = context->thisObject();
     }
     return engine->undefinedValue();
   } else {
@@ -244,11 +237,14 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   }
 }
 
+#ifdef _DEBUG
+static int sc_count = 0;
+#endif
 ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
                                          ScriptableInterface *object,
                                          bool global)
-    : QScriptClass(engine), object_(object), call_slot_(NULL), global_(global),
-      on_reference_change_connection_(NULL) {
+    : QScriptClass(engine), object_(object), call_slot_(NULL),
+      global_(global), js_own_(false), on_reference_change_connection_(NULL) {
   ASSERT(object);
   object->Ref();
   on_reference_change_connection_ = object->ConnectOnReferenceChange(
@@ -258,6 +254,10 @@ ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
     ResultVariant p = object->GetProperty("");
     call_slot_ = VariantValue<Slot*>()(p.v());
   }
+#ifdef _DEBUG
+  sc_count++;
+  LOG("new ResolverScriptClass:%d, %p", sc_count, this);
+#endif
 }
 
 ResolverScriptClass::~ResolverScriptClass() {
@@ -265,6 +265,10 @@ ResolverScriptClass::~ResolverScriptClass() {
     on_reference_change_connection_->Disconnect();
     object_->Unref();
   }
+#ifdef _DEBUG
+  sc_count--;
+  LOG("delete ResolverScriptClass:%d, %p", sc_count, this);
+#endif
 }
 
 void ResolverScriptClass::OnRefChange(int ref_count, int change) {
@@ -273,12 +277,26 @@ void ResolverScriptClass::OnRefChange(int ref_count, int change) {
     on_reference_change_connection_->Disconnect();
     object_->Unref(true);
     JSScriptContext::Impl *impl = GetEngineContext(engine())->impl_;
-    if (!global_) {
+    if (!global_ && !js_own_) {
       impl->RemoveNativeObjectFromJSContext(object_);
     }
     object_ = NULL;
     // global object will be deleted in JSScriptContext destructor
     if (!global_) delete this;
+  } else if (ref_count == 2 && change == -1 && !global_ && !js_own_) {
+    // Now c++ don't have reference on this object, let JS own it all
+    //
+    // Note: the object itself may increase ref_count to guarntee it will no be
+    // GCed. This happens in XMLHttpRequest objects when send method is invoked
+    // in async mode. So we use js_own_ to make sure the following code only
+    // execute once for each ResolverScriptClass.
+    script_value_.setData(engine()->newQObject(this, QScriptEngine::ScriptOwnership));
+    // Remove the reference to QScriptValue so it can be GC'ed.
+    // FIXME: Removing this ref means we lose it for ever from c++ side.
+    script_value_ = QScriptValue();
+    JSScriptContext::Impl *impl = GetEngineContext(engine())->impl_;
+    impl->RemoveNativeObjectFromJSContext(object_);
+    js_own_ = true;
   }
 }
 
@@ -430,6 +448,7 @@ QVariant ResolverScriptClass::extension(Extension extension,
     return QVariant();
 
   ResultVariant res = call_slot_->Call(object_, call_slot_->GetArgCount(), argv);
+  delete [] argv;
   if (!CheckException(context, object_, NULL))
     return QVariant();
 
@@ -444,7 +463,9 @@ JSScriptContext::JSScriptContext() : impl_(new Impl(this)){
 }
 
 JSScriptContext::~JSScriptContext() {
+  QScriptEngine *engine = &impl_->engine_;
   delete impl_;
+  g_data.erase(engine);
 }
 
 void JSScriptContext::Destroy() {
