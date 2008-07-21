@@ -283,6 +283,10 @@ bool ScriptableView::InitFromXML(const std::string &xml, const char *filename) {
   return impl_->InitFromXML(xml, filename);
 }
 
+View *ScriptableView::view() {
+  return impl_->view_;
+}
+
 void ScriptableView::DoRegister() {
   impl_->DoRegister();
 }

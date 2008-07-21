@@ -76,7 +76,8 @@ class BasicElement::Impl {
         cache_(NULL),
         cache_enabled_(false),
         content_changed_(false),
-        draw_queued_(false) {
+        draw_queued_(false),
+        designer_mode_(false) {
     if (parent)
       ASSERT(parent->GetView() == view);
   }
@@ -1025,6 +1026,7 @@ class BasicElement::Impl {
   bool cache_enabled_;
   bool content_changed_;
   bool draw_queued_;
+  bool designer_mode_;
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
@@ -1903,6 +1905,14 @@ bool BasicElement::HasOpaqueBackground() const {
 
 void BasicElement::PostSizeEvent() {
   impl_->PostSizeEvent();
+}
+
+void BasicElement::SetDesignerMode(bool designer_mode) {
+  impl_->designer_mode_ = true;
+}
+
+bool BasicElement::IsDesignerMode() const {
+  return impl_->designer_mode_;
 }
 
 Connection *BasicElement::ConnectOnClickEvent(Slot0<void> *handler) {

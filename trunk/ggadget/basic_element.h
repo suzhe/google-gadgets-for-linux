@@ -658,6 +658,10 @@ public: // Other overridable public methods.
                                     double pixel, double relative);
 
  public:
+  bool IsDesignerMode() const;
+  void SetDesignerMode(bool designer_mode);
+
+ public:
   // Event handler connection methods.
   Connection *ConnectOnClickEvent(Slot0<void> *handler);
   Connection *ConnectOnDblClickEvent(Slot0<void> *handler);

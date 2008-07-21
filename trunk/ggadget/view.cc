@@ -968,11 +968,6 @@ class View::Impl {
 #endif
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
-    if (!view_host_) return false;
-    if (on_add_context_menu_items_signal_.HasActiveConnections() &&
-        !on_add_context_menu_items_signal_(menu))
-      return false;
-
     bool result = true;
     if (mouseover_element_.Get()) {
       if (mouseover_element_.Get()->IsReallyEnabled())
@@ -980,11 +975,17 @@ class View::Impl {
       else
         mouseover_element_.Reset(NULL);
     }
+    if (!result)
+      return false;
+
+    if (on_add_context_menu_items_signal_.HasActiveConnections() &&
+        !on_add_context_menu_items_signal_(menu))
+      return false;
 
     // If the view is main and the mouse over element doesn't have special menu
     // items, then add gadget's menu items.
-    if (result && gadget_ &&
-        view_host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN)
+    if (!view_host_) return false;
+    if (gadget_ && view_host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN)
       gadget_->OnAddCustomMenuItems(menu);
 
     return result;

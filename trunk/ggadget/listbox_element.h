@@ -38,7 +38,7 @@ class ListBoxElement : public DivElement {
  public:
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
-  void ScrollToIndex(int index);
+  void ScrollToSelectedItem();
 
   //void FireOnChangeEvent();
 

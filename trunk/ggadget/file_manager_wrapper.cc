@@ -44,11 +44,10 @@ class FileManagerWrapper::Impl {
   bool RegisterFileManager(const char *prefix, FileManagerInterface *fm) {
     // The default FileManager
     if (!prefix || !*prefix) {
-      if (!fm) {
-        LOG("A NULL FileManager is specified, the default "
-            "FileManager instance will be removed.");
+      if (default_) {
+        LOG("Default file manager must be unregistered before replaced.");
+        return false;
       }
-      delete default_;
       default_ = fm;
       return true;
     }
@@ -61,6 +60,30 @@ class FileManagerWrapper::Impl {
 
     file_managers_.push_back(std::make_pair(std::string(prefix), fm));
     return true;
+  }
+
+  bool UnregisterFileManager(const char *prefix,
+                             FileManagerInterface *fm) {
+    // The default FileManager
+    if (!prefix || !*prefix) {
+      if (fm == default_) {
+        default_ = NULL;
+        return true;
+      }
+      LOG("UnregisterFileManager: Default file manager mismatch.");
+      return false;
+    }
+
+    for (FileManagerPrefixMap::iterator it = file_managers_.begin();
+         it != file_managers_.end(); ++it) {
+      if (it->first == prefix && it->second == fm) {
+        file_managers_.erase(it);
+        return true;
+      }
+    }
+
+    LOG("UnregisterFileManager: File manager not found.");
+    return false;
   }
 
   bool IsValid() {
@@ -322,6 +345,11 @@ FileManagerWrapper::~FileManagerWrapper() {
 bool FileManagerWrapper::RegisterFileManager(const char *prefix,
                                              FileManagerInterface *fm) {
   return impl_->RegisterFileManager(prefix, fm);
+}
+
+bool FileManagerWrapper::UnregisterFileManager(const char *prefix,
+                                               FileManagerInterface *fm) {
+  return impl_->UnregisterFileManager(prefix, fm);
 }
 
 bool FileManagerWrapper::IsValid() {

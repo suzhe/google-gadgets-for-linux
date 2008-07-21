@@ -48,6 +48,12 @@ class FileManagerWrapper : public FileManagerInterface {
    */
   bool RegisterFileManager(const char *prefix, FileManagerInterface *fm);
 
+  /**
+   * Unregisters a registered file manager.
+   * The unregistered file manager will not be deleted.
+   */
+  bool UnregisterFileManager(const char *prefix, FileManagerInterface *fm);
+
   virtual bool IsValid();
   /**
    * Initialize the default FileManager instance, if available.

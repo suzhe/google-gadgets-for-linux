@@ -50,7 +50,8 @@ class ListBoxElement::Impl {
     selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
     item_selected_color_(new Texture(kDefaultItemSelectedColor, 1.0)),
-    item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)) {
+    item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)),
+    pending_scroll_(0) {
   }
 
   ~Impl() {
@@ -177,6 +178,40 @@ class ListBoxElement::Impl {
     return NULL;
   }
 
+  // Update scroll to show the currently selected item. Item rotation will
+  // be ignored.
+  bool HandlePendingScroll() {
+    int scroll_position = owner_->GetScrollYPosition();
+    int selected_index = owner_->GetSelectedIndex();
+    double item_height = owner_->GetItemPixelHeight();
+    switch (pending_scroll_) {
+      case 1:
+        scroll_position = static_cast<int>(selected_index * item_height);
+        break;
+      case 2: {
+        double top = selected_index * item_height;
+        if (top < scroll_position) {
+          scroll_position = static_cast<int>(top);
+        } else {
+          double bottom = top + item_height;
+          double height = owner_->GetClientHeight();
+          if (bottom > scroll_position + height)
+            scroll_position = static_cast<int>(bottom - height);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+
+    pending_scroll_ = 0;
+    if (scroll_position != owner_->GetScrollYPosition()) {
+      owner_->SetScrollYPosition(scroll_position);
+      return true;
+    }
+    return false;
+  }
+
   ListBoxElement *owner_;
   double item_width_, item_height_;
   bool item_width_specified_, item_height_specified_;
@@ -187,6 +222,15 @@ class ListBoxElement::Impl {
   int selected_index_;
   Texture *item_over_color_, *item_selected_color_, *item_separator_color_;
   EventSignal onchange_event_;
+
+  // 0: no pending scroll;
+  // 1: scroll the selected item to top;
+  // 2: minimal scroll to make the selected item into view. 
+  // The actual scrolling action will be taken in Layout(). This is important
+  // for correct scrolling if some items are added and then SetSelectedItem(),
+  // SetSelectedIndex() or ScrollToSelectedItem() is called.
+  // called.
+  int pending_scroll_;
 };
 
 ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
@@ -246,8 +290,9 @@ ListBoxElement::~ListBoxElement() {
   impl_ = NULL;
 }
 
-void ListBoxElement::ScrollToIndex(int index) {
-  SetScrollYPosition(index * static_cast<int>(GetItemPixelHeight()));
+void ListBoxElement::ScrollToSelectedItem() {
+  impl_->pending_scroll_ = 1;
+  QueueDraw();
 }
 
 Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
@@ -469,7 +514,10 @@ int ListBoxElement::GetSelectedIndex() const {
 void ListBoxElement::SetSelectedIndex(int index) {
   BasicElement *item = GetChildren()->GetItemByIndex(index);
   if (!item) {
-    if (impl_->selected_index_ == -2) { // Mark selection as pending.
+    // Only occurs when initializing from XML, selectedIndex is set before
+    // items are added.
+    if (impl_->selected_index_ == -2) {
+      // Mark selection as pending.
       impl_->selected_index_ = index;
     }
     return;
@@ -494,6 +542,8 @@ void ListBoxElement::SetSelectedItem(ItemElement *item) {
   bool changed = impl_->ClearSelection(item);
   if (item && !item->IsSelected()) {
     item->SetSelected(true);
+    impl_->pending_scroll_ = 2;
+    QueueDraw();
     changed = true;
   }
 
@@ -642,6 +692,11 @@ void ListBoxElement::Layout() {
 
   // Call parent Layout() after SetIndex().
   DivElement::Layout();
+
+  if (impl_->HandlePendingScroll()) {
+    // Call Layout() again to let the scrollbar layout.
+    DivElement::Layout();
+  }
 
   // Set appropriate scrolling step distance.
   double item_height = GetItemPixelHeight();
