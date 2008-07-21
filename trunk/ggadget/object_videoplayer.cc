@@ -540,7 +540,7 @@ void ObjectVideoPlayer::DoRegister() {
   RegisterProperty("playState",
                    NewSlot(impl_, &Impl::GetState),
                    NULL);
-  RegisterProperty("URL",
+  RegisterProperty("url",
                    NewSlot(impl_, &Impl::GetURL),
                    NewSlot(impl_, &Impl::SetURL));
 
@@ -572,7 +572,7 @@ void ObjectVideoPlayer::DoRegister() {
   RegisterProperty("enableErrorDialogs",
                    NewSlot(impl_, &Impl::GetEnableErrorDialogs),
                    NewSlot(impl_, &Impl::SetEnableErrorDialogs));
-  RegisterProperty("UIMode",
+  RegisterProperty("uiMode",
                    NewSlot(impl_, &Impl::GetUIMode),
                    NewSlot(impl_, &Impl::SetUIMode));
 }
