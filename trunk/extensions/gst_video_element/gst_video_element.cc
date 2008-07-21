@@ -366,31 +366,27 @@ void GstVideoElement::SetSrc(const std::string &src) {
   }
 }
 
-double GstVideoElement::GetVolume() {
+int GstVideoElement::GetVolume() {
   if (playbin_) {
     double volume;
     g_object_get(G_OBJECT(playbin_), "volume", &volume, NULL);
     int gg_volume = static_cast<int>((volume / kMaxGstVolume) *
                                      (kMaxVolume - kMinVolume) + kMinVolume);
-    return static_cast<double>(Clamp(gg_volume, static_cast<int>(kMinVolume),
-                                     static_cast<int>(kMaxVolume)));
+    return Clamp(gg_volume, kMinVolume, kMaxVolume);
   }
   DLOG("Playbin was not initialized correctly.");
-  return static_cast<double>(kMinVolume);
+  return kMinVolume;
 }
 
-void GstVideoElement::SetVolume(double volume) {
+void GstVideoElement::SetVolume(int volume) {
   if (playbin_) {
-    int gg_volume = static_cast<int>(volume);
-    if (gg_volume < kMinVolume || gg_volume > kMaxVolume) {
-      LOG("Invalid volume value, range: [%f, %f].",
-          kMinVolume, kMaxVolume);
-      gg_volume = Clamp(gg_volume, static_cast<int>(kMinVolume),
-                        static_cast<int>(kMaxVolume));
+    if (volume < kMinVolume || volume > kMaxVolume) {
+      LOG("Invalid volume value, range: [%d, %d].", kMinVolume, kMaxVolume);
+      volume = Clamp(volume, kMinVolume, kMaxVolume);
     }
-    gdouble gst_volume = ((gdouble(gg_volume - kMinVolume) /
-                           (kMaxVolume - kMinVolume)) * kMaxGstVolume);
-    g_object_set(G_OBJECT(playbin_), "volume", gst_volume, NULL);
+    gdouble gg_volume = ((gdouble(volume - kMinVolume) /
+                          (kMaxVolume - kMinVolume)) * kMaxGstVolume);
+    g_object_set(G_OBJECT(playbin_), "volume", gg_volume, NULL);
   } else {
     DLOG("Playbin was not initialized correctly.");
   }
@@ -409,16 +405,14 @@ std::string GstVideoElement::GetTagInfo(TagType tag) {
   }
 }
 
-double GstVideoElement::GetBalance() {
+int GstVideoElement::GetBalance() {
   if (playbin_ && panorama_) {
     gfloat balance;
     g_object_get(G_OBJECT(panorama_), "panorama", &balance, NULL);
     int gg_balance = static_cast<int>(((balance + 1) / 2) *
                                       (kMaxBalance - kMinBalance) +
                                       kMinBalance);
-    return static_cast<double>(Clamp(gg_balance,
-                                     static_cast<int>(kMinBalance),
-                                     static_cast<int>(kMaxBalance)));
+    return Clamp(gg_balance, kMinBalance, kMaxBalance);
   }
 
   if (!playbin_)
@@ -426,21 +420,18 @@ double GstVideoElement::GetBalance() {
   else
     DLOG("Balance is not supported.");
 
-  return static_cast<double>((kMaxBalance + kMinBalance) / 2);
+  return (kMaxBalance + kMinBalance) / 2;
 }
 
-void GstVideoElement::SetBalance(double balance) {
+void GstVideoElement::SetBalance(int balance) {
   if (playbin_ && panorama_) {
-    int gg_balance = static_cast<int>(balance);
-    if (gg_balance < kMinBalance || gg_balance > kMaxBalance) {
-      LOG("Invalid balance value, range: [%f, %f].",
-          kMinBalance, kMaxBalance);
-      gg_balance = Clamp(gg_balance, static_cast<int>(kMinBalance),
-                         static_cast<int>(kMaxBalance));
+    if (balance < kMinBalance || balance > kMaxBalance) {
+      LOG("Invalid balance value, range: [%d, %d].", kMinBalance, kMaxBalance);
+      balance = Clamp(balance, kMinBalance, kMaxBalance);
     }
-    gfloat gst_balance = (gfloat(gg_balance - kMinBalance) /
+    gfloat gg_balance = (gfloat(balance - kMinBalance) /
                           (kMaxBalance - kMinBalance)) * 2 - 1;
-    g_object_set(G_OBJECT(panorama_), "panorama", gst_balance, NULL);
+    g_object_set(G_OBJECT(panorama_), "panorama", gg_balance, NULL);
   } else {
     if (!playbin_)
       DLOG("Playbin was not initialized correctly.");
