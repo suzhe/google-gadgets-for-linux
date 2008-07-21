@@ -250,7 +250,6 @@ void GstVideoElement::Play() {
     else
       LOG("No media source.");
   }
-  QueueDraw();
 }
 
 void GstVideoElement::Pause() {
