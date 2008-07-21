@@ -446,22 +446,22 @@ fi
 
 # Check qt4
 if test x$ggl_host_type = xlinux; then
-  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtOpenGL >= 4.3 QtNetwork >= 4.3],
+  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3],
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
 		    [has_qt4=no])
   PKG_CHECK_MODULES(QT4NETWORK, [QtCore >= 4.3 QtNetwork >= 4.3],
 		    [has_qtnetwork=yes],
 		    [has_qtnetwork=no])
-  PKG_CHECK_MODULES(QT4WEBKIT, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit >= 4.4],
+  PKG_CHECK_MODULES(QT4WEBKIT, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit],
 		    [has_qtwebkit=yes],
 		    [has_qtwebkit=no])
-  PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.3 QtScript >= 4.4],
+  PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.4 QtScript >= 4.4],
 		    [has_qtscript=yes],
 		    [has_qtscript=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
-  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL QtNetwork/QtNetwork],
+  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtNetwork/QtNetwork],
 		   [has_qt4=yes], [has_qt4=no])
   AC_CHECK_HEADERS([QtNetwork/QtNetwork],
 		   [has_qtnetwork=yes], [has_qtnetwork=no])
@@ -471,7 +471,7 @@ elif test x$ggl_host_type = xmacosx; then
   AC_CHECK_HEADERS([QtScript/QtScript],
 		   [has_qtscript=yes], [has_qtscript=no])
   if test x$has_qt4 = xyes; then
-    QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
+    QT4_LIBS="-framework QtGui \
               -framework Carbon -framework AppKit -framework QtCore \
               -framework QtNetwork \
               -framework ApplicationServices -lz -lm"
