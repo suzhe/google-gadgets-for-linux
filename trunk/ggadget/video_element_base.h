@@ -60,10 +60,10 @@ class VideoElementBase : public BasicElement {
   };
 
   /** Ranges of balance and volume. */
-  static const int  kMinBalance = -10000;
-  static const int  kMaxBalance = 10000;
-  static const int  kMinVolume = -10000;
-  static const int  kMaxVolume = 0;
+  static const double kMinBalance = -10000;
+  static const double kMaxBalance = 10000;
+  static const double kMinVolume = -10000;
+  static const double kMaxVolume = 0;
 
  public:
   VideoElementBase(BasicElement *parent, View *view,
