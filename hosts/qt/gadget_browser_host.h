@@ -38,9 +38,6 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
-  virtual bool OpenURL(const char *url) const {
-    return owner_->OpenURL(url);
-  }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }

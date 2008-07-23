@@ -62,9 +62,6 @@ std::string ShowPromptDialog(const char *title, const char *message,
  */
 void ShowGadgetAboutDialog(Gadget *gadget);
 
-/** Open the given URL in the user's default web browser. */
-bool OpenURL(const char *url);
-
 /** Load a given font into the application. */
 bool LoadFont(const char *filename);
 

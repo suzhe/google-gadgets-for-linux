@@ -67,10 +67,10 @@ smjs_LIBS=""
 # if both incdir and libdir are not specified, then try to detect it by
 # pkg-config.
 if test "x$smjs_incdir" = "x" -a "x$smjs_libdir" = "x"; then
-  PKG_CHECK_MODULES([PKGSMJS], [xulrunner-js], [has_pkg_smjs=xulrunner-js],
-    [PKG_CHECK_MODULES([PKGSMJS], [firefox2-js], [has_pkg_smjs=firefox2-js],
-      [PKG_CHECK_MODULES([PKGSMJS], [firefox-js], [has_pkg_smjs=firefox-js],
-        [PKG_CHECK_MODULES([PKGSMJS], [mozilla-js], [has_pkg_smjs=mozilla-js],
+  PKG_CHECK_MODULES([PKGSMJS], [mozilla-js], [has_pkg_smjs=mozilla-js],
+    [PKG_CHECK_MODULES([PKGSMJS], [xulrunner-js], [has_pkg_smjs=xulrunner-js],
+      [PKG_CHECK_MODULES([PKGSMJS], [firefox2-js], [has_pkg_smjs=firefox2-js],
+        [PKG_CHECK_MODULES([PKGSMJS], [firefox-js], [has_pkg_smjs=firefox-js],
           [PKG_CHECK_MODULES([PKGSMJS], [libjs], [has_pkg_smjs=libjs],
             [has_pkg_smjs=no])])])])])
 fi

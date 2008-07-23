@@ -28,4 +28,7 @@
     <smallIcon>small_rss_icon.png</smallIcon>
     <icon>large_rss_icon.png</icon>
   </about>
+  <permissions>
+    <network/>
+  </permissions>
 </gadget>

@@ -29,6 +29,7 @@ noinst_HEADERS		= file_system.h \
 			  machine.h \
 			  memory.h \
 			  network.h \
+			  open_url.h \
 			  perfmon.h \
 			  power.h \
 			  process.h \
@@ -45,6 +46,7 @@ libggadget_linux_la_SOURCES = \
 			  machine.cc \
 			  memory.cc \
 			  network.cc \
+			  open_url.cc \
 			  perfmon.cc \
 			  power.cc \
 			  process.cc \

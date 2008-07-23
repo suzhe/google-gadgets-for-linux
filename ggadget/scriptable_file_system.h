@@ -21,14 +21,36 @@
 
 namespace ggadget {
 
+class Gadget;
+
 namespace framework {
 class FileSystemInterface;
 
-class ScriptableFileSystem : public ScriptableHelperNativeOwnedDefault {
+/**
+ * Scriptable counterpart of FileSystemInterface.
+ *
+ * Please note that ScriptableFileSystem is not NativeOwned, because it's
+ * bound to a Gadget instance. Different Gadget must use different
+ * ScriptableFileSystem instance.
+ *
+ * A framework extension must create a new ScriptableFileSystem instance and
+ * attach it to the specified framework instance when its
+ * RegisterFrameworkExtension() function is called each time.
+ * So the ScriptableFileSystem object will be destroyed correctly when the
+ * associated framework instance is destroyed by the corresponding gadget.
+ *
+ * While each Gadget has its own ScriptableFileSystem object, all
+ * ScriptableFileSystem objects can share one FileSystemInterface instance.
+ * So the specified filesystem pointer can point to a static allocated
+ * FileSystemInterface instance. ScriptableFileSystem object will never delete
+ * the filesystem pointer.
+ */
+class ScriptableFileSystem : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x881b7d66c6bf4ca5, ScriptableInterface)
 
-  explicit ScriptableFileSystem(FileSystemInterface *filesystem);
+  explicit ScriptableFileSystem(FileSystemInterface *filesystem,
+                                Gadget *gadget);
   virtual ~ScriptableFileSystem();
 
  private:

@@ -54,7 +54,7 @@ class UserInterface;
  * While each Gadget has its own ScriptableAudio object, all ScriptableAudio
  * objects can share one AudioInterface instance. So the specified audio
  * pointer can point to a static allocated AudioInterface instance.
- * ScriptableAudio object will not delete the audo pointer upon destroying.
+ * ScriptableAudio object will never delete the audio pointer.
  */
 class ScriptableAudio : public ScriptableHelperDefault {
  public:

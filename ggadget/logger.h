@@ -141,7 +141,7 @@ Connection *ConnectGlobalLogListener(LogListener *listener);
  * receive all logs that don't belong to any context.
  * @see ScopedLogContext
  * @see ConnectGlobalLogListener()
- */  
+ */
 Connection *ConnectContextLogListener(void *context, LogListener *listener);
 
 /**

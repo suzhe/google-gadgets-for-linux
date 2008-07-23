@@ -56,8 +56,7 @@ static const char *kGlobalExtensions[] = {
   "default-framework",
   "libxml2-xml-parser",
   "default-options",
-// Disable DBUS script class for now to ensure security.
-//  "dbus-script-class",
+  "dbus-script-class",
   "qtwebkit-browser-element",
   "qt-system-framework",
   "qt-edit-element",

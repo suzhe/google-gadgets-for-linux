@@ -14,35 +14,20 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_QT_UTILITIES_H__
-#define GGADGET_QT_UTILITIES_H__
-
-#include <string>
-#include <QtGui/QCursor>
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_OPEN_URL_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_OPEN_URL_H__
 
 namespace ggadget {
 
 class Gadget;
-namespace qt {
 
-/**
- * Shows an about dialog for a specified gadget.
- */
-void ShowGadgetAboutDialog(Gadget *gadget);
+namespace framework {
+namespace linux_system {
 
-Qt::CursorShape GetQtCursorShape(int type);
+bool OpenURL(const char *url, const Gadget *gadget);
 
-int GetMouseButtons(const Qt::MouseButtons buttons);
-
-int GetMouseButton(const Qt::MouseButton button);
-
-int GetModifiers(Qt::KeyboardModifiers state);
-
-unsigned int GetKeyCode(int qt_key);
-
-QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget **widget);
-
-} // namespace qt
+} // namespace linux_system
+} // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_QT_UTILITIES_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_OPEN_URL_H__

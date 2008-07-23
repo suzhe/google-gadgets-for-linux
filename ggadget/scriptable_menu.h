@@ -17,18 +17,18 @@
 #ifndef GGADGET_SCRIPTABLE_MENU_H__
 #define GGADGET_SCRIPTABLE_MENU_H__
 
-#include <vector>
 #include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
 class MenuInterface;
+class Gadget;
 
 class ScriptableMenu : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x95432249155845d6, ScriptableInterface)
 
-  explicit ScriptableMenu(MenuInterface *menu);
+  ScriptableMenu(Gadget *gadget, MenuInterface *menu);
   virtual ~ScriptableMenu();
 
  protected:
@@ -36,13 +36,8 @@ class ScriptableMenu : public ScriptableHelperNativeOwnedDefault {
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableMenu);
-
-  void ScriptAddItem(const char *item_text, int style, Slot *handler);
-  ScriptableMenu *ScriptAddPopup(const char *popup_text);
-  void SetItemStyle(const char *item_text, int style);
-
-  MenuInterface *menu_;
-  std::vector<ScriptableMenu *> submenus_;
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace ggadget

@@ -39,7 +39,6 @@ class QtHost : public ggadget::HostInterface {
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual void Run();
   virtual void ShowGadgetAboutDialog(Gadget *gadget);

@@ -63,9 +63,6 @@ class HostInterface {
    */
   virtual void RemoveGadget(Gadget *gadget, bool save_data) = 0;
 
-  /** Open the given URL in the user's default web browser. */
-  virtual bool OpenURL(const char *url) const = 0;
-
   /** Temporarily install a given font on the system. */
   virtual bool LoadFont(const char *filename) = 0;
 

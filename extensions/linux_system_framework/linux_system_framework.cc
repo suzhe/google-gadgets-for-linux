@@ -24,6 +24,8 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_file_system.h>
+#include <ggadget/permissions.h>
+#include <ggadget/gadget.h>
 
 #include "file_system.h"
 #include "runtime.h"
@@ -36,6 +38,7 @@
 #include "process.h"
 #include "wireless_access_point.h"
 #include "user.h"
+#include "open_url.h"
 
 #define Initialize linux_system_framework_LTX_Initialize
 #define Finalize linux_system_framework_LTX_Finalize
@@ -60,7 +63,6 @@ static User g_user_;
 
 static ScriptableRuntime g_script_runtime_(&g_runtime_);
 static ScriptableBios g_script_bios_(&g_machine_);
-static ScriptableFileSystem g_script_filesystem_(&g_filesystem_);
 static ScriptableMachine g_script_machine_(&g_machine_);
 static ScriptableMemory g_script_memory_(&g_memory_);
 static ScriptableNetwork g_script_network_(&g_network_);
@@ -96,12 +98,32 @@ extern "C" {
       return false;
 
     RegisterableInterface *reg_framework = framework->GetRegisterable();
-
     if (!reg_framework) {
       LOG("Specified framework is not registerable.");
       return false;
     }
 
+    const Permissions *permissions = gadget->GetPermissions();
+
+    // OpenURL will check permissions by itself.
+    reg_framework->RegisterMethod("openUrl",
+            NewSlot(OpenURL, const_cast<const Gadget*>(gadget)));
+
+    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ) ||
+        permissions->IsRequiredAndGranted(Permissions::FILE_WRITE)) {
+      ScriptableFileSystem *script_filesystem =
+          new ScriptableFileSystem(&g_filesystem_, gadget);
+      reg_system->RegisterVariantConstant("filesystem",
+                                          Variant(script_filesystem));
+    }
+
+    // Check permissions.
+    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+      LOG("No permission to access device status.");
+      return true;
+    }
+
+    // FIXME: Should runtime be restricted by <devicestatus/> ?
     reg_framework->RegisterVariantConstant("runtime",
                                            Variant(&g_script_runtime_));
 
@@ -132,10 +154,6 @@ extern "C" {
 
     reg_system->RegisterVariantConstant("bios",
                                         Variant(&g_script_bios_));
-    // TODO: Filesystem feature is disabled for now to ensure gadget security.
-    // Maybe we can enable it when we have better access control mechanism.
-    // reg_system->RegisterVariantConstant("filesystem",
-    //                                     Variant(&g_script_filesystem_));
     reg_system->RegisterVariantConstant("machine",
                                         Variant(&g_script_machine_));
     reg_system->RegisterVariantConstant("memory",
@@ -156,7 +174,6 @@ extern "C" {
         new ScriptablePerfmon(&g_perfmon_, gadget);
 
     reg_system->RegisterVariantConstant("perfmon", Variant(script_perfmon));
-
     return true;
   }
 }

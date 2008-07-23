@@ -66,7 +66,8 @@ extern "C" {
 
 #ifdef SCRIPT_EXTENSION
   bool FUNC_NAME(RegisterScriptExtension)(
-      ggadget::ScriptContextInterface *context) {
+      ggadget::ScriptContextInterface *context,
+      ggadget::Gadget *gadget) {
     LOG("Register Script extension %s, context=%p",
         AS_STRING(MODULE_NAME), context);
     return true;

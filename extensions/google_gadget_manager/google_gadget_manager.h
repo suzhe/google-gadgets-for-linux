@@ -177,7 +177,8 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   virtual bool EnumerateGadgetInstances(Slot1<bool, int> *callback);
   virtual std::string GetGadgetInstancePath(int instance_id);
   virtual void ShowGadgetBrowserDialog(HostInterface *host);
-  virtual uint64_t GetGadgetInstanceTrustedFeatures(int instance_id);
+  virtual bool GetGadgetDefaultPermissions(int instance_id,
+                                           Permissions *permissions);
   virtual bool GetGadgetInstanceInfo(int instance_id, const char *locale,
                                      std::string *author,
                                      std::string *download_url,

@@ -38,6 +38,7 @@
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/permissions.h>
 
 #include "gadget_browser_host.h"
 
@@ -113,6 +114,10 @@ class SimpleGtkHost::Impl {
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
     gadget_manager_->ConnectOnRemoveGadgetInstance(
         NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
+
+    // Initializes global permissions.
+    // FIXME: Supports customizable global permissions.
+    global_permissions_.SetGranted(Permissions::ALL_ACCESS, true);
   }
 
   ~Impl() {
@@ -209,7 +214,16 @@ class SimpleGtkHost::Impl {
   }
 #endif
 
-  bool ConfirmGadget(int id) {
+  static bool GetPermissionsDescriptionCallback(int permission,
+                                                std::string *msg) {
+    if (msg->length())
+      msg->append("\n");
+    msg->append("  ");
+    msg->append(Permissions::GetDescription(permission));
+    return true;
+  }
+
+  bool ConfirmGadget(int id, Permissions *permissions) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     std::string download_url, title, description;
     if (!gadget_manager_->GetGadgetInstanceInfo(id,
@@ -218,11 +232,17 @@ class SimpleGtkHost::Impl {
                                                 &title, &description))
       return false;
 
+    // Get required permissions description.
+    std::string permissions_msg;
+    permissions->EnumerateAllRequired(
+        NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
+
     GtkWidget *dialog = gtk_message_dialog_new(
         NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        "%s\n\n%s\n%s\n\n%s%s",
+        "%s\n\n%s\n%s\n\n%s%s\n\n%s\n%s",
         GM_("GADGET_CONFIRM_MESSAGE"), title.c_str(), download_url.c_str(),
-        GM_("GADGET_DESCRIPTION"), description.c_str());
+        GM_("GADGET_DESCRIPTION"), description.c_str(),
+        GM_("GADGET_REQUIRED_PERMISSIONS"), permissions_msg.c_str());
 
     GdkScreen *screen;
     gdk_display_get_pointer(gdk_display_get_default(), &screen,
@@ -233,7 +253,14 @@ class SimpleGtkHost::Impl {
     gtk_window_present(GTK_WINDOW(dialog));
     gint result = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
-    return result == GTK_RESPONSE_YES;
+
+    if (result == GTK_RESPONSE_YES) {
+      // TODO: Is it necessary to let user grant individual permissions
+      // separately?
+      permissions->GrantAllRequired();
+      return true;
+    }
+    return false;
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
@@ -244,9 +271,21 @@ class SimpleGtkHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->GetGadgetInstanceTrustedFeatures(id) ||
-        ConfirmGadget(id)) {
-      return LoadGadgetInstance(id);
+    Permissions permissions;
+    if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
+      if (!permissions.HasUngranted() || ConfirmGadget(id, &permissions)) {
+        // Save initial permissions.
+        std::string options_name =
+            gadget_manager_->GetGadgetInstanceOptionsName(id);
+        OptionsInterface *options = CreateOptions(options_name.c_str());
+        // Don't save required permissions.
+        permissions.RemoveAllRequired();
+        options->PutInternalValue(kPermissionsOption,
+                                  Variant(permissions.ToString()));
+        options->Flush();
+        delete options;
+        return LoadGadgetInstance(id);
+      }
     }
     return false;
   }
@@ -256,9 +295,10 @@ class SimpleGtkHost::Impl {
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
-      result = LoadGadget(path.c_str(), options.c_str(), id);
-      LOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
-          path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      result =
+          LoadGadget(path.c_str(), options.c_str(), id);
+      DLOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
+           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
   }
@@ -269,11 +309,8 @@ class SimpleGtkHost::Impl {
       return true;
     }
 
-    // TODO ACL.
-    uint64_t trusted_features =
-        gadget_manager_->GetGadgetInstanceTrustedFeatures(instance_id);
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                trusted_features);
+                                global_permissions_);
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -783,6 +820,7 @@ class SimpleGtkHost::Impl {
   DecoratedViewHost *expanded_popout_;
 
   HotKeyGrabber hotkey_grabber_;
+  Permissions global_permissions_;
 };
 
 SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
@@ -806,10 +844,6 @@ ViewHostInterface *SimpleGtkHost::NewViewHost(Gadget *gadget,
 
 void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
-}
-
-bool SimpleGtkHost::OpenURL(const char *url) const {
-  return ggadget::gtk::OpenURL(url);
 }
 
 bool SimpleGtkHost::LoadFont(const char *filename) {

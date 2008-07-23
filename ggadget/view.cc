@@ -1330,7 +1330,7 @@ class View::Impl {
 
   ScriptableInterface *scriptable_view_;
 
-  static const unsigned int kAnimationInterval = 20;
+  static const unsigned int kAnimationInterval = 33;
   static const unsigned int kMinInterval = 5;
 };
 

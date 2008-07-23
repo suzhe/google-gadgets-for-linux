@@ -36,6 +36,7 @@ class OptionsInterface;
 class DOMDocumentInterface;
 class ScriptableInterface;
 class XMLHttpRequestInterface;
+class Permissions;
 
 /**
  * A class to hold a gadget instance.
@@ -97,6 +98,12 @@ class Gadget {
    * The gadget will be loaded and initialized, if failed then IsValid() method
    * will return false.
    *
+   * The gadget's initial granted and denied permissions must be stored in its
+   * options database as an internal value with key "permissions". If there is
+   * no initial permissions when creating the gadget instance, then the initial
+   * permissions will be initialized to grant all permissions required by the
+   * gadget.
+   *
    * @param host the host of this gadget.
    * @param base_path the base path of this gadget. It can be a directory,
    *     path to a .gg file, or path to a gadget.gmanifest file.
@@ -104,13 +111,15 @@ class Gadget {
    * @param instance_id An unique id to identify this Gadget instance. It can
    *        be used to remove this Gadget instance by calling
    *        HostInteface::RemoveGadget() method.
-   * @param allowed_features
+   * @param global_permissions The global granted and denied permissions.
+   *        The granted permissions for the gadget instance is the intersection
+   *        of global permissions and the gadget's initial permissions.
    */
   Gadget(HostInterface *host,
          const char *base_path,
          const char *options_name,
          int instance_id,
-         uint64_t allowed_features);
+         const Permissions &global_permissions);
 
   /** Destructor */
   ~Gadget();
@@ -292,6 +301,9 @@ class Gadget {
   Connection *ConnectLogListener(
       Slot2<void, LogLevel, const std::string &> *listener);
 
+  /** Gets Permissions of this gadget. */
+  const Permissions* GetPermissions() const;
+
  public:
   /**
    * A utility to get the manifest infomation of a gadget without
@@ -301,6 +313,19 @@ class Gadget {
    * @return @c true if succeeds.
    */
   static bool GetGadgetManifest(const char *base_path, StringMap *data);
+
+  /**
+   * A utility to get required permissions of a gadget from its manifest
+   * information.
+   *
+   * @param manifest Manifest information loaded by GetGadgetManifest().
+   * @param[out] required Stores the required permissions, the old required
+   *             permissions information will be erased, but the granted/denied
+   *             information will remain untouched.
+   * @return true if permissions information is available.
+   */
+  static bool GetGadgetRequiredPermissions(const StringMap *manifest,
+                                           Permissions *required);
 
  private:
   class Impl;

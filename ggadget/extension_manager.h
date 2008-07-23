@@ -63,7 +63,8 @@ static const char kFileManagerExtensionSymbolName[] =
  *    A Script extension module can be used to provide additional script
  *    classes or objects which can be used by gadgets in their script code.
  *    This kind of extension modules must provide following symbol:
- *    - bool RegisterScriptExtension(ScriptContextInterface *context);
+ *    - bool RegisterScriptExtension(ScriptContextInterface *context,
+ *                                   Gadget *gadget);
  *    This function shall register all script classes or objects provided by
  *    the module into the specified ScriptContext instance.
  *
@@ -157,12 +158,15 @@ class ElementExtensionRegister : public ExtensionRegisterInterface {
  */
 class ScriptExtensionRegister : public ExtensionRegisterInterface {
  public:
-  explicit ScriptExtensionRegister(ScriptContextInterface *context);
+  explicit ScriptExtensionRegister(ScriptContextInterface *context,
+                                   Gadget *gadget);
   virtual bool RegisterExtension(const Module *extension);
 
-  typedef bool (*RegisterScriptExtensionFunc)(ScriptContextInterface *);
+  typedef bool (*RegisterScriptExtensionFunc)(ScriptContextInterface *,
+                                              Gadget *);
  private:
   ScriptContextInterface *context_;
+  Gadget *gadget_;
 };
 
 /**

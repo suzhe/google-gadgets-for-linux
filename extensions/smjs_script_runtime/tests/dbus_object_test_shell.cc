@@ -52,7 +52,7 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   const char **argv = NULL;
   INIT_EXTENSIONS(argc, argv, kExtensions);
 
-  ScriptExtensionRegister ext_register(context);
+  ScriptExtensionRegister ext_register(context, NULL);
   ExtensionManager::GetGlobalExtensionManager()->RegisterLoadedExtensions(
       &ext_register);
 

@@ -21,6 +21,8 @@
 #include <ggadget/dbus/dbus_proxy.h>
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
+#include <ggadget/gadget.h>
+#include <ggadget/permissions.h>
 #include "scriptable_dbus_object.h"
 
 #define Initialize dbus_script_class_LTX_Initialize
@@ -33,6 +35,9 @@ using ggadget::dbus::DBusProxy;
 using ggadget::Variant;
 using ggadget::NewSlot;
 using ggadget::NewSlotWithDefaultArgs;
+using ggadget::ScriptContextInterface;
+using ggadget::Gadget;
+using ggadget::Permissions;
 
 static const char *kDBusSystemObjectName = "DBusSystemObject";
 static const char *kDBusSessionObjectName = "DBusSessionObject";
@@ -78,8 +83,17 @@ extern "C" {
     ggl_dbus_factory = NULL;
   }
 
-  bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
+  bool RegisterScriptExtension(ScriptContextInterface *context,
+                               Gadget *gadget) {
     LOGI("Register dbus_script_class extension.");
+    // Only register D-Bus extension if <allaccess/> is granted.
+    const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+    // Only calling inside unittest can have NULl gadget and permissions.
+    if (permissions &&
+        !permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
+      LOG("No permissions to access D-Bus.");
+      return true;
+    }
     if (context) {
       if (!context->RegisterClass(
           kDBusSystemObjectName, NewSlotWithDefaultArgs(

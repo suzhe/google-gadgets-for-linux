@@ -369,7 +369,7 @@ class DefaultAudioclip : public AudioclipInterface {
   virtual void SetCurrentPosition(int position) { }
   virtual int GetDuration() const { return 100; }
   virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
-  virtual std::string GetSrc() const { return "src"; }
+  virtual std::string GetSrc() const { return ""; }
   virtual void SetSrc(const char *src) { }
   virtual State GetState() const { return SOUND_STATE_PLAYING; }
   virtual int GetVolume() const { return 100; }
@@ -449,7 +449,6 @@ static DefaultUser g_user_;
 
 static ScriptableBios g_script_bios_(&g_machine_);
 static ScriptableCursor g_script_cursor_(&g_cursor_);
-static ScriptableFileSystem g_script_filesystem_(&g_filesystem_);
 static ScriptableMachine g_script_machine_(&g_machine_);
 static ScriptableMemory g_script_memory_(&g_memory_);
 static ScriptableNetwork g_script_network_(&g_network_);
@@ -473,6 +472,11 @@ static ScriptableArray *DefaultBrowseForFiles(const char *filter) {
 
 static Date DefaultLocalTimeToUniversalTime(const Date &date) {
   return date;
+}
+
+static bool DefaultOpenURL(const char *url) {
+  LOG("Don't know how to open url.");
+  return false;
 }
 
 } // namespace default_framework
@@ -515,6 +519,7 @@ extern "C" {
                                   NewSlot(DefaultBrowseForFile));
     reg_framework->RegisterMethod("BrowseForFiles",
                                   NewSlot(DefaultBrowseForFiles));
+    reg_framework->RegisterMethod("openUrl", NewSlot(DefaultOpenURL));
 
     // ScriptableGraphics is per gadget, so create a new instance here.
     ScriptableGraphics *script_graphics = new ScriptableGraphics(gadget);
@@ -548,12 +553,16 @@ extern "C" {
       return false;
     }
 
+    // ScriptableFileSystem is per gadget, so create a new instance here.
+    ScriptableFileSystem *script_filesystem =
+        new ScriptableFileSystem(&g_filesystem_, gadget);
+    reg_system->RegisterVariantConstant("filesystem",
+                                        Variant(script_filesystem));
+
     reg_system->RegisterVariantConstant("bios",
                                         Variant(&g_script_bios_));
     reg_system->RegisterVariantConstant("cursor",
                                         Variant(&g_script_cursor_));
-    reg_system->RegisterVariantConstant("filesystem",
-                                        Variant(&g_script_filesystem_));
     reg_system->RegisterVariantConstant("machine",
                                         Variant(&g_script_machine_));
     reg_system->RegisterVariantConstant("memory",

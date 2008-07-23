@@ -113,7 +113,7 @@ class ScriptableInterface {
     PROPERTY_NOT_EXIST = -1,
     /** The property always exists. It's value may change during its life. */
     PROPERTY_NORMAL = 0,
-    /** The property always exists. It's value doesn't change. */ 
+    /** The property always exists. It's value doesn't change. */
     PROPERTY_CONSTANT,
     /**
      * The property is a dynamic property, which can be dynamically created

@@ -28,4 +28,7 @@
     <smallIcon>igoogle_32.gif</smallIcon>
     <icon>igoogle_32.gif</icon>
   </about>
+  <permissions>
+    <network/>
+  </permissions>
 </gadget>

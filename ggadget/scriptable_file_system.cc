@@ -18,6 +18,8 @@
 #include "file_system_interface.h"
 #include "scriptable_array.h"
 #include "string_utils.h"
+#include "gadget.h"
+#include "permissions.h"
 
 namespace ggadget {
 
@@ -64,8 +66,9 @@ static const Variant kGetStandardStreamDefaultArgs[] = {
 
 class ScriptableFileSystem::Impl {
  public:
-  Impl(FileSystemInterface *filesystem, ScriptableFileSystem *owner)
-      : filesystem_(filesystem), owner_(owner) {
+  Impl(FileSystemInterface *filesystem, ScriptableFileSystem *owner,
+       Gadget *gadget)
+      : filesystem_(filesystem), owner_(owner), gadget_(gadget) {
   }
 
   class FileSystemException : public ScriptableHelperDefault {
@@ -83,47 +86,57 @@ class ScriptableFileSystem::Impl {
   };
 
   template <typename ScriptableT, typename ItemT, typename CollectionT>
-  static ScriptableArray *ToScriptableArray(CollectionT *collection) {
+  static ScriptableArray *ToScriptableArray(CollectionT *collection,
+                                            Impl *impl) {
     int count = collection->GetCount();
     ASSERT(count >= 0);
     Variant *array = new Variant[count];
     for (int i = 0; i < count; i++) {
       ItemT *item = collection->GetItem(i);
-      array[i] = Variant(item ? new ScriptableT(item) : NULL);
+      array[i] = Variant(item ? new ScriptableT(item, impl) : NULL);
     }
+    // To avoid memory leak.
+    collection->Destroy();
     return ScriptableArray::Create(array, static_cast<size_t>(count));
   }
 
   class ScriptableTextStream : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x34828c47e6a243c5, ScriptableInterface);
-    ScriptableTextStream(TextStreamInterface *stream) : stream_(stream) {
+    ScriptableTextStream(TextStreamInterface *stream, Impl *impl)
+        : stream_(stream) {
       ASSERT(stream);
-      RegisterProperty("Line",
-                       NewSlot(stream, &TextStreamInterface::GetLine),
-                       NULL);
-      RegisterProperty("Column",
-                       NewSlot(stream, &TextStreamInterface::GetColumn),
-                       NULL);
-      RegisterProperty("AtEndOfStream",
-                       NewSlot(stream, &TextStreamInterface::IsAtEndOfStream),
-                       NULL);
-      RegisterProperty("AtEndOfLine",
-                       NewSlot(stream, &TextStreamInterface::IsAtEndOfLine),
-                       NULL);
-      RegisterMethod("Read", NewSlot(stream, &TextStreamInterface::Read));
-      RegisterMethod("ReadLine",
-                     NewSlot(stream, &TextStreamInterface::ReadLine));
-      RegisterMethod("ReadAll",
-                     NewSlot(stream, &TextStreamInterface::ReadAll));
-      RegisterMethod("Write", NewSlot(stream, &TextStreamInterface::Write));
-      RegisterMethod("WriteLine",
-                     NewSlot(stream, &TextStreamInterface::WriteLine));
-      RegisterMethod("WriteBlankLines",
-                     NewSlot(stream, &TextStreamInterface::WriteBlankLines));
-      RegisterMethod("Skip", NewSlot(stream, &TextStreamInterface::Skip));
-      RegisterMethod("SkipLine",
-                     NewSlot(stream, &TextStreamInterface::SkipLine));
+      if (impl->CanRead()) {
+        RegisterProperty("Line",
+                         NewSlot(stream, &TextStreamInterface::GetLine),
+                         NULL);
+        RegisterProperty("Column",
+                         NewSlot(stream, &TextStreamInterface::GetColumn),
+                         NULL);
+        RegisterProperty("AtEndOfStream",
+                         NewSlot(stream, &TextStreamInterface::IsAtEndOfStream),
+                         NULL);
+        RegisterProperty("AtEndOfLine",
+                         NewSlot(stream, &TextStreamInterface::IsAtEndOfLine),
+                         NULL);
+        RegisterMethod("Read", NewSlot(stream, &TextStreamInterface::Read));
+        RegisterMethod("ReadLine",
+                       NewSlot(stream, &TextStreamInterface::ReadLine));
+        RegisterMethod("ReadAll",
+                       NewSlot(stream, &TextStreamInterface::ReadAll));
+      }
+      if (impl->CanWrite()) {
+        RegisterMethod("Write", NewSlot(stream, &TextStreamInterface::Write));
+        RegisterMethod("WriteLine",
+                       NewSlot(stream, &TextStreamInterface::WriteLine));
+        RegisterMethod("WriteBlankLines",
+                       NewSlot(stream, &TextStreamInterface::WriteBlankLines));
+      }
+      if (impl->CanRead() || impl->CanWrite()) {
+        RegisterMethod("Skip", NewSlot(stream, &TextStreamInterface::Skip));
+        RegisterMethod("SkipLine",
+                       NewSlot(stream, &TextStreamInterface::SkipLine));
+      }
       RegisterMethod("Close", NewSlot(stream, &TextStreamInterface::Close));
     }
 
@@ -139,44 +152,53 @@ class ScriptableFileSystem::Impl {
   class ScriptableDrive : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x0a34071a4804434b, ScriptableInterface);
-    ScriptableDrive(DriveInterface *drive) : drive_(drive) {
+    ScriptableDrive(DriveInterface *drive, Impl *impl)
+        : drive_(drive), impl_(impl) {
       ASSERT(drive);
-      RegisterProperty("Path",
-                       NewSlot(drive, &DriveInterface::GetPath),
-                       NULL);
-      RegisterProperty("DriveLetter",
-                       NewSlot(drive, &DriveInterface::GetDriveLetter),
-                       NULL);
-      RegisterProperty("ShareName",
-                       NewSlot(drive, &DriveInterface::GetShareName),
-                       NULL);
-      RegisterProperty("DriveType",
-                       NewSlot(drive, &DriveInterface::GetDriveType),
-                       NULL);
-      RegisterProperty("RootFolder",
-                       NewSlot(this, &ScriptableDrive::GetRootFolder),
-                       NULL);
-      RegisterProperty("AvailableSpace",
-                       NewSlot(drive, &DriveInterface::GetAvailableSpace),
-                       NULL);
-      RegisterProperty("FreeSpace",
-                       NewSlot(drive, &DriveInterface::GetFreeSpace),
-                       NULL);
-      RegisterProperty("TotalSize",
-                       NewSlot(drive, &DriveInterface::GetTotalSize),
-                       NULL);
-      RegisterProperty("VolumnName",
-                       NewSlot(drive, &DriveInterface::GetVolumnName),
-                       NewSlot(this, &ScriptableDrive::SetVolumnName));
-      RegisterProperty("FileSystem",
-                       NewSlot(drive, &DriveInterface::GetFileSystem),
-                       NULL);
-      RegisterProperty("SerialNumber",
-                       NewSlot(drive, &DriveInterface::GetSerialNumber),
-                       NULL);
-      RegisterProperty("IsReady",
-                       NewSlot(drive, &DriveInterface::IsReady),
-                       NULL);
+      if (impl->CanRead()) {
+        RegisterProperty("Path",
+                         NewSlot(drive, &DriveInterface::GetPath),
+                         NULL);
+        RegisterProperty("DriveLetter",
+                         NewSlot(drive, &DriveInterface::GetDriveLetter),
+                         NULL);
+        RegisterProperty("ShareName",
+                         NewSlot(drive, &DriveInterface::GetShareName),
+                         NULL);
+        RegisterProperty("DriveType",
+                         NewSlot(drive, &DriveInterface::GetDriveType),
+                         NULL);
+        RegisterProperty("AvailableSpace",
+                         NewSlot(drive, &DriveInterface::GetAvailableSpace),
+                         NULL);
+        RegisterProperty("FreeSpace",
+                         NewSlot(drive, &DriveInterface::GetFreeSpace),
+                         NULL);
+        RegisterProperty("TotalSize",
+                         NewSlot(drive, &DriveInterface::GetTotalSize),
+                         NULL);
+        RegisterProperty("FileSystem",
+                         NewSlot(drive, &DriveInterface::GetFileSystem),
+                         NULL);
+        RegisterProperty("SerialNumber",
+                         NewSlot(drive, &DriveInterface::GetSerialNumber),
+                         NULL);
+        RegisterProperty("IsReady",
+                         NewSlot(drive, &DriveInterface::IsReady),
+                         NULL);
+        RegisterProperty("RootFolder",
+                         NewSlot(this, &ScriptableDrive::GetRootFolder),
+                         NULL);
+      }
+      if (impl->CanRead() || impl->CanWrite()) {
+        RegisterProperty("VolumnName",
+                         (impl->CanRead() ?
+                          NewSlot(drive, &DriveInterface::GetVolumnName) :
+                          NULL),
+                         (impl->CanWrite() ?
+                          NewSlot(this, &ScriptableDrive::SetVolumnName) :
+                          NULL));
+      }
     }
 
     virtual ~ScriptableDrive() {
@@ -192,66 +214,82 @@ class ScriptableFileSystem::Impl {
     }
 
     DriveInterface *drive_;
+    Impl *impl_;
   };
 
   class ScriptableFolder : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xa2e7a3ef662a445c, ScriptableInterface);
-    ScriptableFolder(FolderInterface *folder) : folder_(folder) {
+    ScriptableFolder(FolderInterface *folder, Impl *impl)
+        : folder_(folder), impl_(impl) {
       ASSERT(folder);
-      RegisterProperty("Path",
-                       NewSlot(folder, &FolderInterface::GetPath),
-                       NULL);
-      RegisterProperty("Name",
-                       NewSlot(folder, &FolderInterface::GetName),
-                       NewSlot(this, &ScriptableFolder::SetName));
-      RegisterProperty("ShortPath",
-                       NewSlot(folder, &FolderInterface::GetShortPath),
-                       NULL);
-      RegisterProperty("ShortName",
-                       NewSlot(folder, &FolderInterface::GetShortName),
-                       NULL);
-      RegisterProperty("Drive",
-                       NewSlot(this, &ScriptableFolder::GetDrive),
-                       NULL);
-      RegisterProperty("ParentFolder",
-                       NewSlot(this, &ScriptableFolder::GetParentFolder),
-                       NULL);
-      RegisterProperty("Attributes",
-                       NewSlot(folder, &FolderInterface::GetAttributes),
-                       NewSlot(this, &ScriptableFolder::SetAttributes));
-      RegisterProperty("DateCreated",
-                       NewSlot(folder, &FolderInterface::GetDateCreated),
-                       NULL);
-      RegisterProperty("DateLastModified",
-                       NewSlot(folder, &FolderInterface::GetDateLastModified),
-                       NULL);
-      RegisterProperty("DateLastAccessed",
-                       NewSlot(folder, &FolderInterface::GetDateLastAccessed),
-                       NULL);
-      RegisterProperty("Type",
-                       NewSlot(folder, &FolderInterface::GetType),
-                       NULL);
-      RegisterMethod("Delete",
-          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Delete),
-                                 kDeleteDefaultArgs));
-      RegisterMethod("Copy",
-          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Copy),
-                                 kCopyDefaultArgs));
-      RegisterMethod("Move", NewSlot(this, &ScriptableFolder::Move));
-      RegisterProperty("Size",
-                       NewSlot(folder, &FolderInterface::GetSize),
-                       NULL);
-      RegisterProperty("SubFolders",
-                       NewSlot(this, &ScriptableFolder::GetSubFolders),
-                       NULL);
-      RegisterProperty("Files",
-                       NewSlot(this, &ScriptableFolder::GetFiles),
-                       NULL);
-      RegisterMethod("CreateTextFile",
-                     NewSlotWithDefaultArgs(
-                         NewSlot(this, &ScriptableFolder::CreateTextFile),
-                         kCreateTextFileDefaultArgs));
+      if (impl->CanRead()) {
+        RegisterProperty("Path",
+                         NewSlot(folder, &FolderInterface::GetPath),
+                         NULL);
+        RegisterProperty("ShortPath",
+                         NewSlot(folder, &FolderInterface::GetShortPath),
+                         NULL);
+        RegisterProperty("ShortName",
+                         NewSlot(folder, &FolderInterface::GetShortName),
+                         NULL);
+        RegisterProperty("DateCreated",
+                         NewSlot(folder, &FolderInterface::GetDateCreated),
+                         NULL);
+        RegisterProperty("DateLastModified",
+                         NewSlot(folder, &FolderInterface::GetDateLastModified),
+                         NULL);
+        RegisterProperty("DateLastAccessed",
+                         NewSlot(folder, &FolderInterface::GetDateLastAccessed),
+                         NULL);
+        RegisterProperty("Type",
+                         NewSlot(folder, &FolderInterface::GetType),
+                         NULL);
+        RegisterProperty("Size",
+                         NewSlot(folder, &FolderInterface::GetSize),
+                         NULL);
+        RegisterProperty("SubFolders",
+                         NewSlot(this, &ScriptableFolder::GetSubFolders),
+                         NULL);
+        RegisterProperty("Files",
+                         NewSlot(this, &ScriptableFolder::GetFiles),
+                         NULL);
+        RegisterProperty("ParentFolder",
+                         NewSlot(this, &ScriptableFolder::GetParentFolder),
+                         NULL);
+        RegisterProperty("Drive",
+                         NewSlot(this, &ScriptableFolder::GetDrive),
+                         NULL);
+      }
+      if (impl->CanRead() || impl->CanWrite()) {
+        RegisterProperty("Attributes",
+                         (impl->CanRead() ?
+                          NewSlot(folder, &FolderInterface::GetAttributes) :
+                          NULL),
+                         (impl->CanWrite() ?
+                          NewSlot(this, &ScriptableFolder::SetAttributes) :
+                          NULL));
+        RegisterProperty("Name",
+                         (impl->CanRead() ?
+                          NewSlot(folder, &FolderInterface::GetName) :
+                          NULL),
+                         (impl->CanWrite() ?
+                          NewSlot(this, &ScriptableFolder::SetName) :
+                          NULL));
+      }
+      if (impl->CanWrite()) {
+        RegisterMethod("Delete",
+            NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Delete),
+                                   kDeleteDefaultArgs));
+        RegisterMethod("Copy",
+            NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Copy),
+                                   kCopyDefaultArgs));
+        RegisterMethod("Move", NewSlot(this, &ScriptableFolder::Move));
+        RegisterMethod("CreateTextFile",
+                       NewSlotWithDefaultArgs(
+                           NewSlot(this, &ScriptableFolder::CreateTextFile),
+                           kCreateTextFileDefaultArgs));
+      }
     }
 
     virtual ~ScriptableFolder() {
@@ -270,7 +308,7 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetDrive"));
         return NULL;
       }
-      return new ScriptableDrive(drive);
+      return new ScriptableDrive(drive, impl_);
     }
 
     ScriptableFolder *GetParentFolder() {
@@ -279,7 +317,7 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetParentFolder"));
         return NULL;
       }
-      return new ScriptableFolder(folder);
+      return new ScriptableFolder(folder, impl_);
     }
 
     void SetAttributes(FileAttribute attributes) {
@@ -308,7 +346,8 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetSubFolders"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFolder, FolderInterface>(folders);
+      return ToScriptableArray<ScriptableFolder, FolderInterface>(folders,
+                                                                  impl_);
     }
 
     ScriptableArray *GetFiles() {
@@ -317,7 +356,7 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetFiles"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFile, FileInterface>(files);
+      return ToScriptableArray<ScriptableFile, FileInterface>(files, impl_);
     }
 
     ScriptableTextStream *CreateTextFile(const char *filename,
@@ -329,62 +368,80 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.CreateTextFile"));
         return NULL;
       }
-      return new ScriptableTextStream(stream);
+      return new ScriptableTextStream(stream, impl_);
     }
 
     FolderInterface *folder_;
+    Impl *impl_;
   };
 
   class ScriptableFile : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xd8071714bc0a4d2c, ScriptableInterface);
-    ScriptableFile(FileInterface *file) : file_(file) {
+    ScriptableFile(FileInterface *file, Impl *impl)
+        : file_(file), impl_(impl) {
       ASSERT(file);
-      RegisterProperty("Path",
-                       NewSlot(file, &FileInterface::GetPath),
-                       NULL);
-      RegisterProperty("Name",
-                       NewSlot(file, &FileInterface::GetName),
-                       NewSlot(this, &ScriptableFile::SetName));
-      RegisterProperty("ShortPath",
-                       NewSlot(file, &FileInterface::GetShortPath),
-                       NULL);
-      RegisterProperty("ShortName",
-                       NewSlot(file, &FileInterface::GetShortName),
-                       NULL);
-      RegisterProperty("Drive", NewSlot(this, &ScriptableFile::GetDrive), NULL);
-      RegisterProperty("ParentFolder",
-                       NewSlot(this, &ScriptableFile::GetParentFolder),
-                       NULL);
-      RegisterProperty("Attributes",
-                       NewSlot(file, &FileInterface::GetAttributes),
-                       NewSlot(this, &ScriptableFile::SetAttributes));
-      RegisterProperty("DateCreated",
-                       NewSlot(file, &FileInterface::GetDateCreated),
-                       NULL);
-      RegisterProperty("DateLastModified",
-                       NewSlot(file, &FileInterface::GetDateLastModified),
-                       NULL);
-      RegisterProperty("DateLastAccessed",
-                       NewSlot(file, &FileInterface::GetDateLastAccessed),
-                       NULL);
-      RegisterProperty("Size",
-                       NewSlot(file, &FileInterface::GetSize),
-                       NULL);
-      RegisterProperty("Type",
-                       NewSlot(file, &FileInterface::GetType),
-                       NULL);
-      RegisterMethod("Delete",
-          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Delete),
-                                 kDeleteDefaultArgs));
-      RegisterMethod("Copy",
-          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Copy),
-                                 kCopyDefaultArgs));
-      RegisterMethod("Move", NewSlot(this, &ScriptableFile::Move));
-      RegisterMethod("OpenAsTextStream",
-                     NewSlotWithDefaultArgs(
-                         NewSlot(this, &ScriptableFile::OpenAsTextStream),
-                         kOpenAsTextStreamDefaultArgs));
+      if (impl->CanRead()) {
+        RegisterProperty("Path",
+                         NewSlot(file, &FileInterface::GetPath),
+                         NULL);
+        RegisterProperty("ShortPath",
+                         NewSlot(file, &FileInterface::GetShortPath),
+                         NULL);
+        RegisterProperty("ShortName",
+                         NewSlot(file, &FileInterface::GetShortName),
+                         NULL);
+        RegisterProperty("Drive",
+                         NewSlot(this, &ScriptableFile::GetDrive),
+                         NULL);
+        RegisterProperty("ParentFolder",
+                         NewSlot(this, &ScriptableFile::GetParentFolder),
+                         NULL);
+        RegisterProperty("DateCreated",
+                         NewSlot(file, &FileInterface::GetDateCreated),
+                         NULL);
+        RegisterProperty("DateLastModified",
+                         NewSlot(file, &FileInterface::GetDateLastModified),
+                         NULL);
+        RegisterProperty("DateLastAccessed",
+                         NewSlot(file, &FileInterface::GetDateLastAccessed),
+                         NULL);
+        RegisterProperty("Size",
+                         NewSlot(file, &FileInterface::GetSize),
+                         NULL);
+        RegisterProperty("Type",
+                         NewSlot(file, &FileInterface::GetType),
+                         NULL);
+      }
+      if (impl->CanRead() || impl->CanWrite()) {
+        RegisterMethod("OpenAsTextStream",
+                       NewSlotWithDefaultArgs(
+                           NewSlot(this, &ScriptableFile::OpenAsTextStream),
+                           kOpenAsTextStreamDefaultArgs));
+        RegisterProperty("Attributes",
+                         (impl->CanRead() ?
+                          NewSlot(file, &FileInterface::GetAttributes) :
+                          NULL),
+                         (impl->CanWrite() ?
+                          NewSlot(this, &ScriptableFile::SetAttributes) :
+                          NULL));
+        RegisterProperty("Name",
+                         (impl->CanRead() ?
+                          NewSlot(file, &FileInterface::GetName) :
+                          NULL),
+                         (impl->CanWrite() ?
+                          NewSlot(this, &ScriptableFile::SetName) :
+                          NULL));
+      }
+      if (impl->CanWrite()) {
+        RegisterMethod("Delete",
+            NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Delete),
+                                   kDeleteDefaultArgs));
+        RegisterMethod("Copy",
+            NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Copy),
+                                   kCopyDefaultArgs));
+        RegisterMethod("Move", NewSlot(this, &ScriptableFile::Move));
+      }
     }
 
     virtual ~ScriptableFile() {
@@ -403,7 +460,7 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("File.GetDrive"));
         return NULL;
       }
-      return new ScriptableDrive(drive);
+      return new ScriptableDrive(drive, impl_);
     }
 
     ScriptableFolder *GetParentFolder() {
@@ -412,7 +469,7 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("File.GetParentFolder"));
         return NULL;
       }
-      return new ScriptableFolder(folder);
+      return new ScriptableFolder(folder, impl_);
     }
 
     void SetAttributes(FileAttribute attributes) {
@@ -442,10 +499,11 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("File.OpenAsTextStream"));
         return NULL;
       }
-      return new ScriptableTextStream(stream);
+      return new ScriptableTextStream(stream, impl_);
     }
 
     FileInterface *file_;
+    Impl *impl_;
   };
 
   ScriptableArray *GetDrives() {
@@ -455,7 +513,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetDrives"));
       return NULL;
     }
-    return ToScriptableArray<ScriptableDrive, DriveInterface>(drives);
+    return ToScriptableArray<ScriptableDrive, DriveInterface>(drives, this);
   }
 
   ScriptableDrive *GetDrive(const char *drive_spec) {
@@ -465,7 +523,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetDrive"));
       return NULL;
     }
-    return new ScriptableDrive(drive);
+    return new ScriptableDrive(drive, this);
   }
 
   ScriptableFile *GetFile(const char *file_path) {
@@ -475,7 +533,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetFile"));
       return NULL;
     }
-    return new ScriptableFile(file);
+    return new ScriptableFile(file, this);
   }
 
   ScriptableFolder *GetFolder(const char *folder_path) {
@@ -485,7 +543,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetFolder"));
       return NULL;
     }
-    return new ScriptableFolder(folder);
+    return new ScriptableFolder(folder, this);
   }
 
   ScriptableFolder *GetSpecialFolder(SpecialFolder special) {
@@ -495,7 +553,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetSpecialFolder"));
       return NULL;
     }
-    return new ScriptableFolder(folder);
+    return new ScriptableFolder(folder, this);
   }
 
   void DeleteFile(const char *file_spec, bool force) {
@@ -541,7 +599,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.CreateFolder"));
       return NULL;
     }
-    return new ScriptableFolder(folder);
+    return new ScriptableFolder(folder, this);
   }
 
   ScriptableTextStream *CreateTextFile(const char *filename,
@@ -554,7 +612,7 @@ class ScriptableFileSystem::Impl {
           "Filesystem.CreateTextFile"));
       return NULL;
     }
-    return new ScriptableTextStream(stream);
+    return new ScriptableTextStream(stream, this);
   }
 
   ScriptableTextStream *OpenTextFile(const char *filename, IOMode mode,
@@ -566,7 +624,7 @@ class ScriptableFileSystem::Impl {
           "FileSystem.OpenTextFile"));
       return NULL;
     }
-    return new ScriptableTextStream(stream);
+    return new ScriptableTextStream(stream, this);
   }
 
   ScriptableTextStream *GetStandardStream(StandardStreamType type,
@@ -578,72 +636,92 @@ class ScriptableFileSystem::Impl {
           "Filesystem.GetStandardStream"));
       return NULL;
     }
-    return new ScriptableTextStream(stream);
+    return new ScriptableTextStream(stream, this);
+  }
+
+  bool CanRead() const {
+    const Permissions *permissions = gadget_ ? gadget_->GetPermissions() : NULL;
+    return permissions &&
+        permissions->IsRequiredAndGranted(Permissions::FILE_READ);
+  }
+
+  bool CanWrite() const {
+    const Permissions *permissions = gadget_ ? gadget_->GetPermissions() : NULL;
+    return permissions &&
+        permissions->IsRequiredAndGranted(Permissions::FILE_WRITE);
   }
 
   FileSystemInterface *filesystem_;
   ScriptableFileSystem *owner_;
+  Gadget *gadget_;
 };
 
-ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem)
-    : impl_(new Impl(filesystem, this)) {
+ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem,
+                                           Gadget *gadget)
+    : impl_(new Impl(filesystem, this, gadget)) {
   ASSERT(filesystem);
-  RegisterProperty("Drives", NewSlot(impl_, &Impl::GetDrives), NULL);
-  RegisterMethod("BuildPath",
-                 NewSlot(filesystem, &FileSystemInterface::BuildPath));
-  RegisterMethod("GetDriveName",
-                 NewSlot(filesystem,
-                         &FileSystemInterface::GetDriveName));
-  RegisterMethod("GetParentFolderName",
-                 NewSlot(filesystem,
-                         &FileSystemInterface::GetParentFolderName));
-  RegisterMethod("GetFileName",
-                 NewSlot(filesystem, &FileSystemInterface::GetFileName));
-  RegisterMethod("GetBaseName",
-                 NewSlot(filesystem, &FileSystemInterface::GetBaseName));
-  RegisterMethod("GetExtensionName",
-                 NewSlot(filesystem, &FileSystemInterface::GetExtensionName));
-  RegisterMethod("GetAbsolutePathName",
-                 NewSlot(filesystem,
-                         &FileSystemInterface::GetAbsolutePathName));
-  RegisterMethod("GetTempName",
-                 NewSlot(filesystem, &FileSystemInterface::GetTempName));
-  RegisterMethod("DriveExists",
-                 NewSlot(filesystem, &FileSystemInterface::DriveExists));
-  RegisterMethod("FileExists",
-                 NewSlot(filesystem, &FileSystemInterface::FileExists));
-  RegisterMethod("FolderExists",
-                 NewSlot(filesystem, &FileSystemInterface::FolderExists));
-  RegisterMethod("GetDrive", NewSlot(impl_, &Impl::GetDrive));
-  RegisterMethod("GetFile", NewSlot(impl_, &Impl::GetFile));
-  RegisterMethod("GetFolder", NewSlot(impl_, &Impl::GetFolder));
-  RegisterMethod("GetSpecialFolder", NewSlot(impl_, &Impl::GetSpecialFolder));
-  RegisterMethod("DeleteFile",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFile),
-                                        kDeleteFileOrFolderDefaultArgs));
-  RegisterMethod("DeleteFolder",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFolder),
-                                        kDeleteFileOrFolderDefaultArgs));
-  RegisterMethod("MoveFile", NewSlot(impl_, &Impl::MoveFile));
-  RegisterMethod("MoveFolder", NewSlot(impl_, &Impl::MoveFolder));
-  RegisterMethod("CopyFile",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFile),
-                                        kCopyFileOrFolderDefaultArgs));
-  RegisterMethod("CopyFolder",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFolder),
-                                        kCopyFileOrFolderDefaultArgs));
-  RegisterMethod("CreateFolder", NewSlot(impl_, &Impl::CreateFolder));
-  RegisterMethod("CreateTextFile",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CreateTextFile),
-                                        kCreateTextFileDefaultArgs));
-  RegisterMethod("OpenTextFile",
-                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::OpenTextFile),
-                                        kOpenTextFileDefaultArgs));
-  RegisterMethod("GetStandardStream",
-      NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::GetStandardStream),
-                             kGetStandardStreamDefaultArgs));
-  RegisterMethod("GetFileVersion",
-                 NewSlot(filesystem, &FileSystemInterface::GetFileVersion));
+  if (impl_->CanRead()) {
+    RegisterProperty("Drives", NewSlot(impl_, &Impl::GetDrives), NULL);
+    RegisterMethod("BuildPath",
+                   NewSlot(filesystem, &FileSystemInterface::BuildPath));
+    RegisterMethod("GetDriveName",
+                  NewSlot(filesystem,
+                          &FileSystemInterface::GetDriveName));
+    RegisterMethod("GetParentFolderName",
+                  NewSlot(filesystem,
+                          &FileSystemInterface::GetParentFolderName));
+    RegisterMethod("GetFileName",
+                  NewSlot(filesystem, &FileSystemInterface::GetFileName));
+    RegisterMethod("GetBaseName",
+                  NewSlot(filesystem, &FileSystemInterface::GetBaseName));
+    RegisterMethod("GetExtensionName",
+                  NewSlot(filesystem, &FileSystemInterface::GetExtensionName));
+    RegisterMethod("GetAbsolutePathName",
+                  NewSlot(filesystem,
+                          &FileSystemInterface::GetAbsolutePathName));
+    RegisterMethod("GetTempName",
+                   NewSlot(filesystem, &FileSystemInterface::GetTempName));
+    RegisterMethod("DriveExists",
+                   NewSlot(filesystem, &FileSystemInterface::DriveExists));
+    RegisterMethod("FileExists",
+                   NewSlot(filesystem, &FileSystemInterface::FileExists));
+    RegisterMethod("FolderExists",
+                   NewSlot(filesystem, &FileSystemInterface::FolderExists));
+    RegisterMethod("GetFileVersion",
+                   NewSlot(filesystem, &FileSystemInterface::GetFileVersion));
+    RegisterMethod("GetDrive", NewSlot(impl_, &Impl::GetDrive));
+    RegisterMethod("GetFile", NewSlot(impl_, &Impl::GetFile));
+    RegisterMethod("GetFolder", NewSlot(impl_, &Impl::GetFolder));
+    RegisterMethod("GetSpecialFolder", NewSlot(impl_, &Impl::GetSpecialFolder));
+  }
+  if (impl_->CanRead() || impl_->CanWrite()) {
+    RegisterMethod("OpenTextFile",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::OpenTextFile),
+                                          kOpenTextFileDefaultArgs));
+    RegisterMethod("GetStandardStream",
+        NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::GetStandardStream),
+                               kGetStandardStreamDefaultArgs));
+  }
+  if (impl_->CanWrite()) {
+    RegisterMethod("DeleteFile",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFile),
+                                          kDeleteFileOrFolderDefaultArgs));
+    RegisterMethod("DeleteFolder",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFolder),
+                                          kDeleteFileOrFolderDefaultArgs));
+    RegisterMethod("MoveFile", NewSlot(impl_, &Impl::MoveFile));
+    RegisterMethod("MoveFolder", NewSlot(impl_, &Impl::MoveFolder));
+    RegisterMethod("CopyFile",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFile),
+                                          kCopyFileOrFolderDefaultArgs));
+    RegisterMethod("CopyFolder",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFolder),
+                                          kCopyFileOrFolderDefaultArgs));
+    RegisterMethod("CreateFolder", NewSlot(impl_, &Impl::CreateFolder));
+    RegisterMethod("CreateTextFile",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CreateTextFile),
+                                          kCreateTextFileDefaultArgs));
+  }
 }
 
 ScriptableFileSystem::Impl::ScriptableFolder *
@@ -653,7 +731,7 @@ ScriptableFileSystem::Impl::ScriptableDrive::GetRootFolder() {
     SetPendingException(new FileSystemException("Drive.GetRootFolder"));
     return NULL;
   }
-  return new ScriptableFolder(folder);
+  return new ScriptableFolder(folder, impl_);
 }
 
 ScriptableFileSystem::~ScriptableFileSystem() {

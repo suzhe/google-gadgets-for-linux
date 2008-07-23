@@ -27,6 +27,8 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/gadget.h>
+#include <ggadget/gadget.h>
+#include <ggadget/permissions.h>
 
 #define Initialize qt_system_framework_LTX_Initialize
 #define Finalize qt_system_framework_LTX_Finalize
@@ -178,6 +180,13 @@ extern "C" {
     if (!reg_framework) {
       LOG("Specified framework is not registerable.");
       return false;
+    }
+
+    // Check permissions.
+    const Permissions *permissions = gadget->GetPermissions();
+    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+      LOG("No permission to access device status.");
+      return true;
     }
 
     QtSystemBrowseForFileHelper *helper =
