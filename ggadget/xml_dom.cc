@@ -19,6 +19,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/signals.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_parser_interface.h>
 #include <ggadget/xml_dom_interface.h>
@@ -155,78 +156,6 @@ class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
   DOMNodeInterface *GetItemNotConst(size_t index) { return GetItem(index); }
 };
 
-// The DOMNodeList used as the return value of GetElementsByTagName().
-class ElementsByTagName : public DOMNodeListBase {
- public:
-  DEFINE_CLASS_ID(0x08b36d84ae044941, DOMNodeListInterface);
-
-  ElementsByTagName(DOMNodeInterface *node, const char *name)
-      : node_(node),
-        name_(name ? name : ""),
-        wildcard_(name && name[0] == '*' && name[1] == '\0') {
-    node->Ref();
-  }
-  virtual ~ElementsByTagName() {
-    node_->Unref();
-  }
-
-  virtual DOMNodeInterface *GetItem(size_t index) {
-    return const_cast<DOMNodeInterface *>(GetItemFromNode(node_, &index));
-  }
-  virtual const DOMNodeInterface *GetItem(size_t index) const {
-    return GetItemFromNode(node_, &index);
-  }
-
-  virtual size_t GetLength() const {
-    return CountChildElements(node_);
-  }
-
- private:
-  const DOMNodeInterface *GetItemFromNode(const DOMNodeInterface *node,
-                                          size_t *index) const {
-    const DOMNodeInterface *result_item = NULL;
-    for (const DOMNodeInterface *item = node->GetFirstChild(); item;
-         item = item->GetNextSibling()) {
-      if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
-        // This node first and then children.
-        if (wildcard_ || name_ == item->GetNodeName()) {
-          if (*index == 0) {
-            result_item = item;
-            break;
-          }
-          (*index)--;
-        }
-
-        const DOMNodeInterface *result = GetItemFromNode(item, index);
-        if (result) {
-          // Found in children.
-          ASSERT(*index == 0);
-          result_item = result;
-          break;
-        }
-      }
-    }
-    return result_item;
-  }
-
-  size_t CountChildElements(const DOMNodeInterface *node) const {
-    size_t count = 0;
-    for (const DOMNodeInterface *item = node->GetFirstChild(); item;
-         item = item->GetNextSibling()) {
-      if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
-        if (wildcard_ || name_ == item->GetNodeName())
-          count++;
-        count += CountChildElements(item);
-      }
-    }
-    return count;
-  }
-
-  DOMNodeInterface *node_;
-  std::string name_;
-  bool wildcard_;
-};
-
 // Append a '\n' and indent to xml.
 static void AppendIndentNewLine(size_t indent, std::string *xml) {
   if (!xml->empty() && *(xml->end() - 1) != '\n')
@@ -294,6 +223,7 @@ class DOMNodeImpl {
       delete *it;
     }
     children_.clear();
+    ASSERT(on_element_tree_changed_.GetConnectionCount() == 0);
   }
 
   DOMNodeListInterface *GetChildNodes() {
@@ -338,6 +268,10 @@ class DOMNodeImpl {
 
     if (new_child == ref_child)
       return DOM_NO_ERR;
+
+    // To invalidate cached ElementsByName.
+    if (new_child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE)
+      OnElementTreeChanged();
 
     // Remove the new_child from its old parent.
     DOMNodeInterface *old_parent = new_child->GetParentNode();
@@ -392,6 +326,10 @@ class DOMNodeImpl {
       return DOM_NULL_POINTER_ERR;
     if (old_child->GetParentNode() != node_)
       return DOM_NOT_FOUND_ERR;
+
+    // To invalidate cached ElementsByName.
+    if (old_child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE)
+      OnElementTreeChanged();
 
     children_.erase(FindChild(old_child));
     DOMNodeImpl *old_child_impl = old_child->GetImpl();
@@ -485,6 +423,10 @@ class DOMNodeImpl {
       return DOM_INVALID_CHARACTER_ERR;
     }
     return DOM_NO_ERR;
+  }
+
+  DOMNodeListInterface *GetElementsByTagName(const char *name) {
+    return new ElementsByTagName(this, name);
   }
 
  public:
@@ -643,6 +585,78 @@ class DOMNodeImpl {
     const Children &children_;
   };
 
+  // The DOMNodeList used as the return value of GetElementsByTagName().
+  class ElementsByTagName : public DOMNodeListBase {
+   public:
+    DEFINE_CLASS_ID(0x08b36d84ae044941, DOMNodeListInterface);
+
+    ElementsByTagName(DOMNodeImpl *node, const char *name)
+        : node_(node),
+          name_(name ? name : ""),
+          wildcard_(name && name[0] == '*' && name[1] == '\0'),
+          valid_(false) {
+      node->node_->Ref();
+      on_invalidate_connection_ = node->on_element_tree_changed_.Connect(
+          NewSlot(this, &ElementsByTagName::Invalidate));
+    }
+    virtual ~ElementsByTagName() {
+      on_invalidate_connection_->Disconnect();
+      node_->node_->Unref();
+    }
+
+    virtual DOMNodeInterface *GetItem(size_t index) {
+      EnsureValid();
+      return index >= elements_.size() ? NULL : elements_[index];
+    }
+    virtual const DOMNodeInterface *GetItem(size_t index) const {
+      EnsureValid();
+      return index >= elements_.size() ? NULL : elements_[index];
+    }
+
+    virtual size_t GetLength() const {
+      EnsureValid();
+      return elements_.size();
+    }
+
+   private:
+    void EnsureValid() const {
+      if (!valid_) {
+        Refresh(node_->node_);
+        valid_ = true;
+      }
+    }
+
+    void Invalidate() {
+      valid_ = false;
+      elements_.clear();
+    }
+
+    void Refresh(DOMNodeInterface *node) const {
+      for (DOMNodeInterface *item = node->GetFirstChild(); item;
+           item = item->GetNextSibling()) {
+        if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
+          if (wildcard_ || name_ == item->GetNodeName())
+            elements_.push_back(down_cast<DOMElementInterface *>(item));
+          Refresh(item);
+        }
+      }
+    }
+
+    DOMNodeImpl *node_;
+    std::string name_;
+    bool wildcard_;
+    mutable bool valid_;
+    mutable std::vector<DOMElementInterface *> elements_;
+    Connection *on_invalidate_connection_;
+  };
+
+  void OnElementTreeChanged() {
+    on_element_tree_changed_();
+    // Pass up the message to ancestors.
+    if (parent_)
+      parent_->GetImpl()->OnElementTreeChanged();
+  }
+
   // In fact, node_ and callbacks_ points to the same object.
   DOMNodeInterface *node_;
   DOMNodeImplCallbacks *callbacks_;
@@ -657,6 +671,7 @@ class DOMNodeImpl {
   DOMNodeImpl *previous_sibling_, *next_sibling_;
   std::string last_xml_;
   int row_, column_;
+  Signal0<void> on_element_tree_changed_;
 };
 
 template <typename Interface>
@@ -858,12 +873,12 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   }
 
   virtual DOMNodeListInterface *GetElementsByTagName(const char *name) {
-    return new ElementsByTagName(this, name);
+    return impl_->GetElementsByTagName(name);
   }
 
   virtual const DOMNodeListInterface *GetElementsByTagName(
       const char *name) const {
-    return new ElementsByTagName(const_cast<DOMNodeBase *>(this), name);
+    return impl_->GetElementsByTagName(name);
   }
 
   DOMNodeListInterface *GetElementsByTagNameNotConst(const char *name) {
