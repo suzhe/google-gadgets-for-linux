@@ -22,10 +22,10 @@
 #include <QtGui/QImage>
 #include <QtGui/QTextDocument>
 #include <QtGui/QTextCursor>
-// #include <QtOpenGL/QGLFramebufferObject>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/canvas_interface.h>
+#include "qt_graphics.h"
 
 namespace ggadget {
 namespace qt {
@@ -114,9 +114,6 @@ class QtCanvas : public CanvasInterface {
 
   DISALLOW_EVIL_CONSTRUCTORS(QtCanvas);
 };
-inline int D2I(double d) {
-  return static_cast<int>(round(d));
-}
 } // namespace qt
 } // namespace ggadget
 

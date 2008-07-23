@@ -61,6 +61,7 @@ SET(SRCS
   small_object.cc
   string_utils.cc
   system_utils.cc
+  host_utils.cc
   texture.cc
   text_frame.cc
   unicode_utils.cc

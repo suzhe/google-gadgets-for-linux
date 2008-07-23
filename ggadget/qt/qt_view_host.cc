@@ -163,7 +163,9 @@ class QtViewHost::Impl {
       return true;
     }
 
-    widget_ = new QtViewWidget(view_, composite_, decorated_);
+    widget_ = new QtViewWidget(view_, composite_, decorated_,
+                               true,    // movable
+                               true);   // support_input_mask
     // Initialize window and widget.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       QVBoxLayout *layout = new QVBoxLayout();
