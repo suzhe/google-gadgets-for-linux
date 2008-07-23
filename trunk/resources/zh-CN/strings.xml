@@ -114,6 +114,8 @@ even in the middle of a word. -->
 <GADGET_CONFIRM_MESSAGE>Google 还未测试或验证这一第三方小工具的功能或安全性。请确认您要安装：</GADGET_CONFIRM_MESSAGE>
 <!-- The label displayed before the gadget description. -->
 <GADGET_DESCRIPTION>说明：</GADGET_DESCRIPTION>
+<!-- The label displayed before the gadget's required permissions. -->
+<GADGET_REQUIRED_PERMISSIONS>需要的权限：</GADGET_REQUIRED_PERMISSIONS>
 
 <!-- The message displayed in a confirm dialog to the user when some script
   runs too long and may blocks UI. The first %s parameter is the filename,
@@ -154,4 +156,13 @@ even in the middle of a word. -->
 <!-- Comments used in *.desktop files. -->
 <HOST_GTK_DESKTOP_COMMENT>在 GNOME/GTK 环境中运行 Google 小工具</HOST_GTK_DESKTOP_COMMENT>
 <HOST_QT_DESKTOP_COMMENT>在 KDE/Qt 环境中运行 Google 小工具</HOST_QT_DESKTOP_COMMENT>
+
+<!-- Descriptions of Gadget API permissions. TODO: to be reviewed -->
+<PERMISSION_FILEREAD>读取本地文件和目录的内容</PERMISSION_FILEREAD>
+<PERMISSION_FILEWRITE>创建或修改本地文件和目录</PERMISSION_FILEWRITE>
+<PERMISSION_DEVICESTATUS>访问或修改硬件设备的状态</PERMISSION_DEVICESTATUS>
+<PERMISSION_NETWORK>访问网络</PERMISSION_NETWORK>
+<PERMISSION_PERSONALDATA>访问个性化数据</PERMISSION_PERSONALDATA>
+<PERMISSION_ALLACCESS>执行本地代码和应用</PERMISSION_ALLACCESS>
+
 </strings>

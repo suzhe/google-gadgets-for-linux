@@ -63,7 +63,8 @@ check_PROGRAMS		= backoff_test \
 			  xml_parser_test \
 			  xml_http_request_test \
 			  digest_utils_test \
-			  image_cache_test
+			  image_cache_test \
+			  permissions_test
 
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la
@@ -94,6 +95,7 @@ xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES		= xml_parser_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 image_cache_test_SOURCES	= image_cache_test.cc
+permissions_test_SOURCES	= permissions_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc native_main_loop.cc
 xml_http_request_test_LDADD	= $(PTHREAD_LIBS) \

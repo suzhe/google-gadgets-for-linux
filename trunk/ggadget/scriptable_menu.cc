@@ -14,46 +14,95 @@
   limitations under the License.
 */
 
+#include <vector>
 #include "menu_interface.h"
 #include "scriptable_menu.h"
 #include "slot.h"
+#include "gadget.h"
 
 namespace ggadget {
 
-ScriptableMenu::ScriptableMenu(MenuInterface *menu)
-    : menu_(menu) {
+class ScriptableMenu::Impl {
+ public:
+  class MenuItemSlot : public Slot1<void, const char *> {
+   public:
+    MenuItemSlot(Gadget *gadget, Slot *handler)
+      : gadget_(gadget), handler_(handler) {
+    }
+    virtual ~MenuItemSlot() {
+      delete handler_;
+      handler_ = NULL;
+    }
+    virtual ResultVariant Call(ScriptableInterface *object,
+                               int argc, const Variant argv[]) const {
+      ASSERT(argc == 1);
+      gadget_->SetInUserInteraction(true);
+      ResultVariant result = handler_->Call(object, argc, argv);
+      gadget_->SetInUserInteraction(false);
+      return result;
+    }
+    virtual bool operator==(const Slot &another) const {
+      // Not used.
+      return false;
+    }
+
+   private:
+    Gadget *gadget_;
+    Slot *handler_;
+  };
+
+  Impl(Gadget *gadget, MenuInterface *menu)
+    : gadget_(gadget), menu_(menu) {
+    ASSERT(gadget);
+    ASSERT(menu);
+  }
+
+  ~Impl() {
+    for (std::vector<ScriptableMenu *>::iterator it = submenus_.begin();
+         it != submenus_.end(); ++it) {
+      delete *it;
+    }
+    submenus_.clear();
+  }
+
+  void AddItem(const char *item_text, int style, Slot *handler) {
+    menu_->AddItem(item_text, style,
+                   handler ? new MenuItemSlot(gadget_, handler) : NULL,
+                   MenuInterface::MENU_ITEM_PRI_CLIENT);
+  }
+
+  ScriptableMenu *AddPopup(const char *popup_text) {
+    ScriptableMenu *submenu = new ScriptableMenu(gadget_,
+            menu_->AddPopup(popup_text, MenuInterface::MENU_ITEM_PRI_CLIENT));
+    submenus_.push_back(submenu);
+    return submenu;
+  }
+
+  void SetItemStyle(const char *item_text, int style) {
+    menu_->SetItemStyle(item_text, style);
+  }
+
+  Gadget *gadget_;
+  MenuInterface *menu_;
+  std::vector<ScriptableMenu *> submenus_;
+};
+
+ScriptableMenu::ScriptableMenu(Gadget *gadget, MenuInterface *menu)
+  : impl_(new Impl(gadget, menu)) {
 }
 
 void ScriptableMenu::DoClassRegister() {
-  RegisterMethod("AddItem", NewSlot(&ScriptableMenu::ScriptAddItem));
-  RegisterMethod("SetItemStyle", NewSlot(&ScriptableMenu::SetItemStyle));
-  RegisterMethod("AddPopup", NewSlot(&ScriptableMenu::ScriptAddPopup));
+  RegisterMethod("AddItem",
+                 NewSlot(&Impl::AddItem, &ScriptableMenu::impl_));
+  RegisterMethod("SetItemStyle",
+                 NewSlot(&Impl::SetItemStyle, &ScriptableMenu::impl_));
+  RegisterMethod("AddPopup",
+                 NewSlot(&Impl::AddPopup, &ScriptableMenu::impl_));
 }
 
 ScriptableMenu::~ScriptableMenu() {
-  for (std::vector<ScriptableMenu *>::iterator it = submenus_.begin();
-       it != submenus_.end(); ++it) {
-    delete *it;
-  }
-  submenus_.clear();
-}
-
-void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
-                                   Slot *handler) {
-  menu_->AddItem(item_text, style,
-                 handler ? new SlotProxy1<void, const char *>(handler) : NULL,
-                 MenuInterface::MENU_ITEM_PRI_CLIENT);
-}
-
-ScriptableMenu *ScriptableMenu::ScriptAddPopup(const char *popup_text) {
-  ScriptableMenu *submenu = new ScriptableMenu(
-          menu_->AddPopup(popup_text, MenuInterface::MENU_ITEM_PRI_CLIENT));
-  submenus_.push_back(submenu);
-  return submenu;
-}
-
-void ScriptableMenu::SetItemStyle(const char *item_text, int style) {
-  menu_->SetItemStyle(item_text, style);
+  delete impl_;
+  impl_ = NULL;
 }
 
 } // namespace ggadget

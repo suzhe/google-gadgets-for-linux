@@ -34,6 +34,8 @@
 #include "view.h"
 #include "event.h"
 #include "clip_region.h"
+#include "permissions.h"
+#include "gadget.h"
 
 namespace ggadget {
 
@@ -884,7 +886,7 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!drop_target_)
+    if (!owner_->IsDropTarget())
       return EVENT_RESULT_UNHANDLED;
 
     // Take this event, since no children took it, and we're enabled.
@@ -1267,11 +1269,22 @@ void BasicElement::SetCursor(ViewInterface::CursorType cursor) {
 }
 
 bool BasicElement::IsDropTarget() const {
-  return impl_->drop_target_;
+  Gadget *gadget = GetView()->GetGadget();
+  const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+    return impl_->drop_target_;
+  else
+    LOG("No permission to use basicElement.dropTarget.");
+  return false;
 }
 
 void BasicElement::SetDropTarget(bool drop_target) {
-  impl_->drop_target_ = drop_target;
+  Gadget *gadget = GetView()->GetGadget();
+  const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+    impl_->drop_target_ = drop_target;
+  else
+    LOG("No permission to use basicElement.dropTarget.");
 }
 
 bool BasicElement::IsEnabled() const {

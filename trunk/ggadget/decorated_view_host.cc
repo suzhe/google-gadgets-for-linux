@@ -245,6 +245,9 @@ class DecoratedViewHost::Impl {
 
     virtual EventResult OnOtherEvent(const Event &event) {
       View::OnOtherEvent(event);
+      // Set focus to child view by default.
+      if (event.GetType() == Event::EVENT_FOCUS_IN)
+        SetFocus(view_element_);
       return child_view_ ? child_view_->OnOtherEvent(event) :
           EVENT_RESULT_UNHANDLED;
     }
@@ -584,6 +587,7 @@ class DecoratedViewHost::Impl {
         popped_out_(false),
         mouseover_(false),
         minimized_state_loaded_(false),
+        menu_button_clicked_(false),
         update_visibility_timer_(0),
         background_(NULL),
         bottom_(NULL),
@@ -743,6 +747,13 @@ class DecoratedViewHost::Impl {
         result = child->OnAddContextMenuItems(menu);
       else if (original_child_view_)
         result = original_child_view_->OnAddContextMenuItems(menu);
+
+      // Always show decorator menu items if the menu is activated by clicking
+      // menu button.
+      if (menu_button_clicked_) {
+        result = true;
+        menu_button_clicked_ = false;
+      }
 
       if (result) {
         int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
@@ -1181,6 +1192,7 @@ class DecoratedViewHost::Impl {
     }
 
     void OnMenuButtonClicked() {
+      menu_button_clicked_ = true;
       GetViewHost()->ShowContextMenu(MouseEvent::BUTTON_LEFT);
     }
 
@@ -1247,6 +1259,7 @@ class DecoratedViewHost::Impl {
     bool popped_out_;
     bool mouseover_;
     bool minimized_state_loaded_;
+    bool menu_button_clicked_;
 
     int update_visibility_timer_;
 

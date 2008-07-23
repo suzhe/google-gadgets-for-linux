@@ -27,6 +27,7 @@
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/menu_interface.h>
 #include <ggadget/options_interface.h>
+#include <ggadget/permissions.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
@@ -669,23 +670,35 @@ std::string GoogleGadgetManager::GetDownloadedGadgetLocation(
   return path;
 }
 
-uint64_t GoogleGadgetManager::GetGadgetInstanceTrustedFeatures(
-    int instance_id) {
-  // TODO: ACL.
+bool GoogleGadgetManager::GetGadgetDefaultPermissions(
+    int instance_id, Permissions *permissions) {
+  ASSERT(permissions);
+
+  std::string path = GetGadgetInstancePath(instance_id);
   const GadgetInfo *info = GetGadgetInfoOfInstance(instance_id);
-  if (!info || info->source == SOURCE_LOCAL_FILE)
-    return 0;
+  StringMap manifest;
+  if (path.length() && info &&
+      Gadget::GetGadgetManifest(path.c_str(), &manifest)) {
+    *permissions = Permissions();
+    Gadget::GetGadgetRequiredPermissions(&manifest, permissions);
 
-  if (info->source == SOURCE_BUILTIN)
-    return UINT64_C(0xFFFFFFFFFFFFFFFF);
-
-  StringMap::const_iterator it = info->attributes.find("category");
-  if (it != info->attributes.end()) {
-    std::string category = ',' + it->second + ',';
-    if (category.find(",google,") != category.npos)
-      return 1;
+    if (info->source == SOURCE_BUILTIN) {
+      // built-in gadgets are absolutely trusted.
+      permissions->SetGranted(Permissions::ALL_ACCESS, true);
+    } else if (info->source == SOURCE_PLUGINS_XML) {
+      // FIXME:
+      // Trusts gadgets created by Google for now, until they are
+      // all upgraded to make use of <permissions/> API.
+      StringMap::const_iterator it = info->attributes.find("category");
+      if (it != info->attributes.end()) {
+        std::string category = ',' + it->second + ',';
+        if (category.find(",google,") != category.npos)
+          permissions->GrantAllRequired();
+      }
+    }
+    return true;
   }
-  return 0;
+  return false;
 }
 
 bool GoogleGadgetManager::GetGadgetInstanceInfo(
@@ -987,13 +1000,14 @@ static bool DisableContextMenu(MenuInterface *) {
 
 void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   if (!browser_gadget_) {
+    Permissions permissions;
+    permissions.SetGranted(Permissions::ALL_ACCESS, true);
     browser_gadget_ =
         new Gadget(host,
                    GetSystemGadgetPath(kGoogleGadgetBrowserName).c_str(),
                    kGoogleGadgetBrowserOptionsName,
                    kGoogleGadgetBrowserInstanceId,
-                   // TODO: ACL.
-                   UINT64_C(0xFFFFFFFFFFFFFFFF));
+                   permissions);
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
       browser_gadget_->GetMainView()->

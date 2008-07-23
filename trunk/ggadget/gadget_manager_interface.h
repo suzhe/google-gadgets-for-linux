@@ -22,6 +22,7 @@
 namespace ggadget {
 
 class HostInterface;
+class Permissions;
 
 class Connection;
 template <typename R, typename P1> class Slot1;
@@ -86,13 +87,15 @@ class GadgetManagerInterface {
   virtual void ShowGadgetBrowserDialog(HostInterface *host) = 0;
 
   /**
-   * Gets the trustiness of a gadget instance.
+   * Gets the default permissions of a gadget instance.
    * @param instance_id id of an active instance.
-   * @return the trustiness of a gadget instance, which is combination of
-   *     feature bits indicating which features can be safely trusted for
-   *     this gadget instance.
+   * @param[out] permissions The default permissions of the gadget instance,
+   *             including all permissions required by the gadget instance,
+   *             and all permissions granted/denied by default.
+   * @return true if the permissions information is loaded successfully.
    */
-  virtual uint64_t GetGadgetInstanceTrustedFeatures(int instance_id) = 0;
+  virtual bool GetGadgetDefaultPermissions(int instance_id,
+                                           Permissions *permissions) = 0;
 
   /**
    * Gets information of a gadget instance.

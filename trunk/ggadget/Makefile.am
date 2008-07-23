@@ -89,6 +89,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  object_element.h \
 			  object_videoplayer.h \
 			  options_interface.h \
+			  permissions.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
 			  run_once.h \
@@ -183,6 +184,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  object_element.cc \
 			  object_videoplayer.cc \
 			  options_factory.cc \
+			  permissions.cc \
 			  progressbar_element.cc \
 			  run_once.cc \
 			  script_runtime_manager.cc \

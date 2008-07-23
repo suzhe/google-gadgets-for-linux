@@ -40,8 +40,9 @@ bool ElementExtensionRegister::RegisterExtension(const Module *extension) {
   return func ? func(factory_) : false;
 }
 
-ScriptExtensionRegister::ScriptExtensionRegister(ScriptContextInterface *context)
-  : context_(context) {
+ScriptExtensionRegister::ScriptExtensionRegister(
+    ScriptContextInterface *context, Gadget *gadget)
+  : context_(context), gadget_(gadget) {
 }
 
 bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
@@ -49,14 +50,12 @@ bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
   // reinterpret_cast<> doesn't work on gcc 3.x
   RegisterScriptExtensionFunc func = (RegisterScriptExtensionFunc)(
       extension->GetSymbol(kScriptExtensionSymbolName));
-  return func ? func(context_) : false;
+  return func ? func(context_, gadget_) : false;
 }
 
 FrameworkExtensionRegister::FrameworkExtensionRegister(
-    ScriptableInterface *framework,
-    Gadget *gadget)
-  : framework_(framework),
-    gadget_(gadget) {
+    ScriptableInterface *framework, Gadget *gadget)
+  : framework_(framework), gadget_(gadget) {
 }
 
 bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {

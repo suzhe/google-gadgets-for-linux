@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <ggadget/logger.h>
+#include <ggadget/gadget.h>
 #include "google_gadget_manager_interface.h"
 
 #define Initialize gadget_browser_script_utils_LTX_Initialize
@@ -25,6 +26,8 @@
 
 using ggadget::GadgetManagerInterface;
 using ggadget::GetGadgetManager;
+using ggadget::Gadget;
+using ggadget::ScriptContextInterface;
 using ggadget::google::GoogleGadgetManagerInterface;
 using ggadget::google::kGoogleGadgetManagerTag;
 
@@ -38,7 +41,8 @@ extern "C" {
     LOGI("Finalize gadget_browser_script_utils extension.");
   }
 
-  bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
+  bool RegisterScriptExtension(ScriptContextInterface *context,
+                               Gadget *gadget) {
     LOGI("Register ggadget_browser_script_utils extension.");
     GadgetManagerInterface *gadget_manager = GetGadgetManager();
     if (!gadget_manager ||

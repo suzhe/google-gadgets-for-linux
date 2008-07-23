@@ -337,7 +337,10 @@ std::string GetHomeDirectory() {
   return home ? std::string(home) : GetCurrentDirectory();
 }
 
-std::string GetAbsolutePath(const std::string &path) {
+std::string GetAbsolutePath(const char *path) {
+  if (!path || !*path)
+    return "";
+
   // Normalizes the file path.
   std::string result = path;
   // Not using kDirSeparator because Windows version should have more things
@@ -349,6 +352,11 @@ std::string GetAbsolutePath(const std::string &path) {
   }
   result = NormalizeFilePath(result.c_str());
   return result;
+}
+
+bool IsAbsolutePath(const char *path) {
+  // Other system may use other method.
+  return path && *path == '/';
 }
 
 bool CreateTempDirectory(const char *prefix, std::string *path) {

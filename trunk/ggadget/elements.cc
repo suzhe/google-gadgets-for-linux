@@ -43,6 +43,8 @@ class Elements::Impl {
   }
 
   ~Impl() {
+    // To prevent from calling owner_->QueueDraw();
+    owner_ = NULL;
     RemoveAllElements();
   }
 
@@ -57,6 +59,7 @@ class Elements::Impl {
     if (e == NULL)
       return NULL;
     if (view_->OnElementAdd(e)) {
+      e->QueueDraw();
       children_.push_back(e);
     } else {
       delete e;
@@ -76,6 +79,7 @@ class Elements::Impl {
       second = std::find(children_.begin(), children_.end(), before);
     }
     if (view_->OnElementAdd(element)) {
+      element->QueueDraw();
       if (!before || second == children_.end()) {
         children_.push_back(element);
         return true;
@@ -96,6 +100,7 @@ class Elements::Impl {
     if (e == NULL)
       return NULL;
     if (view_->OnElementAdd(e)) {
+      e->QueueDraw();
       Children::iterator ite = std::find(children_.begin(), children_.end(),
                                          before);
       children_.insert(ite, e);
@@ -118,6 +123,8 @@ class Elements::Impl {
   }
 
   void RemoveAllElements() {
+    if (owner_)
+      owner_->QueueDraw();
     for (Children::iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
       view_->OnElementRemove(*ite);

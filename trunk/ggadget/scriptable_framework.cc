@@ -30,6 +30,9 @@
 #include "view.h"
 #include "event.h"
 #include "scriptable_event.h"
+#include "gadget_consts.h"
+#include "permissions.h"
+#include "system_utils.h"
 
 namespace ggadget {
 namespace framework {
@@ -119,33 +122,46 @@ class ScriptableAudioclip : public ScriptableHelperDefault {
 class ScriptableAudio::Impl {
  public:
   Impl(AudioInterface *audio, Gadget *gadget)
-    : audio_(audio), file_manager_(NULL) {
-    file_manager_ = gadget->GetFileManager();
+    : audio_(audio), gadget_(NULL) {
   }
 
   ScriptableAudioclip *Open(const char *src, Slot *method) {
-    if (!src || !*src)
+    if (!src || !*src) {
+      delete method;
       return NULL;
+    }
 
     std::string src_str;
     if (strstr(src, "://")) {
+      const Permissions *perm = gadget_->GetPermissions();
+      // If it's not a local file uri, then only allow it when gadget has the
+      // permission to access network.
+      if (strncasecmp(src, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1) &&
+          !perm->IsRequiredAndGranted(Permissions::NETWORK)) {
+        LOG("No permission to access %s", src);
+        return NULL;
+      }
       src_str = src;
+    } else if (IsAbsolutePath(src)) {
+      // It's ok to play files in local filesystem.
+      src_str = std::string(kFileUrlPrefix) + src;
     } else {
       // src may be a relative file name under the base path of the gadget.
       std::string extracted_file;
-      if (!file_manager_->ExtractFile(src, &extracted_file))
+      if (!gadget_->GetFileManager()->ExtractFile(src, &extracted_file))
         return NULL;
-      src_str = "file://" + extracted_file;
+      src_str = std::string(kFileUrlPrefix) + extracted_file;
     }
 
     AudioclipInterface *clip = audio_->CreateAudioclip(src_str.c_str());
     if (clip) {
       ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
-      scriptable_clip->ConnectOnStateChange(method);
+      if (method)
+        scriptable_clip->ConnectOnStateChange(method);
       return scriptable_clip;
-    } else {
-      delete method;
     }
+
+    delete method;
     return NULL;
   }
 
@@ -162,7 +178,7 @@ class ScriptableAudio::Impl {
   }
 
   AudioInterface *audio_;
-  FileManagerInterface *file_manager_;
+  Gadget *gadget_;
 };
 
 ScriptableAudio::ScriptableAudio(AudioInterface *audio,

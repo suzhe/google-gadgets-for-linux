@@ -32,6 +32,7 @@
 #include "messages.h"
 #include "host_interface.h"
 #include "options_interface.h"
+#include "permissions.h"
 #include "script_context_interface.h"
 #include "script_runtime_manager.h"
 #include "scriptable_array.h"
@@ -137,7 +138,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
        const char *base_path,
        const char *options_name,
        int instance_id,
-       uint64_t allowed_features)
+       const Permissions &global_permissions)
       : owner_(owner),
         host_(host),
         element_factory_(new ElementFactory()),
@@ -148,6 +149,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         main_view_(NULL),
         details_view_(NULL),
         old_details_view_(NULL),
+        permissions_(global_permissions),
         base_path_(base_path),
         instance_id_(instance_id),
         initialized_(false),
@@ -155,7 +157,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         plugin_flags_(0),
         display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
-        allowed_features_(allowed_features),
         in_user_interaction_(false),
         remove_me_timer_(0),
         debug_console_config_(0) {
@@ -169,8 +170,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     OptionsInterface *global_options = GetGlobalOptions();
     if (global_options) {
-      global_options->GetValue(kDebugConsoleOption)
-          .ConvertToInt(&debug_console_config_);
+      global_options->GetValue(kDebugConsoleOption).ConvertToInt(
+          &debug_console_config_);
     }
   }
 
@@ -240,6 +241,32 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
+    // Load permissions information at very beginning, in case following
+    // initialization code requires it.
+    // permissions_ contains the global permissions.
+    Permissions global_permissions = permissions_;
+
+    // Clear permissions_.
+    permissions_ = Permissions();
+    Variant value = options_->GetInternalValue(kPermissionsOption);
+    if (value.type() == Variant::TYPE_STRING) {
+      permissions_.FromString(VariantValue<const char *>()(value));
+      GetGadgetRequiredPermissions(&manifest_info_map_, &permissions_);
+    } else {
+      GetGadgetRequiredPermissions(&manifest_info_map_, &permissions_);
+      // Grants all required permissions, and use it as initial permissions.
+      permissions_.GrantAllRequired();
+      Permissions temp = permissions_;
+      temp.RemoveAllRequired();
+      // Don't save required permissions.
+      options_->PutInternalValue(kPermissionsOption, Variant(temp.ToString()));
+    }
+
+    // Denies all permissions which are denied explicitly in global
+    // permissions.
+    permissions_.SetGrantedByPermissions(global_permissions, false);
+    DLOG("Permissions: %s", permissions_.ToString().c_str());
+
     // main view must be created before calling RegisterProperties();
     main_view_ = new ViewBundle(
         host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
@@ -263,7 +290,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
-        if (allowed_features_ & 0x10000000) { // TODO: ACL
+        if (permissions_.IsRequired(Permissions::ALL_ACCESS) &&
+            permissions_.IsGranted(Permissions::ALL_ACCESS)) {
           // Only trusted gadget can load local extensions.
           const char *module_name = i->second.c_str();
           std::string path;
@@ -286,9 +314,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         }
       }
     }
-
-    framework_.GetRegisterable()->RegisterMethod(
-        "openUrl", NewSlot(this, &Impl::OpenURL));
 
     // Register extensions
     const ExtensionManager *global_manager =
@@ -360,7 +385,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ASSERT(context);
     const ExtensionManager *global_manager =
         ExtensionManager::GetGlobalExtensionManager();
-    ScriptExtensionRegister script_register(context);
+    ScriptExtensionRegister script_register(context, owner_);
 
     if (global_manager)
       global_manager->RegisterLoadedExtensions(&script_register);
@@ -499,7 +524,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void OnAddCustomMenuItems(MenuInterface *menu) {
-    ScriptableMenu scriptable_menu(menu);
+    ScriptableMenu scriptable_menu(owner_, menu);
     onaddcustommenuitems_signal_(&scriptable_menu);
     if (HasOptionsDialog()) {
       menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
@@ -839,18 +864,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   bool OpenURL(const char *url) {
-    // Important: verify that URL is valid first.
-    // Otherwise could be a security problem.
-    if (in_user_interaction_) {
-      std::string newurl = EncodeURL(url);
-      if (IsValidURL(url))
-        return host_->OpenURL(newurl.c_str());
-
-      DLOG("Malformed URL: %s", newurl.c_str());
-      return false;
+    Variant open_url;
+    if (framework_.GetPropertyInfo("openUrl", &open_url) == PROPERTY_METHOD &&
+        open_url.type() == Variant::TYPE_SLOT) {
+      Variant argv[1] = { Variant(url) };
+      ResultVariant result =
+          VariantValue<Slot *>()(open_url)->Call(&framework_, 1, argv);
+      return VariantValue<bool>()(result.v());
     }
 
-    DLOG("OpenURL called not in user interaction is forbidden.");
+    DLOG("No method to open url.");
     return false;
   }
 
@@ -918,8 +941,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Signal1<void, int> oncommand_signal_;
   Signal1<void, int> ondisplaystatechange_signal_;
   Signal1<void, int> ondisplaytargetchange_signal_;
-
   Signal1<void, int> onpluginflagschanged_signal_;
+  Signal2<void, LogLevel, const std::string &> log_signal_;
 
   StringMap manifest_info_map_;
   StringMap strings_map_;
@@ -936,6 +959,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   ViewBundle *details_view_;
   ViewBundle *old_details_view_;
 
+  Permissions permissions_;
+
   std::string base_path_;
   int instance_id_;
   bool initialized_;
@@ -943,10 +968,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   int plugin_flags_;
   DisplayTarget display_target_;
   int xml_http_request_session_;
-  uint64_t allowed_features_;
   bool in_user_interaction_;
   int remove_me_timer_;
-  Signal2<void, LogLevel, const std::string &> log_signal_;
   int debug_console_config_;
 };
 
@@ -954,9 +977,9 @@ Gadget::Gadget(HostInterface *host,
                const char *base_path,
                const char *options_name,
                int instance_id,
-               uint64_t allowed_features)
+               const Permissions &initial_permissions)
     : impl_(new Impl(this, host, base_path, options_name, instance_id,
-                     allowed_features)) {
+                     initial_permissions)) {
   impl_->initialized_ = impl_->Initialize();
 }
 
@@ -1072,8 +1095,12 @@ Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
 }
 
 XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
-  return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
-      impl_->xml_http_request_session_, GetXMLParser());
+  if (impl_->permissions_.IsRequiredAndGranted(Permissions::NETWORK)) {
+      return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
+          impl_->xml_http_request_session_, GetXMLParser());
+  }
+  LOG("No permission to access network.");
+  return NULL;
 }
 
 bool Gadget::SetInUserInteraction(bool in_user_interaction) {
@@ -1093,6 +1120,10 @@ Connection *Gadget::ConnectLogListener(
   return impl_->log_signal_.Connect(listener);
 }
 
+const Permissions* Gadget::GetPermissions() const {
+  return &impl_->permissions_;
+}
+
 // static methods
 bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
   ASSERT(base_path);
@@ -1106,6 +1137,42 @@ bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
   bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
   delete file_manager;
   return result;
+}
+
+bool Gadget::GetGadgetRequiredPermissions(const StringMap *manifest,
+                                          Permissions *required) {
+  ASSERT(manifest);
+  ASSERT(required);
+  StringMap::const_iterator it = manifest->begin();
+  bool has_permissions = false;
+  size_t prefix_length = arraysize(kManifestPermissions) - 1;
+
+  required->RemoveAllRequired();
+  for (; it != manifest->end(); ++it) {
+    if (GadgetStrNCmp(it->first.c_str(), kManifestPermissions,
+                      prefix_length) == 0) {
+      if (it->first[prefix_length] == 0) {
+        has_permissions = true;
+      } else if (has_permissions && it->first[prefix_length] == '/') {
+        int permission =
+            Permissions::GetByName(it->first.c_str() + prefix_length + 1);
+        if (permission >= 0) {
+          required->SetRequired(permission, true);
+        } else {
+          DLOG("Invalid permission node: %s", it->first.c_str());
+        }
+      } else {
+        DLOG("Invalid permission node: %s", it->first.c_str());
+      }
+    }
+  }
+
+  // If there is no permissions node in manifest, then requires <allaccess/>
+  // explicitly.
+  if (!has_permissions)
+    required->SetRequired(Permissions::ALL_ACCESS, true);
+
+  return has_permissions;
 }
 
 } // namespace ggadget

@@ -89,6 +89,9 @@ const char kManifestInstallObject[] = "install/object";
  */
 const char kManifestInstallObjectSrc[] = "install/object@src";
 
+/** Permissions node key in manifest file. */
+const char kManifestPermissions[] = "permissions";
+
 /** The tag name of the root element in string table files. */
 const char kStringsTag[] = "strings";
 /** The tag name of the root element in view file. */
@@ -252,6 +255,11 @@ const char kEncodingFallback[] = "ISO8859-1";
  *        startup code.
  */
 const char kDebugConsoleOption[] = "debug_console";
+
+/**
+ * The option key to store permissions of a gadget instance in its options file.
+ */
+const char kPermissionsOption[] = "permissions";
 
 } // namespace ggadget
 

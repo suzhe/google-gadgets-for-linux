@@ -44,7 +44,6 @@ ggl_qt_LDADD		= @QT4_LIBS@ \
 ggl_qt_LDFLAGS		= -R$(libdir)
 
 BUILT_SOURCES		= $(MOC_FILES)
-CLEANFILES 		= $(MOC_FILES)
 qt_host_internal.moc:qt_host_internal.h
 	$(MOC) $< -o $@
 
@@ -80,7 +79,6 @@ ggl-qt.desktop : ggl-qt.desktop.in
 	rm -f $@.tmp
 
 EXTRA_DIST = $(desktop_in_files)
-CLEANFILES = $(desktop_DATA)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
@@ -89,5 +87,7 @@ install-data-hook:
 uninstall-hook:
 	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
 endif
+
+CLEANFILES 		= $(desktop_DATA) $(MOC_FILES)
 
 endif

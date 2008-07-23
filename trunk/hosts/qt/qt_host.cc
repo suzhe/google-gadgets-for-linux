@@ -41,6 +41,8 @@
 #include <ggadget/decorated_view_host.h>
 #include <ggadget/gadget.h>
 #include <ggadget/view.h>
+#include <ggadget/permissions.h>
+#include <ggadget/options_interface.h>
 #include "qt_host.h"
 #include "gadget_browser_host.h"
 #include "qt_host_internal.h"
@@ -78,6 +80,9 @@ class QtHost::Impl {
       expanded_popout_(NULL),
       expanded_original_(NULL),
       obj_(new QtHostObject(host, &gadget_browser_host_)) {
+    // Initializes global permissions.
+    // FIXME: Supports customizable global permissions.
+    global_permissions_.SetGranted(Permissions::ALL_ACCESS, true);
     SetupUI();
   }
 
@@ -129,7 +134,16 @@ class QtHost::Impl {
         NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
-  bool ConfirmGadget(int id) {
+  static bool GetPermissionsDescriptionCallback(int permission,
+                                                std::string *msg) {
+    if (msg->length())
+      msg->append("\n");
+    msg->append("  ");
+    msg->append(Permissions::GetDescription(permission));
+    return true;
+  }
+
+  bool ConfirmGadget(int id, Permissions *permissions) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     std::string download_url, title, description;
     if (!gadget_manager_->GetGadgetInstanceInfo(id,
@@ -138,19 +152,34 @@ class QtHost::Impl {
                                                 &title, &description))
       return false;
 
+    // Get required permissions description.
+    std::string permissions_msg;
+    permissions->EnumerateAllRequired(
+        NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
+
     std::string message = GM_("GADGET_CONFIRM_MESSAGE");
     message.append("\n\n")
         .append(title).append("\n")
         .append(download_url).append("\n\n")
         .append(GM_("GADGET_DESCRIPTION"))
-        .append(description);
+        .append(description)
+        .append("\n\n")
+        .append(GM_("GADGET_REQUIRED_PERMISSIONS"))
+        .append(permissions_msg);
     int ret = QMessageBox::question(
         NULL,
         QString::fromUtf8(GM_("GADGET_CONFIRM_TITLE")),
         QString::fromUtf8(message.c_str()),
         QMessageBox::Yes| QMessageBox::No,
         QMessageBox::Yes);
-    return ret == QMessageBox::Yes;
+
+    if (ret == QMessageBox::Yes) {
+      // TODO: Is it necessary to let user grant individual permissions
+      // separately?
+      permissions->GrantAllRequired();
+      return true;
+    }
+    return false;
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
@@ -161,12 +190,24 @@ class QtHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    if (gadget_manager_->GetGadgetInstanceTrustedFeatures(id) ||
-        ConfirmGadget(id)) {
-      if (with_plasma_)
-        return InstallPlasmaApplet(id);
-      else
-        return LoadGadgetInstance(id);
+    Permissions permissions;
+    if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
+      if (!permissions.HasUngranted() || ConfirmGadget(id, &permissions)) {
+        // Save initial permissions.
+        std::string options_name =
+            gadget_manager_->GetGadgetInstanceOptionsName(id);
+        OptionsInterface *options = CreateOptions(options_name.c_str());
+        // Don't save required permissions.
+        permissions.RemoveAllRequired();
+        options->PutInternalValue(kPermissionsOption,
+                                  Variant(permissions.ToString()));
+        options->Flush();
+        delete options;
+        if (with_plasma_)
+          return InstallPlasmaApplet(id);
+        else
+          return LoadGadgetInstance(id);
+      }
     }
     return false;
   }
@@ -256,30 +297,22 @@ class QtHost::Impl {
         return true;
       }
       delete opt;
-      result = LoadGadget(path.c_str(), options.c_str(), id);
-      if (result) {
-        DLOG("Load gadget %s, with option %s, succeeded",
-             path.c_str(), options.c_str());
-      } else {
-        LOG("Load gadget %s, with option %s, failed",
-             path.c_str(), options.c_str());
-      }
+      result =
+          LoadGadget(path.c_str(), options.c_str(), id);
+      DLOG("QtHost: Load gadget %s, with option %s, %s",
+           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
   }
 
-  bool LoadGadget(const char *path, const char *options_name,
-                  int instance_id) {
+  bool LoadGadget(const char *path, const char *options_name, int instance_id) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
       return true;
     }
 
-    // TODO ACL.
-    uint64_t trusted_features =
-        gadget_manager_->GetGadgetInstanceTrustedFeatures(instance_id);
     Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
-                                trusted_features);
+                                global_permissions_);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
@@ -447,6 +480,8 @@ class QtHost::Impl {
 
   typedef std::map<int, GadgetInfo*> GadgetsMap;
   GadgetsMap gadgets_;
+
+  Permissions global_permissions_;
 };
 
 QtHost::QtHost(bool composite, int view_debug_mode,
@@ -469,10 +504,6 @@ ViewHostInterface *QtHost::NewViewHost(Gadget *gadget,
 
 void QtHost::RemoveGadget(Gadget *gadget, bool save_data) {
   impl_->RemoveGadget(gadget, save_data);
-}
-
-bool QtHost::OpenURL(const char *url) const {
-  return ggadget::qt::OpenURL(url);
 }
 
 bool QtHost::LoadFont(const char *filename) {
