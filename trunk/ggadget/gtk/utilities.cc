@@ -647,22 +647,10 @@ static const gint kDebugMaxBufferSize = 512 * 1024;
 struct DebugConsoleInfo {
   Connection *log_connection;
   GtkTextView *log_view;
+  GtkTextMark *end_mark;
   int log_level;
   bool lock_scroll;
-  bool changed;
 };
-
-static gboolean UpdateDebugConsoleScroll(gpointer data) {
-  DebugConsoleInfo *info = static_cast<DebugConsoleInfo *>(data);
-  if (info->changed && !info->lock_scroll) {
-    GtkTextBuffer *buffer = gtk_text_view_get_buffer(info->log_view);
-    GtkTextIter end;
-    gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_view_scroll_to_iter(info->log_view, &end, 0, FALSE, 0, 0);
-    info->changed = false;
-  }
-  return TRUE;
-}
 
 static void OnDebugConsoleLog(LogLevel level, const std::string &message,
                               DebugConsoleInfo *info) {
@@ -690,31 +678,30 @@ static void OnDebugConsoleLog(LogLevel level, const std::string &message,
            static_cast<int>(tv.tv_sec % 60),
            static_cast<int>(tv.tv_usec / 1000));
 
-  gtk_text_buffer_get_end_iter(buffer, &end);
   gtk_text_buffer_insert(buffer, &end, timestr, -1);
-  gtk_text_buffer_get_end_iter(buffer, &end);
   gtk_text_buffer_insert(buffer, &end, message.c_str(),
                          static_cast<gint>(message.size()));
-  gtk_text_buffer_get_end_iter(buffer, &end);
   gtk_text_buffer_insert(buffer, &end, "\n", 1);
 
   // Trim the beginning lines if the buffer exceeds the maximum size.
+  GtkTextIter start, next_line;
+  gtk_text_buffer_get_start_iter(buffer, &start);
+  gtk_text_buffer_get_start_iter(buffer, &next_line);
   while (gtk_text_buffer_get_char_count(buffer) > kDebugMaxBufferSize) {
-    GtkTextIter start;
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    GtkTextIter *next_line = gtk_text_iter_copy(&start);
-    gtk_text_iter_forward_line(next_line);
-    gtk_text_buffer_delete(buffer, &start, next_line);
-    gtk_text_iter_free(next_line);
+    gtk_text_iter_forward_line(&next_line);
+    gtk_text_buffer_delete(buffer, &start, &next_line);
   }
-  info->changed = true;
+
+  if (!info->lock_scroll) {
+    gtk_text_view_scroll_to_mark(info->log_view, info->end_mark,
+                                 0, FALSE, 0, 0);
+  }
 }
 
 static void OnDebugConsoleDestroy(GtkObject *object, gpointer user_data) {
   DLOG("Debug console destroyed: %p", object);
   DebugConsoleInfo *info = static_cast<DebugConsoleInfo *>(user_data);
   info->log_connection->Disconnect();
-  g_idle_remove_by_data(info);
 
   OptionsInterface *options = GetGlobalOptions();
   if (options) {
@@ -810,12 +797,16 @@ GtkWidget *NewGadgetDebugConsole(Gadget *gadget) {
 
   DebugConsoleInfo *console_info = new DebugConsoleInfo();
   memset(console_info, 0, sizeof(DebugConsoleInfo));
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(log_view));
+  GtkTextIter end;
+  gtk_text_buffer_get_end_iter(buffer, &end);
   console_info->log_view = GTK_TEXT_VIEW(log_view);
+  console_info->end_mark = gtk_text_buffer_create_mark(buffer, NULL, &end,
+                                                       FALSE);
   console_info->log_connection =
       gadget->ConnectLogListener(NewSlot(OnDebugConsoleLog, console_info));
   console_info->log_level = LOG_TRACE;
   console_info->lock_scroll = false;
-  console_info->changed = false;
 
   OptionsInterface *options = GetGlobalOptions();
   if (options) {
@@ -847,7 +838,6 @@ GtkWidget *NewGadgetDebugConsole(Gadget *gadget) {
 
   g_signal_connect(window, "destroy", G_CALLBACK(OnDebugConsoleDestroy),
                    console_info);
-  g_idle_add_full(G_PRIORITY_LOW, UpdateDebugConsoleScroll, console_info, NULL);
   // The caller must destroy the window before the gadget is deleted.
   return window;
 }
