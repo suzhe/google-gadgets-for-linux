@@ -1,6 +1,7 @@
 #ifndef GGADGET_QTWEBKIT_BROWSER_ELEMENT_INTERNAL_H__
 #define GGADGET_QTWEBKIT_BROWSER_ELEMENT_INTERNAL_H__
 
+#include <cmath>
 #include <string>
 #if QT_VERSION < 0x040400
 #include <qwebnetworkinterface.h>

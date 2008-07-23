@@ -22,15 +22,18 @@
 #include <QtGui/QWidget>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
-#include "qt_canvas.h"
 
 namespace ggadget {
 namespace qt {
 
 class QtViewWidget : public QWidget {
+  Q_OBJECT
  public:
   QtViewWidget(ViewInterface* view,
-                bool composite, bool decorated);
+               bool composite,
+               bool decorated,
+               bool movable,
+               bool support_input_mask);
   ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
@@ -53,14 +56,17 @@ class QtViewWidget : public QWidget {
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
-
+  virtual QSize sizeHint () const;
+  virtual QSize minimumSizeHint () const;
   void SetInputMask(QPixmap *pixmap);
   void SetSize(int width, int height);
   ViewInterface *view_;
   const char **drag_files_;
   std::vector<std::string> drag_urls_;
   bool composite_;
+  bool movable_;
   bool enable_input_mask_;
+  bool support_input_mask_;
   QPixmap *offscreen_pixmap_;
   QPoint mouse_pos_;
   bool mouse_drag_moved_;
@@ -71,6 +77,8 @@ class QtViewWidget : public QWidget {
   QRect origi_geometry_;
   // used as coefficient of mouse move in window resize
   int top_, bottom_, left_, right_;
+ signals:
+  void moved(int x, int y);
 };
 
 

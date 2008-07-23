@@ -22,7 +22,8 @@ SUBDIRS = . tests
 MOC_FILES		= qt_main_loop.moc \
 			  qt_menu_internal.moc \
 			  utilities_internal.moc \
-			  qt_view_host.moc
+			  qt_view_host.moc \
+			  qt_view_widget.moc
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -85,5 +86,7 @@ qt_menu_internal.moc:qt_menu_internal.h
 qt_view_host.moc:qt_view_host.h
 	$(MOC) $< -o $@
 utilities_internal.moc:utilities_internal.h
+	$(MOC) $< -o $@
+qt_view_widget.moc:qt_view_widget.h
 	$(MOC) $< -o $@
 endif

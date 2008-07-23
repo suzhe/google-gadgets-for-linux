@@ -17,6 +17,7 @@
 #ifndef GGADGET_QT_QT_GRAPHICS_H__
 #define GGADGET_QT_QT_GRAPHICS_H__
 
+#include <cmath>
 #include <ggadget/common.h>
 #include <ggadget/graphics_interface.h>
 #include <ggadget/signals.h>
@@ -58,6 +59,9 @@ class QtGraphics : public GraphicsInterface {
   DISALLOW_EVIL_CONSTRUCTORS(QtGraphics);
 };
 
+inline int D2I(double d) {
+  return static_cast<int>(round(d));
+}
 } // namespace qt
 } // namespace ggadget
 

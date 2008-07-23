@@ -19,15 +19,10 @@
 #include <locale.h>
 #include <signal.h>
 #include <unistd.h>
-#include <sys/time.h>
-#include <ctime>
 #include <map>
 #include <cstdlib>
 
-#include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
@@ -35,7 +30,7 @@
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
 #include <ggadget/host_interface.h>
-#include <ggadget/localized_file_manager.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
@@ -45,8 +40,7 @@
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/xml_http_request_interface.h>
-#include <ggadget/xml_parser_interface.h>
+#include <ggadget/host_utils.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
 
@@ -76,83 +70,6 @@ static const char *kGlobalExtensions[] = {
   "google-gadget-manager",
   NULL
 };
-
-static bool CheckRequiredExtensions() {
-  if (!ggadget::GetGlobalFileManager()->FileExists(ggadget::kCommonJS, NULL)) {
-    // We can't use localized message here because resource failed to load.
-    ggadget::gtk::ShowAlertDialog(
-        "Google Gadgets",
-        "Program can't start because it failed to load resources");
-    return false;
-  }
-
-  if (!ggadget::GetXMLParser()) {
-    // We can't use localized message here because XML parser is not available.
-    ggadget::gtk::ShowAlertDialog(
-        "Google Gadgets", "Program can't start because it failed to load the "
-        "libxml2-xml-parser module.");
-    return false;
-  }
-
-  std::string message;
-  if (!ggadget::ScriptRuntimeManager::get()->GetScriptRuntime("js"))
-    message += "smjs-script-runtime\n";
-  if (!ggadget::GetXMLHttpRequestFactory())
-    message += "curl-xml-http-request\n";
-  if (!ggadget::GetGadgetManager())
-    message += "google-gadget-manager\n";
-
-  if (!message.empty()) {
-    message = GMS_("LOAD_EXTENSIONS_FAIL") + "\n\n" + message;
-    ggadget::gtk::ShowAlertDialog(GM_("GOOGLE_GADGETS"), message.c_str());
-    return false;
-  }
-  return true;
-}
-
-static const char *kGlobalResourcePaths[] = {
-#ifdef _DEBUG
-  "resources.gg",
-  "resources",
-#endif
-#ifdef GGL_RESOURCE_DIR
-  GGL_RESOURCE_DIR "/resources.gg",
-  GGL_RESOURCE_DIR "/resources",
-#endif
-  NULL
-};
-
-#ifdef _DEBUG
-static int g_log_level = ggadget::LOG_TRACE;
-static bool g_long_log = true;
-#else
-static int g_log_level = ggadget::LOG_WARNING;
-static bool g_long_log = false;
-#endif
-
-std::string LogListener(ggadget::LogLevel level, const char *filename, int line,
-                        const std::string &message) {
-  if (level >= g_log_level) {
-    if (g_long_log) {
-      struct timeval tv;
-      gettimeofday(&tv, NULL);
-      printf("%02d:%02d.%03d: ",
-             static_cast<int>(tv.tv_sec / 60 % 60),
-             static_cast<int>(tv.tv_sec % 60),
-             static_cast<int>(tv.tv_usec / 1000));
-      if (filename) {
-        // Print only the last part of the file name.
-        const char *name = strrchr(filename, '/');
-        if (name)
-          filename = name + 1;
-        printf("%s:%d: ", filename, line);
-      }
-    }
-    printf("%s\n", message.c_str());
-    fflush(stdout);
-  }
-  return message;
-}
 
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
@@ -199,6 +116,13 @@ static void OnClientMessage(const std::string &data) {
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
+#ifdef _DEBUG
+  int log_level = ggadget::LOG_TRACE;
+  bool long_log = true;
+#else
+  int log_level = ggadget::LOG_WARNING;
+  bool long_log = false;
+#endif
   int debug_mode = 0;
   double zoom = 1.0;
   bool decorated = false;
@@ -253,10 +177,10 @@ int main(int argc, char* argv[]) {
     } else if (strcmp("-l", argv[i]) == 0 ||
                strcmp("--log-level", argv[i]) == 0) {
       if (++i < argc)
-        g_log_level = atoi(argv[i]);
+        log_level = atoi(argv[i]);
     } else if (strcmp("-ll", argv[i]) == 0 ||
                strcmp("--long-log", argv[i]) == 0) {
-      g_long_log = true;
+      long_log = true;
     } else if (strcmp("-dc", argv[i]) == 0 ||
                strcmp("--debug-console", argv[i]) == 0) {
       debug_console = 1;
@@ -281,7 +205,7 @@ int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
-  ggadget::ConnectGlobalLogListener(ggadget::NewSlot(LogListener));
+  ggadget::SetupLogger(log_level, long_log);
 
   // Puth the process into background in the early stage to prevent from
   // printing any log messages.
@@ -289,38 +213,7 @@ int main(int argc, char* argv[]) {
     ggadget::Daemonize();
 
   // Set global file manager.
-  ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
-  ggadget::FileManagerInterface *fm;
-
-  for (size_t i = 0; kGlobalResourcePaths[i]; ++i) {
-    fm = ggadget::CreateFileManager(kGlobalResourcePaths[i]);
-    if (fm) {
-      fm_wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
-                                      new ggadget::LocalizedFileManager(fm));
-      break;
-    }
-  }
-
-  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL) {
-    fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
-  }
-
-#ifdef _DEBUG
-  std::string dot_slash(".");
-  dot_slash += ggadget::kDirSeparatorStr;
-  if ((fm = ggadget::CreateFileManager(dot_slash.c_str())) != NULL) {
-    fm_wrapper->RegisterFileManager(dot_slash.c_str(), fm);
-  }
-#endif
-
-  fm = ggadget::DirFileManager::Create(profile_dir.c_str(), true);
-  if (fm != NULL) {
-    fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
-  } else {
-    LOG("Failed to initialize profile directory.");
-  }
-
-  ggadget::SetGlobalFileManager(fm_wrapper);
+  ggadget::SetupGlobalFileManager(profile_dir);
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
@@ -336,8 +229,11 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
-  if (!CheckRequiredExtensions())
+  std::string error;
+  if (!ggadget::CheckRequiredExtensions(&error)) {
+    ggadget::gtk::ShowAlertDialog(GM_("GOOGLE_GADGETS"), error.c_str());
     return 1;
+  }
 
   // Make the global extension manager readonly to avoid the potential
   // danger that a bad gadget register local extensions into the global

@@ -37,17 +37,21 @@ namespace ggadget {
 namespace qt {
 
 QtViewWidget::QtViewWidget(ViewInterface *view,
-                             bool composite,
-                             bool decorated)
-     : view_(view),
-       drag_files_(NULL),
-       composite_(composite),
-       enable_input_mask_(composite),
-       offscreen_pixmap_(NULL),
-       mouse_drag_moved_(false),
-       child_(NULL),
-       mouse_down_hittest_(ViewInterface::HT_CLIENT),
-       resize_drag_(false) {
+                           bool composite,
+                           bool decorated,
+                           bool movable,
+                           bool support_input_mask)
+    : view_(view),
+      drag_files_(NULL),
+      composite_(composite),
+      movable_(movable),
+      enable_input_mask_(composite && support_input_mask),
+      support_input_mask_(support_input_mask && composite),
+      offscreen_pixmap_(NULL),
+      mouse_drag_moved_(false),
+      child_(NULL),
+      mouse_down_hittest_(ViewInterface::HT_CLIENT),
+      resize_drag_(false) {
   setMouseTracking(true);
   SetSize(2, 2);
   setAcceptDrops(true);
@@ -56,8 +60,6 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
     SkipTaskBar();
   }
   setAttribute(Qt::WA_InputMethodEnabled);
-  setAttribute(Qt::WA_OpaquePaintEvent, composite);
-  setAttribute(Qt::WA_NoSystemBackground, composite);
 }
 
 QtViewWidget::~QtViewWidget() {
@@ -192,8 +194,10 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
         }
       }
     }  else {
-      window()->move(window()->pos() + QCursor::pos() - mouse_pos_);
+      QPoint offset = QCursor::pos() - mouse_pos_;
+      if (movable_) window()->move(window()->pos() + offset);
       mouse_pos_ = QCursor::pos();
+      emit moved(offset.x(), offset.y());
     }
   }
 }
@@ -368,8 +372,20 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   }
 }
 
+QSize QtViewWidget::sizeHint() const {
+  int w = D2I(view_->GetWidth() * zoom_);
+  int h = D2I(view_->GetHeight() * zoom_);
+  return QSize(w > 0 ? w : 1, h > 0 ? h : 1);
+}
+
+QSize QtViewWidget::minimumSizeHint() const {
+  int w = D2I(view_->GetWidth() * zoom_);
+  int h = D2I(view_->GetHeight() * zoom_);
+  return QSize(w > 0 ? w : 1, h > 0 ? h : 1);
+}
+
 void QtViewWidget::EnableInputShapeMask(bool enable) {
-  if (!composite_) return;
+  if (!support_input_mask_) return;
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;
     if (!enable) SetInputMask(NULL);
@@ -448,3 +464,4 @@ void QtViewWidget::SetChild(QWidget *widget) {
 
 }
 }
+#include "qt_view_widget.moc"

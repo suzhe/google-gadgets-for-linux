@@ -117,6 +117,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  small_object.h \
 			  string_utils.h \
 			  system_utils.h \
+			  host_utils.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
@@ -202,6 +203,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  small_object.cc \
 			  string_utils.cc \
 			  system_utils.cc \
+			  host_utils.cc \
 			  text_frame.cc \
 			  texture.cc \
 			  unicode_utils.cc \

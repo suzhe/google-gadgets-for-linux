@@ -26,15 +26,11 @@
 #include <QtGui/QPushButton>
 #include <QtGui/QMessageBox>
 
-#include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/host_interface.h>
-#include <ggadget/localized_file_manager.h>
 #include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/qt/qt_view_widget.h>
@@ -45,8 +41,7 @@
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/xml_http_request_interface.h>
-#include <ggadget/xml_parser_interface.h>
+#include <ggadget/host_utils.h>
 #include "qt_host.h"
 #if defined(Q_WS_X11) && defined(HAVE_X11)
 #include <X11/Xlib.h>
@@ -77,86 +72,6 @@ static const char *kGlobalExtensions[] = {
   NULL
 };
 
-static bool CheckRequiredExtensions() {
-  if (!ggadget::GetGlobalFileManager()->FileExists(ggadget::kCommonJS, NULL)) {
-    // We can't use localized message here because resource failed to load. 
-    QMessageBox::information(
-        NULL, "Google Gadgets",
-        "Program can't start because it failed to load resources");
-    return false;
-  }
-
-  if (!ggadget::GetXMLParser()) {
-    // We can't use localized message here because XML parser is not available.
-    QMessageBox::information(
-        NULL, "Google Gadgets",
-        "Program can't start because it failed to load the "
-        "libxml2-xml-parser module.");
-    return false;
-  }
-
-  std::string message;
-  if (!ggadget::ScriptRuntimeManager::get()->GetScriptRuntime("js"))
-    message += "smjs-script-runtime\n";
-  if (!ggadget::GetXMLHttpRequestFactory())
-    message += "qt-xml-http-request\n";
-  if (!ggadget::GetGadgetManager())
-    message += "google-gadget-manager\n";
-
-  if (!message.empty()) {
-    message = GMS_("LOAD_EXTENSIONS_FAIL") + "\n\n" + message;
-    QMessageBox::information(
-        NULL, QString::fromUtf8(GM_("GOOGLE_GADGETS")),
-        QString::fromUtf8(message.c_str()));
-    return false;
-  }
-  return true;
-}
-
-static const char *kGlobalResourcePaths[] = {
-#ifdef _DEBUG
-  "resources.gg",
-  "resources",
-#endif
-#ifdef GGL_RESOURCE_DIR
-  GGL_RESOURCE_DIR "/resources.gg",
-  GGL_RESOURCE_DIR "/resources",
-#endif
-  NULL
-};
-
-#ifdef _DEBUG
-static int g_log_level = ggadget::LOG_TRACE;
-static bool g_long_log = true;
-#else
-static int g_log_level = ggadget::LOG_WARNING;
-static bool g_long_log = false;
-#endif
-
-static std::string LogListener(ggadget::LogLevel level, const char *filename,
-                               int line, const std::string &message) {
-  if (level >= g_log_level) {
-    if (g_long_log) {
-      struct timeval tv;
-      gettimeofday(&tv, NULL);
-      printf("%02d:%02d.%03d: ",
-             static_cast<int>(tv.tv_sec / 60 % 60),
-             static_cast<int>(tv.tv_sec % 60),
-             static_cast<int>(tv.tv_usec / 1000));
-      if (filename) {
-        // Print only the last part of the file name.
-        const char *name = strrchr(filename, '/');
-        if (name)
-          filename = name + 1;
-        printf("%s:%d: ", filename, line);
-      }
-    }
-    printf("%s\n", message.c_str());
-    fflush(stdout);
-  }
-  return message;
-}
-
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
   "Usage: %s [Options] [Gadgets]\n"
@@ -185,6 +100,8 @@ static const char *g_help_string =
   "      0 - No debug console allowed\n"
   "      1 - Gadgets has debug console menu item\n"
   "      2 - Open debug console when gadget is added to debug startup code\n"
+  "  -p, --plasma\n"
+  "      Install gadget into KDE4's plasma\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -241,7 +158,15 @@ static void OnClientMessage(const std::string &data) {
 }
 
 int main(int argc, char* argv[]) {
+#ifdef _DEBUG
+  int log_level = ggadget::LOG_TRACE;
+  bool long_log = true;
+#else
+  int log_level = ggadget::LOG_WARNING;
+  bool long_log = false;
+#endif
   bool composite = false;
+  bool with_plasma = false;
   int debug_mode = 0;
   int debug_console = -1;
   const char* js_runtime = "smjs-script-runtime";
@@ -280,9 +205,6 @@ int main(int argc, char* argv[]) {
                              NULL).c_str());
   run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
-  ggadget::ConnectGlobalLogListener(ggadget::NewSlot(LogListener));
-
-
   // Parse command line.
   std::vector<std::string> gadget_paths;
   for (int i = 1; i < argc; i++) {
@@ -307,13 +229,16 @@ int main(int argc, char* argv[]) {
         }
       }
 #endif
+    } else if (strcmp("-p", argv[i]) == 0 ||
+               strcmp("--plasma", argv[i]) == 0) {
+      with_plasma = true;
     } else if (strcmp("-l", argv[i]) == 0 ||
                strcmp("--log-level", argv[i]) == 0) {
       if (++i < argc)
-        g_log_level = atoi(argv[i]);
+        log_level = atoi(argv[i]);
     } else if (strcmp("-ll", argv[i]) == 0 ||
                strcmp("--long-log", argv[i]) == 0) {
-      g_long_log = true;
+      long_log = true;
     } else if (strcmp("-dc", argv[i]) == 0 ||
                strcmp("--debug-console", argv[i]) == 0) {
       debug_console = 1;
@@ -334,37 +259,10 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
 
+  ggadget::SetupLogger(log_level, long_log);
+
   // Set global file manager.
-  ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
-  ggadget::FileManagerInterface *fm;
-
-  for (size_t i = 0; kGlobalResourcePaths[i]; ++i) {
-    fm = ggadget::CreateFileManager(kGlobalResourcePaths[i]);
-    if (fm) {
-      fm_wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
-          new ggadget::LocalizedFileManager(fm));
-      break;
-    }
-  }
-
-  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
-    fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
-#ifdef _DEBUG
-  std::string dot_slash(".");
-  dot_slash += ggadget::kDirSeparatorStr;
-  if ((fm = ggadget::CreateFileManager(dot_slash.c_str())) != NULL) {
-    fm_wrapper->RegisterFileManager(dot_slash.c_str(), fm);
-  }
-#endif
-
-  fm = ggadget::DirFileManager::Create(profile_dir.c_str(), true);
-  if (fm != NULL) {
-    fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
-  } else {
-    LOG("Failed to initialize profile directory.");
-  }
-
-  ggadget::SetGlobalFileManager(fm_wrapper);
+  ggadget::SetupGlobalFileManager(profile_dir);
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
@@ -381,8 +279,14 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
-  if (!CheckRequiredExtensions())
+  std::string error;
+  if (!ggadget::CheckRequiredExtensions(&error)) {
+    QMessageBox::information(NULL,
+                             QString::fromUtf8(GM_("GOOGLE_GADGETS")),
+                             QString::fromUtf8(error.c_str()));
+
     return 1;
+  }
 
   ext_manager->SetReadonly();
 
@@ -398,7 +302,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode, debug_console);
+  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode, debug_console, with_plasma);
 
   // Load gadget files.
   if (gadget_paths.size()) {

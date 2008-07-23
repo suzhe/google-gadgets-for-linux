@@ -39,8 +39,8 @@ qtwebkit_browser_element_la_CPPFLAGS = \
 
 qtwebkit_browser_element_la_LIBADD = \
 			  @QT4WEBKIT_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-			  $(top_builddir)/ggadget/libggadget-qt@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
 qtwebkit_browser_element_la_LDFLAGS = \
 			  -avoid-version \
