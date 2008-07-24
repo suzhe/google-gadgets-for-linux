@@ -32,15 +32,18 @@ namespace smjs {
 // The maximum execution time of a piece of script (10 seconds).
 static const uint64_t kMaxScriptRunTime = 10000;
 // OperationCallback is checked after the script executed instructions
-// weighted 5000 * JS_OPERATION_WEIGHT_BASE (new version), or 5000 branches
+// weighted 100 * JS_OPERATION_WEIGHT_BASE (new version), or 100 branches
 // (old version, deperecated).
-static const uint32 kOperationCallbackMultiply = 5000;
+static const uint32 kOperationCallbackMultiply = 100;
 #ifdef JS_OPERATION_WEIGHT_BASE
 // The accumulated operation weight before OperationCallback is called.
 static const uint32 kOperationCallbackWeight =
     kOperationCallbackMultiply * JS_OPERATION_WEIGHT_BASE;
 #endif
 
+static const uint64_t kMaxGCInterval = 5000; // 5 seconds.
+
+uint64_t JSScriptContext::last_gc_time_ = 0;
 uint64_t JSScriptContext::operation_callback_time_ = 0;
 int JSScriptContext::reset_operation_time_timer_ = 0;
 
@@ -401,9 +404,20 @@ static JSObject *GetClassPrototype(JSContext *cx, const char *class_name) {
   return JSVAL_TO_OBJECT(proto);
 }
 
+static void ForceGC(JSContext *cx) {
+  JSRuntime *rt = JS_GetRuntime(cx);
+  DLOG("Force GC: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
+       "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
+       rt->gcMaxMallocBytes);
+  JS_GC(cx);
+  DLOG("Force GC Finished: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
+       "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
+       rt->gcMaxMallocBytes);
+}
+
 static JSBool DoGC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                    jsval *rval) {
-  JS_GC(cx);
+  ForceGC(cx);
   return JS_TRUE;
 }
 
@@ -576,31 +590,40 @@ void JSScriptContext::ReportError(JSContext *cx, const char *message,
   LOGE("%s:%d: %s", report->filename, report->lineno, message);
 }
 
-JSBool JSScriptContext::OperationCallback(JSContext *cx) {
-  JSScriptContext *this_p = GetJSScriptContext(cx);
-  if (!this_p)
-    return JS_TRUE;
+void JSScriptContext::MaybeGC(JSContext *cx) {
+  MainLoopInterface *main_loop = GetGlobalMainLoop();
+  uint64_t now = main_loop ? main_loop->GetCurrentTime() : 0;
 
   // Trigger GC on certain conditions.
   JSRuntime *rt = cx->runtime;
   uint32 bytes = rt->gcBytes;
   uint32 last_bytes = rt->gcLastBytes;
-  if (bytes > 8192 && bytes / 16 > last_bytes) {
+  if ((bytes > 8192 && bytes / 4 > last_bytes) ||
+      now - last_gc_time_ > kMaxGCInterval) {
     DLOG("GC Triggered: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
          "gcMaxMallocBytes=%u", bytes, last_bytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
     JS_GC(cx);
+    last_gc_time_ = now;
     DLOG("GC Finished: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
          "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
   }
+}
 
-  // Check for long time script operation that may blocks UI.
+JSBool JSScriptContext::OperationCallback(JSContext *cx) {
+  MaybeGC(cx);
+
+  JSScriptContext *this_p = GetJSScriptContext(cx);
+  if (!this_p)
+    return JS_TRUE;
+
   MainLoopInterface *main_loop = GetGlobalMainLoop();
   if (!main_loop)
     return JS_TRUE;
 
   uint64_t now = main_loop->GetCurrentTime();
+  // Check for long time script operation that may blocks UI.
   if (operation_callback_time_ == 0) {
     // The current script operation is just started. Start timing now.
     operation_callback_time_ = now;
@@ -659,7 +682,7 @@ Connection *JSScriptContext::ConnectScriptBlockedFeedback(
 }
 
 void JSScriptContext::CollectGarbage() {
-  JS_GC(context_);
+  ForceGC(context_);
 }
 
 } // namespace smjs

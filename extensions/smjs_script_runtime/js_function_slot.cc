@@ -66,6 +66,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
                                    const Variant argv[]) const {
+  JSScriptContext::MaybeGC(context_);
   Variant return_value(GetReturnType());
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.

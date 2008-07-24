@@ -66,6 +66,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
+  JSScriptContext::MaybeGC();
   ScopedLogContext log_context(GetEngineContext(engine_));
   Variant return_value(GetReturnType());
   QScriptValue qval;
