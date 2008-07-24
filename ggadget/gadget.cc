@@ -88,12 +88,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       }
 
       view_ = new View(view_host, gadget, element_factory, context_);
-      // Also let the view_ become a log context, so that the view can
-      // output context logs.
-      ConnectContextLogListener(
-          view_, NewSlot(gadget->impl_, &Impl::OnContextLog,
-                         static_cast<ScriptContextInterface *>(NULL)));
-
       if (details_)
         details_->Ref();
       if (context_)
@@ -344,7 +338,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
-    ScopedLogContext log_context(main_view_->context());
     main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
     RegisterScriptExtensions(main_view_->context());
 
@@ -986,12 +979,21 @@ Gadget::Gadget(HostInterface *host,
                const Permissions &initial_permissions)
     : impl_(new Impl(this, host, base_path, options_name, instance_id,
                      initial_permissions)) {
+  // Let the gadget become a log context, so that all logs related to this
+  // gadget can be outputted to correct debug console.
+  ConnectContextLogListener(
+      this, NewSlot(impl_, &Impl::OnContextLog,
+                    static_cast<ScriptContextInterface *>(NULL)));
+
+  // Initialize the gadget.
+  ScopedLogContext log_context(this);
   impl_->initialized_ = impl_->Initialize();
 }
 
 Gadget::~Gadget() {
   delete impl_;
   impl_ = NULL;
+  RemoveLogContext(this);
 }
 
 HostInterface *Gadget::GetHost() const {

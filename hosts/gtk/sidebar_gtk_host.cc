@@ -1440,7 +1440,11 @@ class SideBarGtkHost::Impl {
     ASSERT(gadget);
     CloseDetailsView(gadget->GetInstanceID());
     OnMainViewPopIn(gadget->GetInstanceID());
-    gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+    int id = gadget->GetInstanceID();
+    // If RemoveGadgetInstance() returns false, then means this instance is not
+    // installed by gadget manager.
+    if (!gadget_manager_->RemoveGadgetInstance(id))
+      RemoveGadgetInstanceCallback(id);
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
@@ -1683,7 +1687,7 @@ class SideBarGtkHost::Impl {
     if (it == gadgets_.end())
       return;
     if (it->second.debug_console) {
-      DLOG("Gadget has already debug console opened: %p",
+      DLOG("Gadget has already opened a debug console: %p",
            it->second.debug_console);
       return;
     }

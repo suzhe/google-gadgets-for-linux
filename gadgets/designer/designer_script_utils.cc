@@ -17,7 +17,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include <ggadget/basic_element.h> 
+#include <ggadget/basic_element.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
@@ -39,6 +39,7 @@ namespace designer {
 static const char kGadgetFileManagerPrefix[] = "gadget://";
 static FileManagerInterface *g_gadget_file_manager = NULL;
 static FileManagerWrapper *g_designer_file_manager = NULL;
+static Gadget *g_gadget = NULL;
 
 class ScriptableFileManager : public ScriptableHelperDefault {
  public:
@@ -134,8 +135,6 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
                    NewSlot(this, &DesignerUtils::ShowXMLOptionsDialog));
     RegisterMethod("setDesignerMode",
                    NewSlot(this, &DesignerUtils::SetDesignerMode));
-    RegisterMethod("systemOpenFile",
-                   NewSlot(this, &DesignerUtils::SystemOpenFile));
     RegisterMethod("systemOpenFileWith",
                    NewSlot(this, &DesignerUtils::SystemOpenFileWith));
   }
@@ -203,7 +202,7 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
   }
 
   static bool ProxyMenuHandler(MenuInterface *menu, Slot *handler) {
-    ScriptableMenu scriptable_menu(menu);
+    ScriptableMenu scriptable_menu(g_gadget, menu);
     Variant arg(&scriptable_menu);
     return VariantValue<bool>()(handler->Call(NULL, 1, &arg).v());
   }
@@ -217,9 +216,8 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
     element->ConnectOnAddContextMenuItems(NewSlot(ProxyMenuHandler, handler));
   }
 
-  void ShowXMLOptionsDialog(ScriptableView *view, const char *xml_file,
-                            ScriptableInterface *param) {
-    view->view()->GetGadget()->ShowXMLOptionsDialog(
+  void ShowXMLOptionsDialog(const char *xml_file, ScriptableInterface *param) {
+    g_gadget->ShowXMLOptionsDialog(
         ViewInterface::OPTIONS_VIEW_FLAG_OK |
         ViewInterface::OPTIONS_VIEW_FLAG_CANCEL,
         xml_file, param);
@@ -227,12 +225,6 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
 
   void SetDesignerMode(BasicElement *element) {
     element->SetDesignerMode(true);
-  }
-
-  void SystemOpenFile(ScriptableView *view, const char *file) {
-    std::string url = "file://";
-    url += file;
-    view->view()->GetGadget()->GetHost()->OpenURL(url.c_str());
   }
 
   void SystemOpenFileWith(const char *command, const char *file) {
@@ -270,8 +262,10 @@ extern "C" {
     LOGI("Finalize designer_script_utils extension.");
   }
 
-  bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
+  bool RegisterScriptExtension(ggadget::ScriptContextInterface *context,
+                               ggadget::Gadget *gadget) {
     ASSERT(context);
+    ASSERT(gadget);
     if (context) {
       if (!context->AssignFromNative(
           NULL, NULL, "designerUtils",
@@ -279,6 +273,7 @@ extern "C" {
         LOG("Failed to register designerUtils.");
         return false;
       }
+      ggadget::designer::g_gadget = gadget;
       return true;
     }
     return false;
@@ -290,6 +285,4 @@ extern "C" {
     ggadget::designer::g_designer_file_manager = fm;
     return true;
   }
-
 }
-

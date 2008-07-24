@@ -25,6 +25,7 @@ SET(SRCS
   runtime.cc
   machine.cc
   memory.cc
+  open_url.cc
   perfmon.cc
   power.cc
   process.cc

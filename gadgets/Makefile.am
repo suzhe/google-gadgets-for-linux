@@ -15,6 +15,7 @@
 #
 
 SUBDIRS = analog_clock \
+	  designer \
 	  digital_alarm_clock \
 	  igoogle \
 	  rss

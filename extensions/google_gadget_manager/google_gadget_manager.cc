@@ -481,6 +481,7 @@ bool GoogleGadgetManager::RemoveGadgetInstance(int instance_id) {
   if (instance_id == kGoogleGadgetBrowserInstanceId && browser_gadget_) {
     delete browser_gadget_;
     browser_gadget_ = NULL;
+    return true;
   }
 
   int size = static_cast<int>(instance_statuses_.size());

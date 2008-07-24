@@ -293,7 +293,6 @@ AC_SUBST(GGL_RESOURCE_DIR)
 ##                 Default compiler options.             ##
 ###########################################################
 if test x$enable_debug = xyes; then
-  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
   DEFAULT_COMPILE_FLAGS="-g -O0 -Wall"
   DEBUG_MACROS="_DEBUG";
 else
@@ -422,16 +421,18 @@ fi
 
 # check for bytesex stuff
 AC_C_BIGENDIAN(
-  [AC_DEFINE(GGL_BIG_ENDIAN,1,[Big endian])],
-  [AC_DEFINE(GGL_LITTLE_ENDIAN,1,[Little endian])]
+  [PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_BIG_ENDIAN"],
+  [PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_LITTLE_ENDIAN"],
 )
 
 # Check necessary libraries
 
 # Check zlib
+has_zlib=no
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
 # Check pthread lib
+has_pthread=no
 AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
 
 # Check Xlib
@@ -445,6 +446,10 @@ if test "x$no_x" != "xyes"; then
 fi
 
 # Check qt4
+has_qt4=no
+has_qtnetwork=no
+has_qtwebkit=no
+has_qtscript=no
 if test x$ggl_host_type = xlinux; then
   PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3],
 		    [has_qt4=yes
@@ -504,6 +509,7 @@ if test "x$MOC" = "x"; then
 fi
 
 # Check gtk2 related libraries.
+has_gtk2=no
 PKG_CHECK_MODULES(GTK2,
 		  [cairo >= 1.0.0
 		   pango  >= 1.10.0
@@ -514,6 +520,8 @@ PKG_CHECK_MODULES(GTK2,
 		   [has_gtk2=yes], [has_gtk2=no])
 
 # Check gstreamer-0.10 related libraries.
+has_gstreamer_plugins_base=no
+has_gstreamer_video=no
 PKG_CHECK_MODULES(GSTREAMER,
 		  [gstreamer-0.10 >= 0.10.0 gstreamer-plugins-base-0.10 >= 0.10.0],
 		  [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
@@ -532,6 +540,7 @@ if test x$has_gstreamer_plugins_base = xyes; then
 fi
 
 # Check libcurl.
+has_libcurl=no
 LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
 if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; then
   AC_MSG_WARN([Libcurl is not useable because it doesn't support SSL or HTTPS])
@@ -539,24 +548,38 @@ if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; t
 fi
 
 # Check libxml2.
+has_libxml2=no
 AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 
 # Check spidermonkey library
+has_spidermonkey=no
 GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 
 # Check D-Bus library
-PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes], [has_dbus=no])
+has_dbus=no
+PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes],
+		  [PKG_CHECK_MODULES(DBUS, [dbus-1 >= 0.60], [has_dbus=old],
+				     [has_dbus=no])])
 
-if test x$has_dbus = xyes; then
+if test x$has_dbus != xno; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_LIBRARY"
+  if test x$has_dbus = xold; then
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DDBUS_API_SUBJECT_TO_CHANGE=1"
+  fi
   CFLAGS="$CFLAGS $DBUS_CFLAGS"
   LDFLAGS="$LDFLAGS $DBUS_LIBS"
-  AC_CHECK_FUNCS([dbus_watch_get_unix_fd dbus_watch_get_fd])
+  AC_CHECK_FUNC(dbus_watch_get_unix_fd,
+		[PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_WATCH_GET_UNIX_FD"])
   CFLAGS=$ggl_save_CFLAGS
   LDFLAGS=$ggl_save_LDFLAGS
 fi
 
 # Check librsvg
-PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0], [has_rsvg=yes], [has_rsvg=no])
+has_librsvg=no
+PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0], [has_librsvg=yes], [has_librsvg=no])
+if test x$has_librsvg = xyes; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_RSVG_LIBRARY"
+fi
 
 # Check gtkmozembed
 # Check priority:
@@ -567,6 +590,7 @@ PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0], [has_rsvg=yes], [has_rsvg=no])
 #  firefox 1.5: firefox-gtkmozembed and firefox-js
 #
 # Add more rules here if your distribution doesn't support above rules.
+has_gtkmozembed=no
 PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
   [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
@@ -579,16 +603,8 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 			   [has_gtkmozembed=firefox-gtkmozembed],
 	  [has_gtkmozembed=no])])])])])
 
-if test x$has_dbus = xyes; then
-  AC_DEFINE(HAVE_DBUS_LIBRARY,1,[Have dbus library])
-fi
-
-if test x$has_rsvg = xyes; then
-  AC_DEFINE(HAVE_RSVG_LIBRARY,1,[Have rsvg library])
-fi
-
 # Check necessary functions
-AC_CHECK_FUNCS([mkdtemp tempnam])
+AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
 
 # Check flex
 AC_PROG_LEX
@@ -681,7 +697,8 @@ if test x$has_spidermonkey != xyes -a x$build_smjs_script_runtime = xyes; then
   build_smjs_script_runtime=no
 fi
 
-if test x$has_dbus != xyes -a x$build_libggadget_dbus = xyes; then
+# has_dbus might also be equal to old
+if test x$has_dbus = xno -a x$build_libggadget_dbus = xyes; then
   AC_MSG_WARN([Library D-Bus is not available, libggadget-dbus won't be built.])
   build_libggadget_dbus=no
 fi
@@ -783,7 +800,7 @@ AM_CONDITIONAL(
   [test x$build_gtk_host = xyes])
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
-AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
+AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
 
 if test x$ZIP = x; then
   AC_MSG_WARN([Can't generate resource file bundle without zip command.])
@@ -809,7 +826,7 @@ if test x$build_qt_host = xyes; then
   if test x$build_qt_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
           '(' x$build_smjs_script_runtime != xyes -a \
-	   x$build_qt_script_runtime != xyes ')'; then
+          x$build_qt_script_runtime != xyes ')'; then
     AC_MSG_WARN([qt4, libxml2 or js runtime are missing, which are required for qt host.])
     build_qt_host=no;
   fi
@@ -817,8 +834,8 @@ fi
 
 #Gstreamer audiosink
 if test x$default_gst_audio_sink != x; then
-  AC_DEFINE_UNQUOTED([GGL_DEFAULT_GST_AUDIO_SINK], ["$default_gst_audio_sink"],
-		     [Default Gstreamer audio sink.])
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \
+                     -DGGL_DEFAULT_GST_AUDIO_SINK=\\\"$default_gst_audio_sink\\\""
 fi
 
 #pthread lib
@@ -898,6 +915,8 @@ AC_CONFIG_FILES([Makefile
 		 unittest/Makefile
 		 gadgets/Makefile
 		 gadgets/analog_clock/Makefile
+		 gadgets/designer/Makefile
+		 gadgets/designer/gadget/Makefile
 		 gadgets/digital_alarm_clock/Makefile
 		 gadgets/igoogle/Makefile
 		 gadgets/rss/Makefile
@@ -921,7 +940,7 @@ Build options:
   Host type                     $ggl_host_type
 
  Libraries:
-  GTK SVG Support               $has_rsvg
+  GTK SVG Support               $has_librsvg
   Build libggadget-gtk          $build_libggadget_gtk
   Build libggadget-qt           $build_libggadget_qt
   Build libggadget-dbus         $build_libggadget_dbus

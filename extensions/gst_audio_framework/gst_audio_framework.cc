@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef HAVE_CONFIG_H
-  #include<config.h>
-#endif
-
 #include <gst/gst.h>
 #include <string>
 #include <ggadget/logger.h>

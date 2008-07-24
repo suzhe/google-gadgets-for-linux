@@ -32,4 +32,7 @@
   <install>
     <object name="designer-script-utils" src="designer-script-utils.so"/>
   </install>
+  <permissions>
+    <allaccess/>
+  </permissions>
 </gadget>
