@@ -1270,8 +1270,10 @@ void BasicElement::SetCursor(ViewInterface::CursorType cursor) {
 
 bool BasicElement::IsDropTarget() const {
   Gadget *gadget = GetView()->GetGadget();
+  // If gadget is NULL then means that the view is not used in a gadget
+  // (eg. in unittest), so it's ok to grant the permission.
   const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
-  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+  if (!permissions || permissions->IsRequiredAndGranted(Permissions::FILE_READ))
     return impl_->drop_target_;
   else
     LOG("No permission to use basicElement.dropTarget.");
@@ -1280,8 +1282,10 @@ bool BasicElement::IsDropTarget() const {
 
 void BasicElement::SetDropTarget(bool drop_target) {
   Gadget *gadget = GetView()->GetGadget();
+  // If gadget is NULL then means that the view is not used in a gadget
+  // (eg. in unittest), so it's ok to grant the permission.
   const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
-  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+  if (!permissions || permissions->IsRequiredAndGranted(Permissions::FILE_READ))
     impl_->drop_target_ = drop_target;
   else
     LOG("No permission to use basicElement.dropTarget.");
