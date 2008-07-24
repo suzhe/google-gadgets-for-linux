@@ -19,4 +19,4 @@ Description: Core library of Google Gadgets Runtime
 Version: @GGL_VERSION@
 Requires:
 Libs: -L${libdir} -lggadget@GGL_EPOCH@
-Cflags: -I${ggl_include_dir} -I${ggl_sysdeps_include_dir}
+Cflags: -I${ggl_include_dir} -I${ggl_sysdeps_include_dir} -D__STDC_CONSTANT_MACROS
