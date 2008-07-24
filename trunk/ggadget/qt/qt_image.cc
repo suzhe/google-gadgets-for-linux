@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <cmath>
 #include <string>
 #include <QtGui/QPixmap>

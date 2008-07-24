@@ -14,9 +14,6 @@
   limitations under the License.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 #include <ggadget/color.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>

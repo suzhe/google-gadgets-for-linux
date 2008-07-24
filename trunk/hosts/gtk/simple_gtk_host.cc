@@ -405,12 +405,15 @@ class SimpleGtkHost::Impl {
       OnPopInHandler(expanded_original_);
     }
 
-    gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+    int id = gadget->GetInstanceID();
+    // If RemoveGadgetInstance() returns false, then means this instance is not
+    // installed by gadget manager.
+    if (!gadget_manager_->RemoveGadgetInstance(id))
+      RemoveGadgetInstanceCallback(id);
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
-
     if (it != gadgets_.end()) {
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);

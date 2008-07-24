@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <algorithm>
 #include <utility>
 #include <vector>

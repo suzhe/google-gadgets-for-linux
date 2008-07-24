@@ -799,7 +799,7 @@ function SystemOpenFile(filename) {
     if (editor)
       designerUtils.systemOpenFileWith(editor, full_path);
     else
-      designerUtils.systemOpenFile(view, full_path);
+      framework.openUrl(full_path);
   } else {
     gadget.debug.error("Failed to get full path or extract file: " + filename);
   }

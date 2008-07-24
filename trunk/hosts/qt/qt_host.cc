@@ -366,14 +366,19 @@ class QtHost::Impl {
     if (main_view->GetViewHost() == expanded_popout_) {
       OnPopInHandler(expanded_original_);
     }
-    gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+
+    int id = gadget->GetInstanceID();
+    // If RemoveGadgetInstance() returns false, then means this instance is not
+    // installed by gadget manager.
+    if (!gadget_manager_->RemoveGadgetInstance(id))
+      RemoveGadgetInstanceCallback(id);
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
-
     if (it != gadgets_.end()) {
-      DLOG("Close Gadget: %s", it->second->gadget_->GetManifestInfo(kManifestName).c_str());
+      DLOG("Close Gadget: %s",
+           it->second->gadget_->GetManifestInfo(kManifestName).c_str());
       delete it->second;
       gadgets_.erase(it);
     } else {
