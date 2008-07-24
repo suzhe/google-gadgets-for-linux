@@ -103,29 +103,9 @@ extern "C" {
       return false;
     }
 
-    const Permissions *permissions = gadget->GetPermissions();
-
     // OpenURL will check permissions by itself.
     reg_framework->RegisterMethod("openUrl",
             NewSlot(OpenURL, const_cast<const Gadget*>(gadget)));
-
-    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ) ||
-        permissions->IsRequiredAndGranted(Permissions::FILE_WRITE)) {
-      ScriptableFileSystem *script_filesystem =
-          new ScriptableFileSystem(&g_filesystem_, gadget);
-      reg_system->RegisterVariantConstant("filesystem",
-                                          Variant(script_filesystem));
-    }
-
-    // Check permissions.
-    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
-      LOG("No permission to access device status.");
-      return true;
-    }
-
-    // FIXME: Should runtime be restricted by <devicestatus/> ?
-    reg_framework->RegisterVariantConstant("runtime",
-                                           Variant(&g_script_runtime_));
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.
@@ -152,6 +132,24 @@ extern "C" {
       return false;
     }
 
+    const Permissions *permissions = gadget->GetPermissions();
+    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ) ||
+        permissions->IsRequiredAndGranted(Permissions::FILE_WRITE)) {
+      ScriptableFileSystem *script_filesystem =
+          new ScriptableFileSystem(&g_filesystem_, gadget);
+      reg_system->RegisterVariantConstant("filesystem",
+                                          Variant(script_filesystem));
+    }
+
+    // Check permissions.
+    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+      LOG("No permission to access device status.");
+      return true;
+    }
+
+    // FIXME: Should runtime be restricted by <devicestatus/> ?
+    reg_framework->RegisterVariantConstant("runtime",
+                                           Variant(&g_script_runtime_));
     reg_system->RegisterVariantConstant("bios",
                                         Variant(&g_script_bios_));
     reg_system->RegisterVariantConstant("machine",
