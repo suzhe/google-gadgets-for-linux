@@ -46,6 +46,45 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
   return QScriptValue(engine, self.toString().mid(start, length));
 }
 
+QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
+  if (!ctx->argument(0).isString())
+    return ctx->callee().data().construct(ctx->argumentsObject());
+
+  QString arg = ctx->argument(0).toString();
+  QDateTime dt = QDateTime::fromString(arg, Qt::TextDate);
+  if (!dt.isValid()) {
+    // try custom parsing
+    QRegExp re("(January|February|March|April|May|June|July|August|September|October|November|December) ([0-9]+), ([0-9]+) ([0-9]{2}):([0-9]{2}):([0-9]{2})");
+    if (re.indexIn(arg) != -1) {
+      QString monthName = re.cap(1);
+      static QHash<QString, int> monthsHash;
+      if (monthsHash.isEmpty()) {
+        monthsHash["January"] = 1;
+        monthsHash["February"] = 2;
+        monthsHash["March"] = 3;
+        monthsHash["April"] = 4;
+        monthsHash["May"] = 5;
+        monthsHash["June"] = 6;
+        monthsHash["July"] = 7;
+        monthsHash["August"] = 8;
+        monthsHash["September"] = 9;
+        monthsHash["October"] = 10;
+        monthsHash["November"] = 11;
+        monthsHash["December"] = 12;
+      }
+      int month = monthsHash.value(monthName);
+      if (month != 0) {
+        int day = re.cap(2).toInt();
+        int year = re.cap(3).toInt();
+        int hours = re.cap(4).toInt();
+        int minutes = re.cap(5).toInt();
+        int seconds = re.cap(6).toInt();
+        dt = QDateTime(QDate(year, month, day), QTime(hours, minutes, seconds));
+      }
+    }
+  }
+  return eng->newDate(dt);
+}
 // Check if obj has pending exception, if so, raise exception with ctx and
 // return false.
 // NOTE: Due to QT4's problem, sometimes calling throwValue/throwError is not
@@ -115,6 +154,13 @@ class JSScriptContext::Impl {
     QScriptValue string_prototype =
         engine_.globalObject().property("String").property("prototype");
     string_prototype.setProperty("substr", engine_.newFunction(substr));
+
+    // Suport Date("May 5, 2008 00:00:00")
+    QScriptValue originalDateCtor = engine_.globalObject().property("Date");
+    QScriptValue newDateCtor = engine_.newFunction(CustomDateConstructor);
+    newDateCtor.setData(originalDateCtor);
+    engine_.globalObject().setProperty("Date", newDateCtor);
+
     return true;
   }
 
