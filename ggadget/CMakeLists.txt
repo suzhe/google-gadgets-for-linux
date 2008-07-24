@@ -34,6 +34,7 @@ SET(SRCS
   element_factory.cc
   elements.cc
   encryptor.cc
+  permissions.cc
   extension_manager.cc
   gadget.cc
   gadget_manager.cc
