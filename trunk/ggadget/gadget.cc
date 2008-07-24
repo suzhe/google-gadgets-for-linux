@@ -90,8 +90,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       view_ = new View(view_host, gadget, element_factory, context_);
       // Also let the view_ become a log context, so that the view can
       // output context logs.
-      ConnectContextLogListener(
-          view_, NewSlot(gadget->impl_, &Impl::OnContextLog, context_));
+      ConnectContextLogListener(view_, NewSlot(gadget->impl_,
+                                               &Impl::OnContextLog, NULL));
 
       if (details_)
         details_->Ref();
