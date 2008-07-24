@@ -100,6 +100,8 @@ class JSScriptContext : public ScriptContextInterface {
 
   JSContext *context() const { return context_; }
 
+  static void MaybeGC(JSContext *cx);
+
   /** @see ScriptContextInterface::Destroy() */
   virtual void Destroy();
   /** @see ScriptContextInterface::Execute() */
@@ -190,6 +192,7 @@ class JSScriptContext : public ScriptContextInterface {
   typedef std::vector<JSClassWithNativeCtor *> ClassVector;
   ClassVector registered_classes_;
 
+  static uint64_t last_gc_time_;
   static uint64_t operation_callback_time_;
   static int reset_operation_time_timer_;
 

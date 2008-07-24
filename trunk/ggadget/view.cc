@@ -92,6 +92,7 @@ class View::Impl {
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       ASSERT(event_.GetToken() == watch_id);
+      ScopedLogContext log_context(impl_->owner_);
 
       bool fire = true;
       bool ret = true;
@@ -1231,6 +1232,7 @@ class View::Impl {
   }
 
   void OnOptionChanged(const char *name) {
+    ScopedLogContext log_context(owner_);
     OptionChangedEvent event(name);
     ScriptableEvent scriptable_event(&event, NULL, NULL);
     FireEvent(&scriptable_event, onoptionchanged_event_);
@@ -1449,22 +1451,27 @@ void View::MarkRedraw() {
 }
 
 void View::Draw(CanvasInterface *canvas) {
+  ScopedLogContext log_context(this);
   impl_->Draw(canvas);
 }
 
 EventResult View::OnMouseEvent(const MouseEvent &event) {
+  ScopedLogContext log_context(this);
   return impl_->OnMouseEvent(event);
 }
 
 EventResult View::OnKeyEvent(const KeyboardEvent &event) {
+  ScopedLogContext log_context(this);
   return impl_->OnKeyEvent(event);
 }
 
 EventResult View::OnDragEvent(const DragEvent &event) {
+  ScopedLogContext log_context(this);
   return impl_->OnDragEvent(event);
 }
 
 EventResult View::OnOtherEvent(const Event &event) {
+  ScopedLogContext log_context(this);
   return impl_->OnOtherEvent(event);
 }
 
@@ -1473,10 +1480,12 @@ ViewInterface::HitTest View::GetHitTest() const {
 }
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {
+  ScopedLogContext log_context(this);
   return impl_->OnAddContextMenuItems(menu);
 }
 
 bool View::OnSizing(double *width, double *height) {
+  ScopedLogContext log_context(this);
   return impl_->OnSizing(width, height);
 }
 

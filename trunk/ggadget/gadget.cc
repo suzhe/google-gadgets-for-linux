@@ -88,6 +88,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       }
 
       view_ = new View(view_host, gadget, element_factory, context_);
+      // Also let the view_ become a log context, so that the view can
+      // output context logs.
+      ConnectContextLogListener(
+          view_, NewSlot(gadget->impl_, &Impl::OnContextLog, context_));
 
       if (details_)
         details_->Ref();
@@ -643,7 +647,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     std::string real_message;
     std::string script_filename;
     int script_line;
-    context->GetCurrentFileAndLine(&script_filename, &script_line);
+    if (context)
+      context->GetCurrentFileAndLine(&script_filename, &script_line);
     if (script_filename.empty() ||
         strncmp(script_filename.c_str(), message.c_str(),
                 script_filename.size()) == 0) {
