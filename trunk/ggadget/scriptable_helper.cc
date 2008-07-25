@@ -59,8 +59,8 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   }
   virtual bool IsStrict() const { ASSERT(false); return false; }
 
-  virtual void Ref();
-  virtual void Unref(bool transient);
+  virtual void Ref() const;
+  virtual void Unref(bool transient) const;
   virtual int GetRefCount() const { return ref_count_; }
 
   virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot);
@@ -129,7 +129,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   const PropertyInfo *GetPropertyInfoInternal(const char *name);
 
   ScriptableHelperCallbackInterface *owner_;
-  int ref_count_;
+  mutable int ref_count_;
   bool registering_class_;
 
   typedef std::map<const char *, PropertyInfo,
@@ -158,11 +158,24 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
     ~ClassStat() {
       // Don't use LOG because the logger may be unavailable now.
       printf("ScriptableHelper class stat: classes: %zu\n", map.size());
+      int properties_reg_in_ctor = 0;
+      int total_properties = 0;
+      int properties_if_obj_reg = 0;
       for (ClassStatMap::iterator it = map.begin(); it != map.end(); ++it) {
         printf("%jx: class properties: %d object properties: %d objects: %d\n",
                it->first, it->second.class_property_count,
                it->second.obj_property_count, it->second.total_created);
+        if (it->second.total_created == 0)
+          properties_reg_in_ctor += it->second.obj_property_count;
+        properties_if_obj_reg += it->second.obj_property_count +
+            it->second.class_property_count * it->second.total_created;
+        total_properties += it->second.obj_property_count +
+                            it->second.class_property_count;
       }
+      printf("properties registered in constructors: %d\n"
+             "total properties: %d (if all obj reg: %d, saved %f%%)\n",
+             properties_reg_in_ctor, total_properties, properties_if_obj_reg,
+             100.0 - 100.0 * total_properties / properties_if_obj_reg);
     }
     ClassStatMap map;
   };
@@ -507,7 +520,7 @@ void ScriptableHelperImpl::SetDynamicPropertyHandler(
   dynamic_property_setter_ = setter;
 }
 
-void ScriptableHelperImpl::Ref() {
+void ScriptableHelperImpl::Ref() const {
 #ifdef VERBOSE_DEBUG_REF
   DLOG("Ref ref_count_ = %d", ref_count_);
 #endif
@@ -516,7 +529,7 @@ void ScriptableHelperImpl::Ref() {
   ref_count_++;
 }
 
-void ScriptableHelperImpl::Unref(bool transient) {
+void ScriptableHelperImpl::Unref(bool transient) const {
   // The parameter traisnent is ignored here. Let the ScriptableHelper
   // template deal with it.
 #ifdef VERBOSE_DEBUG_REF

@@ -16,12 +16,13 @@
 -->
 
 <strings>
-  <GADGET_DESCRIPTION>Gadget designer</GADGET_DESCRIPTION>
-  <GADGET_TITLE>Gadget designer</GADGET_TITLE>
-  <ABOUT_TEXT>Gadget designer</ABOUT_TEXT>
+  <GADGET_DESCRIPTION>Gadget Designer</GADGET_DESCRIPTION>
+  <GADGET_TITLE>Gadget Designer</GADGET_TITLE>
+  <ABOUT_TEXT>Gadget Designer</ABOUT_TEXT>
   <MENU_NEW_GADGET>New Gadget...</MENU_NEW_GADGET>
   <MENU_OPEN_GADGET>Open Gadget...</MENU_OPEN_GADGET>
   <MENU_CLOSE_GADGET>Close Gadget</MENU_CLOSE_GADGET>
+  <MENU_RUN_GADGET>Run Gadget</MENU_RUN_GADGET>
   <MENU_SAVE_CURRENT_FILE>Save Current File</MENU_SAVE_CURRENT_FILE>
   <MENU_EDIT_SOURCE>Edit Source</MENU_EDIT_SOURCE>
   <MENU_RENAME>Rename</MENU_RENAME>
@@ -31,6 +32,7 @@
   <MENU_MOVE_TOP>Bring to Top</MENU_MOVE_TOP>
   <MENU_MOVE_UP_LEVEL>Move Up One Level</MENU_MOVE_UP_LEVEL>
   <MENU_MOVE_DOWN_LEVEL>Move Down One Level</MENU_MOVE_DOWN_LEVEL>
+  <MENU_APPEND_STRING>Append String...</MENU_APPEND_STRING>
   <TYPE_ALL_GADGET>All Gadget Files</TYPE_ALL_GADGET>
   <TYPE_GG>Gadget Package Files</TYPE_GG>
   <TYPE_GMANIFEST>Gadget Manifest Files</TYPE_GMANIFEST>
@@ -52,4 +54,5 @@
   <ELEMENTS>Elements</ELEMENTS>
   <CONFIRM_DISCARD>Your current file has not been saved.&#10;&#10;Discard changes?</CONFIRM_DISCARD>
   <CONFIRM_CHANGED>The current file has been changed on the file system.&#10;&#10;Do you want to refresh it?</CONFIRM_CHANGED>
+  <PROMPT_APPEND_STRING>Append string</PROMPT_APPEND_STRING>
 </strings>

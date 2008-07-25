@@ -109,6 +109,7 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   EXPECT_STREQ("<v>", doc_ele->GetAttribute("a").c_str());
   EXPECT_STREQ("v1", doc_ele->GetAttribute("a1").c_str());
   DOMNodeListInterface *children = doc_ele->GetChildNodes();
+  children->Ref();
   EXPECT_EQ(13U, children->GetLength());
 
   DOMNodeInterface *sub_node = children->GetItem(9);
@@ -116,6 +117,7 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, sub_node->GetNodeType());
   DOMElementInterface *sub_ele = down_cast<DOMElementInterface *>(sub_node);
   DOMNodeListInterface *sub_children = sub_ele->GetChildNodes();
+  sub_children->Ref();
   EXPECT_EQ(7U, sub_children->GetLength());
   EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
             sub_children->GetItem(0)->GetNodeType());
@@ -135,8 +137,8 @@ TEST(XMLParser, ParseXMLIntoDOM) {
             pi_node->GetNodeType());
   EXPECT_STREQ("pi", pi_node->GetNodeName().c_str());
   EXPECT_STREQ("value", pi_node->GetNodeValue());
-  delete children;
-  delete sub_children;
+  children->Unref();
+  sub_children->Unref();
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
 }

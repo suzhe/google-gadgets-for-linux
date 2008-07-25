@@ -425,7 +425,7 @@ static void ConvertChildrenIntoDOM(DOMDocumentInterface *domdoc,
         ConvertPIIntoDOM(domdoc, parent, child);
         break;
       default:
-        DLOG("Ignore XML Node of type %d\n", child->type);
+        DLOG("Ignore XML Node of type %d", child->type);
         break;
     }
   }

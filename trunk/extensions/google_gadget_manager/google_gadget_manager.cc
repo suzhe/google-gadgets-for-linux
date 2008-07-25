@@ -1008,7 +1008,7 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
                    GetSystemGadgetPath(kGoogleGadgetBrowserName).c_str(),
                    kGoogleGadgetBrowserOptionsName,
                    kGoogleGadgetBrowserInstanceId,
-                   permissions);
+                   permissions, Gadget::DEBUG_CONSOLE_DISABLED);
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
       browser_gadget_->GetMainView()->

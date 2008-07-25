@@ -24,6 +24,9 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/logger.h>
+#include <ggadget/main_loop_interface.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/permissions.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_menu.h>
@@ -39,7 +42,8 @@ namespace designer {
 static const char kGadgetFileManagerPrefix[] = "gadget://";
 static FileManagerInterface *g_gadget_file_manager = NULL;
 static FileManagerWrapper *g_designer_file_manager = NULL;
-static Gadget *g_gadget = NULL;
+static Gadget *g_designer_gadget = NULL;
+static Gadget *g_designee_gadget = NULL;
 
 class ScriptableFileManager : public ScriptableHelperDefault {
  public:
@@ -112,6 +116,13 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xd83de55b392c4d56, ScriptableInterface);
 
+  DesignerUtils() {
+    StringAppendPrintf(&designee_options_name_, "designee-options-%p", this);
+  }
+  ~DesignerUtils() {
+    RemoveGadget();
+  }
+
   virtual void DoRegister() {
     RegisterMethod("elementCoordToAncestor",
                    NewSlot(this, &DesignerUtils::ElementCoordToAncestor));
@@ -137,6 +148,8 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
                    NewSlot(this, &DesignerUtils::SetDesignerMode));
     RegisterMethod("systemOpenFileWith",
                    NewSlot(this, &DesignerUtils::SystemOpenFileWith));
+    RegisterMethod("runGadget", NewSlot(this, &DesignerUtils::RunGadget));
+    RegisterMethod("removeGadget", NewSlot(this, &DesignerUtils::RemoveGadget));
   }
 
   JSONString ElementCoordToAncestor(const BasicElement *element,
@@ -176,6 +189,9 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
   }
 
   ScriptableFileManager *InitGadgetFileManager(const char *gadget_path) {
+    if (!gadget_path || !*gadget_path)
+      return NULL;
+
     if (g_gadget_file_manager) {
       g_designer_file_manager->UnregisterFileManager(kGadgetFileManagerPrefix,
                                                      g_gadget_file_manager);
@@ -202,7 +218,7 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
   }
 
   static bool ProxyMenuHandler(MenuInterface *menu, Slot *handler) {
-    ScriptableMenu scriptable_menu(g_gadget, menu);
+    ScriptableMenu scriptable_menu(g_designer_gadget, menu);
     Variant arg(&scriptable_menu);
     return VariantValue<bool>()(handler->Call(NULL, 1, &arg).v());
   }
@@ -217,7 +233,7 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
   }
 
   void ShowXMLOptionsDialog(const char *xml_file, ScriptableInterface *param) {
-    g_gadget->ShowXMLOptionsDialog(
+    g_designer_gadget->ShowXMLOptionsDialog(
         ViewInterface::OPTIONS_VIEW_FLAG_OK |
         ViewInterface::OPTIONS_VIEW_FLAG_CANCEL,
         xml_file, param);
@@ -238,6 +254,74 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
       _exit(-1);
     }
   }
+
+  class RunGadgetWatchCallback : public WatchCallbackInterface {
+   public:
+    RunGadgetWatchCallback(const std::string &gadget_path,
+                           const std::string &options_name)
+        : gadget_path_(gadget_path), options_name_(options_name) {
+    }
+
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      Permissions permissions;
+      permissions.SetGranted(Permissions::ALL_ACCESS, true);
+      // The gadget manager always use positive instance ids, so this designee_id
+      // won't conflict with them.
+      int designee_id = -g_designer_gadget->GetInstanceID() - 1;
+      if (designee_id >= 0) {
+        LOG("This designer can't run gadgets if the designer is running in "
+            "another designer");
+        return false;
+      }
+      g_designee_gadget = new Gadget(g_designer_gadget->GetHost(),
+                                     gadget_path_.c_str(),
+                                     options_name_.c_str(),
+                                     designee_id, permissions,
+                                     Gadget::DEBUG_CONSOLE_INITIAL);
+      if (g_designee_gadget && g_designee_gadget->IsValid()) {
+        g_designee_gadget->ShowMainView();
+        g_designee_gadget->GetMainView()->ConnectOnCloseEvent(
+            NewSlot(ResetDesigneeGadget));
+      }
+      return false;
+    }
+
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+    static void ResetDesigneeGadget() {
+      g_designee_gadget = NULL;
+    }
+
+   private:
+    std::string gadget_path_;
+    std::string options_name_;
+  };
+
+  void RunGadget(const char *gadget_path) {
+    if (!gadget_path || !*gadget_path)
+      return;
+
+    RemoveGadget();
+    // Schedule actual gadget run, because Gadget::RemoveMe() scheduled the
+    // actual gadget removal in the next main loop.
+    GetGlobalMainLoop()->AddTimeoutWatch(
+        0, new RunGadgetWatchCallback(gadget_path, designee_options_name_));
+  }
+
+  void RemoveGadget() {
+    if (g_designee_gadget) {
+      OptionsInterface *options = g_designee_gadget->GetOptions();
+      if (options)
+        options->DeleteStorage();
+      g_designee_gadget->RemoveMe(false);
+      g_designee_gadget = NULL;
+    }
+  }
+
+ private:
+  std::string designee_options_name_;
 };
 
 static DesignerUtils g_designer_utils;
@@ -273,7 +357,7 @@ extern "C" {
         LOG("Failed to register designerUtils.");
         return false;
       }
-      ggadget::designer::g_gadget = gadget;
+      ggadget::designer::g_designer_gadget = gadget;
       return true;
     }
     return false;

@@ -1017,6 +1017,8 @@ class BasicElement::Impl {
 
   static int total_draw_count_;
   static int total_queue_draw_count_;
+
+  static std::map<uint64_t, bool> class_has_children_;
 #endif
 
   ImageInterface *mask_image_;
@@ -1058,6 +1060,7 @@ class BasicElement::Impl {
 int BasicElement::Impl::total_debug_color_index_ = 0;
 int BasicElement::Impl::total_draw_count_ = 0;
 int BasicElement::Impl::total_queue_draw_count_ = 0;
+std::map<uint64_t, bool> BasicElement::Impl::class_has_children_;
 #endif
 
 // Must sync with ViewInterface::CursorType enumerates
@@ -1089,23 +1092,39 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
 }
 
 void BasicElement::DoRegister() {
-  // Use GetChildren() instead of impl_->children_ because GetChildren()
-  // may be overriden.
-  Elements *children = GetChildren();
-  if (children) {
-    RegisterConstant("children", children);
-    RegisterMethod("appendElement",
-                   NewSlot(children, &Elements::AppendElementFromXML));
-    RegisterMethod("insertElement",
-                   NewSlot(children, &Elements::InsertElementFromXML));
-    RegisterMethod("removeElement",
-                   NewSlot(children, &Elements::RemoveElement));
-    RegisterMethod("removeAllElements",
-                   NewSlot(children, &Elements::RemoveAllElements));
-  }
+#ifdef _DEBUG
+  // Objects of a class must be all or none allowing children.
+  bool has_children = GetChildren() != NULL;
+  ASSERT_M(has_children == Impl::class_has_children_[GetClassId()],
+           ("Objects of class %jx aren't consistent about children",
+            GetClassId()));
+#endif
+}
+
+static Elements *GetElementChildren(BasicElement *element) {
+  return element->GetChildren();
 }
 
 void BasicElement::DoClassRegister() {
+  bool has_children = GetChildren() != NULL;
+#ifdef _DEBUG
+  Impl::class_has_children_[GetClassId()] = has_children;
+#endif
+  if (has_children) {
+    RegisterProperty("children",
+                     // Select the non-const version.
+                     NewSlot(static_cast<Elements *(BasicElement::*)()>(
+                         &BasicElement::GetChildren)), NULL);
+    RegisterMethod("appendElement", NewSlot(&Elements::AppendElementFromXML,
+                                            GetElementChildren));
+    RegisterMethod("insertElement", NewSlot(&Elements::InsertElementFromXML,
+                                            GetElementChildren));
+    RegisterMethod("removeElement", NewSlot(&Elements::RemoveElement,
+                                            GetElementChildren));
+    RegisterMethod("removeAllElements", NewSlot(&Elements::RemoveAllElements,
+                                                GetElementChildren));
+  }
+
   RegisterProperty("x",
                    NewSlot(&Impl::GetX, &BasicElement::impl_),
                    NewSlot(&Impl::SetX, &BasicElement::impl_));

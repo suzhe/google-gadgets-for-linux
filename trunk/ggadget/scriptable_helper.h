@@ -259,7 +259,7 @@ class ScriptableHelper : public I,
    * @see ScriptableInterface::Ref()
    * Normally this method is not allowed to be overriden.
    */
-  virtual void Ref() {
+  virtual void Ref() const {
     impl_->Ref();
   }
 
@@ -267,7 +267,7 @@ class ScriptableHelper : public I,
    * @see ScriptableInterface::Unref()
    * Normally this method is not allowed to be overriden.
    */
-  virtual void Unref(bool transient = false) {
+  virtual void Unref(bool transient = false) const {
     impl_->Unref(transient);
     if (!transient && impl_->GetRefCount() == 0) delete this;
   }

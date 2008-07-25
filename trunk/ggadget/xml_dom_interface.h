@@ -131,8 +131,8 @@ class DOMNodeInterface : public ScriptableInterface {
    * or call @c Ref() if you need to further operate on it, but never ignore
    * the results from such methods.
    */
-  virtual void Ref() = 0;
-  virtual void Unref(bool transient = false) = 0;
+  virtual void Ref() const = 0;
+  virtual void Unref(bool transient = false) const = 0;
 
   virtual std::string GetNodeName() const = 0;
   virtual const char *GetNodeValue() const = 0;
@@ -217,6 +217,8 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual const DOMNodeListInterface *GetElementsByTagNameNS(
       const char *namespace_uri, const char *local_name) const = 0;
   */
+
+  friend class internal::DOMNodeImpl;
 };
 CLASS_ID_IMPL(DOMNodeInterface, ScriptableInterface)
 

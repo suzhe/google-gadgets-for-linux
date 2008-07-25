@@ -137,7 +137,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
        const char *base_path,
        const char *options_name,
        int instance_id,
-       const Permissions &global_permissions)
+       const Permissions &global_permissions,
+       DebugConsoleConfig debug_console_config)
       : owner_(owner),
         host_(host),
         element_factory_(new ElementFactory()),
@@ -158,7 +159,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         in_user_interaction_(false),
         remove_me_timer_(0),
-        debug_console_config_(0) {
+        debug_console_config_(debug_console_config) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -166,12 +167,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ASSERT(file_manager_);
     ASSERT(options_);
     ASSERT(scriptable_options_);
-
-    OptionsInterface *global_options = GetGlobalOptions();
-    if (global_options) {
-      global_options->GetValue(kDebugConsoleOption).ConvertToInt(
-          &debug_console_config_);
-    }
   }
 
   ~Impl() {
@@ -271,6 +266,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
         owner_, element_factory_, &global_, NULL, true);
     ASSERT(main_view_);
+
+    if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
+      host_->ShowGadgetDebugConsole(owner_);
 
     // Register scriptable properties.
     RegisterProperties();
@@ -532,7 +530,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
     bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
                          !oncommand_signal_.HasActiveConnections();
-    if (debug_console_config_ > 0) {
+    if (debug_console_config_ != DEBUG_CONSOLE_DISABLED) {
       menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0,
                     NewSlot(this, &Impl::DebugConsoleMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
@@ -976,9 +974,10 @@ Gadget::Gadget(HostInterface *host,
                const char *base_path,
                const char *options_name,
                int instance_id,
-               const Permissions &initial_permissions)
+               const Permissions &initial_permissions,
+               DebugConsoleConfig debug_console_config)
     : impl_(new Impl(this, host, base_path, options_name, instance_id,
-                     initial_permissions)) {
+                     initial_permissions, debug_console_config)) {
   // Let the gadget become a log context, so that all logs related to this
   // gadget can be outputted to correct debug console.
   ConnectContextLogListener(

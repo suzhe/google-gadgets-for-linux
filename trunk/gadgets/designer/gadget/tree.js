@@ -66,8 +66,9 @@ Tree.prototype = {
     return this.GetIdFromNodeName(node.name);
   },
 
-  InsertNode: function(level, id, title, expanded, has_children, before_node) {
+  InsertNode: function(level, id, title, has_children, before_id) {
     var indent = this.GetLevelIndent(level);
+    var before_node = before_id ? this.GetNode(before_id) : null;
     var item = this.listbox_.insertElement(
       "<item name='" + this.GetNodeName(id) + "'/>", before_node);
     var button = item.appendElement(
@@ -82,7 +83,6 @@ Tree.prototype = {
     button.onclick = function() {
       this_.ToggleFolder(id);
     };
-    button.rotation = expanded ? 90 : 0;
     if (this.menu_handler_) {
       designerUtils.connectElementMenuHandler(
           item,

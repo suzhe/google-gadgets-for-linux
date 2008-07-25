@@ -17,6 +17,7 @@
 #ifndef GGADGET_GOOGLE_GADGET_MANAGER_H__
 #define GGADGET_GOOGLE_GADGET_MANAGER_H__
 
+#include <limits.h>
 #include <stdint.h>
 #include <set>
 #include <vector>
@@ -138,7 +139,7 @@ const char kIGoogleModuleURLOption[] = "module_url_prefix";
 const char kIGoogleBGColorOption[] = "bg_color";
 
 /** Fake instance id for google gadget browser. */
-const int kGoogleGadgetBrowserInstanceId = -1;
+const int kGoogleGadgetBrowserInstanceId = INT_MAX;
 const char kGoogleGadgetBrowserName[] = "google-gadget-browser";
 const char kGoogleGadgetBrowserOptionsName[] = "google-gadget-browser";
 

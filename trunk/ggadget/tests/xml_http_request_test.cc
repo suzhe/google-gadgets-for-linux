@@ -48,6 +48,7 @@ XMLHttpRequestInterface *CreateXMLHttpRequest(int session_id) {
 
 TEST(XMLHttpRequest, States) {
   XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
+  request->Ref();
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -67,7 +68,7 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->SetRequestHeader("ccc", "ddd"));
-  delete request;
+  request->Unref();
 }
 
 class Callback {

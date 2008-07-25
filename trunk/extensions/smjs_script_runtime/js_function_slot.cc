@@ -66,7 +66,6 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
                                    const Variant argv[]) const {
-  JSScriptContext::MaybeGC(context_);
   Variant return_value(GetReturnType());
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.
@@ -104,6 +103,8 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
         "Failed to convert JS function(%s) return value(%s) to native",
         function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }
+
+  JSScriptContext::MaybeGC(context_);
   return ResultVariant(return_value);
 }
 

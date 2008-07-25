@@ -42,7 +42,7 @@ JSNativeWrapper::~JSNativeWrapper() {
   qval_.setData(context_->engine()->undefinedValue());
 }
 
-void JSNativeWrapper::Ref() {
+void JSNativeWrapper::Ref() const {
   ScriptableHelperDefault::Ref();
   if (GetRefCount() == 2) {
     // There must be a new native reference, let JavaScript know it by adding
@@ -51,7 +51,7 @@ void JSNativeWrapper::Ref() {
   }
 }
 
-void JSNativeWrapper::Unref(bool transient) {
+void JSNativeWrapper::Unref(bool transient) const {
   if (GetRefCount() == 2) {
     // The last native reference is about to be released, let JavaScript know
     // it by removing the root reference.

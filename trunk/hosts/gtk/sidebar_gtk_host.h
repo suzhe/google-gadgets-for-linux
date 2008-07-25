@@ -18,6 +18,7 @@
 #define HOSTS_GTK_SIDEBAR_GTK_HOST_H__
 
 #include <string>
+#include <ggadget/gadget.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
 
@@ -32,7 +33,8 @@ using ggadget::OptionsInterface;
 class SideBarGtkHost : public ggadget::HostInterface {
  public:
   SideBarGtkHost(OptionsInterface *options, bool decorated,
-                 int view_debug_mode, int debug_console_config);
+                 int view_debug_mode,
+                 Gadget::DebugConsoleConfig debug_console_config);
   virtual ~SideBarGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);

@@ -34,6 +34,7 @@ var g_size_width_dir = 0;
 var g_size_height_dir = 0;
 var g_current_tool = -1;
 var g_gadget_file_manager = null;
+var g_gadget_file = null;
 var g_current_file = null;
 var g_current_file_time = 0;
 var g_changed = false;
@@ -72,13 +73,13 @@ function ResetGlobals() {
   g_size_height_dir = 0;
   SelectTool(-1);
   SelectElement(null);
-  designer_view.removeAllElements();
-  properties_list.removeAllElements();
-  events_list.removeAllElements();
+  e_designer_view.removeAllElements();
+  e_properties_list.removeAllElements();
+  e_events_list.removeAllElements();
   g_elements_view = null;
   g_properties_view = null;
   g_events_view = null;
-  g_changed = false;
+  g_changed = false;7
   g_current_file = null;
   g_current_file_time = 0;
 }
@@ -88,17 +89,19 @@ function view_onopen() {
   plugin.onAddCustomMenuItems = AddGlobalMenu;
   view_onsize();
   InitToolBar();
-  designerUtils.connectElementMenuHandler(selection, AddElementContextMenu);
-  for (var i = 0; i < selection.children.count; i++) {
-    designerUtils.connectElementMenuHandler(selection.children.item(i),
+  designerUtils.connectViewMenuHandler(
+      view, function(menu) { AddGlobalMenu(menu); return false; });
+  designerUtils.connectElementMenuHandler(e_selection, AddElementContextMenu);
+  for (var i = 0; i < e_selection.children.count; i++) {
+    designerUtils.connectElementMenuHandler(e_selection.children.item(i),
                                             AddElementContextMenu);
   }
 }
 
 function view_onsize() {
-  toolbar.width = view.width - tool_views.offsetWidth;
-  designer.width = view.width - tool_views.offsetWidth;
-  designer.height = view.height - toolbar.offsetHeight;
+  e_toolbar.width = view.width - e_tool_views.offsetWidth;
+  e_designer.width = view.width - e_tool_views.offsetWidth;
+  e_designer.height = view.height - e_toolbar.offsetHeight;
 }
 
 function view_onmouseover() {
@@ -112,13 +115,13 @@ function tool_label_onsize(index) {
   if (index == 0) {
     tool.x = 0;
   } else {
-    var prev_tool = toolbar.children.item(index - 1);
+    var prev_tool = e_toolbar.children.item(index - 1);
     tool.x = prev_tool.x + prev_tool.width;
   }
 }
 
 function file_list_onchange() {
-  var item = file_list.selectedItem;
+  var item = e_file_list.selectedItem;
   if (item) {
     var filename = item.children.item(0).innerText;
     if (filename && filename != g_current_file)
@@ -128,12 +131,12 @@ function file_list_onchange() {
 
 function designer_onsize() {
   if (!g_dragging) {
-    designer_view.x =
-        Math.max(0, Math.round((designer.offsetWidth -
-                                designer_view.offsetWidth) / 2));
-    designer_view.y =
-        Math.max(0, Math.round((designer.offsetHeight -
-                                designer_view.offsetHeight) / 2));
+    e_designer_view.x =
+        Math.max(0, Math.round((e_designer.offsetWidth -
+                                e_designer_view.offsetWidth) / 2));
+    e_designer_view.y =
+        Math.max(0, Math.round((e_designer.offsetHeight -
+                                e_designer_view.offsetHeight) / 2));
     view.setTimeout(UpdateSelectionPos, 0);
   }
 }
@@ -147,8 +150,8 @@ function events_list_onchange() {
 }
 
 function elements_list_onchange() {
-  if (elements_list.selectedItem) {
-    var id = g_elements_view.GetIdByNode(elements_list.selectedItem);
+  if (e_elements_list.selectedItem) {
+    var id = g_elements_view.GetIdByNode(e_elements_list.selectedItem);
     SelectElement(g_elements_info[id]);
   } else {
     SelectElement(null);
@@ -157,19 +160,19 @@ function elements_list_onchange() {
 
 function designer_panel_onmousedown() {
   if (event.button == 1) {
-    var x = event.x - designer_view.offsetX;
-    var y = event.y - designer_view.offsetY;
+    var x = event.x - e_designer_view.offsetX;
+    var y = event.y - e_designer_view.offsetY;
     if (g_current_tool != -1) {
       SelectElement(NewElement(kTools[g_current_tool], x, y));
       g_changed = true;
       SelectTool(-1);
     } else {
-      var element = FindElementByPos(designer_view, x, y);
+      var element = FindElementByPos(e_designer_view, x, y);
       if (element) {
         g_drag_offset_x = x;
         g_drag_offset_y = y;
         SelectElement(GetElementInfo(element));
-        designer_panel.cursor = "sizeall";
+        e_designer_panel.cursor = "sizeall";
         g_dragging = true;
       } else {
         SelectElement(null);
@@ -180,16 +183,18 @@ function designer_panel_onmousedown() {
 
 function designer_panel_onmousemove() {
   if (g_dragging && !(event.button & 1)) {
-    designer_panel.cursor = "arrow";
+    e_designer_panel.cursor = "arrow";
     EndDragging();
   }
-  if (g_selected_element && g_dragging)
-    DragMove(event.x - designer_view.offsetX, event.y - designer_view.offsetY);
+  if (g_selected_element && g_dragging) {
+    DragMove(event.x - e_designer_view.offsetX,
+             event.y - e_designer_view.offsetY);
+  }
 }
 
 function designer_panel_onmouseup() {
   designer_panel_onmousemove();
-  designer_panel.cursor = "arrow";
+  e_designer_panel.cursor = "arrow";
   EndDragging();
 }
 
@@ -217,7 +222,7 @@ function selection_onkeydown() {
       size_move_func(0, 1);
       break;
     case 46: // delete
-      if (g_selected_element && g_selected_element != designer_view) {
+      if (g_selected_element && g_selected_element != e_designer_view) {
         // DeleteElement will return the next element to be selected.
         SelectElement(DeleteElement(g_selected_element));
         g_changed = true;
@@ -237,43 +242,43 @@ function selection_onfocusin() {
 
 function selection_onmousedown() {
   if (event.button == 1) {
-    var parent_pos = ElementCoordToParent(selection, event.x, event.y);
-    g_drag_offset_x = parent_pos.x - designer_view.offsetX;
-    g_drag_offset_y = parent_pos.y - designer_view.offsetY;
-    var new_selected = FindElementByPos(designer_view,
+    var parent_pos = ElementCoordToParent(e_selection, event.x, event.y);
+    g_drag_offset_x = parent_pos.x - e_designer_view.offsetX;
+    g_drag_offset_y = parent_pos.y - e_designer_view.offsetY;
+    var new_selected = FindElementByPos(e_designer_view,
                                         g_drag_offset_x, g_drag_offset_y);
     if (new_selected && new_selected != g_selected_element)
       SelectElement(GetElementInfo(new_selected));
-    selection.cursor = "sizeall";
+    e_selection.cursor = "sizeall";
     g_dragging = true;
   }
 }
 
 function selection_onmousemove() {
   if (g_dragging && !(event.button & 1)) {
-    selection.cursor = "arrow";
+    e_selection.cursor = "arrow";
     EndDragging();
   }
   if (g_selected_element && g_dragging) {
-    var parent_pos = ElementCoordToParent(selection, event.x, event.y);
-    DragMove(parent_pos.x - designer_view.offsetX,
-             parent_pos.y - designer_view.offsetY);
+    var parent_pos = ElementCoordToParent(e_selection, event.x, event.y);
+    DragMove(parent_pos.x - e_designer_view.offsetX,
+             parent_pos.y - e_designer_view.offsetY);
   }
 }
 
 function selection_onmouseup() {
   selection_onmousemove();
-  selection.cursor = "arrow";
+  e_selection.cursor = "arrow";
   EndDragging();
 }
 
 function selection_border_onmousedown() {
   if (event.button == 1) {
     var panel_pos = designerUtils.elementCoordToAncestor(event.srcElement,
-                                                         designer_panel,
+                                                         e_designer_panel,
                                                          event.x, event.y);
-    g_drag_offset_x = panel_pos.x - designer_view.offsetX;
-    g_drag_offset_y = panel_pos.y - designer_view.offsetY;
+    g_drag_offset_x = panel_pos.x - e_designer_view.offsetX;
+    g_drag_offset_y = panel_pos.y - e_designer_view.offsetY;
     g_dragging = true;
   }
 }
@@ -283,10 +288,10 @@ function selection_border_onmousemove() {
     EndDragging();
   if (g_selected_element && g_dragging) {
     var panel_pos = designerUtils.elementCoordToAncestor(event.srcElement,
-                                                         designer_panel,
+                                                         e_designer_panel,
                                                          event.x, event.y);
-    DragMove(panel_pos.x - designer_view.offsetX,
-             panel_pos.y - designer_view.offsetY);
+    DragMove(panel_pos.x - e_designer_view.offsetX,
+             panel_pos.y - e_designer_view.offsetY);
   }
 }
 
@@ -298,12 +303,12 @@ function selection_border_onmouseup() {
 function size_onmousedown(width_dir, height_dir) {
   if (event.button == 1 && g_selected_element) {
     var panel_pos = designerUtils.elementCoordToAncestor(event.srcElement,
-                                                         designer_panel,
+                                                         e_designer_panel,
                                                          event.x, event.y);
     g_size_width_dir = width_dir;
     g_size_height_dir = height_dir;
-    g_drag_offset_x = panel_pos.x - designer_view.offsetX;
-    g_drag_offset_y = panel_pos.y - designer_view.offsetY;
+    g_drag_offset_x = panel_pos.x - e_designer_view.offsetX;
+    g_drag_offset_y = panel_pos.y - e_designer_view.offsetY;
     g_dragging = true;
   }
 }
@@ -313,10 +318,10 @@ function size_onmousemove() {
     EndDragging();
   if (g_selected_element && g_dragging) {
     var panel_pos = designerUtils.elementCoordToAncestor(event.srcElement,
-                                                         designer_panel,
+                                                         e_designer_panel,
                                                          event.x, event.y);
-    var x = panel_pos.x - designer_view.offsetX;
-    var y = panel_pos.y - designer_view.offsetY;
+    var x = panel_pos.x - e_designer_view.offsetX;
+    var y = panel_pos.y - e_designer_view.offsetY;
     var delta = ViewDeltaToElement(g_selected_element,
                                    x - g_drag_offset_x, y - g_drag_offset_y);
     var size_delta = ResizeSelectedElement(delta.x * g_size_width_dir,
@@ -338,8 +343,8 @@ function size_onmouseup() {
 
 function pin_onmousedown() {
   if (event.button == 1) {
-    g_drag_offset_x = event.x + pin.offsetX - designer_view.offsetX;
-    g_drag_offset_y = event.y + pin.offsetY - designer_view.offsetY;
+    g_drag_offset_x = event.x + e_pin.offsetX - e_designer_view.offsetX;
+    g_drag_offset_y = event.y + e_pin.offsetY - e_designer_view.offsetY;
     g_dragging = true;
   }
 }
@@ -348,18 +353,19 @@ function pin_onmousemove() {
   if (g_dragging && !(event.button & 1))
     EndDragging();
   if (g_selected_element && g_dragging) {
-    var x = event.x + pin.offsetX - designer_view.offsetX;
-    var y = event.y + pin.offsetY - designer_view.offsetY;
+    var x = event.x + e_pin.offsetX - e_designer_view.offsetX;
+    var y = event.y + e_pin.offsetY - e_designer_view.offsetY;
     var delta = ViewDeltaToElement(g_selected_element,
                                    x - g_drag_offset_x, y - g_drag_offset_y);
     var new_pin_x = designerUtils.getOffsetPinX(g_selected_element) + delta.x;
     var new_pin_y = designerUtils.getOffsetPinY(g_selected_element) + delta.y;
     g_selected_element.pinX = new_pin_x;
     g_selected_element.pinY = new_pin_y;
-    selection.pinX = new_pin_x + kSelectionBorderWidth;
-    selection.pinY = new_pin_y + kSelectionBorderWidth;
+    e_selection.pinX = new_pin_x + kSelectionBorderWidth;
+    e_selection.pinY = new_pin_y + kSelectionBorderWidth;
     g_properties_view.SyncPropertyFromElement("pinX");
     g_properties_view.SyncPropertyFromElement("pinY");
+    g_changed = true;
     // Enable or disable this?
     // MoveSelectedElementInElementCoord(delta.x, delta.y);
     g_drag_offset_x = x;
@@ -374,11 +380,12 @@ function pin_onmouseup() {
 
 function rotation_onmousedown() {
   if (event.button == 1 && g_selected_element) {
-    var pos = ElementCoordToParent(selection,
+    var pos = ElementCoordToParent(e_selection,
                                    event.x + event.srcElement.offsetX,
                                    event.y + event.srcElement.offsetY);
-    g_offset_angle = Math.atan2(pin.x - pos.x, pos.y - pin.y) * 180 / Math.PI -
-                     selection.rotation;
+    g_offset_angle = Math.atan2(e_pin.x - pos.x, pos.y - e_pin.y)
+                         * 180 / Math.PI -
+                     e_selection.rotation;
     g_dragging = true;
   }
 }
@@ -387,17 +394,18 @@ function rotation_onmousemove() {
   if (g_dragging && !(event.button & 1))
     EndDragging();
   if (g_selected_element && g_dragging) {
-    var pos = ElementCoordToParent(selection,
+    var pos = ElementCoordToParent(e_selection,
                                    event.x + event.srcElement.offsetX,
                                    event.y + event.srcElement.offsetY);
-    var angle = Math.atan2(pin.x - pos.x, pos.y - pin.y) * 180 / Math.PI;
+    var angle = Math.atan2(e_pin.x - pos.x, pos.y - e_pin.y) * 180 / Math.PI;
     angle -= g_offset_angle;
     angle %= 360;
     if (angle < 0) angle += 360;
     g_selected_element.rotation = ViewRotationToElement(g_selected_element,
                                                         angle);
-    selection.rotation = angle;
+    e_selection.rotation = angle;
     g_properties_view.SyncPropertyFromElement("rotation");
+    g_changed = true;
   }
 }
 
@@ -415,6 +423,7 @@ function MoveSelectedElement(delta_x, delta_y) {
     g_selected_element.x = new_x;
     x_moved = new_x - org_x;
     g_properties_view.SyncPropertyFromElement("x");
+    g_changed = true;
   }
   if (!g_y_fixed) {
     var org_y = g_selected_element.offsetY;
@@ -422,11 +431,12 @@ function MoveSelectedElement(delta_x, delta_y) {
     g_selected_element.y = new_y;
     y_moved = new_y - org_y;
     g_properties_view.SyncPropertyFromElement("y");
+    g_changed = true;
   }
 
   var pos = ElementPosToView(g_selected_element);
-  selection.x = pin.x = pos.x + designer_view.offsetX;
-  selection.y = pin.y = pos.y + designer_view.offsetY;
+  e_selection.x = e_pin.x = pos.x + e_designer_view.offsetX;
+  e_selection.y = e_pin.y = pos.y + e_designer_view.offsetY;
   return { x: x_moved, y: y_moved };
 }
 
@@ -445,18 +455,20 @@ function ResizeSelectedElement(delta_x, delta_y) {
     var new_width = Math.min(kMaxWidth,
                              Math.max(kMinWidth, org_width + delta_x));
     g_selected_element.width = new_width;
-    selection.width = new_width + 2 * kSelectionBorderWidth;
+    e_selection.width = new_width + 2 * kSelectionBorderWidth;
     delta_width = new_width - org_width;
     g_properties_view.SyncPropertyFromElement("width");
+    g_changed = true;
   }
   if (!g_height_fixed) {
     var org_height = g_selected_element.offsetHeight;
     var new_height = Math.min(kMaxHeight,
                               Math.max(kMinHeight, org_height + delta_y));
     g_selected_element.height = new_height;
-    selection.height = new_height + 2 * kSelectionBorderWidth;
+    e_selection.height = new_height + 2 * kSelectionBorderWidth;
     delta_height = new_height - org_height;
     g_properties_view.SyncPropertyFromElement("height");
+    g_changed = true;
   }
   return { x: delta_width, y: delta_height };
 }
@@ -465,8 +477,8 @@ function EndDragging() {
   g_dragging = false;
   if (g_properties_view)
     g_properties_view.SyncFromElement();
-  selection.focus();
-  if (g_selected_element == designer_view) {
+  e_selection.focus();
+  if (g_selected_element == e_designer_view) {
     view.setTimeout(function() {
       designer_onsize();
       view.setTimeout(UpdateSelectionPos, 0);
@@ -475,7 +487,7 @@ function EndDragging() {
 }
 
 function DragMove(x, y) {
-  if (g_selected_element != designer_view) {
+  if (g_selected_element != e_designer_view) {
     var delta = ViewDeltaToElement(g_selected_element.parentElement,
                                    x - g_drag_offset_x, y - g_drag_offset_y);
     MoveSelectedElement(delta.x, delta.y);
@@ -487,12 +499,12 @@ function DragMove(x, y) {
 function InitToolBar() {
   for (var i = 0; i < kTools.length; i++) {
     var tool_name = kTools[i];
-    toolbar.appendElement("<div height='100%'>" +
+    e_toolbar.appendElement("<div height='100%'>" +
         "<button width='100%' height='100%' stretchMiddle='true'" +
         " overImage='images/tool_button_over.png'" +
         " downImage='images/tool_button_down.png'" +
         " onclick='SelectTool(" + i + ")' " +
-        " ondblclick='tool_button_onclick(" + i + ")'/>" +
+        " ondblclick='tool_button_ondblclick(" + i + ")'/>" +
         "<img x='50%' pinX='50%' src='images/tool_" + tool_name + ".png'/>" +
         "<label size='8' y='25' x='50%' pinX='50%'" +
         " onsize='tool_label_onsize(" + i + ")'>" +
@@ -501,7 +513,7 @@ function InitToolBar() {
   }
 }
 
-function tool_button_onclick(index) {
+function tool_button_ondblclick(index) {
   SelectElement(NewElement(kTools[index]));
   g_changed = true;
   SelectTool(-1);
@@ -549,10 +561,10 @@ function ParentDeltaToElement(element, delta_x, delta_y) {
   return { x: pos.x - pos0.x, y: pos.y - pos0.y };
 }
 
-// Here "View" means the designer_view. 
-// element must be an element under the designer_view.
+// Here "View" means the e_designer_view. 
+// element must be an element under the e_designer_view.
 function ElementCoordToView(element, x, y) {
-  return designerUtils.elementCoordToAncestor(element, designer_view, x, y);
+  return designerUtils.elementCoordToAncestor(element, e_designer_view, x, y);
 }
 
 function ElementPosToView(element) {
@@ -562,12 +574,12 @@ function ElementPosToView(element) {
 }
 
 function ViewCoordToElement(element, x, y) {
-  return designerUtils.ancestorCoordToElement(designer_view, element, x, y);
+  return designerUtils.ancestorCoordToElement(e_designer_view, element, x, y);
 }
 
 function ViewDeltaToElement(element, delta_x, delta_y) {
   var path = [ ];
-  while (element != designer_view) {
+  while (element != e_designer_view) {
     path.push(element);
     element = element.parentElement;
   }
@@ -579,7 +591,7 @@ function ViewDeltaToElement(element, delta_x, delta_y) {
 
 function ElementDeltaToView(element, delta_x, delta_y) {
   var delta = { x: delta_x, y: delta_y };
-  while (element != designer_view) {
+  while (element != e_designer_view) {
     delta = ElementDeltaToParent(element, delta.x, delta.y);
     element = element.parentElement;
   }
@@ -588,7 +600,7 @@ function ElementDeltaToView(element, delta_x, delta_y) {
 
 function ElementRotationToView(element) {
   var rotation = 0;
-  while (element != designer_view) {
+  while (element != e_designer_view) {
     rotation += element.rotation;
     element = element.parentElement;
   }
@@ -599,7 +611,7 @@ function ElementRotationToView(element) {
 
 function ViewRotationToElement(element, rotation) {
   element = element.parentElement;
-  while (element != designer_view) {
+  while (element != e_designer_view) {
     rotation -= element.rotation;
     element = element.parentElement;
   }
@@ -611,23 +623,23 @@ function ViewRotationToElement(element, rotation) {
 function UpdateSelectionPos() {
   if (g_selected_element) {
     var pos = ElementPosToView(g_selected_element);
-    selection.x = pin.x = designer_view.offsetX + pos.x;
-    selection.y = pin.y = designer_view.offsetY + pos.y;
-    selection.width = g_selected_element.offsetWidth +
-                      2 * kSelectionBorderWidth;
-    selection.height = g_selected_element.offsetHeight +
-                       2 * kSelectionBorderWidth;
-    selection.pinX = designerUtils.getOffsetPinX(g_selected_element) +
-                     kSelectionBorderWidth;
-    selection.pinY = designerUtils.getOffsetPinY(g_selected_element) +
-                     kSelectionBorderWidth;
-    selection.rotation = ElementRotationToView(g_selected_element);
+    e_selection.x = e_pin.x = e_designer_view.offsetX + pos.x;
+    e_selection.y = e_pin.y = e_designer_view.offsetY + pos.y;
+    e_selection.width = g_selected_element.offsetWidth +
+                        2 * kSelectionBorderWidth;
+    e_selection.height = g_selected_element.offsetHeight +
+                         2 * kSelectionBorderWidth;
+    e_selection.pinX = designerUtils.getOffsetPinX(g_selected_element) +
+                       kSelectionBorderWidth;
+    e_selection.pinY = designerUtils.getOffsetPinY(g_selected_element) +
+                       kSelectionBorderWidth;
+    e_selection.rotation = ElementRotationToView(g_selected_element);
 
-    if (g_selected_element == designer_view) {
+    if (g_selected_element == e_designer_view) {
       g_x_fixed = g_y_fixed = true;
       g_width_fixed = g_height_fixed = false;
-      rotation1.visible = false;
-      rotation2.visible = false;
+      e_rotation1.visible = false;
+      e_rotation2.visible = false;
     } else {
       // Don't allow mouse resizing if x/y/width/height specified percentage.
       var is_item = g_selected_element.tagName == "item";
@@ -636,20 +648,21 @@ function UpdateSelectionPos() {
       g_width_fixed = typeof g_selected_element.width == "string" || is_item;
       g_height_fixed = typeof g_selected_element.height == "string" ||
                        is_item || g_selected_element.tagName == "combobox";
-      rotation1.visible = true;
-      rotation2.visible = true;
+      e_rotation1.visible = true;
+      e_rotation2.visible = true;
     }
-    size_top_left.visible = !g_x_fixed && !g_y_fixed &&
-                            !g_width_fixed & !g_height_fixed;
-    size_top.visible = !g_y_fixed && !g_height_fixed;
-    size_top_right.visible = !g_y_fixed && !g_height_fixed && !g_width_fixed;
-    size_left.visible = !g_x_fixed && !g_width_fixed;
-    size_right.visible = !g_width_fixed;
-    size_bottom_left.visible = !g_x_fixed && !g_width_fixed && !g_height_fixed;
-    size_bottom.visible = !g_height_fixed;
-    size_bottom_right.visible = !g_width_fixed && !g_height_fixed;
-    selection.visible = true;
-    selection.focus();
+    e_size_top_left.visible = !g_x_fixed && !g_y_fixed &&
+                              !g_width_fixed & !g_height_fixed;
+    e_size_top.visible = !g_y_fixed && !g_height_fixed;
+    e_size_top_right.visible = !g_y_fixed && !g_height_fixed && !g_width_fixed;
+    e_size_left.visible = !g_x_fixed && !g_width_fixed;
+    e_size_right.visible = !g_width_fixed;
+    e_size_bottom_left.visible = !g_x_fixed && !g_width_fixed &&
+                                 !g_height_fixed;
+    e_size_bottom.visible = !g_height_fixed;
+    e_size_bottom_right.visible = !g_width_fixed && !g_height_fixed;
+    e_selection.visible = true;
+    e_selection.focus();
   }
 }
 
@@ -658,11 +671,11 @@ function SelectElement(element_info) {
     var element = element_info.element;
     g_selected_element = element;
     // Will be set to true in UpdateSelectionPos.
-    selection.visible = false;
-    if (g_selected_element != designer_view)
-      pin.visible = true;
+    e_selection.visible = false;
+    if (g_selected_element != e_designer_view)
+      e_pin.visible = true;
     g_properties_view = new Properties(
-        properties_list, g_properties_meta[element_info.type], element_info,
+        e_properties_list, g_properties_meta[element_info.type], element_info,
         function() { // The on_property_change callback.
           // Setting one property may cause changes of other properties, so
           // sync all properties.
@@ -671,7 +684,7 @@ function SelectElement(element_info) {
           UpdateSelectionPos();
         });
     g_events_view = new Properties(
-        events_list, g_events_meta[element_info.type], element_info,
+        e_events_list, g_events_meta[element_info.type], element_info,
         function() { // The on_property_change callback.
           // TODO:
           g_changed = true;
@@ -679,13 +692,13 @@ function SelectElement(element_info) {
     ElementsViewSelectNode(element_info);
     view.setTimeout(UpdateSelectionPos, 0);
   } else {
-    selection.visible = false;
-    pin.visible = false;
+    e_selection.visible = false;
+    e_pin.visible = false;
     g_selected_element = null;
     g_properties_view = null;
     g_events_view = null;
-    properties_list.removeAllElements();
-    events_list.removeAllElements();
+    e_properties_list.removeAllElements();
+    e_events_list.removeAllElements();
     ElementsViewSelectNode(null);
   }
 }
@@ -696,13 +709,13 @@ function SelectTool(index) {
     index = -1;
   }
   if (g_current_tool != -1) {
-    var button = toolbar.children.item(g_current_tool).children.item(0);
+    var button = e_toolbar.children.item(g_current_tool).children.item(0);
     button.image = "";
     button.overImage = "images/tool_button_over.png";
   }
   g_current_tool = index;
   if (index != -1) {
-    var button = toolbar.children.item(index).children.item(0);
+    var button = e_toolbar.children.item(index).children.item(0);
     button.image = "images/tool_button_active.png";
     button.overImage = "images/tool_button_active_over.png";
     SelectElement(null);
@@ -712,22 +725,24 @@ function SelectTool(index) {
 function AddGlobalMenu(menu) {
   menu.AddItem(strings.MENU_NEW_GADGET, 0, NewGadget);
   menu.AddItem(strings.MENU_OPEN_GADGET, 0, OpenGadget);
-  menu.AddItem(strings.MENU_CLOSE_GADGET, 0, CloseGadget);
-  menu.AddItem("", 0, null);
+  menu.AddItem(strings.MENU_CLOSE_GADGET,
+               g_gadget_file ? 0 : gddMenuItemFlagGrayed, CloseGadget);
+  menu.AddItem(strings.MENU_RUN_GADGET,
+               g_gadget_file ? 0 : gddMenuItemFlagGrayed, RunGadget);
+//  menu.AddItem("", 0, null);
   menu.AddItem(strings.MENU_SAVE_CURRENT_FILE,
-               g_current_file ? 0 : gddMenuItemFlagGrayed,
-               SaveCurrentFile);
+               g_current_file ? 0 : gddMenuItemFlagGrayed, SaveCurrentFile);
   menu.AddItem(strings.MENU_EDIT_SOURCE,
                g_current_file ? 0 : gddMenuItemFlagGrayed, EditSource);
 }
 
 function RefreshFileList() {
-  file_list.removeAllElements();
+  e_file_list.removeAllElements();
   var files = g_gadget_file_manager.getAllFiles();
   for (var i in files) {
-    file_list.appendString(files[i]);
+    e_file_list.appendString(files[i]);
     if (files[i] == g_current_file)
-      file_list.selectedIndex = i;
+      e_file_list.selectedIndex = i;
   }
 }
 
@@ -736,18 +751,19 @@ function NewGadget() {
 }
 
 function OpenGadget() {
+  if (!CloseGadget())
+    return;
   var file = framework.BrowseForFile(
       Strings.TYPE_ALL_GADGET + "|*.gg;gadget.gmanifest|" +
       Strings.TYPE_GG + "|*.gg|" +
       Strings.TYPE_GMANIFEST + "|gadget.gmanifest");
   if (file) {
-    if (!CloseGadget())
-      return;
+    g_gadget_file = file;
     g_gadget_file_manager = designerUtils.initGadgetFileManager(file);
     if (g_gadget_file_manager) {
-      toolbar.visible = true;
-      tool_views.visible = true;
-      designer.visible = true;
+      e_toolbar.visible = true;
+      e_tool_views.visible = true;
+      e_designer.visible = true;
       OpenFile("main.xml");
       RefreshFileList();
     } else {
@@ -763,16 +779,22 @@ function CheckSave() {
 function CloseGadget() {
   if (!CheckSave())
     return false;
-  // TODO: prompt save.
-  toolbar.visible = false;
-  tool_views.visible = false;
-  designer.visible = false;
+
+  designerUtils.removeGadget();
+  e_toolbar.visible = false;
+  e_tool_views.visible = false;
+  e_designer.visible = false;
   ResetGlobals();
+  g_gadget_file = null;
   g_gadget_file_manager = null;
-  file_list.removeAllElements();
+  e_file_list.removeAllElements();
   g_extracted_files = { };
   g_extracted_files_time = { };
   return true;
+}
+
+function RunGadget() {
+  designerUtils.runGadget(g_gadget_file);
 }
 
 function GetFileExtension(filename) {
@@ -811,10 +833,10 @@ function EditSource() {
 }
 
 function SelectFile(filename) {
-  var items = file_list.children;
+  var items = e_file_list.children;
   for (var i = 0; i < items.count; i++) {
     if (items.item(i).children(0).innerText == filename) {
-      file_list.selectedIndex = i;
+      e_file_list.selectedIndex = i;
       break;
     }
   }
@@ -845,7 +867,7 @@ function SaveCurrentFile() {
         var full_path = g_gadget_file_manager.extract(g_current_file);
         if (full_path != extracted)
           g_global_file_manager.write(extracted, content, true);
-        g_extracted_files_time[filename] =
+        g_extracted_files_time[g_current_file] =
             g_global_file_manager.getLastModifiedTime(extracted).getTime();
       }
     }
@@ -910,31 +932,23 @@ function CheckExternalFileChange() {
 }
 
 function AddElementContextMenu(menu) {
-  if (!g_selected_element)
+  if (!g_selected_element || g_selected_element == e_designer_view)
     return true;
 
   var can_up_level = false;
   var can_down_level = false;
   var can_move_back = false;
   var can_move_front = false;
-  var can_rename = false;
-  if (g_selected_element != designer_view) {
-    var parent = g_selected_element.parentElement;
-    var index = GetIndexInParent(g_selected_element);
-    can_rename = true;
-    can_up_level = g_selected_element.tagName != "item" &&
-                   parent != designer_view;
-    can_move_back = index > 0;
-    can_move_front = index < parent.children.count - 1;
-    // The element can be moved down a level if the next element can have
-    // children.
-    can_down_level = can_move_front &&
-                     g_selected_element.tagName != "item" &&
-                     parent.children.item(index + 1).children;
-  }
-  menu.AddItem(strings.MENU_RENAME,
-               can_rename ? 0 : gddMenuItemFlagGrayed,
-               RenameElement);
+  var parent = g_selected_element.parentElement;
+  var index = GetIndexInParent(g_selected_element);
+  can_up_level = parent != e_designer_view;
+  can_move_back = index > 0;
+  can_move_front = index < parent.children.count - 1;
+  // The element can be moved down a level if the next element can have
+  // children.
+  can_down_level = can_move_front && parent.children.item(index + 1).children;
+
+  menu.AddItem(strings.MENU_RENAME, 0, RenameElement);
   menu.AddItem(strings.MENU_MOVE_BACK,
                can_move_back ? 0 : gddMenuItemFlagGrayed,
                MoveElementBack);
@@ -953,6 +967,11 @@ function AddElementContextMenu(menu) {
   menu.AddItem(strings.MENU_MOVE_DOWN_LEVEL,
                can_down_level ? 0 : gddMenuItemFlagGrayed,
                MoveElementDownLevel);
+  if (g_selected_element.tagName == "listbox" ||
+      g_selected_element.tagName == "combobox") {
+    menu.AddItem("", 0, null);
+    menu.AddItem(strings.MENU_APPEND_STRING, 0, PromptAndAppendString);
+  }
   return false;
 }
 
@@ -991,6 +1010,8 @@ function MoveElementToTop() {
 function MoveElementUpLevel() {
   g_changed = true;
   var parent = g_selected_element.parentElement;
+  if (parent.tagName == "item")
+    parent = parent.parentElement;
   SelectElement(MoveElement(g_selected_element, parent.parentElement, parent));
 }
 
@@ -1000,5 +1021,13 @@ function MoveElementDownLevel() {
     g_changed = true;
     SelectElement(MoveElement(g_selected_element, next,
                               next.children.item(0)));
+  }
+}
+
+function PromptAndAppendString() {
+  var s = view.prompt(strings.PROMPT_APPEND_STRING, "");
+  if (s) {
+    g_changed = true;
+    SelectElement(AppendString(g_selected_element, s));
   }
 }

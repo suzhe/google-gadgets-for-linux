@@ -18,9 +18,10 @@
 #define HOSTS_QT_HOST_H__
 
 #include <string>
-#include <ggadget/host_interface.h>
-#include <ggadget/gadget_manager_interface.h>
 #include <ggadget/decorated_view_host.h>
+#include <ggadget/gadget.h>
+#include <ggadget/gadget_manager_interface.h>
+#include <ggadget/host_interface.h>
 
 namespace hosts {
 namespace qt {
@@ -34,7 +35,7 @@ using ggadget::ViewInterface;
 class QtHost : public ggadget::HostInterface {
  public:
   QtHost(bool composite, int view_debug_mode,
-         int debug_console, bool with_plasma);
+         Gadget::DebugConsoleConfig debug_console, bool with_plasma);
   virtual ~QtHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
