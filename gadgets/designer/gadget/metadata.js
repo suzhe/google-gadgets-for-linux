@@ -409,7 +409,7 @@ function InitMetadata() {
     var properties = g_properties_meta[type] = { };
     var default_values =
         type == "view" ? g_view_property_defaults :
-        for_metadata.children.item("for_metadata_" + type);
+        e_for_metadata.children.item("e_for_metadata_" + type);
     if (type == "item")
       default_values = default_values.children.item(0);
     for (var i in property_names) {
@@ -424,5 +424,5 @@ function InitMetadata() {
   }
   // g_metadata is no more used.
   g_metadata = null;
-  for_metadata.parentElement.removeElement(for_metadata);
+  e_for_metadata.parentElement.removeElement(e_for_metadata);
 }

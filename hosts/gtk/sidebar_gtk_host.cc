@@ -101,7 +101,8 @@ class SideBarGtkHost::Impl {
   };
 
   Impl(SideBarGtkHost *owner, OptionsInterface *options,
-       bool decorated, int view_debug_mode, int debug_console_config)
+       bool decorated, int view_debug_mode,
+       Gadget::DebugConsoleConfig debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       decorated_(decorated),
@@ -684,8 +685,7 @@ class SideBarGtkHost::Impl {
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
-      result =
-          LoadGadget(path.c_str(), options.c_str(), id);
+      result = LoadGadget(path.c_str(), options.c_str(), id);
       DLOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
            path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
@@ -1248,7 +1248,7 @@ class SideBarGtkHost::Impl {
     }
 
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                global_permissions_);
+                                global_permissions_, debug_console_config_);
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -1403,17 +1403,12 @@ class SideBarGtkHost::Impl {
     value.ConvertToInt(&gadgets_[gadget->GetInstanceID()].index_in_sidebar);
   }
 
-  ViewHostInterface *NewViewHost(Gadget *gadget,
-                                 ViewHostInterface::Type type) {
+  ViewHostInterface *NewViewHost(Gadget *gadget, ViewHostInterface::Type type) {
     if (!gadget) return NULL;
     int gadget_id = gadget->GetInstanceID();
     GadgetInfo *info = &gadgets_[gadget_id];
     ASSERT(info->gadget == NULL || info->gadget == gadget);
     info->gadget = gadget;
-
-    // Show debug console at the very early stage.
-    if (debug_console_config_ >= 2)
-      ShowGadgetDebugConsole(gadget);
 
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
       // Make sure it's the initial loading.
@@ -1709,7 +1704,7 @@ class SideBarGtkHost::Impl {
   bool gadgets_shown_;
   bool transparent_;
   int view_debug_mode_;
-  int debug_console_config_;
+  Gadget::DebugConsoleConfig debug_console_config_;
 
   SingleViewHost *sidebar_host_;
   Gadget *dragging_gadget_;
@@ -1750,7 +1745,8 @@ class SideBarGtkHost::Impl {
 };
 
 SideBarGtkHost::SideBarGtkHost(OptionsInterface *options, bool decorated,
-                               int view_debug_mode, int debug_console_config)
+                               int view_debug_mode,
+                               Gadget::DebugConsoleConfig debug_console_config)
   : impl_(new Impl(this, options, decorated, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();

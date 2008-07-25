@@ -78,7 +78,7 @@ class SimpleGtkHost::Impl {
  public:
   Impl(SimpleGtkHost *owner, OptionsInterface *options,
        double zoom, bool decorated, int view_debug_mode,
-       int debug_console_config)
+       Gadget::DebugConsoleConfig debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       options_(options),
@@ -310,7 +310,7 @@ class SimpleGtkHost::Impl {
     }
 
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                global_permissions_);
+                                global_permissions_, debug_console_config_);
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -357,9 +357,6 @@ class SimpleGtkHost::Impl {
 
     DecoratedViewHost *dvh;
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
-      if (debug_console_config_ >= 2)
-        ShowGadgetDebugConsole(gadget);
-
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
                                   transparent_);
       ASSERT(!info->main);
@@ -807,7 +804,7 @@ class SimpleGtkHost::Impl {
   double zoom_;
   bool decorated_;
   int view_debug_mode_;
-  int debug_console_config_;
+  Gadget::DebugConsoleConfig debug_console_config_;
   bool gadgets_shown_;
   bool transparent_;
 
@@ -828,7 +825,7 @@ class SimpleGtkHost::Impl {
 
 SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
                              bool decorated, int view_debug_mode,
-                             int debug_console_config)
+                             Gadget::DebugConsoleConfig debug_console_config)
   : impl_(new Impl(this, options, zoom, decorated, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();

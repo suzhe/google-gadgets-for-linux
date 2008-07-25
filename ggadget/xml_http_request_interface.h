@@ -55,8 +55,10 @@ class XMLHttpRequestInterface : public ScriptableInterface {
     DONE,
   };
 
+ protected:
   virtual ~XMLHttpRequestInterface() { }
 
+ public:
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) = 0;
   virtual State GetReadyState() = 0;
 

@@ -33,7 +33,6 @@
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
-#include <ggadget/options_interface.h>
 #include <ggadget/run_once.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
@@ -96,7 +95,7 @@ static const char *g_help_string =
   "  -ll, --long-log\n"
   "      Output logs using long format.\n"
   "  -dc, --debug-console debug_console_config\n"
-  "      Change debug console configuration (will be saved in config file):\n"
+  "      Change debug console configuration:\n"
   "      0 - No debug console allowed\n"
   "      1 - Gadgets has debug console menu item\n"
   "      2 - Open debug console when gadget is added to debug startup code\n"
@@ -127,7 +126,8 @@ int main(int argc, char* argv[]) {
   bool decorated = false;
   bool sidebar = true;
   bool background = false;
-  int debug_console = -1;
+  ggadget::Gadget::DebugConsoleConfig debug_console =
+      ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
@@ -182,9 +182,11 @@ int main(int argc, char* argv[]) {
       long_log = true;
     } else if (strcmp("-dc", argv[i]) == 0 ||
                strcmp("--debug-console", argv[i]) == 0) {
-      debug_console = 1;
-      if (++i < argc)
-        debug_console = atoi(argv[i]);
+      debug_console = ggadget::Gadget::DEBUG_CONSOLE_ON_DEMMAND;
+      if (++i < argc) {
+        debug_console =
+            static_cast<ggadget::Gadget::DebugConsoleConfig>(atoi(argv[i]));
+      }
     } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
       if (run_once.IsRunning()) {
@@ -238,18 +240,6 @@ int main(int argc, char* argv[]) {
   // danger that a bad gadget register local extensions into the global
   // extension manager.
   ext_manager->SetReadonly();
-
-  ggadget::OptionsInterface *global_options = ggadget::GetGlobalOptions();
-  if (global_options) {
-    if (debug_console == -1) {
-      debug_console = 0;
-      global_options->GetValue(ggadget::kDebugConsoleOption)
-          .ConvertToInt(&debug_console);
-    } else {
-      global_options->PutValue(ggadget::kDebugConsoleOption,
-                               ggadget::Variant(debug_console));
-    }
-  }
 
   ggadget::HostInterface *host;
   ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);

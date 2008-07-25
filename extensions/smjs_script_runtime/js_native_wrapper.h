@@ -37,8 +37,8 @@ class JSNativeWrapper : public ScriptableHelperDefault {
   virtual ~JSNativeWrapper();
 
  public:
-  virtual void Ref();
-  virtual void Unref(bool transient = false);
+  virtual void Ref() const;
+  virtual void Unref(bool transient = false) const;
   virtual PropertyType GetPropertyInfo(const char *name,
                                        Variant *prototype);
   virtual ResultVariant GetProperty(const char *name);

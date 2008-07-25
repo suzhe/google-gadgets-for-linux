@@ -67,13 +67,13 @@ class QtHost::Impl {
   };
   Impl(QtHost *host, bool composite,
        int view_debug_mode,
-       int dc_option,
+       Gadget::DebugConsoleConfig debug_console_config,
        bool with_plasma)
     : gadget_manager_(GetGadgetManager()),
       gadget_browser_host_(host, view_debug_mode),
       host_(host),
       view_debug_mode_(view_debug_mode),
-      debug_console_option_(dc_option),
+      debug_console_config_(debug_console_config),
       composite_(composite),
       with_plasma_(with_plasma),
       gadgets_shown_(true),
@@ -330,7 +330,7 @@ class QtHost::Impl {
     }
 
     Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
-                                global_permissions_);
+                                global_permissions_, debug_console_config_);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
@@ -338,9 +338,6 @@ class QtHost::Impl {
       return false;
     }
     GadgetInfo *info = new GadgetInfo(gadget);
-    if (debug_console_option_ >= 2)
-      NewGadgetDebugConsole(gadget, &info->debug_console_);
-
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
       delete info;
@@ -479,7 +476,8 @@ class QtHost::Impl {
     if (it == gadgets_.end() || !it->second) return;
     GadgetInfo *info = it->second;
     if (info->debug_console_) {
-      DLOG("Gadget has already debug console opened: %p", info->debug_console_);
+      DLOG("Gadget has already opened a debug console: %p",
+           info->debug_console_);
       return;
     }
     NewGadgetDebugConsole(gadget, &info->debug_console_);
@@ -489,7 +487,7 @@ class QtHost::Impl {
   GadgetBrowserHost gadget_browser_host_;
   QtHost *host_;
   int view_debug_mode_;
-  int debug_console_option_;
+  Gadget::DebugConsoleConfig debug_console_config_;
   bool composite_;
   bool with_plasma_;
   bool gadgets_shown_;
@@ -508,7 +506,7 @@ class QtHost::Impl {
 };
 
 QtHost::QtHost(bool composite, int view_debug_mode,
-               int debug_console, bool with_plasma)
+               Gadget::DebugConsoleConfig debug_console, bool with_plasma)
   : impl_(new Impl(this, composite, view_debug_mode,
                    debug_console, with_plasma)) {
   impl_->InitGadgets();

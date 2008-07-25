@@ -29,10 +29,10 @@ function ResetViewGlobals() {
   g_element_id_seq = 0;
   g_element_name_seqs = { };
   g_used_element_names = { };
-  designer_view.removeAllElements();
+  e_designer_view.removeAllElements();
   g_view_info = {
-    element: designer_view,
-    id: "designer_view",
+    element: e_designer_view,
+    id: "e_designer_view",
     type: "view",
     extra_properties: { },
     events: { },
@@ -53,8 +53,8 @@ function GetElementInfo(element) {
 }
 
 function GetElementInfoParent(element_info) {
-  var parent_element = element_info.element.parentElement;
-  return parent_element ? GetElementInfo(parent_element) : null;
+  return element_info == g_view_info ?
+         null : GetElementInfo(element_info.element.parentElement);
 }
 
 function NewElementId() {
@@ -70,7 +70,7 @@ function GetElementProperty(element_info, name) {
   if (!metadata)
     return element_info.extra_properties[name];
   var value = metadata.get_value(element_info.element);
-  // The designer_view is an element, so it may not support all properties
+  // The e_designer_view is an element, so it may not support all properties
   // of view. These properties are stored in extra_properties.
   if (element_info.type == "view" && value === undefined) {
     value = element_info.extra_properties[name];
@@ -91,6 +91,16 @@ function SetElementName(element_info, name) {
   element_info.name = name;
   g_elements_view.SetNodeTitle(element_info.id,
                                GetElementTitle(element_info));
+}
+
+function InsertElementsViewNode(element_info, before_element) {
+  var element = element_info.element;
+  var parent_info = GetElementInfoParent(element_info);
+  var level = parent_info ? g_elements_view.GetLevel(parent_info.id) + 1 : 0;
+  g_elements_view.InsertNode(level, element_info.id,
+                             GetElementTitle(element_info),
+                             element.children && element.children.count,
+                             before_element ? before_element.name : null);
 }
 
 function SetElementProperty(element_info, name, value) {
@@ -118,7 +128,7 @@ function SetElementProperty(element_info, name, value) {
       }
     } catch (e) {
       if (meta && type == "view") {
-        // The designer_view is an element, so it may not support all
+        // The e_designer_view is an element, so it may not support all
         // properties of the view.
         element_info.extra_properties[name] = value;
       } else {
@@ -249,17 +259,16 @@ function ParseChildren(xml_element, parent_info) {
 }
 
 function ParseViewXMLDocument(doc) {
-  g_elements_view = new Tree(elements_list, "elvw_", ExpandElement,
+  g_elements_view = new Tree(e_elements_list, "elvw_", ExpandElement,
                              AddElementContextMenu);
   var view_element = doc.documentElement;
   if (!view_element)
     return false;
-  g_elements_view.InsertNode(0, g_view_info.id, GetElementTitle(g_view_info),
-                             false, false, null);
+  InsertElementsViewNode(g_view_info, null);
   SetElementProperties(view_element, g_view_info);
   ParseChildren(view_element, g_view_info);
   g_elements_view.SetNodeHasChildren(
-      g_view_info.id, designer_view.children.count > 0);
+      g_view_info.id, e_designer_view.children.count > 0);
 
   var comments = g_view_info.before_comments;
   for (var node = doc.firstChild; node; node = node.nextSibling) {
@@ -269,8 +278,8 @@ function ParseViewXMLDocument(doc) {
       comments = g_view_info.after_comments;
   }
 
-  if (designer_view.children.count)
-    SelectElement(GetElementInfo(designer_view.children.item(0)));
+  if (e_designer_view.children.count)
+    SelectElement(GetElementInfo(e_designer_view.children.item(0)));
   else
     SelectElement(g_view_info);
   return true;
@@ -278,20 +287,13 @@ function ParseViewXMLDocument(doc) {
 
 function ExpandElement(id) {
   var element_info = g_elements_info[id];
-  var node = g_elements_view.GetNode(id);
-  var level = g_elements_view.GetLevel(id);
-  var insert_before = GetNextSibling(node);
+  var insert_before = GetNextElementInTree(element_info.element);
   var children = element_info.element.children;
   if (children) {
     var count = children.count;
     for (var i = 0; i < count; i++) {
       var child = children.item(i);
-      var child_info = GetElementInfo(child);
-      var child_id = child_info.id;
-      g_elements_view.InsertNode(level + 1, child_id,
-                                 GetElementTitle(child_info),
-                                 false, child.children && child.children.count,
-                                 insert_before);
+      InsertElementsViewNode(GetElementInfo(child), insert_before);
     }
   }
 }
@@ -361,10 +363,10 @@ function NewElement(type, x, y) {
   domdoc.loadXML(init_xml);
   var element_info = ParseElement(domdoc.documentElement, g_view_info, null);
   if (element_info) {
-    var element = element_info.element;
+    InsertElementsViewNode(element_info, null);
     if (x != undefined && y != undefined) {
-      element.x = x;
-      element.y = y;
+      element_info.element.x = x;
+      element_info.element.y = y;
     }
   }
   return element_info;
@@ -500,13 +502,33 @@ function GetNextSibling(element) {
   return element.parentElement.children.item(index + 1);
 }
 
+function GetNextElementInTree(element) {
+  while (element != e_designer_view) {
+    var next = GetNextSibling(element);
+    if (next)
+      return next;
+    element = element.parentElement;
+  }
+  return null;
+}
+
 function MoveElement(element, parent, before_element) {
-  var has_children = element.children && element.children.count;
   var old_info = GetElementInfo(element);
   var parent_info = GetElementInfo(parent);
   g_elements_view.SetNodeHasChildren(parent_info.id, true);
   g_elements_view.ExpandFolder(parent_info.id);
   var xml = ElementToXML(GetElementInfo(element));
+  var expand = false;
+  if ((parent.tagName == "combobox" || parent.tagName == "listbox")) {
+    if (element.tagName != "item") {
+      xml = "<item>" + xml + "</item>";
+      expand = true;
+    }
+  } else if (element.tagName == "item") {
+    xml = xml.replace(/^\s*<item/m, "$1<div")
+             .replace(/<\/item\s*>\s*$/m, "</div>$1");
+    expand = true;
+  }
   DeleteElement(element);
   var domdoc = new DOMDocument();
   domdoc.loadXML(xml);
@@ -514,11 +536,21 @@ function MoveElement(element, parent, before_element) {
                               before_element);
   new_info.before_comments = old_info.before_comments;
   var before_element_in_tree = before_element ?
-                               before_element : GetNextSibling(parent);
-  var before_node = before_element_in_tree ?
-                    g_elements_view.GetNode(before_element_in_tree.name) : null;
-  g_elements_view.InsertNode(g_elements_view.GetLevel(parent_info.id) + 1,
-                             new_info.id, GetElementTitle(new_info), false,
-                             has_children, before_node);
+                               before_element : GetNextElementInTree(parent);
+  InsertElementsViewNode(new_info, before_element_in_tree);
+  if (expand)
+    g_elements_view.ExpandFolder(new_info.id);
   return new_info;
+}
+
+function AppendString(list, string) {
+  g_elements_view.ExpandFolder(list.name);
+  var domdoc = new DOMDocument();
+  domdoc.loadXML("<item><label/></item>");
+  var item_info = ParseElement(domdoc.documentElement, GetElementInfo(list),
+                               null);
+  item_info.element.children.item(0).innerText = string;
+  InsertElementsViewNode(item_info, GetNextSibling(list));
+  g_elements_view.ExpandFolder(item_info.id);
+  return item_info;
 }

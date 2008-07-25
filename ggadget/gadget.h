@@ -91,6 +91,15 @@ class Gadget {
     PLUGIN_FLAG_TOOLBAR_FORWARD = 2,
   };
 
+  enum DebugConsoleConfig {
+    /** Disable debug console. */
+    DEBUG_CONSOLE_DISABLED,
+    /** Display a "Debug Console" menu item. */
+    DEBUG_CONSOLE_ON_DEMMAND,
+    /** Show the debug console during gadget initialization. */
+    DEBUG_CONSOLE_INITIAL,
+  };
+
  public:
   /**
    * Constructor.
@@ -114,12 +123,14 @@ class Gadget {
    * @param global_permissions The global granted and denied permissions.
    *        The granted permissions for the gadget instance is the intersection
    *        of global permissions and the gadget's initial permissions.
+   * @param debug_console_config
    */
   Gadget(HostInterface *host,
          const char *base_path,
          const char *options_name,
          int instance_id,
-         const Permissions &global_permissions);
+         const Permissions &global_permissions,
+         DebugConsoleConfig debug_console_config);
 
   /** Destructor */
   ~Gadget();

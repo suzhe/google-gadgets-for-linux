@@ -92,8 +92,10 @@ class ComboBoxElement::Impl {
         listbox_->SetVisible(true);
         if (!owner_->IsDesignerMode())
           owner_->GetView()->SetPopupElement(owner_);
-      } else if (!owner_->IsDesignerMode()) {
-        // popup_out handler will turn off listbox
+      } else if (owner_->IsDesignerMode()) {
+        owner_->OnPopupOff();
+      } else {
+        // OnPopupOff() handler will turn off listbox.
         owner_->GetView()->SetPopupElement(NULL);
       }
       owner_->PostSizeEvent();

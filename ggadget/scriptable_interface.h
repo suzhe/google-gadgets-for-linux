@@ -63,7 +63,7 @@ class ScriptableInterface {
   /**
    * Adds a reference to this object.
    */
-  virtual void Ref() = 0;
+  virtual void Ref() const = 0;
 
   /**
    * Removes a reference from this object.
@@ -72,7 +72,7 @@ class ScriptableInterface {
    *     reaches zero (i.e. the object is floating). This is useful before
    *     returning an object from a function.
    */
-  virtual void Unref(bool transient = false) = 0;
+  virtual void Unref(bool transient = false) const = 0;
 
   /**
    * Gets the current reference count.

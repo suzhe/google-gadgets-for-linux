@@ -251,14 +251,13 @@ class DOMNodeImpl {
       return DOM_NOT_FOUND_ERR;
 
     if (new_child->GetNodeType() == DOMNodeInterface::DOCUMENT_FRAGMENT_NODE) {
-      DOMNodeListInterface *children = new_child->GetChildNodes();
+      const Children &children = new_child->GetImpl()->children_;
       DOMExceptionCode code = DOM_NO_ERR;
-      while (children->GetLength() > 0) {
-        code = InsertBefore(children->GetItem(0), ref_child);
+      while (children.size() > 0) {
+        code = InsertBefore(children[0], ref_child);
         if (code != DOM_NO_ERR)
           break;
       }
-      delete children;
       return code;
     }
 
@@ -758,7 +757,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
 
   // Overrides ScriptableHelper::Ref().
-  virtual void Ref() {
+  virtual void Ref() const {
     if (impl_->owner_node_) {
       // Increase the reference count along the path to the root.
       impl_->owner_node_->Ref();
@@ -766,7 +765,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return Super::Ref();
   }
   // Overrides ScriptableHelper::Unref().
-  virtual void Unref(bool transient = false) {
+  virtual void Unref(bool transient = false) const {
     if (impl_->owner_node_) {
       Super::Unref(true);
       // Decrease the reference count along the path to the root.
@@ -1748,7 +1747,12 @@ class ParseError : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xc494c55756dc46a6, ScriptableInterface);
   ParseError() : code_(0) {
-    RegisterReadonlySimpleProperty("errorCode", &code_);
+  }
+  int GetCode() const { return code_; }
+  void SetCode(int code) { code_ = code; }
+
+  virtual void DoClassRegister() {
+    RegisterProperty("errorCode", NewSlot(&ParseError::GetCode), NULL);
     RegisterConstant("filepos", 0);
     RegisterConstant("line", 0);
     RegisterConstant("linepos", 0);
@@ -1756,7 +1760,7 @@ class ParseError : public ScriptableHelperNativeOwnedDefault {
     RegisterConstant("srcText", "");
     RegisterConstant("url", "");
   }
-  void SetCode(int code) { code_ = code; }
+
  private:
   int code_;
 };

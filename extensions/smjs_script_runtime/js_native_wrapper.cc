@@ -56,20 +56,22 @@ JSNativeWrapper::~JSNativeWrapper() {
   JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
 }
 
-void JSNativeWrapper::Ref() {
+void JSNativeWrapper::Ref() const {
   ScriptableHelperDefault::Ref();
   if (GetRefCount() == 2) {
     // There must be a new native reference, let JavaScript know it by adding
     // the object to root.
-    JS_AddNamedRootRT(JS_GetRuntime(js_context_), &js_object_, name_.c_str());
+    JS_AddNamedRootRT(JS_GetRuntime(js_context_),
+                      const_cast<JSObject **>(&js_object_), name_.c_str());
   }
 }
 
-void JSNativeWrapper::Unref(bool transient) {
+void JSNativeWrapper::Unref(bool transient) const {
   if (GetRefCount() == 2) {
     // The last native reference is about to be released, let JavaScript know
     // it by removing the root reference.
-    JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
+    JS_RemoveRootRT(JS_GetRuntime(js_context_),
+                    const_cast<JSObject **>(&js_object_));
   }
   ScriptableHelperDefault::Unref(transient);
 }
