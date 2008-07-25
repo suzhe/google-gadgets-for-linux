@@ -499,8 +499,7 @@ QVariant ResolverScriptClass::extension(Extension extension,
     return QVariant();
 
   QScriptValue val;
-  bool ret = ConvertNativeToJS(engine(), res.v(), &val);
-  ASSERT(ret);
+  ConvertNativeToJS(engine(), res.v(), &val);
   return qVariantFromValue(val);
 }
 

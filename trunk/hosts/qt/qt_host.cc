@@ -90,7 +90,8 @@ class QtHost::Impl {
     DLOG("Going to free %zd gadgets", gadgets_.size());
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      DLOG("Close Gadget: %s", it->second->gadget_->GetManifestInfo(kManifestName).c_str());
+      DLOG("Close Gadget: %s",
+           it->second->gadget_->GetManifestInfo(kManifestName).c_str());
       it->second->gadget_->CloseMainView();  // TODO: Save window state. A little hacky!
       delete it->second;
     }
@@ -232,10 +233,27 @@ class QtHost::Impl {
         "X-KDE-PluginInfo-Website=\n"
         "X-KDE-ServiceTypes=Plasma/Applet,Plasma/Containment\n"
         "X-Plasma-API=googlegadgets\n";
-    QString kdedir = getenv("KDEHOME");
-    if (kdedir == "") {
-      LOGE("Environment variable KDEHOME is not set");
-      return false;
+    // Get the local prefix of kde4
+    QString kdedir;
+    {
+      char path[PATH_MAX];
+      FILE *fp = popen("kde-config --localprefix", "r");
+      if (fp != NULL) {
+        if (fgets(path, PATH_MAX, fp)) {
+          int len = strlen(path);
+          if (path[len - 1] == '\n') path[len - 1] = '\0';
+          kdedir = path;
+        }
+        pclose(fp);
+      }
+      if (kdedir == "") {
+        kdedir = getenv("KDEHOME");
+        if (kdedir == "") {
+          LOGE("Can't find localprefix of kde by environment variable KDEHOME"
+               " or `kde-config --localprefix`");
+          return false;
+        }
+      }
     }
     LOG("Install plasma applet into %s", kdedir.toUtf8().data());
     std::string author, download_url, title, description;
@@ -248,7 +266,7 @@ class QtHost::Impl {
 
     // Create package
     QDir root(kdedir + "/share/apps/plasma/plasmoids/");
-    if (!root.cd(pkg_name) && (!root.mkdir(pkg_name) || !root.cd(pkg_name))) {
+    if (!root.cd(pkg_name) && (!root.mkpath(pkg_name) || !root.cd(pkg_name))) {
       LOGE("Failed to create package %s",
            (root.path() + "/" + pkg_name).toUtf8().data());
       return false;
