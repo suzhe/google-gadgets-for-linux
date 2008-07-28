@@ -40,6 +40,8 @@ class QtViewWidget : public QWidget {
   void SkipTaskBar();
   void Center();
   void SetKeepAbove(bool above);
+  virtual QSize sizeHint () const;
+  virtual QSize minimumSizeHint () const;
 
  protected:
   virtual void paintEvent(QPaintEvent *event);
@@ -56,8 +58,6 @@ class QtViewWidget : public QWidget {
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
-  virtual QSize sizeHint () const;
-  virtual QSize minimumSizeHint () const;
   void SetInputMask(QPixmap *pixmap);
   void SetSize(int width, int height);
   ViewInterface *view_;

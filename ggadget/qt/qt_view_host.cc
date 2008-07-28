@@ -350,7 +350,6 @@ void QtViewHost::Destroy() {
 void QtViewHost::SetView(ViewInterface *view) {
   if (impl_->view_ == view) return;
   impl_->Detach();
-  if (view == NULL) return;
   impl_->view_ = view;
 }
 
