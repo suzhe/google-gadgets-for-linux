@@ -50,6 +50,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
       offscreen_pixmap_(NULL),
       mouse_drag_moved_(false),
       child_(NULL),
+      zoom_(view->GetGraphics()->GetZoom()),
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
       resize_drag_(false) {
   setMouseTracking(true);
@@ -75,8 +76,10 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   int int_width = D2I(view_->GetWidth() * zoom_);
   int int_height = D2I(view_->GetHeight() * zoom_);
 
-  if (width() != int_width || height() != int_height)
+  if (width() != int_width || height() != int_height) {
+    DLOG("QtViewWidget: Adjust size to (%d,%d)", int_height, int_height);
     SetSize(int_width, int_height);
+  }
 
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
@@ -373,14 +376,18 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
 }
 
 QSize QtViewWidget::sizeHint() const {
-  int w = D2I(view_->GetWidth() * zoom_);
-  int h = D2I(view_->GetHeight() * zoom_);
-  return QSize(w > 0 ? w : 1, h > 0 ? h : 1);
+  return minimumSizeHint();
 }
 
 QSize QtViewWidget::minimumSizeHint() const {
   int w = D2I(view_->GetWidth() * zoom_);
   int h = D2I(view_->GetHeight() * zoom_);
+  if (w == 0 || h == 0) {
+    double dw, dh;
+    view_->GetDefaultSize(&dw, &dh);
+    w = D2I(dw * zoom_);
+    h = D2I(dh * zoom_);
+  }
   return QSize(w > 0 ? w : 1, h > 0 ? h : 1);
 }
 
