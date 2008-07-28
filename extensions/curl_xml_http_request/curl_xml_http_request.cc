@@ -58,6 +58,66 @@ static bool IsSuccessHTTPStatus(unsigned short status) {
   return status >= 200 && status < 400;
 }
 
+// field-name     = token
+// token          = 1*<any CHAR except CTLs or separators>
+// separators     = "(" | ")" | "<" | ">" | "@"
+//                | "," | ";" | ":" | "\" | <">
+//                | "/" | "[" | "]" | "?" | "="
+//                | "{" | "}" | SP | HT
+static bool IsValidHTTPToken(const char *s) {
+  if (s == NULL) return false;
+  while (*s) {
+    if (*s > 32 && *s < 127 &&
+        (isalnum(*s) || strchr("!#$%&'*+ -.^_`~", *s) != NULL)) {
+      //valid case
+    } else {
+      return false;
+    }
+    ++s;
+  }
+  return true;
+}
+
+// field-value    = *( field-content | LWS )
+// field-content  = <the OCTETs making up the field-value
+//                  and consisting of either *TEXT or combinations
+//                  of token, separators, and quoted-string>
+// TEXT           = <any OCTET except CTLs, but including LWS>
+static bool IsValidHTTPHeaderValue(const char *s) {
+  if (s == NULL) return true;
+  while (*s) {
+    if ( ((*s > 0 && *s<=31) && *s != '\r' && *s != '\n' && *s != '\t') ||
+         *s == 127)
+      return false;
+    ++s;
+  }
+  return true;
+}
+
+// Process a user inputed header value, add a space after newline.
+static std::string ReformatHttpHeaderValue(const char *value) {
+  std::string tmp;
+  if (value == NULL) return tmp;
+  int n_crlf = 0;
+  while (*value) {
+    if (*value == '\r' || *value == '\n') {
+      ++n_crlf;
+    } else {
+      if (n_crlf > 0) {
+        // We have meeted some newline char(s). Both '\r' and '\n' are
+        // recognised as newline chars, and continued newline chars
+        // are taken as one. According the rfc2616, the server MAY
+        // replace / *\r\n +/ to " ", so this will work fine.
+        tmp += "\r\n ";
+        n_crlf = 0;
+      }
+      tmp.push_back(*value);
+    }
+    ++value;
+  }
+  return tmp;
+}
+
 class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
@@ -255,11 +315,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         "Via"
     };
 
-    if (!header)
-      return NULL_POINTER_ERR;
     if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: SetRequestHeader: Invalid state: %d", state_);
       return INVALID_STATE_ERR;
+    }
+
+    if (!IsValidHTTPToken(header)) {
+      LOG("XMLHttpRequest::SetRequestHeader: Invalid header %s", header);
+      return SYNTAX_ERR;
+    }
+
+    if (!IsValidHTTPHeaderValue(value)) {
+      LOG("XMLHttpRequest::SetRequestHeader: Invalid value: %s", value);
+      return SYNTAX_ERR;
     }
 
     if (strncasecmp("Proxy-", header, 6) == 0) {
@@ -278,8 +346,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     std::string whole_header(header);
     whole_header += ": ";
-    if (value)
-      whole_header += value;
+    whole_header += ReformatHttpHeaderValue(value);
     request_headers_ = curl_slist_append(request_headers_,
                                          whole_header.c_str());
     return NO_ERR;
@@ -317,6 +384,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (!ChangeState(OPENED))
       return INVALID_STATE_ERR;
 
+    // Do backoff checking to avoid DDOS attack to the server.
+    if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
+                                host_.c_str())) {
+      Abort();
+      if (async_) {
+        // Don't raise exception here because async callers might not expect
+        // this kind of exception.
+        ChangeState(DONE);
+        return NO_ERR;
+      }
+      return ABORT_ERR;
+    }
+
     WorkerContext *context = new WorkerContext(this, curl_, async_,
                                                request_headers_,
                                                data, size);
@@ -347,14 +427,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, context);
 
     if (async_) {
-      // Do backoff checking to avoid DDOS attack to the server.
-      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
-                                  host_.c_str())) {
-        Abort();
-        // Don't raise exception here because async callers might not expect
-        // this kind of exception.
-        return NO_ERR;
-      }
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed during the request.
       Ref();
@@ -365,15 +437,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         Unref();
         send_flag_ = false;
         Abort();
+        if (context->request_headers) {
+          curl_slist_free_all(context->request_headers);
+          context->request_headers = NULL;
+        }
+        delete context;
         return ABORT_ERR;
       }
     } else {
-      // Do backoff checking to avoid DDOS attack to the server.
-      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
-                                  host_.c_str())) {
-        Abort();
-        return NETWORK_ERR;
-      }
       send_flag_ = true;
       // Run the worker directly in this thread.
       void *result = Worker(context);
