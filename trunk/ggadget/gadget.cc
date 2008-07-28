@@ -520,11 +520,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void OnAddCustomMenuItems(MenuInterface *menu) {
-    scriptable_menu *menu = new Scriptablemenu(owner_, menu);
-    menu->Ref();
-    onaddcustommenuitems_signal_(menu);
+    ScriptableMenu *smenu = new ScriptableMenu(owner_, menu);
+    smenu->Ref();
+    onaddcustommenuitems_signal_(smenu);
     // Some of the menu handler slots may still hold the reference.
-    menu->Unref();
+    smenu->Unref();
     if (HasOptionsDialog()) {
       menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
                     NewSlot(this, &Impl::OptionsMenuCallback),
