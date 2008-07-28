@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <limits.h>
 #include <string>
 #include <map>
 #include <QtCore/QFile>

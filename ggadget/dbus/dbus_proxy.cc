@@ -32,20 +32,24 @@ limitations under the License.
 namespace ggadget {
 namespace dbus {
 
-namespace {
+struct Prototype {
+  explicit Prototype(const char *n) : name(n) {}
+  std::string name;
+  Arguments in_args;
+  Arguments out_args;
+};
+typedef std::vector<Prototype> PrototypeVector;
 
-const char *kIntrospectInterface = "org.freedesktop.DBus.Introspectable";
-const char *kIntrospectMethod    = "Introspect";
+static const char kIntrospectInterface[] ="org.freedesktop.DBus.Introspectable";
+static const char kIntrospectMethod[] = "Introspect";
 
-void VariantListToArguments(const Variant *list_start, size_t count,
-                            Arguments *args) {
+static void VariantListToArguments(const Variant *list_start, size_t count,
+                                   Arguments *args) {
   Arguments tmp;
   for (size_t i = 0; i < count; ++i)
     tmp.push_back(Argument(*list_start++));
   args->swap(tmp);
 }
-
-}  // anonymous namespace
 
 class DBusProxyFactory::Impl {
  public:
@@ -627,7 +631,7 @@ bool DBusProxy::Impl::InvokeMethodCallback(DBusMessage *reply,
   if (ret) {
     bool keep_work = true;
     for (std::size_t i = 0; i < out.size() && keep_work; ++i)
-      keep_work = (*callback)(static_cast<int>(i), out[i].value);
+      keep_work = (*callback)(static_cast<int>(i), out[i].value.v());
   }
   return ret;
 }

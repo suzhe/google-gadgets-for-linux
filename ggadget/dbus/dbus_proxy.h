@@ -35,7 +35,7 @@ namespace dbus {
 class DBusProxy;
 
 enum MessageType {
-  MESSAGE_TYPE_INVALID,
+  MESSAGE_TYPE_INVALID = 0,
   MESSAGE_TYPE_BYTE,
   MESSAGE_TYPE_BOOLEAN,
   MESSAGE_TYPE_INT16,

@@ -40,13 +40,20 @@ namespace dbus {
 class ScriptableDBusContainer : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x7829c86eb35a4168, ScriptableInterface);
-  ScriptableDBusContainer() : array_(NULL), count_(0) {}
-  ScriptableDBusContainer(Variant *start, std::size_t size)
-      : array_(start), count_(size) {
-    AddArray(start, size);
+  ScriptableDBusContainer() {
   }
-  virtual ~ScriptableDBusContainer() {
-    delete [] array_;
+  explicit ScriptableDBusContainer(std::vector<ResultVariant> *array) {
+    AddArray(array);
+  }
+
+  virtual void DoClassRegister() {
+    RegisterProperty("length",
+                     NewSlot(&ScriptableDBusContainer::GetCount),
+                     NULL);
+  }
+
+  size_t GetCount() const {
+    return array_.size();
   }
 
   /**
@@ -61,31 +68,20 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
     RegisterConstant((keys_.end() - 1)->c_str(), value);
   }
 
-  /** Creates a @c ScriptableArray with an iterator and count. */
-  template <typename Iterator>
-  void AddArray(Iterator start, size_t count) {
-    Variant *variant_array = new Variant[count];
-    for (size_t i = 0; i < count; i++)
-      variant_array[i] = Variant(*start++);
-    AddArray(variant_array, count);
-  }
-
   /**
-   * Add array with an iterator and count, the object will own the array, and
-   * delete it when finalized.
+   * All elements in array will be moved into the ScriptableDBusContainer
+   * object.
    */
-  void AddArray(Variant *start, size_t count) {
-    if (!start) return;
-    if (array_ && array_ != start) delete [] array_;
-    array_ = start;
-    count_ = count;
-    RegisterConstant("length", count);
+  void AddArray(std::vector<ResultVariant> *array) {
+    ASSERT(array);
+    array->swap(array_);
+    array->clear();
   }
 
   bool EnumerateElements(EnumerateElementsCallback *callback) {
     ASSERT(callback);
-    for (size_t i = 0; i < count_; i++)
-      if (!(*callback)(static_cast<int>(i), array_[i])) {
+    for (size_t i = 0; i < array_.size(); i++)
+      if (!(*callback)(static_cast<int>(i), array_[i].v())) {
         delete callback;
         return false;
       }
@@ -95,84 +91,28 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
 
  private:
   std::vector<std::string> keys_;
-  Variant *array_;
-  std::size_t count_;
+  std::vector<ResultVariant> array_;
 };
 
 std::string GetVariantSignature(const Variant &value);
 
-typedef std::vector<std::string> StringList;
-class ArrayIterator {
- public:
-  ArrayIterator() : is_array_(true) {}
-  std::string signature() const {
-    if (signature_list_.empty()) return "";
-    if (is_array_) return std::string("a") + signature_list_[0];
-    std::string sig = "(";
-    for (StringList::const_iterator it = signature_list_.begin();
-         it != signature_list_.end(); ++it)
-      sig += *it;
-    sig += ")";
-    return sig;
-  }
-  bool Callback(int id, const Variant &value) {
-    std::string sig = GetVariantSignature(value);
-    if (sig.empty()) return true;
-    if (is_array_ && !signature_list_.empty() && sig != signature_list_[0])
-      is_array_ = false;
-    signature_list_.push_back(sig);
-    return true;
-  }
- private:
-  bool is_array_;
-  StringList signature_list_;
-};
-
-class DictIterator {
- public:
-  std::string signature() const { return signature_; }
-  bool Callback(const char *name, ScriptableInterface::PropertyType type,
-                const Variant &value) {
-    if (type == ScriptableInterface::PROPERTY_METHOD ||
-        value.type() == Variant::TYPE_VOID) {
-      // Ignore method and void type properties.
-      return true;
-    }
-    std::string sig = GetVariantSignature(value);
-    if (signature_.empty()) {
-      signature_ = sig;
-    } else if (signature_ != sig) {
-      return false;
-    }
-    return true;
-  }
- private:
-  std::string signature_;
-};
-
 struct Argument {
   Argument() {}
   explicit Argument(const Variant& v) : value(v) {}
+  explicit Argument(const ResultVariant& v) : value(v) {}
   explicit Argument(const char *sig) : signature(sig) {}
   Argument(const char *n, const char *sig) : name(n), signature(sig) {}
   Argument(const char *sig, const Variant &v) : signature(sig), value(v) {}
+  Argument(const char *sig, const ResultVariant &v) : signature(sig), value(v){}
   bool operator!=(const Argument& another) const {
     return signature != another.signature;
   }
 
   std::string name;
   std::string signature;
-  Variant value;
+  ResultVariant value;
 };
 typedef std::vector<Argument> Arguments;
-
-struct Prototype {
-  explicit Prototype(const char *n) : name(n) {}
-  std::string name;
-  Arguments in_args;
-  Arguments out_args;
-};
-typedef std::vector<Prototype> PrototypeVector;
 
 /**
  * Marshaller for DBusMessage. Not a external API, user should not use it
@@ -188,9 +128,6 @@ class DBusMarshaller {
 
   static bool ValistAdaptor(Arguments *in_args,
                             MessageType first_arg_type, va_list *va_args);
-  static bool ValistToAugrments(Arguments *out_args,
-                                MessageType first_arg_type,
-                                va_list *va_args);
  private:
   class Impl;
   Impl *impl_;

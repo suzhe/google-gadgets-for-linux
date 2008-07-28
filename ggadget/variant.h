@@ -62,7 +62,7 @@ struct Date {
  * @c Variant instances can only be used transiently. It can't hold a
  * @c ScriptableInterface pointer longer than the life of the pointer.
  * If you need Variant hold a reference of a @c ScriptableInterface pointer,
- * use ResultVariant instead. 
+ * use ResultVariant instead.
  */
 class Variant {
  public:
