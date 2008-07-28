@@ -995,10 +995,6 @@ bool GoogleGadgetManager::RegisterGadgetBrowserScriptUtils(
   return false;
 }
 
-static bool DisableContextMenu(MenuInterface *) {
-  return false;
-}
-
 void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   if (!browser_gadget_) {
     Permissions permissions;
@@ -1011,8 +1007,6 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
                    permissions, Gadget::DEBUG_CONSOLE_DISABLED);
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
-      browser_gadget_->GetMainView()->
-          ConnectOnAddContextMenuItems(NewSlot(DisableContextMenu));
       browser_gadget_->GetMainView()->ConnectOnCloseEvent(
           NewSlot(&metadata_, &GadgetsMetadata::FreeMemory));
     }

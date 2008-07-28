@@ -16,7 +16,8 @@
 -->
 
 <view height="600" resizable="true" width="800" onopen="view_onopen()"
-  onsize="view_onsize()" onmouseover="view_onmouseover()">
+  onsize="view_onsize()" onmouseover="view_onmouseover()"
+  oncontextmenu="view_oncontextmenu()">
   <div visible="false" name="e_for_metadata">
     <!-- metadata.js uses the following elements to determine the default
       values of each property of each element. -->

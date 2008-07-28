@@ -937,7 +937,8 @@ BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
 }
 
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
-  return impl_->OnAddContextMenuItems(menu);
+  return ScrollingElement::OnAddContextMenuItems(menu) &&
+         impl_->OnAddContextMenuItems(menu);
 }
 
 ScriptableArray *ContentAreaElement::ScriptGetContentItems() {

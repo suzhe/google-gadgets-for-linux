@@ -18,6 +18,7 @@
 #include "basic_element.h"
 #include "event.h"
 #include "scriptable_array.h"
+#include "scriptable_menu.h"
 
 namespace ggadget {
 
@@ -28,6 +29,7 @@ static const uint64_t kSizingEventClassId = UINT64_C(0xba226642c2d94168);
 static const uint64_t kOptionChangedEventClassId = UINT64_C(0x8c13c37976f0443d);
 static const uint64_t kTimerEventClassId = UINT64_C(0xc7de1daa11a0489b);
 static const uint64_t kPerfmonEventClassId = UINT64_C(0x4109a5fb49c84ae6);
+static const uint64_t kContextMenuEventClassId = UINT64_C(0x5899c2c72f0e4f22);
 
 class ScriptableEvent::Impl {
  public:
@@ -58,6 +60,9 @@ class ScriptableEvent::Impl {
         case Event::EVENT_PERFMON:
           class_id_ = kPerfmonEventClassId;
           break;
+        case Event::EVENT_CONTEXT_MENU:
+          class_id_ = kContextMenuEventClassId;
+          break;
         default:
           class_id_ = ScriptableEvent::CLASS_ID;
           break;
@@ -81,6 +86,11 @@ class ScriptableEvent::Impl {
 
   ScriptableInterface *GetSrcElement() {
     return src_element_.Get();
+  }
+
+  ScriptableMenu *GetMenu() {
+    ASSERT(event_->GetType() == Event::EVENT_CONTEXT_MENU);
+    return static_cast<const ContextMenuEvent *>(event_)->GetMenu();
   }
 
   DEFINE_DELEGATE_GETTER_CONST(
@@ -189,6 +199,9 @@ void ScriptableEvent::DoClassRegister() {
       RegisterProperty("value",
           NewSlot(&PerfmonEvent::GetValue, Impl::GetPerfmonEvent), NULL);
       break;
+    case kContextMenuEventClassId:
+      RegisterProperty("menu",
+                       NewSlot(&Impl::GetMenu, &ScriptableEvent::impl_), NULL);
     default:
       break;
   }
@@ -251,6 +264,7 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_OPTION_CHANGED: return kOnOptionChangedEvent;
     case Event::EVENT_TIMER: return "";  // Windows version does the same.
     case Event::EVENT_PERFMON: return ""; // FIXME: Is it correct?
+    case Event::EVENT_CONTEXT_MENU: return kOnContextMenuEvent;
     default: ASSERT(false); return "";
   }
 }

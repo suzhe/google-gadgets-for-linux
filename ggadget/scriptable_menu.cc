@@ -15,10 +15,10 @@
 */
 
 #include <vector>
+#include "gadget.h"
 #include "menu_interface.h"
 #include "scriptable_menu.h"
 #include "slot.h"
-#include "gadget.h"
 
 namespace ggadget {
 
@@ -26,12 +26,17 @@ class ScriptableMenu::Impl {
  public:
   class MenuItemSlot : public Slot1<void, const char *> {
    public:
-    MenuItemSlot(Gadget *gadget, Slot *handler)
-      : gadget_(gadget), handler_(handler) {
+    MenuItemSlot(ScriptableMenu *owner, Gadget *gadget, Slot *handler)
+        : owner_(owner), gadget_(gadget), handler_(handler) {
+      // Let the slot hold a reference to its owner to prevent the owner
+      // from being deleted before end-of-life of this slot.
+      owner_->Ref();
     }
     virtual ~MenuItemSlot() {
       delete handler_;
       handler_ = NULL;
+      owner_->Unref();
+      owner_ = NULL;
     }
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
@@ -47,12 +52,13 @@ class ScriptableMenu::Impl {
     }
 
    private:
+    ScriptableMenu *owner_;
     Gadget *gadget_;
     Slot *handler_;
   };
 
-  Impl(Gadget *gadget, MenuInterface *menu)
-    : gadget_(gadget), menu_(menu) {
+  Impl(ScriptableMenu *owner, Gadget *gadget, MenuInterface *menu)
+      : owner_(owner), gadget_(gadget), menu_(menu) {
     ASSERT(gadget);
     ASSERT(menu);
   }
@@ -67,7 +73,7 @@ class ScriptableMenu::Impl {
 
   void AddItem(const char *item_text, int style, Slot *handler) {
     menu_->AddItem(item_text, style,
-                   handler ? new MenuItemSlot(gadget_, handler) : NULL,
+                   handler ? new MenuItemSlot(owner_, gadget_, handler) : NULL,
                    MenuInterface::MENU_ITEM_PRI_CLIENT);
   }
 
@@ -82,13 +88,14 @@ class ScriptableMenu::Impl {
     menu_->SetItemStyle(item_text, style);
   }
 
+  ScriptableMenu *owner_;
   Gadget *gadget_;
   MenuInterface *menu_;
   std::vector<ScriptableMenu *> submenus_;
 };
 
 ScriptableMenu::ScriptableMenu(Gadget *gadget, MenuInterface *menu)
-  : impl_(new Impl(gadget, menu)) {
+  : impl_(new Impl(this, gadget, menu)) {
 }
 
 void ScriptableMenu::DoClassRegister() {

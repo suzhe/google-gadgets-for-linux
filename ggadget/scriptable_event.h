@@ -60,6 +60,7 @@ const char kOnSizingEvent[]        = "onsizing";
 const char kOnUndockEvent[]        = "onundock";
 const char kOnChangeEvent[]        = "onchange";
 const char kOnTextChangeEvent[]    = "ontextchange";
+const char kOnContextMenuEvent[]   = "oncontextmenu";
 
 /**
  * Scriptable decorator for @c Event.

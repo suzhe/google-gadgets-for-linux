@@ -21,7 +21,6 @@
 #include <ggadget/slot.h>
 #include <ggadget/variant.h>
 #include <ggadget/view_interface.h>
-#include <ggadget/menu_interface.h>
 
 namespace ggadget {
 
@@ -40,6 +39,7 @@ class ScriptableEvent;
 class Texture;
 class Gadget;
 class Rectangle;
+class MenuInterface;
 
 /**
  * The default View implementation.
@@ -481,8 +481,7 @@ class View : public ViewInterface {
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
   Connection *ConnectOnSizingEvent(Slot0<void> *handler);
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
-  Connection *ConnectOnAddContextMenuItems(
-      Slot1<bool, MenuInterface *> *handler);
+  Connection *ConnectOnContextMenuEvent(Slot0<void> *handler);
 
  public:
   /** For performance testing. */

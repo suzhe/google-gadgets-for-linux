@@ -89,13 +89,9 @@ function view_onopen() {
   plugin.onAddCustomMenuItems = AddGlobalMenu;
   view_onsize();
   InitToolBar();
-  designerUtils.connectViewMenuHandler(
-      view, function(menu) { AddGlobalMenu(menu); return false; });
-  designerUtils.connectElementMenuHandler(e_selection, AddElementContextMenu);
-  for (var i = 0; i < e_selection.children.count; i++) {
-    designerUtils.connectElementMenuHandler(e_selection.children.item(i),
-                                            AddElementContextMenu);
-  }
+  e_selection.oncontextmenu = AddElementContextMenu;
+  for (var i = 0; i < e_selection.children.count; i++)
+    e_selection.children.item(i).oncontextmenu = AddElementContextMenu;
 }
 
 function view_onsize() {
@@ -106,6 +102,11 @@ function view_onsize() {
 
 function view_onmouseover() {
   CheckExternalFileChange();
+}
+
+function view_oncontextmenu() {
+  AddGlobalMenu(event.menu);
+  event.returnValue = false;
 }
 
 function tool_label_onsize(index) {
@@ -931,10 +932,11 @@ function CheckExternalFileChange() {
   }
 }
 
-function AddElementContextMenu(menu) {
+function AddElementContextMenu() {
   if (!g_selected_element || g_selected_element == e_designer_view)
     return true;
 
+  var menu = event.menu;
   var can_up_level = false;
   var can_down_level = false;
   var can_move_back = false;
@@ -972,7 +974,7 @@ function AddElementContextMenu(menu) {
     menu.AddItem("", 0, null);
     menu.AddItem(strings.MENU_APPEND_STRING, 0, PromptAndAppendString);
   }
-  return false;
+  event.returnValue = false;
 }
 
 function RenameElement() {

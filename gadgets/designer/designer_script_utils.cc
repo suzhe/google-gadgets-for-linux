@@ -138,10 +138,6 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
                    NewSlot(this, &DesignerUtils::InitGadgetFileManager));
     RegisterMethod("getGlobalFileManager",
                    NewSlot(this, &DesignerUtils::GetGlobalFileManager));
-    RegisterMethod("connectViewMenuHandler",
-                   NewSlot(this, &DesignerUtils::ConnectViewMenuHandler));
-    RegisterMethod("connectElementMenuHandler",
-                   NewSlot(this, &DesignerUtils::ConnectElementMenuHandler));
     RegisterMethod("showXMLOptionsDialog",
                    NewSlot(this, &DesignerUtils::ShowXMLOptionsDialog));
     RegisterMethod("setDesignerMode",
@@ -215,21 +211,6 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
 
   ScriptableFileManager *GetGlobalFileManager() {
     return new ScriptableFileManager(::ggadget::GetGlobalFileManager());
-  }
-
-  static bool ProxyMenuHandler(MenuInterface *menu, Slot *handler) {
-    ScriptableMenu scriptable_menu(g_designer_gadget, menu);
-    Variant arg(&scriptable_menu);
-    return VariantValue<bool>()(handler->Call(NULL, 1, &arg).v());
-  }
-
-  void ConnectViewMenuHandler(ScriptableView *view, Slot *handler) {
-    view->view()->ConnectOnAddContextMenuItems(NewSlot(ProxyMenuHandler,
-                                                       handler));
-  }
-
-  void ConnectElementMenuHandler(BasicElement *element, Slot *handler) {
-    element->ConnectOnAddContextMenuItems(NewSlot(ProxyMenuHandler, handler));
   }
 
   void ShowXMLOptionsDialog(const char *xml_file, ScriptableInterface *param) {
