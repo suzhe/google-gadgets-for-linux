@@ -46,16 +46,6 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
     AddArray(array);
   }
 
-  virtual void DoClassRegister() {
-    RegisterProperty("length",
-                     NewSlot(&ScriptableDBusContainer::GetCount),
-                     NULL);
-  }
-
-  size_t GetCount() const {
-    return array_.size();
-  }
-
   /**
    * Don't use @c RegisterConstant() directly, since we want to register
    * constant properties by dynamic char pointer. This case is not applicable
@@ -76,6 +66,7 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
     ASSERT(array);
     array->swap(array_);
     array->clear();
+    RegisterConstant("length", array_.size());
   }
 
   bool EnumerateElements(EnumerateElementsCallback *callback) {

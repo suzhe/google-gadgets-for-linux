@@ -230,7 +230,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -241,7 +241,7 @@ class DBusMarshaller::Impl {
         {
           bool b;
           if (!arg.value.v().ConvertToBool(&b)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_BOOL, arg.value.v().Print().c_str());
             return false;
           }
@@ -252,7 +252,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -263,7 +263,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -274,7 +274,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -285,7 +285,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -296,7 +296,7 @@ class DBusMarshaller::Impl {
         {
           int64_t v;
           if (!arg.value.v().ConvertToInt64(&v)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -307,7 +307,7 @@ class DBusMarshaller::Impl {
         {
           int64_t i;
           if (!arg.value.v().ConvertToInt64(&i)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
@@ -318,7 +318,7 @@ class DBusMarshaller::Impl {
         {
           double v;
           if (!arg.value.v().ConvertToDouble(&v)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_DOUBLE, arg.value.v().Print().c_str());
             return false;
           }
@@ -329,7 +329,7 @@ class DBusMarshaller::Impl {
         {
           std::string s;
           if (!arg.value.v().ConvertToString(&s)) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_STRING, arg.value.v().Print().c_str());
             return false;
           }
@@ -339,7 +339,7 @@ class DBusMarshaller::Impl {
       case 'a':
         {
           if (arg.value.v().type() != Variant::TYPE_SCRIPTABLE) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_SCRIPTABLE, arg.value.v().Print().c_str());
             return false;
           }
@@ -383,7 +383,7 @@ class DBusMarshaller::Impl {
       case '{':
         {
           if (arg.value.v().type() != Variant::TYPE_SCRIPTABLE) {
-            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+            DLOG("Type mismatch. Expected type: %d, actual value:%s",
                  Variant::TYPE_SCRIPTABLE, arg.value.v().Print().c_str());
             return false;
           }
@@ -763,7 +763,7 @@ class DBusDemarshaller::Impl {
       return false;
     int type = dbus_message_iter_get_arg_type(iter_);
     if (type != GetTypeBySignature(index)) {
-      DLOG("Demarshal failed. Type dismatch, message type: %c, expected: %c",
+      DLOG("Demarshal failed. Type mismatch, message type: %c, expected: %c",
            type, GetTypeBySignature(index));
       return false;
     }
@@ -953,7 +953,7 @@ class DBusDemarshaller::Impl {
       }
       int arg_type = GetTypeBySignature(it->signature.c_str());
       if (arg_type != MessageTypeToDBusType(type)) {
-        DLOG("Type dismatch! the type in message is %d, "
+        DLOG("Type mismatch! the type in message is %d, "
              " but in this function it is %d", arg_type, type);
         ASSERT(false);
         return false;
@@ -977,7 +977,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -989,7 +989,7 @@ class DBusDemarshaller::Impl {
           {
             bool v;
             if (!out_arg.value.v().ConvertToBool(&v)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_BOOL, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1000,7 +1000,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1012,7 +1012,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1024,7 +1024,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1036,7 +1036,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1048,7 +1048,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1059,7 +1059,7 @@ class DBusDemarshaller::Impl {
           {
             int64_t i;
             if (!out_arg.value.v().ConvertToInt64(&i)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1071,7 +1071,7 @@ class DBusDemarshaller::Impl {
           {
             double v;
             if (!out_arg.value.v().ConvertToDouble(&v)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_DOUBLE, out_arg.value.v().Print().c_str());
               return false;
             }
@@ -1082,7 +1082,7 @@ class DBusDemarshaller::Impl {
           {
             std::string str;
             if (!out_arg.value.v().ConvertToString(&str)) {
-              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+              DLOG("Type mismatch. Expected type: %d, actual value:%s",
                    Variant::TYPE_STRING, out_arg.value.v().Print().c_str());
               return false;
             }
