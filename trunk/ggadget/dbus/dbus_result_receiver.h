@@ -48,7 +48,7 @@ class DBusSingleResultReceiver {
   typedef typename VariantValue<T>::value_type RType;
 
   DBusSingleResultReceiver()
-    : result_(VariantType<T>::type) {
+    : result_(Variant(VariantType<T>::type)) {
   }
 
   DBusSingleResultReceiver(T def_value)
@@ -60,27 +60,27 @@ class DBusSingleResultReceiver {
   }
 
   RType GetValue() const {
-    return VariantValue<T>()(result_);
+    return VariantValue<T>()(result_.v());
   }
 
   bool Callback(int id, const Variant& result) {
     if (id == 0 && result.type() == VariantType<T>::type) {
-      result_ = result;
+      result_ = ResultVariant(result);
       return true;
     }
     return false;
   }
 
   void Reset() {
-    result_ = Variant(VariantType<T>::type);
+    result_ = ResultVariant(Variant(VariantType<T>::type));
   }
 
   void Reset(T def_value) {
-    result_ = Variant(def_value);
+    result_ = ResultVariant(Variant(def_value));
   }
 
  private:
-  Variant result_;
+  ResultVariant result_;
 };
 
 typedef DBusSingleResultReceiver<bool> DBusBooleanReceiver;

@@ -77,24 +77,24 @@ void TestBasicMarshal<std::string>(const char *signature, int dbus_type,
 }
 
 template <typename T>
-Variant GenerateVariantArray(std::size_t size, T first, T diff) {
-  Variant *vec = new Variant[size];
+ResultVariant GenerateVariantArray(size_t size, T first, T diff) {
+  std::vector<ResultVariant> values;
   T value = first;
-  for (std::size_t i = 0; i < size; ++i) {
-    vec[i] = Variant(value);
+  for (size_t i = 0; i < size; ++i) {
+    values.push_back(ResultVariant(Variant(value)));
     value = value + diff;
   }
-  ScriptableDBusContainer *sa = new ScriptableDBusContainer(vec, size);
-  return Variant(sa);
+  ScriptableDBusContainer *sa = new ScriptableDBusContainer(&values);
+  return ResultVariant(Variant(sa));
 }
 
 template <typename P1, typename P2>
-Variant GenerateVariantDict(std::size_t size, P1 key, P1 key_diff,
-                            P2 value, P2 value_diff) {
+ResultVariant GenerateVariantDict(size_t size, P1 key, P1 key_diff,
+                                  P2 value, P2 value_diff) {
   ScriptableDBusContainer *obj = new ScriptableDBusContainer;
   P1 k = key;
   P2 v = value;
-  for (std::size_t i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     Variant vk(k);
     Variant vv(v);
     std::string key;
@@ -103,28 +103,28 @@ Variant GenerateVariantDict(std::size_t size, P1 key, P1 key_diff,
     k = k + key_diff;
     v = v + value_diff;
   }
-  return Variant(obj);
+  return ResultVariant(Variant(obj));
 }
 
-Variant GenerateVariantStruct(std::size_t size, ...) {
-  Variant *vec = new Variant[size];
+ResultVariant GenerateVariantStruct(size_t size, ...) {
+  std::vector<ResultVariant> values;
   va_list args;
   va_start(args, size);
-  for (std::size_t i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     Variant *v;
     v = va_arg(args, Variant*);
-    vec[i] = *v;
+    values.push_back(ResultVariant(*v));
   }
   va_end(args);
-  ScriptableDBusContainer *sa = new ScriptableDBusContainer(vec, size);
-  return Variant(sa);
+  ScriptableDBusContainer *sa = new ScriptableDBusContainer(&values);
+  return ResultVariant(Variant(sa));
 }
 
 void TestArrayMarshal() {
   DLOG("Testing Array Marshalling...");
-  const std::size_t vector_size = 10;
-  Variant v = GenerateVariantArray<uint64_t>(vector_size, 12, 4);
-  DBusMessage *message = GetMarshalledMessage("at", v);
+  const size_t vector_size = 10;
+  ResultVariant v = GenerateVariantArray<uint64_t>(vector_size, 12, 4);
+  DBusMessage *message = GetMarshalledMessage("at", v.v());
   /* begin to demarshal the message. */
   DBusMessageIter iter, subiter;
   dbus_message_iter_init(message, &iter);
@@ -134,7 +134,7 @@ void TestArrayMarshal() {
   EXPECT_FALSE(dbus_message_iter_has_next(&iter));
   EXPECT_EQ(DBUS_TYPE_ARRAY, dbus_message_iter_get_arg_type(&iter));
   dbus_message_iter_recurse(&iter, &subiter);
-  for (std::size_t i = 0; i < vector_size; ++i) {
+  for (size_t i = 0; i < vector_size; ++i) {
     uint64_t v;
     dbus_message_iter_get_basic(&subiter, &v);
     EXPECT_EQ(12 + i * 4, v);
@@ -143,7 +143,7 @@ void TestArrayMarshal() {
   EXPECT_FALSE(dbus_message_iter_has_next(&subiter));
   dbus_message_unref(message);
   /* testing marshal without explicit signature. */
-  message = GetMarshalledMessage("", v);
+  message = GetMarshalledMessage("", v.v());
   dbus_message_iter_init(message, &iter);
   sig = dbus_message_iter_get_signature(&iter);
   EXPECT_STREQ("ai", sig);
@@ -159,8 +159,8 @@ Variant operator+(const Variant &first, const Variant &second) {
 void TestStructMarshal() {
   DLOG("Testing Struct Marshalling...");
   Variant v1("Gadget"), v2(64), v3(true);
-  Variant vs = GenerateVariantStruct(3, &v1, &v2, &v3);
-  DBusMessage *message = GetMarshalledMessage("(sub)", vs);
+  ResultVariant vs = GenerateVariantStruct(3, &v1, &v2, &v3);
+  DBusMessage *message = GetMarshalledMessage("(sub)", vs.v());
   DBusMessageIter iter, subiter;
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_STRUCT, dbus_message_iter_get_arg_type(&iter));
@@ -183,7 +183,7 @@ void TestStructMarshal() {
   EXPECT_FALSE(dbus_message_iter_has_next(&subiter));
   dbus_message_unref(message);
   /* testing marshal without explicit signature. */
-  message = GetMarshalledMessage("", vs);
+  message = GetMarshalledMessage("", vs.v());
   dbus_message_iter_init(message, &iter);
   sig = dbus_message_iter_get_signature(&iter);
   EXPECT_STREQ("(sib)", sig);
@@ -193,9 +193,9 @@ void TestStructMarshal() {
 
 void TestDictMarshal() {
   DLOG("Testing Dict Marshalling...");
-  const std::size_t dict_size = 10;
-  Variant v = GenerateVariantDict(dict_size, 123, 3, 256, 9);
-  DBusMessage *message = GetMarshalledMessage("a{it}", v);
+  const size_t dict_size = 10;
+  ResultVariant v = GenerateVariantDict(dict_size, 123, 3, 256, 9);
+  DBusMessage *message = GetMarshalledMessage("a{it}", v.v());
   DBusMessageIter iter, item_iter, dict_iter;
   dbus_message_iter_init(message, &iter);
   char *sig = dbus_message_iter_get_signature(&iter);
@@ -204,7 +204,7 @@ void TestDictMarshal() {
   EXPECT_EQ(DBUS_TYPE_ARRAY, dbus_message_iter_get_arg_type(&iter));
   EXPECT_FALSE(dbus_message_iter_has_next(&iter));
   dbus_message_iter_recurse(&iter, &item_iter);
-  for (std::size_t i = 0; i < dict_size; ++i) {
+  for (size_t i = 0; i < dict_size; ++i) {
     EXPECT_EQ(DBUS_TYPE_DICT_ENTRY, dbus_message_iter_get_arg_type(&item_iter));
     dbus_message_iter_recurse(&item_iter, &dict_iter);
     int key;
@@ -220,7 +220,7 @@ void TestDictMarshal() {
   EXPECT_FALSE(dbus_message_iter_has_next(&item_iter));
   dbus_message_unref(message);
   /* testing marshal without explicit signature. */
-  message = GetMarshalledMessage("", v);
+  message = GetMarshalledMessage("", v.v());
   dbus_message_iter_init(message, &iter);
   sig = dbus_message_iter_get_signature(&iter);
   EXPECT_STREQ("a{si}", sig);
@@ -273,8 +273,8 @@ void TestVariantMarshal() {
   dbus_message_unref(message);
 
   /* testing variant as an array container. */
-  Variant array = GenerateVariantArray<uint64_t>(4, 5, 39);
-  message = GetMarshalledMessage("v", array);
+  ResultVariant array = GenerateVariantArray<uint64_t>(4, 5, 39);
+  message = GetMarshalledMessage("v", array.v());
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -296,10 +296,10 @@ void TestVariantMarshal() {
   EXPECT_FALSE(dbus_message_iter_has_next(&subiter));
   dbus_message_unref(message);
   Variant v1("Gadget"), v2(64), v3(true);
-  Variant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
+  ResultVariant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
 
   /* testing variant as a structure container. */
-  message = GetMarshalledMessage("v", structure);
+  message = GetMarshalledMessage("v", structure.v());
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -325,8 +325,8 @@ void TestVariantMarshal() {
   dbus_message_unref(message);
 
   /* testing variant as a dict container. */
-  Variant dict = GenerateVariantDict(10, 123, 3, 256, 9);
-  message = GetMarshalledMessage("v", dict);
+  ResultVariant dict = GenerateVariantDict(10, 123, 3, 256, 9);
+  message = GetMarshalledMessage("v", dict.v());
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -355,7 +355,7 @@ void TestVariantMarshal() {
   dbus_message_unref(message);
 }
 
-bool IsEual(const Variant &v1, const Variant &v2);
+bool IsEqual(const Variant &v1, const Variant &v2);
 class ScriptableIterator {
  public:
   bool operator==(const ScriptableIterator &another) const {
@@ -366,8 +366,8 @@ class ScriptableIterator {
            properties_.size(), another.properties_.size());
       return false;
     }
-    for (std::size_t i = 0; i < array_.size(); ++i)
-      if (!IsEual(array_[i], another.array_[i])) {
+    for (size_t i = 0; i < array_.size(); ++i)
+      if (!IsEqual(array_[i], another.array_[i])) {
         DLOG("index %zu mismatch: %s, %s", i, array_[i].Print().c_str(),
              another.array_[i].Print().c_str());
         return false;
@@ -379,7 +379,7 @@ class ScriptableIterator {
         DLOG("property %s does not exist in another", it->first.c_str());
         return false;
       }
-      if (!IsEual(it->second, second->second)) {
+      if (!IsEqual(it->second, second->second)) {
         DLOG("property %s mismatch: %s, %s", it->first.c_str(),
              it->second.Print().c_str(), second->second.Print().c_str());
         return false;
@@ -404,7 +404,7 @@ class ScriptableIterator {
   PropertyMap properties_;
 };
 
-bool IsEual(ScriptableInterface *s1, ScriptableInterface *s2) {
+bool IsEqual(ScriptableInterface *s1, ScriptableInterface *s2) {
   ScriptableIterator it1, it2;
   s1->EnumerateElements(NewSlot(&it1, &ScriptableIterator::EnumerateArray));
   s1->EnumerateProperties(NewSlot(&it1,
@@ -415,7 +415,7 @@ bool IsEual(ScriptableInterface *s1, ScriptableInterface *s2) {
   return it1 == it2;
 }
 
-bool IsEual(const Variant &v1, const Variant &v2) {
+bool IsEqual(const Variant &v1, const Variant &v2) {
   if (v1.type() != Variant::TYPE_SCRIPTABLE) {
     bool ret = (v1 == v2);
     if (!ret) DLOG("simple type mismatch: %s, %s",
@@ -426,7 +426,7 @@ bool IsEual(const Variant &v1, const Variant &v2) {
     DLOG("type mismatch. one is not scriptable but the other is.");
     return false;
   }
-  return IsEual(VariantValue<ScriptableInterface*>()(v1),
+  return IsEqual(VariantValue<ScriptableInterface*>()(v1),
                 VariantValue<ScriptableInterface*>()(v2));
 }
 
@@ -437,21 +437,21 @@ void TestBasicDemarshal(const char *signature,
   Argument arg(expect_signature);
   DBusDemarshaller demarshaller(message);
   EXPECT_TRUE(demarshaller.GetArgument(&arg));
-  EXPECT_TRUE(IsEual(value, arg.value));
+  EXPECT_TRUE(IsEqual(value, arg.value.v()));
   dbus_message_unref(message);
 }
 
 void TestContainerDemarshal() {
-  Variant array = GenerateVariantArray<uint64_t>(4, 5, 39);
-  TestBasicDemarshal("at", "at", array);
-  TestBasicDemarshal("v", "v", array);
+  ResultVariant array = GenerateVariantArray<uint64_t>(4, 5, 39);
+  TestBasicDemarshal("at", "at", array.v());
+  TestBasicDemarshal("v", "v", array.v());
   Variant v1("Gadget"), v2(64), v3(true);
-  Variant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
-  TestBasicDemarshal("", "(sib)", structure);
-  TestBasicDemarshal("v", "v", structure);
-  Variant dict = GenerateVariantDict(10, 123, 3, 256, 9);
-  TestBasicDemarshal("a{yu}", "a{yu}", dict);
-  TestBasicDemarshal("v", "v", dict);
+  ResultVariant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
+  TestBasicDemarshal("", "(sib)", structure.v());
+  TestBasicDemarshal("v", "v", structure.v());
+  ResultVariant dict = GenerateVariantDict(10, 123, 3, 256, 9);
+  TestBasicDemarshal("a{yu}", "a{yu}", dict.v());
+  TestBasicDemarshal("v", "v", dict.v());
 }
 
 template <typename T>
@@ -511,45 +511,45 @@ void TestConvertedVariant(const Variant &value, const char *signature,
   Arguments args;
   EXPECT_TRUE(DBusMarshaller::ValistAdaptor(&args, first_arg_type, &va_args));
   EXPECT_EQ(1u, args.size());
-  EXPECT_TRUE(IsEual(value, args[0].value));
+  EXPECT_TRUE(IsEqual(value, args[0].value.v()));
   EXPECT_STREQ(signature, args[0].signature.c_str());
 }
 
 void TestContainerValistMarshal() {
-  Variant array = GenerateVariantArray<std::string>(2, "AA", "a");
-  TestConvertedVariant(array, "as",
+  ResultVariant array = GenerateVariantArray<std::string>(2, "AA", "a");
+  TestConvertedVariant(array.v(), "as",
                        MESSAGE_TYPE_ARRAY, 2,
                        MESSAGE_TYPE_STRING, "AA",
                        MESSAGE_TYPE_STRING, "AAa",
                        MESSAGE_TYPE_INVALID);
-  TestConvertedVariant(array, "v", MESSAGE_TYPE_VARIANT,
+  TestConvertedVariant(array.v(), "v", MESSAGE_TYPE_VARIANT,
                        MESSAGE_TYPE_ARRAY, 2,
                        MESSAGE_TYPE_STRING, "AA",
                        MESSAGE_TYPE_STRING, "AAa",
                        MESSAGE_TYPE_INVALID);
   Variant v1("Gadget"), v2(64), v3(true);
-  Variant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
-  TestConvertedVariant(structure, "(syb)",
+  ResultVariant structure = GenerateVariantStruct(3, &v1, &v2, &v3);
+  TestConvertedVariant(structure.v(), "(syb)",
                        MESSAGE_TYPE_STRUCT, 3,
                        MESSAGE_TYPE_STRING, "Gadget",
                        MESSAGE_TYPE_BYTE, 64,
                        MESSAGE_TYPE_BOOLEAN, true,
                        MESSAGE_TYPE_INVALID);
-  TestConvertedVariant(structure, "v", MESSAGE_TYPE_VARIANT,
+  TestConvertedVariant(structure.v(), "v", MESSAGE_TYPE_VARIANT,
                        MESSAGE_TYPE_STRUCT, 3,
                        MESSAGE_TYPE_STRING, "Gadget",
                        MESSAGE_TYPE_BYTE, 64,
                        MESSAGE_TYPE_BOOLEAN, true,
                        MESSAGE_TYPE_INVALID);
-  Variant dict = GenerateVariantDict(2, 123, 3, 256, 9);
-  TestConvertedVariant(dict, "a{iu}",
+  ResultVariant dict = GenerateVariantDict(2, 123, 3, 256, 9);
+  TestConvertedVariant(dict.v(), "a{iu}",
                        MESSAGE_TYPE_DICT, 2,
                        MESSAGE_TYPE_INT32, 123,
                        MESSAGE_TYPE_UINT32, 256,
                        MESSAGE_TYPE_INT32, 126,
                        MESSAGE_TYPE_UINT32, 265,
                        MESSAGE_TYPE_INVALID);
-  TestConvertedVariant(dict, "v", MESSAGE_TYPE_VARIANT,
+  TestConvertedVariant(dict.v(), "v", MESSAGE_TYPE_VARIANT,
                        MESSAGE_TYPE_DICT, 2,
                        MESSAGE_TYPE_INT32, 123,
                        MESSAGE_TYPE_UINT32, 256,
@@ -568,11 +568,11 @@ void TestValistDemarshal(MessageType first_arg_type, ...) {
   first_arg_type = static_cast<MessageType>(va_arg(va_args, int));
   va_list tmp_args;
   va_copy(tmp_args, va_args);
-  EXPECT_TRUE(DBusMarshaller::ValistToAugrments(&in_args, first_arg_type,
-                                                &tmp_args));
+  EXPECT_TRUE(DBusMarshaller::ValistAdaptor(&in_args, first_arg_type,
+                                            &tmp_args));
   va_end(tmp_args);
   EXPECT_EQ(out_args.size(), in_args.size());
-  for (std::size_t i = 0; i < in_args.size(); ++i)
+  for (size_t i = 0; i < in_args.size(); ++i)
     EXPECT_EQ(out_args[i].signature, in_args[i].signature);
   EXPECT_TRUE(DBusDemarshaller::ValistAdaptor(out_args, first_arg_type,
                                               &va_args));
@@ -710,12 +710,14 @@ TEST(DBusDemarshaller, ValistAdaptor) {
   TestValistDemarshal(MESSAGE_TYPE_STRING, "e", MESSAGE_TYPE_INVALID,
                       MESSAGE_TYPE_STRING, &str, MESSAGE_TYPE_INVALID);
   EXPECT_STREQ("e", str);
+  delete str;
   TestValistDemarshal(MESSAGE_TYPE_STRING, "pi ~= ",
                       MESSAGE_TYPE_DOUBLE, 3.1415926, MESSAGE_TYPE_INVALID,
                       MESSAGE_TYPE_STRING, &str,
                       MESSAGE_TYPE_DOUBLE, &d, MESSAGE_TYPE_INVALID);
   EXPECT_EQ(3.1415926, d);
   EXPECT_STREQ("pi ~= ", str);
+  delete str;
 }
 
 int main(int argc, char **argv) {

@@ -23,47 +23,37 @@ limitations under the License.
 namespace ggadget {
 namespace dbus {
 
-namespace {
+typedef std::vector<std::string> StringList;
 
-const struct Type {
-  MessageType type;
-  int dbus_type;
-} types[] = {
-  { MESSAGE_TYPE_INVALID, DBUS_TYPE_INVALID    },
-  { MESSAGE_TYPE_BYTE,    DBUS_TYPE_BYTE       },
-  { MESSAGE_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN    },
-  { MESSAGE_TYPE_INT16,   DBUS_TYPE_INT16      },
-  { MESSAGE_TYPE_UINT16,  DBUS_TYPE_UINT16     },
-  { MESSAGE_TYPE_INT32,   DBUS_TYPE_INT32      },
-  { MESSAGE_TYPE_UINT32,  DBUS_TYPE_UINT32     },
-  { MESSAGE_TYPE_INT64,   DBUS_TYPE_INT64      },
-  { MESSAGE_TYPE_UINT64,  DBUS_TYPE_UINT64     },
-  { MESSAGE_TYPE_DOUBLE,  DBUS_TYPE_DOUBLE     },
-  { MESSAGE_TYPE_STRING,  DBUS_TYPE_STRING     },
-  { MESSAGE_TYPE_ARRAY,   DBUS_TYPE_ARRAY      },
-  { MESSAGE_TYPE_STRUCT,  DBUS_TYPE_STRUCT     },
-  { MESSAGE_TYPE_VARIANT, DBUS_TYPE_VARIANT    },
-  { MESSAGE_TYPE_DICT,    DBUS_TYPE_DICT_ENTRY }
-};
+static int MessageTypeToDBusType(MessageType type) {
+  static const int kDBusTypes[] = {
+    DBUS_TYPE_INVALID,
+    DBUS_TYPE_BYTE,
+    DBUS_TYPE_BOOLEAN,
+    DBUS_TYPE_INT16,
+    DBUS_TYPE_UINT16,
+    DBUS_TYPE_INT32,
+    DBUS_TYPE_UINT32,
+    DBUS_TYPE_INT64,
+    DBUS_TYPE_UINT64,
+    DBUS_TYPE_DOUBLE,
+    DBUS_TYPE_STRING,
+    DBUS_TYPE_ARRAY,
+    DBUS_TYPE_STRUCT,
+    DBUS_TYPE_VARIANT,
+    DBUS_TYPE_DICT_ENTRY
+  };
 
-int MessageTypeToDBusType(MessageType type) {
-  // TODO: more effient way is needed.
-  for (std::size_t i = 0; i < arraysize(types); ++i)
-    if (types[i].type == type)
-      return types[i].dbus_type;
-  return DBUS_TYPE_INVALID;
+  return (type >= MESSAGE_TYPE_INVALID && type <= MESSAGE_TYPE_DICT) ?
+         kDBusTypes[type - MESSAGE_TYPE_INVALID] : DBUS_TYPE_INVALID;
 }
 
-bool IsBasicType(int type) {
-  return dbus_type_is_basic(type);
-}
-
-bool IsBasicType(const char *s) {
+static bool IsBasicType(const char *s) {
   if (!s || s[1]) return false;
-  return IsBasicType(static_cast<int>(*s));
+  return dbus_type_is_basic(static_cast<int>(*s));
 }
 
-std::string GetElementType(const char *signature) {
+static std::string GetElementType(const char *signature) {
   if (!signature) return "";
   if (*signature == 'a')
     return std::string("a") + GetElementType(signature + 1);
@@ -88,8 +78,7 @@ std::string GetElementType(const char *signature) {
 }
 
 /** used for container type except array. */
-bool GetSubElements(const char *signature,
-                    StringList *sig_list) {
+static bool GetSubElements(const char *signature, StringList *sig_list) {
   if (IsBasicType(signature) || *signature == 'a') return false;
   StringList tmp_list;
   const char *begin = signature + 1;
@@ -104,13 +93,13 @@ bool GetSubElements(const char *signature,
   return sig_list->size();
 }
 
-bool CheckSignatureValidity(const char* signature, bool single) {
+static bool ValidateSignature(const char* signature, bool single) {
   DBusError error;
   dbus_error_init(&error);
   bool ret = true;
   if ((single && !dbus_signature_validate_single(signature, &error)) ||
       !dbus_signature_validate(signature, &error)) {
-    LOG("Failed to check validity for signature %s, %s: %s",
+    DLOG("Failed to check validity for signature %s, %s: %s",
         signature, error.name, error.message);
     ret = false;
   }
@@ -118,7 +107,53 @@ bool CheckSignatureValidity(const char* signature, bool single) {
   return ret;
 }
 
-}  // anonymous namespace
+class ArraySignatureIterator {
+ public:
+  ArraySignatureIterator() : is_array_(true) {}
+  std::string GetSignature() const {
+    if (signature_list_.empty()) return "";
+    if (is_array_) return std::string("a") + signature_list_[0];
+    std::string sig = "(";
+    for (StringList::const_iterator it = signature_list_.begin();
+         it != signature_list_.end(); ++it)
+      sig += *it;
+    sig += ")";
+    return sig;
+  }
+  bool Callback(int id, const Variant &value) {
+    std::string sig = GetVariantSignature(value);
+    if (sig.empty()) return true;
+    if (is_array_ && !signature_list_.empty() && sig != signature_list_[0])
+      is_array_ = false;
+    signature_list_.push_back(sig);
+    return true;
+  }
+ private:
+  bool is_array_;
+  StringList signature_list_;
+};
+
+class DictSignatureIterator {
+ public:
+  std::string GetSignature() const { return signature_; }
+  bool Callback(const char *name, ScriptableInterface::PropertyType type,
+                const Variant &value) {
+    if (type == ScriptableInterface::PROPERTY_METHOD ||
+        value.type() == Variant::TYPE_VOID) {
+      // Ignore method and void type properties.
+      return true;
+    }
+    std::string sig = GetVariantSignature(value);
+    if (signature_.empty()) {
+      signature_ = sig;
+    } else if (signature_ != sig) {
+      return false;
+    }
+    return true;
+  }
+ private:
+  std::string signature_;
+};
 
 std::string GetVariantSignature(const Variant &value) {
   switch (value.type()) {
@@ -139,24 +174,29 @@ std::string GetVariantSignature(const Variant &value) {
         Variant length = scriptable->GetProperty("length").v();
         if (length.type() != Variant::TYPE_VOID) {
           /* firstly treat as an array. */
-          ArrayIterator iterator;
-          scriptable->EnumerateElements(
-              NewSlot(&iterator, &ArrayIterator::Callback));
-          std::string sig = iterator.signature();
-          if (!sig.empty()) return sig;
+          ArraySignatureIterator iterator;
+          if(!scriptable->EnumerateElements(
+              NewSlot(&iterator, &ArraySignatureIterator::Callback))) {
+            DLOG("Failed to get array signature.");
+          } else {
+            std::string sig = iterator.GetSignature();
+            if (!sig.empty()) return sig;
+          }
         }
-        DictIterator iterator;
+        DictSignatureIterator iterator;
         if (!scriptable->EnumerateProperties(
-            NewSlot(&iterator, &DictIterator::Callback)))
+            NewSlot(&iterator, &DictSignatureIterator::Callback))) {
+          DLOG("Failed to get dict signature.");
           return "";
+        }
         std::string dict_signature = "a{s";
-        dict_signature += iterator.signature();
+        dict_signature += iterator.GetSignature();
         dict_signature += "}";
         return dict_signature;
       }
       break;
     default:
-      LOG("Unsupported Variant type %d to be converted to DBus.", value.type());
+     DLOG("Unsupported Variant type %d for DBus.", value.type());
   }
   return "";
 }
@@ -179,19 +219,19 @@ class DBusMarshaller::Impl {
   }
   bool AppendArgument(const Argument &arg) {
     if (arg.signature.empty()) {
-      std::string sig = GetVariantSignature(arg.value);
+      std::string sig = GetVariantSignature(arg.value.v());
       if (sig.empty()) return false;
       return AppendArgument(Argument(sig.c_str(), arg.value));
     }
     const char* index = arg.signature.c_str();
-    if (!CheckSignatureValidity(index, true)) return false;
+    if (!ValidateSignature(index, true)) return false;
     switch (*index) {
       case 'y':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<unsigned char>(i));
@@ -200,9 +240,9 @@ class DBusMarshaller::Impl {
       case 'b':
         {
           bool b;
-          if (!arg.value.ConvertToBool(&b)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_BOOL, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToBool(&b)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_BOOL, arg.value.v().Print().c_str());
             return false;
           }
           Append(b);
@@ -211,9 +251,9 @@ class DBusMarshaller::Impl {
       case 'n':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<int16_t>(i));
@@ -222,9 +262,9 @@ class DBusMarshaller::Impl {
       case 'q':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<uint16_t>(i));
@@ -233,9 +273,9 @@ class DBusMarshaller::Impl {
       case 'i':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<int32_t>(i));
@@ -244,9 +284,9 @@ class DBusMarshaller::Impl {
       case 'u':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<uint32_t>(i));
@@ -255,9 +295,9 @@ class DBusMarshaller::Impl {
       case 'x':
         {
           int64_t v;
-          if (!arg.value.ConvertToInt64(&v)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&v)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(v);
@@ -266,9 +306,9 @@ class DBusMarshaller::Impl {
       case 't':
         {
           int64_t i;
-          if (!arg.value.ConvertToInt64(&i)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_INT64, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToInt64(&i)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_INT64, arg.value.v().Print().c_str());
             return false;
           }
           Append(static_cast<uint64_t>(i));
@@ -277,9 +317,9 @@ class DBusMarshaller::Impl {
       case 'd':
         {
           double v;
-          if (!arg.value.ConvertToDouble(&v)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_DOUBLE, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToDouble(&v)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_DOUBLE, arg.value.v().Print().c_str());
             return false;
           }
           Append(v);
@@ -288,9 +328,9 @@ class DBusMarshaller::Impl {
       case 's':
         {
           std::string s;
-          if (!arg.value.ConvertToString(&s)) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_STRING, arg.value.Print().c_str());
+          if (!arg.value.v().ConvertToString(&s)) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_STRING, arg.value.v().Print().c_str());
             return false;
           }
           Append(s.c_str());
@@ -298,88 +338,96 @@ class DBusMarshaller::Impl {
         }
       case 'a':
         {
-          if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_SCRIPTABLE, arg.value.Print().c_str());
+          if (arg.value.v().type() != Variant::TYPE_SCRIPTABLE) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_SCRIPTABLE, arg.value.v().Print().c_str());
             return false;
           }
-          /* special handle dict case */
+          // handle dict case specially
           if (*(index + 1) == '{') {
             std::string dict_sig = GetElementType(index + 1);
             StringList sig_list;
             if (!GetSubElements(dict_sig.c_str(), &sig_list) ||
-                sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str()))
+                sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str())) {
+              DLOG("Invalid dict type: %s.", dict_sig.c_str());
               return false;
+            }
             ScriptableInterface *dict =
-                VariantValue<ScriptableInterface*>()(arg.value);
+                VariantValue<ScriptableInterface*>()(arg.value.v());
             Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, dict_sig.c_str());
-            DictIterator slot(sub, sig_list[0].c_str(), sig_list[1].c_str());
+            DictMarshaller slot(sub, sig_list[0].c_str(), sig_list[1].c_str());
             if (!dict->EnumerateProperties(
-                NewSlot(&slot, &DictIterator::Callback)))
+                NewSlot(&slot, &DictMarshaller::Callback))) {
+              DLOG("Failed to marshal dict: %s.", dict_sig.c_str());
               return false;
+            }
             index += dict_sig.size();
           } else {
             std::string signature = GetElementType(index + 1);
             Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, signature.c_str());
             ScriptableInterface *array =
-                VariantValue<ScriptableInterface*>()(arg.value);
-            ArrayIterator slot(sub, signature.c_str());
+                VariantValue<ScriptableInterface*>()(arg.value.v());
+            ArrayMarshaller slot(sub, signature.c_str());
             if (!array->EnumerateElements(
-                NewSlot(&slot, &ArrayIterator::Callback)))
+                NewSlot(&slot, &ArrayMarshaller::Callback))) {
+              DLOG("Failed to marshal array: %s.", signature.c_str());
               return false;
+            }
             index += signature.size();
           }
           break;
         }
       case '(':
-      /* normally, {} should not exist without a.
-       * We add it here just for safety.
-       */
+      // normally, {} should not exist without a.
+      // We add it here just for safety.
       case '{':
         {
-          if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
-            LOG("Type dismatch. Expected type: %d, actual value:%s",
-                Variant::TYPE_SCRIPTABLE, arg.value.Print().c_str());
+          if (arg.value.v().type() != Variant::TYPE_SCRIPTABLE) {
+            DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                 Variant::TYPE_SCRIPTABLE, arg.value.v().Print().c_str());
             return false;
           }
           StringList sig_list;
           std::string struct_signature = GetElementType(index);
-          if (!GetSubElements(struct_signature.c_str(), &sig_list))
+          if (!GetSubElements(struct_signature.c_str(), &sig_list)) {
+            DLOG("Invalid structure type: %s", struct_signature.c_str());
             return false;
+          }
           Impl *sub = new Impl(iter_, *index == '(' ?
                                DBUS_TYPE_STRUCT : DBUS_TYPE_DICT_ENTRY, NULL);
           ScriptableInterface *structure =
-              VariantValue<ScriptableInterface*>()(arg.value);
-          StructIterator slot(sub, sig_list);
+              VariantValue<ScriptableInterface*>()(arg.value.v());
+          StructMarshaller slot(sub, sig_list);
           if (!structure->EnumerateElements(
-              NewSlot(&slot, &StructIterator::Callback)))
+              NewSlot(&slot, &StructMarshaller::Callback))) {
+            DLOG("Failed to marshal struct: %s", struct_signature.c_str());
             return false;
+          }
           index += struct_signature.size() - 1;
           break;
         }
       case 'v':
         {
-          std::string sig = GetVariantSignature(arg.value);
+          std::string sig = GetVariantSignature(arg.value.v());
           Impl sub(iter_, DBUS_TYPE_VARIANT, sig.c_str());
           if (!sub.AppendArgument(Argument(sig.c_str(), arg.value)))
             return false;
           break;
         }
       default:
-        LOG("Unsupported type: %s", index);
+        DLOG("Unsupported type: %s", index);
         return false;
     }
     if (index != arg.signature.c_str() + arg.signature.size() - 1)
       return false;
     return true;
   }
-  static bool ValistAdaptor(Arguments *in_args, bool copy_value,
-                            MessageType first_arg_type,
+  static bool ValistAdaptor(Arguments *in_args, MessageType first_arg_type,
                             va_list *va_args) {
     Arguments tmp_args;
     while (first_arg_type != MESSAGE_TYPE_INVALID) {
       Argument arg;
-      if (!ValistItemAdaptor(&arg, copy_value, first_arg_type, va_args))
+      if (!ValistItemAdaptor(&arg, first_arg_type, va_args))
         return false;
       tmp_args.push_back(arg);
       first_arg_type = static_cast<MessageType>(va_arg(*va_args, int));
@@ -388,12 +436,12 @@ class DBusMarshaller::Impl {
     return true;
   }
  private:
-  class ArrayIterator {
+  class ArrayMarshaller {
    public:
-    ArrayIterator(Impl *impl, const char *sig) :
-      marshaller_(impl), signature_(sig) {
+    ArrayMarshaller(Impl *impl, const char *sig)
+      : marshaller_(impl), signature_(sig) {
     }
-    ~ArrayIterator() {
+    ~ArrayMarshaller() {
       delete marshaller_;
     }
     bool Callback(int id, const Variant &value) {
@@ -405,17 +453,17 @@ class DBusMarshaller::Impl {
     std::string signature_;
   };
 
-  class StructIterator {
+  class StructMarshaller {
    public:
-    StructIterator(Impl *impl, const std::vector<std::string>& signatures) :
-      marshaller_(impl), signature_list_(signatures), index_(0) {}
-    ~StructIterator() {
+    StructMarshaller(Impl *impl, const std::vector<std::string>& signatures)
+      : marshaller_(impl), signature_list_(signatures), index_(0) {}
+    ~StructMarshaller() {
       delete marshaller_;
     }
     bool Callback(int id, const Variant &value) {
       if (index_ >= signature_list_.size()) {
-        LOG("The signature of the variant does not match the specified "
-            "signature.");
+        DLOG("The signature of the variant does not match the specified "
+             "signature.");
         return false;
       }
       Argument arg(signature_list_[index_].c_str(), value);
@@ -428,15 +476,14 @@ class DBusMarshaller::Impl {
     std::string::size_type index_;
   };
 
-  class DictIterator {
+  class DictMarshaller {
    public:
-    DictIterator(Impl *impl,
-                 const char *key_signature,
-                 const char *value_signature) : marshaller_(impl) {
+    DictMarshaller(Impl *impl, const char *key_signature,
+                   const char *value_signature) : marshaller_(impl) {
       if (key_signature) key_signature_ = key_signature;
       if (value_signature) value_signature_ = value_signature;
     }
-    ~DictIterator() {
+    ~DictMarshaller() {
       delete marshaller_;
     }
     bool Callback(const char *name, ScriptableInterface::PropertyType type,
@@ -458,140 +505,112 @@ class DBusMarshaller::Impl {
     std::string value_signature_;
   };
 
-  static bool ValistItemAdaptor(Argument *in_arg, bool copy_value,
-                                MessageType first_arg_type, va_list *va_args) {
+  static bool ValistItemAdaptor(Argument *in_arg, MessageType first_arg_type,
+                                va_list *va_args) {
     ASSERT(in_arg);
     MessageType type = first_arg_type;
     if (type == MESSAGE_TYPE_INVALID) return false;
     switch (type) {
       case MESSAGE_TYPE_BYTE:
         in_arg->signature = "y";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, int))));
         break;
       case MESSAGE_TYPE_BOOLEAN:
         in_arg->signature = "b";
-        if (copy_value) {
-          bool v = va_arg(*va_args, int);
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<bool>(va_arg(*va_args, int))));
         break;
       case MESSAGE_TYPE_INT16:
         in_arg->signature = "n";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, int))));
         break;
       case MESSAGE_TYPE_UINT16:
         in_arg->signature = "q";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, int))));
         break;
       case MESSAGE_TYPE_INT32:
         in_arg->signature = "i";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, int32_t));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, int32_t))));
         break;
       case MESSAGE_TYPE_UINT32:
         in_arg->signature = "u";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, uint32_t));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, uint32_t))));
         break;
       case MESSAGE_TYPE_INT64:
         in_arg->signature = "x";
-        if (copy_value) {
-          int64_t v = va_arg(*va_args, int64_t);
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, int64_t))));
         break;
       case MESSAGE_TYPE_UINT64:
         in_arg->signature = "t";
-        if (copy_value) {
-          int64_t v = static_cast<int64_t>(va_arg(*va_args, uint64_t));
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<int64_t>(va_arg(*va_args, uint64_t))));
         break;
       case MESSAGE_TYPE_DOUBLE:
         in_arg->signature = "d";
-        if (copy_value) {
-          double v = va_arg(*va_args, double);
-          in_arg->value = Variant(v);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<double>(va_arg(*va_args, double))));
         break;
       case MESSAGE_TYPE_STRING:
         in_arg->signature = "s";
-        if (copy_value) {
-          const char *str = va_arg(*va_args, const char*);
-          in_arg->value = Variant(str);
-        }
+        in_arg->value = ResultVariant(
+            Variant(static_cast<const char *>(va_arg(*va_args, const char*))));
         break;
       case MESSAGE_TYPE_ARRAY:
         {
           Argument arg;
           std::string signature("a"), item_sig;
           std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
-          Variant *vec = new Variant[size];
+          std::vector<ResultVariant> values;
           bool ret = true;
-          for (std::size_t i = 0; i < size && ret; ++i) {
+          for (size_t i = 0; i < size && ret; ++i) {
             type = static_cast<MessageType>(va_arg(*va_args, int));
-            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            ret = ValistItemAdaptor(&arg, type, va_args);
             if (item_sig.empty()) {
               item_sig = arg.signature;
             } else if (item_sig != arg.signature) {
-              LOG("Types of items in the array are not the same.");
+              DLOG("Types of items in the array are not same.");
               ret = false;
             }
-            vec[i] = arg.value;
+            values.push_back(arg.value);
           }
-          if (!ret) {
-            delete [] vec;
-            return false;
-          }
+          if (!ret) return false;
           signature.append(item_sig);
-          ScriptableDBusContainer *array =
-              new ScriptableDBusContainer(vec, size);
-          in_arg->value = Variant(array);
+          ScriptableDBusContainer *array = new ScriptableDBusContainer(&values);
+          in_arg->value = ResultVariant(Variant(array));
           in_arg->signature = signature;
           break;
         }
       case MESSAGE_TYPE_STRUCT:
         {
           std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
-          Variant *vec = new Variant[size];
+          std::vector<ResultVariant> values;
           std::string signature("(");
           Argument arg;
           bool ret = true;
-          for (std::size_t i = 0; i < size && ret; ++i) {
+          for (size_t i = 0; i < size && ret; ++i) {
             type = static_cast<MessageType>(va_arg(*va_args, int));
-            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            ret = ValistItemAdaptor(&arg, type, va_args);
             signature.append(arg.signature);
-            vec[i] = arg.value;
+            values.push_back(arg.value);
           }
-          if (!ret) {
-            delete [] vec;
-            return false;
-          }
+          if (!ret) return false;
           signature.append(")");
-          ScriptableDBusContainer *array =
-              new ScriptableDBusContainer(vec, size);
+          ScriptableDBusContainer *array = new ScriptableDBusContainer(&values);
+          in_arg->value = ResultVariant(Variant(array));
           in_arg->signature = signature;
-          in_arg->value = Variant(array);
           break;
         }
       case MESSAGE_TYPE_VARIANT:
         type = static_cast<MessageType>(va_arg(*va_args, int));
         if (type == MESSAGE_TYPE_INVALID || type == MESSAGE_TYPE_VARIANT)
           return false;
-        if (!ValistItemAdaptor(in_arg, copy_value, type, va_args))
+        if (!ValistItemAdaptor(in_arg, type, va_args))
           return false;
         in_arg->signature = "v";
         break;
@@ -602,9 +621,9 @@ class DBusMarshaller::Impl {
           std::string signature("a{"), key_sig, value_sig;
           Argument arg;
           bool ret = true;
-          for (std::size_t i = 0; i < size && ret; ++i) {
+          for (size_t i = 0; i < size && ret; ++i) {
             type = static_cast<MessageType>(va_arg(*va_args, int));
-            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            ret = ValistItemAdaptor(&arg, type, va_args);
             if (!ret) break;
             if (key_sig.empty()) {
               key_sig = arg.signature;
@@ -613,14 +632,14 @@ class DBusMarshaller::Impl {
               break;
             }
             std::string str;
-            if (!arg.value.ConvertToString(&str)) {
-              LOG("%s can not be converted to string to be a dict key",
-                  arg.value.Print().c_str());
+            if (!arg.value.v().ConvertToString(&str)) {
+              DLOG("%s can not be converted to string to be a dict key",
+                   arg.value.v().Print().c_str());
               ret = false;
               break;
             }
             type = static_cast<MessageType>(va_arg(*va_args, int));
-            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            ret = ValistItemAdaptor(&arg, type, va_args);
             if (!ret) break;
             if (value_sig.empty()) {
               value_sig = arg.signature;
@@ -628,7 +647,7 @@ class DBusMarshaller::Impl {
               ret = false;
               break;
             }
-            obj->AddProperty(str.c_str(), arg.value);
+            obj->AddProperty(str.c_str(), arg.value.v());
           }
           if (!ret) {
             delete obj;
@@ -638,15 +657,13 @@ class DBusMarshaller::Impl {
           signature.append(value_sig);
           signature.append("}");
           in_arg->signature = signature;
-          in_arg->value = Variant(obj);
+          in_arg->value = ResultVariant(Variant(obj));
           break;
         }
       default:
-        LOG("Unsupported type: %d", type);
+        DLOG("Unsupported type: %d", type);
         return false;
     }
-    if (!copy_value)
-      va_arg(*va_args, void*);
     return true;
   }
 
@@ -714,13 +731,7 @@ bool DBusMarshaller::AppendArgument(const Argument &arg) {
 bool DBusMarshaller::ValistAdaptor(Arguments *in_args,
                                    MessageType first_arg_type,
                                    va_list *va_args) {
-  return Impl::ValistAdaptor(in_args, true, first_arg_type, va_args);
-}
-
-bool DBusMarshaller::ValistToAugrments(Arguments *out_args,
-                                       MessageType first_arg_type,
-                                       va_list *va_args) {
-  return Impl::ValistAdaptor(out_args, false, first_arg_type, va_args);
+  return Impl::ValistAdaptor(in_args, first_arg_type, va_args);
 }
 
 class DBusDemarshaller::Impl {
@@ -742,18 +753,18 @@ class DBusDemarshaller::Impl {
   bool GetArgument(Argument *arg) {
     if (arg->signature.empty()) {
       char *sig = dbus_message_iter_get_signature(iter_);
-      arg->signature = sig;
+      arg->signature = sig ? sig : "";
       dbus_free(sig);
       // no value remained in current message iterator
       if (arg->signature.empty()) return false;
     }
     const char *index = arg->signature.c_str();
-    if (!CheckSignatureValidity(index, true))
+    if (!ValidateSignature(index, true))
       return false;
     int type = dbus_message_iter_get_arg_type(iter_);
     if (type != GetTypeBySignature(index)) {
-      LOG("Demarshal failed. Type dismatch, message type: %c, expected: %c",
-          type, GetTypeBySignature(index));
+      DLOG("Demarshal failed. Type dismatch, message type: %c, expected: %c",
+           type, GetTypeBySignature(index));
       return false;
     }
     switch (type) {
@@ -761,63 +772,63 @@ class DBusDemarshaller::Impl {
         {
           unsigned char value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_BOOLEAN:
         {
           dbus_bool_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<bool>(value));
+          arg->value = ResultVariant(Variant(static_cast<bool>(value)));
           break;
         }
       case DBUS_TYPE_INT16:
         {
           dbus_int16_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_UINT16:
         {
           dbus_uint16_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_INT32:
         {
           dbus_int32_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_UINT32:
         {
           dbus_uint32_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_INT64:
         {
           dbus_int64_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_UINT64:
         {
           dbus_uint64_t value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(static_cast<int64_t>(value));
+          arg->value = ResultVariant(Variant(static_cast<int64_t>(value)));
           break;
         }
       case DBUS_TYPE_DOUBLE:
         {
           double value;
           dbus_message_iter_get_basic(iter_, &value);
-          arg->value = Variant(value);
+          arg->value = ResultVariant(Variant(value));
           break;
         }
       case DBUS_TYPE_STRING:
@@ -825,12 +836,12 @@ class DBusDemarshaller::Impl {
         {
           const char *str;
           dbus_message_iter_get_basic(iter_, &str);
-          arg->value = Variant(str);
+          arg->value = ResultVariant(Variant(str));
           break;
         }
       case DBUS_TYPE_ARRAY:
         {
-          if (*(index + 1) == '{') {  /* it is a dict. */
+          if (*(index + 1) == '{') {  // it is a dict.
             std::string dict_sig = GetElementType(index + 1);
             StringList sig_list;
             if (!GetSubElements(dict_sig.c_str(), &sig_list))
@@ -848,36 +859,35 @@ class DBusDemarshaller::Impl {
                   && sub.GetArgument(&value);
               if (!ret) break;
               std::string name;
-              if (!key.value.ConvertToString(&name)) {
+              if (!key.value.v().ConvertToString(&name)) {
                 ret = false;
                 break;
               }
-              obj->AddProperty(name.c_str(), value.value);
+              obj->AddProperty(name.c_str(), value.value.v());
             } while(dict.MoveToNextItem());
             if (!ret) {
               delete obj;
               return false;
             }
-            arg->value = Variant(obj);
+            arg->value = ResultVariant(Variant(obj));
             index += dict_sig.size();
           } else {
             std::string sub_type = GetElementType(index + 1);
             Impl sub(iter_);
             bool ret;
-            std::vector<Variant> var_array;
+            std::vector<ResultVariant> values;
             do {
               Argument arg(sub_type.c_str());
               ret = sub.GetArgument(&arg);
               if (ret)
-                var_array.push_back(arg.value);
+                values.push_back(arg.value);
             } while (ret && sub.MoveToNextItem());
             if (!ret) {
               DLOG("something wrong.");
               return false;
             }
-            ScriptableDBusContainer *obj = new ScriptableDBusContainer;
-            obj->AddArray(var_array.begin(), var_array.size());
-            arg->value = Variant(obj);
+            ScriptableDBusContainer *obj = new ScriptableDBusContainer(&values);
+            arg->value = ResultVariant(Variant(obj));
             index += sub_type.size();
           }
           break;
@@ -893,20 +903,19 @@ class DBusDemarshaller::Impl {
               (sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str())))
             return false;
           Impl sub(iter_);
-          std::vector<Variant> var_array;
+          std::vector<ResultVariant> values;
           bool ret = false;
           for (StringList::iterator it = sig_list.begin();
                it != sig_list.end(); ++it) {
             Argument arg(it->c_str());
             ret = sub.GetArgument(&arg);
             if (!ret) break;
-            var_array.push_back(arg.value);
+            values.push_back(arg.value);
             sub.MoveToNextItem();
           }
           if (!ret) return false;
-          ScriptableDBusContainer *obj = new ScriptableDBusContainer;
-          obj->AddArray(var_array.begin(), var_array.size());
-          arg->value = Variant(obj);
+          ScriptableDBusContainer *obj = new ScriptableDBusContainer(&values);
+          arg->value = ResultVariant(Variant(obj));
           index += struct_sig.size() - 1;
           break;
         }
@@ -916,7 +925,7 @@ class DBusDemarshaller::Impl {
           dbus_message_iter_recurse(iter_, &subiter);
           char *sig = dbus_message_iter_get_signature(&subiter);
           if (!sig) {
-            LOG("Sub type of variant is invalid.");
+            DLOG("Sub type of variant is invalid.");
             return false;
           }
           Impl sub(iter_);
@@ -928,7 +937,7 @@ class DBusDemarshaller::Impl {
           break;
         }
       default:
-        LOG("Unsupported type: %d", type);
+        DLOG("Unsupported type: %d", type);
         return false;
     }
     return true;
@@ -939,19 +948,19 @@ class DBusDemarshaller::Impl {
     Arguments::const_iterator it = out_args.begin();
     while (type != MESSAGE_TYPE_INVALID) {
       if (it == out_args.end()) {
-        LOG("Too few arguments in reply.");
+        DLOG("Too few arguments in reply.");
         return false;
       }
       int arg_type = GetTypeBySignature(it->signature.c_str());
       if (arg_type != MessageTypeToDBusType(type)) {
-        LOG("Type dismatch! the type in message is %d, "
-            " but in this function it is %d", arg_type, type);
+        DLOG("Type dismatch! the type in message is %d, "
+             " but in this function it is %d", arg_type, type);
         ASSERT(false);
         return false;
       }
       if (!ValistItemAdaptor(*it, type, va_args))
         return false;
-      it++;
+      ++it;
       type = static_cast<MessageType>(va_arg(*va_args, int));
     }
     return true;
@@ -967,9 +976,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_BYTE:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             unsigned char v = static_cast<unsigned char>(i);
@@ -979,9 +988,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_BOOLEAN:
           {
             bool v;
-            if (!out_arg.value.ConvertToBool(&v)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_BOOL, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToBool(&v)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_BOOL, out_arg.value.v().Print().c_str());
               return false;
             }
             memcpy(return_storage, &v, sizeof(bool));
@@ -990,9 +999,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_INT16:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             int16_t v = static_cast<int16_t>(i);
@@ -1002,9 +1011,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_UINT16:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             uint16_t v = static_cast<uint16_t>(i);
@@ -1014,9 +1023,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_INT32:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             int v = static_cast<int>(i);
@@ -1026,9 +1035,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_UINT32:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             uint32_t v = static_cast<uint32_t>(i);
@@ -1038,9 +1047,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_INT64:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             memcpy(return_storage, &i, sizeof(dbus_int64_t));
@@ -1049,9 +1058,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_UINT64:
           {
             int64_t i;
-            if (!out_arg.value.ConvertToInt64(&i)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_INT64, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToInt64(&i)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_INT64, out_arg.value.v().Print().c_str());
               return false;
             }
             uint64_t v = static_cast<uint64_t>(i);
@@ -1061,9 +1070,9 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_DOUBLE:
           {
             double v;
-            if (!out_arg.value.ConvertToDouble(&v)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_DOUBLE, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToDouble(&v)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_DOUBLE, out_arg.value.v().Print().c_str());
               return false;
             }
             memcpy(return_storage, &v, sizeof(double));
@@ -1072,12 +1081,16 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_STRING:
           {
             std::string str;
-            if (!out_arg.value.ConvertToString(&str)) {
-              LOG("Type dismatch. Expected type: %d, actual value:%s",
-                  Variant::TYPE_STRING, out_arg.value.Print().c_str());
+            if (!out_arg.value.v().ConvertToString(&str)) {
+              DLOG("Type dismatch. Expected type: %d, actual value:%s",
+                   Variant::TYPE_STRING, out_arg.value.v().Print().c_str());
               return false;
             }
-            const char* s = str.c_str();
+            // The string must be duplicated, otherwise it'll be destroyed when
+            // return.
+            // So the caller must free it.
+            char* s = new char[str.length() + 1];
+            strcpy(s, str.c_str());
             memcpy(return_storage, &s, sizeof(const char*));
             break;
           }
@@ -1088,7 +1101,7 @@ class DBusDemarshaller::Impl {
         case MESSAGE_TYPE_DICT:
           memcpy(return_storage, &out_arg.value, sizeof(Variant));
         default:
-          LOG("The DBus type %d is not supported yet!", first_arg_type);
+          DLOG("The DBus type %d is not supported yet!", first_arg_type);
           return false;
       }
     }
