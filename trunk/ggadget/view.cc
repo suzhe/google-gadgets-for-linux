@@ -37,19 +37,22 @@
 #include "file_manager_factory.h"
 #include "main_loop_interface.h"
 #include "gadget_consts.h"
-#include "host_interface.h"
 #include "gadget.h"
+#include "host_interface.h"
 #include "graphics_interface.h"
+#include "image_cache.h"
 #include "image_interface.h"
 #include "logger.h"
 #include "math_utils.h"
+#include "menu_interface.h"
 #include "options_interface.h"
 #include "script_context_interface.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"
+#include "scriptable_helper.h"
 #include "scriptable_image.h"
 #include "scriptable_interface.h"
-#include "scriptable_helper.h"
+#include "scriptable_menu.h"
 #include "slot.h"
 #include "texture.h"
 #include "view_host_interface.h"
@@ -57,7 +60,6 @@
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
-#include "image_cache.h"
 
 namespace ggadget {
 
@@ -311,6 +313,8 @@ class View::Impl {
     obj->RegisterSignal(kOnSizeEvent, &onsize_event_);
     obj->RegisterSignal(kOnSizingEvent, &onsizing_event_);
     obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
+    // Not a standard signal.
+    obj->RegisterSignal(kOnContextMenuEvent, &oncontextmenu_event_);
   }
 
   void MapChildPositionEvent(const PositionEvent &org_event,
@@ -971,6 +975,8 @@ class View::Impl {
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
     bool result = true;
+    // Let the element handle context menu first, so that the element can
+    // override view's menu.
     if (mouseover_element_.Get()) {
       if (mouseover_element_.Get()->IsReallyEnabled())
         result = mouseover_element_.Get()->OnAddContextMenuItems(menu);
@@ -980,8 +986,10 @@ class View::Impl {
     if (!result)
       return false;
 
-    if (on_add_context_menu_items_signal_.HasActiveConnections() &&
-        !on_add_context_menu_items_signal_(menu))
+    ContextMenuEvent event(new ScriptableMenu(gadget_, menu));
+    ScriptableEvent scriptable_event(&event, NULL, NULL);
+    FireEvent(&scriptable_event, oncontextmenu_event_);
+    if (scriptable_event.GetReturnValue() == EVENT_RESULT_CANCELED)
       return false;
 
     // If the view is main and the mouse over element doesn't have special menu
@@ -1265,7 +1273,7 @@ class View::Impl {
   EventSignal onsize_event_;
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
-  Signal1<bool, MenuInterface *> on_add_context_menu_items_signal_;
+  EventSignal oncontextmenu_event_;
 
   ImageCache image_cache_;
 
@@ -1798,9 +1806,8 @@ Connection *View::ConnectOnSizingEvent(Slot0<void> *handler) {
 Connection *View::ConnectOnUndockEvent(Slot0<void> *handler) {
   return impl_->onundock_event_.Connect(handler);
 }
-Connection *View::ConnectOnAddContextMenuItems(
-    Slot1<bool, MenuInterface *> *handler) {
-  return impl_->on_add_context_menu_items_signal_.Connect(handler);
+Connection *View::ConnectOnContextMenuEvent(Slot0<void> *handler) {
+  return impl_->oncontextmenu_event_.Connect(handler);
 }
 
 } // namespace ggadget

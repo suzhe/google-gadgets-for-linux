@@ -84,12 +84,10 @@ Tree.prototype = {
       this_.ToggleFolder(id);
     };
     if (this.menu_handler_) {
-      designerUtils.connectElementMenuHandler(
-          item,
-          function(menu) {
-            this_.SelectNode(id);
-            return this_.menu_handler_(menu);
-          });
+      item.oncontextmenu = function(menu) {
+        this_.SelectNode(id);
+        return this_.menu_handler_(menu);
+      };
     }
     label.innerText = title;
     return item;

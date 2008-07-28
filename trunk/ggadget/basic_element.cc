@@ -1051,9 +1051,8 @@ class BasicElement::Impl {
   EventSignal onmouseup_event_;
   EventSignal onmousewheel_event_;
   EventSignal onsize_event_;
-
+  EventSignal oncontextmenu_event_;
   EventSignal on_content_changed_signal_;
-  Signal1<bool, MenuInterface *> on_add_context_menu_items_signal_;
 };
 
 #ifdef _DEBUG
@@ -1238,6 +1237,9 @@ void BasicElement::DoClassRegister() {
   RegisterClassSignal(kOnMouseWheelEvent, &Impl::onmousewheel_event_,
                       &BasicElement::impl_);
   RegisterClassSignal(kOnSizeEvent, &Impl::onsize_event_,
+                      &BasicElement::impl_);
+  // Not a standard signal yet.
+  RegisterClassSignal(kOnContextMenuEvent, &Impl::oncontextmenu_event_,
                       &BasicElement::impl_);
 }
 
@@ -1927,8 +1929,10 @@ void BasicElement::OnPopupOff() {
 }
 
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
-  return !impl_->on_add_context_menu_items_signal_.HasActiveConnections() ||
-         impl_->on_add_context_menu_items_signal_(menu);
+  ContextMenuEvent event(new ScriptableMenu(impl_->view_->GetGadget(), menu));
+  ScriptableEvent scriptable_event(&event, this, NULL);
+  impl_->view_->FireEvent(&scriptable_event, impl_->oncontextmenu_event_);
+  return scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED;
 }
 
 bool BasicElement::IsChildInVisibleArea(const BasicElement *child) const {
@@ -2008,13 +2012,12 @@ Connection *BasicElement::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
 Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
   return impl_->onsize_event_.Connect(handler);
 }
-Connection *BasicElement::ConnectOnContentChanged(Slot0<void> *handler) {
-  return impl_->on_content_changed_signal_.Connect(handler);
+Connection *BasicElement::ConnectOnContextMenuEvent(Slot0<void> *handler) {
+  return impl_->oncontextmenu_event_.Connect(handler);
 }
 
-Connection *BasicElement::ConnectOnAddContextMenuItems(
-    Slot1<bool, MenuInterface *> *handler) {
-  return impl_->on_add_context_menu_items_signal_.Connect(handler);
+Connection *BasicElement::ConnectOnContentChanged(Slot0<void> *handler) {
+  return impl_->on_content_changed_signal_.Connect(handler);
 }
 
 EventResult BasicElement::HandleMouseEvent(const MouseEvent &event) {

@@ -19,6 +19,7 @@
 
 #include <string>
 #include <ggadget/common.h>
+#include <ggadget/scriptable_menu.h>
 #include <ggadget/variant.h>
 
 namespace ggadget {
@@ -90,6 +91,7 @@ class Event {
     EVENT_OPTION_CHANGED,
     EVENT_TIMER,
     EVENT_PERFMON,
+    EVENT_CONTEXT_MENU,
   };
 
   enum Modifier {
@@ -395,6 +397,25 @@ class PerfmonEvent : public Event {
 
  private:
   Variant value_;
+};
+
+/**
+ * Class representing a context menu event.
+ */
+class ContextMenuEvent : public Event {
+ public:
+  ContextMenuEvent(ScriptableMenu *menu)
+      : Event(EVENT_CONTEXT_MENU), menu_(menu) {
+    menu_->Ref();
+  }
+  ~ContextMenuEvent() {
+    menu_->Unref();
+  }
+
+  ScriptableMenu *GetMenu() const { return menu_; }
+
+ private:
+  ScriptableMenu *menu_;
 };
 
 } // namespace ggadget

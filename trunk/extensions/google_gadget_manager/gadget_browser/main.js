@@ -39,6 +39,11 @@ function view_onclose() {
   ClearPluginDownloadTasks();
 }
 
+// Disable context menus.
+function view_oncontextmenu() {
+  event.returnValue = false;
+}
+
 function language_label_onsize() {
   language_box_div.x = language_label.offsetX +
                        language_label.offsetWidth + 7;
