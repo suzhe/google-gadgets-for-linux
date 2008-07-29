@@ -25,6 +25,42 @@ namespace ggadget {
 
 namespace framework {
 
+template <typename Wrapper, typename Collection, typename Owner>
+class ScriptableCollection : public ScriptableHelperDefault {
+ public:
+  DEFINE_CLASS_ID(0xad83bfee5d1b11dd, ScriptableInterface);
+
+  ScriptableCollection(Collection *collection, Owner *owner)
+      : collection_(collection), owner_(owner) {
+  }
+
+  ~ScriptableCollection() {
+    collection_->Destroy();
+  }
+
+  Variant GetItem(int index) {
+    return index >= 0 && index < collection_->GetCount() ?
+        Variant(new Wrapper(collection_->GetItem(index), owner_)) : Variant();
+  }
+
+ protected:
+  virtual void DoClassRegister() {
+    RegisterProperty(
+        "count",
+        NewSlot(&Collection::GetCount,
+                &ScriptableCollection<Wrapper, Collection, Owner>::collection_),
+        NULL);
+    RegisterMethod(
+        "item",
+        NewSlot(&ScriptableCollection<Wrapper, Collection, Owner>::GetItem));
+  }
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableCollection);
+  Collection *collection_;
+  Owner *owner_;
+};
+
 // Default args for File.Delete() and Folder.Delete().
 static const Variant kDeleteDefaultArgs[] = {
   Variant(false)
@@ -84,21 +120,6 @@ class ScriptableFileSystem::Impl {
    private:
     std::string message_;
   };
-
-  template <typename ScriptableT, typename ItemT, typename CollectionT>
-  static ScriptableArray *ToScriptableArray(CollectionT *collection,
-                                            Impl *impl) {
-    int count = collection->GetCount();
-    ASSERT(count >= 0);
-    Variant *array = new Variant[count];
-    for (int i = 0; i < count; i++) {
-      ItemT *item = collection->GetItem(i);
-      array[i] = Variant(item ? new ScriptableT(item, impl) : NULL);
-    }
-    // To avoid memory leak.
-    collection->Destroy();
-    return ScriptableArray::Create(array, static_cast<size_t>(count));
-  }
 
   class ScriptableTextStream : public ScriptableHelperDefault {
    public:
@@ -340,23 +361,26 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.Move"));
     }
 
-    ScriptableArray *GetSubFolders() {
+    ScriptableInterface *GetSubFolders() {
       FoldersInterface *folders = folder_->GetSubFolders();
       if (!folders) {
         SetPendingException(new FileSystemException("Folder.GetSubFolders"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFolder, FolderInterface>(folders,
-                                                                  impl_);
+      return new ScriptableCollection<ScriptableFolder,
+                                      FoldersInterface,
+                                      Impl>(folders, impl_);
     }
 
-    ScriptableArray *GetFiles() {
+    ScriptableInterface *GetFiles() {
       FilesInterface *files = folder_->GetFiles();
       if (!files) {
         SetPendingException(new FileSystemException("Folder.GetFiles"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFile, FileInterface>(files, impl_);
+      return new ScriptableCollection<ScriptableFile,
+                                      FilesInterface,
+                                      Impl>(files, impl_);
     }
 
     ScriptableTextStream *CreateTextFile(const char *filename,
@@ -506,14 +530,16 @@ class ScriptableFileSystem::Impl {
     Impl *impl_;
   };
 
-  ScriptableArray *GetDrives() {
+  ScriptableInterface *GetDrives() {
     DrivesInterface *drives = filesystem_->GetDrives();
     if (!drives) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetDrives"));
       return NULL;
     }
-    return ToScriptableArray<ScriptableDrive, DriveInterface>(drives, this);
+    return new ScriptableCollection<ScriptableDrive,
+                                    DrivesInterface,
+                                    Impl>(drives, this);
   }
 
   ScriptableDrive *GetDrive(const char *drive_spec) {
