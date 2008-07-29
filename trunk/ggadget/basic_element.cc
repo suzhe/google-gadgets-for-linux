@@ -1890,7 +1890,7 @@ BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
     // NOTE: This statement relies on the printf output of a NaN or INF double
     // value. If the input is a double nan or inf, then it can be converted to
     // string and the result shall be "nan" or "inf".
-    return PR_UNSPECIFIED;
+    return PR_INVALID;
   } else if (input.ConvertToDouble(output)) {
     // If it can be converted to double directly then treat it as pixel value.
     return PR_PIXEL;

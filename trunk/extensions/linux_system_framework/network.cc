@@ -36,6 +36,7 @@ Network::Network()
                    MESSAGE_TYPE_INVALID)) {
     DLOG("Get devices failed.");
     interfaces_.clear();
+    last_active_interface_ = -2;
   }
   delete proxy;
 
@@ -55,7 +56,8 @@ Network::~Network() {
 }
 
 bool Network::IsOnline() {
-  return GetActiveInterface() >= 0;
+  // Also returns true if dbus or service is not available.
+  return GetActiveInterface() != -1;
 }
 
 NetworkInterface::ConnectionType Network::GetConnectionType() {
@@ -111,6 +113,10 @@ DBusProxy *Network::GetInterfaceProxy(int i) {
 }
 
 int Network::GetActiveInterface() {
+  if (last_active_interface_ == -2) {
+    // DBus or service is not available.
+    return last_active_interface_;
+  }
   if (last_active_interface_ >= 0) {
     if (IsInterfaceUp(last_active_interface_))
       return last_active_interface_;
