@@ -566,14 +566,6 @@ void TestValistDemarshal(MessageType first_arg_type, ...) {
   EXPECT_TRUE(DBusMarshaller::ValistAdaptor(&out_args, first_arg_type,
                                             &va_args));
   first_arg_type = static_cast<MessageType>(va_arg(va_args, int));
-  va_list tmp_args;
-  va_copy(tmp_args, va_args);
-  EXPECT_TRUE(DBusMarshaller::ValistAdaptor(&in_args, first_arg_type,
-                                            &tmp_args));
-  va_end(tmp_args);
-  EXPECT_EQ(out_args.size(), in_args.size());
-  for (size_t i = 0; i < in_args.size(); ++i)
-    EXPECT_EQ(out_args[i].signature, in_args[i].signature);
   EXPECT_TRUE(DBusDemarshaller::ValistAdaptor(out_args, first_arg_type,
                                               &va_args));
   va_end(va_args);
