@@ -44,6 +44,7 @@ static FileManagerInterface *g_gadget_file_manager = NULL;
 static FileManagerWrapper *g_designer_file_manager = NULL;
 static Gadget *g_designer_gadget = NULL;
 static Gadget *g_designee_gadget = NULL;
+static Connection *g_designee_close_connection = NULL;
 
 class ScriptableFileManager : public ScriptableHelperDefault {
  public:
@@ -261,8 +262,8 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
                                      Gadget::DEBUG_CONSOLE_INITIAL);
       if (g_designee_gadget && g_designee_gadget->IsValid()) {
         g_designee_gadget->ShowMainView();
-        g_designee_gadget->GetMainView()->ConnectOnCloseEvent(
-            NewSlot(ResetDesigneeGadget));
+        g_designee_close_connection = g_designee_gadget->GetMainView()->
+            ConnectOnCloseEvent(NewSlot(ResetDesigneeGadget));
       }
       return false;
     }
@@ -293,6 +294,7 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
 
   void RemoveGadget() {
     if (g_designee_gadget) {
+      g_designee_close_connection->Disconnect();
       OptionsInterface *options = g_designee_gadget->GetOptions();
       if (options)
         options->DeleteStorage();
