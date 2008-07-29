@@ -174,7 +174,7 @@ class DOMNodeImplCallbacks {
  public:
   virtual ~DOMNodeImplCallbacks() { }
   // Subclasses should implement these methods.
-  virtual DOMNodeInterface *CloneSelf() = 0;
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) = 0;
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) = 0;
   // Append the XML string representation to the string.
   virtual void AppendXML(size_t indent, std::string *xml) = 0;
@@ -344,14 +344,15 @@ class DOMNodeImpl {
     return DOM_NO_ERR;
   }
 
-  DOMNodeInterface *CloneNode(bool deep) {
-    DOMNodeInterface *self_cloned = callbacks_->CloneSelf();
+  DOMNodeInterface *CloneNode(DOMDocumentInterface *owner_document, bool deep) {
+    DOMNodeInterface *self_cloned = callbacks_->CloneSelf(owner_document);
     if (self_cloned && deep) {
       for (Children::iterator it = children_.begin();
-           it != children_.end();
-           ++it)
+           it != children_.end(); ++it) {
         // Ignore error returned from AppendChild, since it should not occur.
-        self_cloned->AppendChild((*it)->CloneNode(deep));
+        self_cloned->AppendChild(
+            (*it)->GetImpl()->CloneNode(owner_document, deep));
+      }
     }
     return self_cloned;
   }
@@ -864,7 +865,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   }
 
   virtual DOMNodeInterface *CloneNode(bool deep) const {
-    return impl_->CloneNode(deep);
+    return impl_->CloneNode(impl_->owner_document_, deep);
   }
 
   virtual void Normalize() {
@@ -1138,10 +1139,10 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
     return code;
   }
 
-  virtual DOMNodeInterface *CloneSelf() {
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
     // The content will be cloned by common CloneNode implementation,
     // because for Attr.cloneNode(), children are always cloned.
-    return new DOMAttr(GetOwnerDocument(), GetName().c_str(), NULL);
+    return new DOMAttr(owner_document, GetName().c_str(), NULL);
   }
 
   virtual bool AllowPrefix() const { return true; }
@@ -1315,12 +1316,11 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     return code;
   }
 
-  virtual DOMNodeInterface *CloneSelf() {
-    DOMElement *element = new DOMElement(GetOwnerDocument(),
-                                         GetTagName().c_str());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    DOMElement *element = new DOMElement(owner_document, GetTagName().c_str());
     for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it) {
-      DOMAttrInterface *cloned_attr =
-          down_cast<DOMAttrInterface *>((*it)->CloneNode(true));
+      DOMAttrInterface *cloned_attr = down_cast<DOMAttrInterface *>(
+          (*it)->GetImpl()->CloneNode(owner_document, true));
       element->SetAttributeNode(cloned_attr);
     }
     return element;
@@ -1549,8 +1549,8 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
   }
 
  protected:
-  virtual DOMNodeInterface *CloneSelf() {
-    return new DOMText(GetOwnerDocument(), GetData().c_str());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    return new DOMText(owner_document, GetData().c_str());
   }
 
  private:
@@ -1595,8 +1595,8 @@ class DOMComment : public DOMCharacterData<DOMCommentInterface> {
   }
 
  protected:
-  virtual DOMNodeInterface *CloneSelf() {
-    return new DOMComment(GetOwnerDocument(), GetData().c_str());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    return new DOMComment(owner_document, GetData().c_str());
   }
 };
 
@@ -1638,8 +1638,8 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
   }
 
  protected:
-  virtual DOMNodeInterface *CloneSelf() {
-    return new DOMCDATASection(GetOwnerDocument(), GetData().c_str());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    return new DOMCDATASection(owner_document, GetData().c_str());
   }
 };
 
@@ -1668,8 +1668,8 @@ class DOMDocumentFragment : public DOMNodeBase<DOMDocumentFragmentInterface> {
     return code;
   }
 
-  virtual DOMNodeInterface *CloneSelf() {
-    return new DOMDocumentFragment(GetOwnerDocument());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    return new DOMDocumentFragment(owner_document);
   }
 };
 
@@ -1717,8 +1717,8 @@ class DOMProcessingInstruction
     return DOM_HIERARCHY_REQUEST_ERR;
   }
 
-  virtual DOMNodeInterface *CloneSelf() {
-    return new DOMDocumentFragment(GetOwnerDocument());
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    return new DOMDocumentFragment(owner_document);
   }
 
  private:
@@ -1806,9 +1806,15 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
                    NewSlot(&DOMDocument::ScriptCreateEntityReference));
     RegisterMethod("getElementsByTagName",
                    NewSlot(&Super::GetElementsByTagNameNotConst));
+    RegisterMethod("importNode", NewSlot(&DOMDocument::ScriptImportNode));
     // Compatibility with Microsoft DOM.
     RegisterProperty("async", NULL, NewSlot(&DummySetter));
+    RegisterProperty("parsed", NewFixedGetterSlot(true), NULL);
     RegisterProperty("parseError", NewSlot(&DOMDocument::GetParseError), NULL);
+    RegisterProperty("resolveExternals", NULL, NewSlot(&DummySetter));
+    RegisterProperty("validateOnParse", NULL, NewSlot(&DummySetter));
+    RegisterMethod("getProperty", NewSlot(DummyGetProperty));
+    RegisterMethod("setProperty", NewSlot(DummySetProperty));
   }
 
   ParseError *GetParseError() {
@@ -1918,8 +1924,20 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     return xml_parser_;
   }
 
+  virtual DOMExceptionCode ImportNode(const DOMNodeInterface *imported_node,
+                                      bool deep,
+                                      DOMNodeInterface **result) {
+    if (!imported_node)
+      return DOM_NULL_POINTER_ERR;
+    NodeType type = imported_node->GetNodeType();
+    if (type == DOCUMENT_NODE || type == DOCUMENT_TYPE_NODE)
+      return DOM_NOT_SUPPORTED_ERR;
+    *result = imported_node->GetImpl()->CloneNode(this, deep);
+    return *result ? DOM_NO_ERR : DOM_NOT_SUPPORTED_ERR;
+  }
+
  protected:
-  virtual DOMNodeInterface *CloneSelf() {
+  virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
     return NULL;
   }
 
@@ -1986,6 +2004,16 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     // TODO: if we support DTD.
     return NULL;
   }
+
+  DOMNodeInterface *ScriptImportNode(const DOMNodeInterface *imported_node,
+                                     bool deep) {
+    DOMNodeInterface *result = NULL;
+    return CheckException(ImportNode(imported_node, deep, &result)) ?
+           result : NULL;
+  }
+
+  static void DummySetProperty(const char *name, const Variant &value) { }
+  static Variant DummyGetProperty(const char *name) { return Variant(); }
 
   XMLParserInterface *xml_parser_;
   static DOMImplementation dom_implementation_;

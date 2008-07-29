@@ -423,9 +423,12 @@ class DOMDocumentInterface : public DOMNodeInterface {
 
   virtual XMLParserInterface *GetXMLParser() const = 0;
 
+  // A useful DOM2 method.
+  virtual DOMExceptionCode ImportNode(const DOMNodeInterface *imported_node,
+                                      bool deep,
+                                      DOMNodeInterface **result) = 0;
+
   /* TODO: DOM2
-  virtual DOMExceptionCode ImportNode(DOMNodeInterface *imported_node,
-                                      bool deep) = 0;
   virtual DOMExceptionCode CreateElementNS(const char *namespace_uri,
                                            const char *qualified_name,
                                            DOMElementInterface **result) = 0;
