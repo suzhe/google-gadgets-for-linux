@@ -144,6 +144,9 @@ inline To implicit_cast(From const &f) {
  */
 template<typename To, typename From>
 inline To down_cast(const From *f) {          // so we only accept pointers
+// dynamic_cast doesn't work properly when ggl library is dlopen'ed
+// So we comment following code out
+#if 0
 #ifdef _DEBUG   // RTTI: debug mode only!
   // Ensures that To is a sub-type of From *.  This test is here only
   // for compile-time type checking, and has no overhead in an
@@ -158,11 +161,15 @@ inline To down_cast(const From *f) {          // so we only accept pointers
     ASSERT(false);
   }
 #endif
+#endif
   return static_cast<To>(f);
 }
 
 template<typename To, typename From>
 inline To down_cast(From *f) {
+// dynamic_cast doesn't work properly when ggl library is dlopen'ed
+// So we comment following code out
+#if 0
 #ifdef _DEBUG   // RTTI: debug mode only!
   if (false) {
     implicit_cast<const From *, To>(0);
@@ -172,6 +179,7 @@ inline To down_cast(From *f) {
            typeid(*f).name(), typeid(To).name());
     ASSERT(false);
   }
+#endif
 #endif
   return static_cast<To>(f);
 }
