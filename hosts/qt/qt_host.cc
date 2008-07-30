@@ -403,10 +403,15 @@ class QtHost::Impl {
   }
 
   void OnCloseHandler(DecoratedViewHost *decorated) {
+    // Closing a main view which has popout view causes the popout view close
+    // first
+    if (expanded_original_ == decorated && expanded_popout_) {
+      OnPopInHandler(decorated);
+    }
+
     ViewInterface *child = decorated->GetView();
     Gadget *gadget = child ? child->GetGadget() : NULL;
 
-    ASSERT(gadget);
     if (!gadget) return;
 
     switch (decorated->GetDecoratorType()) {
@@ -430,7 +435,9 @@ class QtHost::Impl {
 
   void OnPopOutHandler(DecoratedViewHost *decorated) {
     if (expanded_original_) {
+      bool just_hide = (decorated == expanded_original_);
       OnPopInHandler(expanded_original_);
+      if (just_hide) return;
     }
 
     ViewInterface *child = decorated->GetView();
