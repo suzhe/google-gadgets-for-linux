@@ -45,6 +45,7 @@ check_PROGRAMS		= backoff_test \
 			  slot_test \
 			  signal_test \
 			  scriptable_helper_test \
+			  scriptable_enumerator_test \
 			  elements_test \
 			  element_factory_test \
 			  encryptor_test \
@@ -77,6 +78,7 @@ variant_test_SOURCES		= variant_test.cc
 slot_test_SOURCES		= slot_test.cc slots.cc
 signal_test_SOURCES		= signal_test.cc slots.cc
 scriptable_helper_test_SOURCES	= scriptable_helper_test.cc scriptables.cc
+scriptable_enumerator_test_SOURCES	= scriptable_enumerator_test.cc scriptables.cc
 elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
 encryptor_test_SOURCES		= encryptor_test.cc
