@@ -99,6 +99,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  script_runtime_manager.h \
 			  scriptable_array.h \
 			  scriptable_binary_data.h \
+			  scriptable_enumerator.h \
 			  scriptable_event.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
