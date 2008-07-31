@@ -60,12 +60,19 @@ class Backoff {
    */
   int GetFailureCount(const char *request);
 
+  enum ResultType {
+    SUCCESS,
+    EXPONENTIAL_BACKOFF,
+    CONSTANT_BACKOFF,
+  };
+
   /**
    * Indicate success or failure of a request. Always report after each
    * request to keep backoff data updated.
    * Returns @c true if the backoff data changed.
    */
-  bool ReportRequestResult(uint64_t now, const char *request, bool success);
+  bool ReportRequestResult(uint64_t now, const char *request,
+                           ResultType result_type);
 
   /**
    * Clear all backoff data (for testing only).
