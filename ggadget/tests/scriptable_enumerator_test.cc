@@ -43,6 +43,10 @@ class MyEnumeratable {
       *flag_ = true;
   }
 
+  void Destroy() {
+    delete this;
+  }
+
   bool AtEnd() {
     return *str_ == '\0';
   }
