@@ -54,8 +54,11 @@ static const Variant kOpenDefaultArgs[] = {
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
 
-static bool IsSuccessHTTPStatus(unsigned short status) {
-  return status >= 200 && status < 400;
+static Backoff::ResultType GetBackoffType(unsigned short status) {
+  // status == 0: network error, don't do exponential backoff.
+  return status == 0 ? Backoff::CONSTANT_BACKOFF :
+         status >= 200 && status < 400 ? Backoff::SUCCESS :
+         Backoff::EXPONENTIAL_BACKOFF;
 }
 
 // field-name     = token
@@ -765,7 +768,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       uint64_t now = main_loop_->GetCurrentTime();
       if (!aborting &&
           backoff_.ReportRequestResult(now, host_.c_str(),
-                                       IsSuccessHTTPStatus(status_))) {
+                                       GetBackoffType(status_))) {
         SaveBackoffData(now);
       }
       // The caller may call Open() again in the OnReadyStateChange callback,

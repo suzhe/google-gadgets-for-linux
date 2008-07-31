@@ -24,9 +24,9 @@
 namespace ggadget {
 
 // The basic interval of the Truncated Binary Exponential backoff algorithm.
-static const uint64_t kBaseInterval = 30000U; // 30 seconds.
+static const int kBaseInterval = 30000; // 30 seconds.
 // The maximum retry interval after repeated failures.
-static const uint64_t kMaxRetryInterval = 12U * 3600U * 1000U; // 12 hours.
+static const int kMaxRetryInterval = 4 * 3600 * 1000; // 4 hours.
 // Backoff entry will be removed it has not been requested for this interval.
 static const uint64_t kExpirationInterval = 24U * 3600U * 1000U; // 24 hours.
 
@@ -64,18 +64,34 @@ class Backoff::Impl {
     return it == backoff_info_map_.end() ? 0 : it->second.failure_count;
   }
 
-  static uint64_t GetNextRequestInterval(int failure_count) {
-    // wait_exp is failure_count - 3 .. failure_count result.
-    int wait_exp = failure_count - (rand() / (0xFFFF / 4)) % 4;
-    if (wait_exp <= 0)
-      return 0;
-    wait_exp = std::min(15, wait_exp);
-    return std::min(kMaxRetryInterval, kBaseInterval * (1 << (wait_exp - 1)));
+  // Return a value which is the input value +/- random(20%).
+  static int Randomize(int input) {
+    int variant = input * 20 / 100;
+    return std::max(0, input + (rand() % (variant * 2)) - variant);
   }
 
-  bool ReportRequestResult(uint64_t now, const char *request, bool success) {
+  static int GetNextRequestInterval(int failure_count, ResultType result_type) {
+    // Do not start backoff on the first two retries to tolerate some
+    // temporary failure or the case that the server returns failure code
+    // to let the client do something (e.g. refresh a security token).
+    if (failure_count <= 2)
+      return 0;
+
+    if (result_type == CONSTANT_BACKOFF)
+      return Randomize(kBaseInterval);
+
+    ASSERT(result_type == EXPONENTIAL_BACKOFF);
+    // wait_exp is failure_count - random(3 .. failure_count).
+    int wait_exp = failure_count - (rand() / (0xFFFF / 4)) % 4;
+    wait_exp = std::max(1, std::min(15, wait_exp));
+    return Randomize(std::min(kMaxRetryInterval,
+                              kBaseInterval * (1 << (wait_exp - 1))));
+  }
+
+  bool ReportRequestResult(uint64_t now, const char *request,
+                           ResultType result_type) {
     ASSERT(request);
-    if (success) {
+    if (result_type == SUCCESS) {
       BackoffInfoMap::iterator it = backoff_info_map_.find(request);
       if (it != backoff_info_map_.end()) {
         backoff_info_map_.erase(it);
@@ -85,8 +101,9 @@ class Backoff::Impl {
       BackoffInfo *backoff_info = &backoff_info_map_[request];
       backoff_info->failure_count++;
       backoff_info->last_failure_time = now;
-      backoff_info->next_try_time =
-          now + GetNextRequestInterval(backoff_info->failure_count);
+      backoff_info->result_type = result_type;
+      backoff_info->next_try_time = now + static_cast<uint64_t>(
+          GetNextRequestInterval(backoff_info->failure_count, result_type));
       return true;
     }
     return false;
@@ -102,9 +119,16 @@ class Backoff::Impl {
         if (sscanf(p + 1, "%ju\t%d\n",
                    &backoff_info.last_failure_time,
                    &backoff_info.failure_count) == 2) {
+          if (backoff_info.failure_count < 0) {
+            // Use negative failure_count to indicate constant backoff, so that
+            // compatibility of config file can be achived.
+            backoff_info.failure_count = -backoff_info.failure_count;
+            backoff_info.result_type = CONSTANT_BACKOFF;
+          }
           backoff_info.next_try_time =
               backoff_info.last_failure_time +
-              GetNextRequestInterval(backoff_info.failure_count);
+              static_cast<uint64_t>(GetNextRequestInterval(
+                  backoff_info.failure_count, backoff_info.result_type));
           if (backoff_info.next_try_time + kExpirationInterval > now)
             backoff_info_map_[request] = backoff_info;
           data = strchr(data, '\n');
@@ -127,8 +151,13 @@ class Backoff::Impl {
          it != backoff_info_map_.end(); ++it) {
       if (it->second.next_try_time + kExpirationInterval > now) {
         result.append(it->first);
+        int failure_count = it->second.failure_count;
+        // Use negative failure_count to indicate constant backoff, so that
+        // compatibility of config file can be achived.
+        if (it->second.result_type == CONSTANT_BACKOFF)
+          failure_count = -failure_count;
         result.append(StringPrintf("\t%ju\t%d\n", it->second.last_failure_time,
-                                   it->second.failure_count));
+                                   failure_count));
       }
     }
     return result;
@@ -136,10 +165,12 @@ class Backoff::Impl {
 
   struct BackoffInfo {
     BackoffInfo()
-        : last_failure_time(0), failure_count(0), next_try_time(0) { }
+        : last_failure_time(0), failure_count(0), next_try_time(0),
+          result_type(EXPONENTIAL_BACKOFF) { }
     uint64_t last_failure_time;
     int failure_count;
     uint64_t next_try_time;
+    ResultType result_type;
   };
 
   typedef std::map<std::string, BackoffInfo> BackoffInfoMap;
@@ -166,8 +197,8 @@ int Backoff::GetFailureCount(const char *request) {
 }
 
 bool Backoff::ReportRequestResult(uint64_t now, const char *request,
-                                  bool success) {
-  return impl_->ReportRequestResult(now, request, success);
+                                  ResultType result_type) {
+  return impl_->ReportRequestResult(now, request, result_type);
 }
 
 void Backoff::Clear() {
