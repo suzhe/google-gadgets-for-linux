@@ -74,6 +74,8 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
     return ResultVariant(return_value);
   }
 
+  JSScriptContext::MaybeGC(context_);
+
   ScopedLogContext log_context(GetJSScriptContext(context_));
   if (JS_IsExceptionPending(context_))
     return ResultVariant(return_value);
@@ -104,7 +106,6 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
         function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }
 
-  JSScriptContext::MaybeGC(context_);
   return ResultVariant(return_value);
 }
 
