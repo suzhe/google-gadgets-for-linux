@@ -440,9 +440,10 @@ class BasicElement::Impl {
     // Other values have already triggered position_changed_ when they were set.
     double parent_width = GetParentWidth();
     if (x_relative_) {
-      double new_x = px_ * parent_width;
+      // 'volatile' prevents the value of new_x from being used from registers,
+      // ensures the correct new_x != x_ comparison.
+      volatile double new_x = px_ * parent_width;
       if (new_x != x_) {
-        view_->AddElementToClipRegion(owner_, NULL);
         position_changed_ = true;
         x_ = new_x;
       }
@@ -450,9 +451,8 @@ class BasicElement::Impl {
       px_ = parent_width > 0.0 ? x_ / parent_width : 0.0;
     }
     if (width_relative_) {
-      double new_width = pwidth_ * parent_width;
+      volatile double new_width = pwidth_ * parent_width;
       if (new_width != width_) {
-        view_->AddElementToClipRegion(owner_, NULL);
         size_changed_ = true;
         width_ = new_width;
       }
@@ -462,9 +462,8 @@ class BasicElement::Impl {
 
     double parent_height = GetParentHeight();
     if (y_relative_) {
-      double new_y = py_ * parent_height;
+      volatile double new_y = py_ * parent_height;
       if (new_y != y_) {
-        view_->AddElementToClipRegion(owner_, NULL);
         position_changed_ = true;
         y_ = new_y;
       }
@@ -472,9 +471,8 @@ class BasicElement::Impl {
       py_ = parent_height > 0.0 ? y_ / parent_height : 0.0;
     }
     if (height_relative_) {
-      double new_height = pheight_ * parent_height;
+      volatile double new_height = pheight_ * parent_height;
       if (new_height != height_) {
-        view_->AddElementToClipRegion(owner_, NULL);
         size_changed_ = true;
         height_ = new_height;
       }
