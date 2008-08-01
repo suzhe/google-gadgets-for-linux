@@ -17,14 +17,10 @@
 ADD_DEFINITIONS(-DUNIT_TEST)
 
 MACRO(UNIT_TEST TEST_NAME)
-  ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
-  TARGET_LINK_LIBRARIES(${TEST_NAME} gtest ggadget ggadget-gtk)
+  ADD_TEST_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gtest ggadget ggadget-qt)
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)
 
-UNIT_TEST(cairo_canvas_test)
-UNIT_TEST(cairo_graphics_test)
-UNIT_TEST(basic_element_draw_test)
 UNIT_TEST(main_loop_test)
 
-TEST_RESOURCES(120day.png kitty419.jpg testmask.png base.png opaque.png)

@@ -28,7 +28,7 @@ SET(LIBS
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/third_party/editline)
 
 # General js_shell without custom objects.
-ADD_EXECUTABLE(js_shell
+ADD_TEST_EXECUTABLE(js_shell
   js_shell.cc
   init_custom_objects_stub.cc
 )
@@ -36,7 +36,7 @@ TARGET_LINK_LIBRARIES(js_shell ${LIBS})
 TEST_WRAPPER(js_shell)
 
 # Customized js_shell with test scriptables.
-ADD_EXECUTABLE(wrapper_test_shell
+ADD_TEST_EXECUTABLE(wrapper_test_shell
   js_shell.cc
   wrapper_test_shell.cc
   ${CMAKE_SOURCE_DIR}/ggadget/tests/scriptables.cc
@@ -49,12 +49,13 @@ STRING(REPLACE "-Wall" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 STRING(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 STRING(REPLACE "-Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-ADD_EXECUTABLE(cross_context_test cross_context_test.cc)
+ADD_TEST_EXECUTABLE(cross_context_test
+  cross_context_test.cc)
 TARGET_LINK_LIBRARIES(cross_context_test ${LIBS})
 TEST_WRAPPER(cross_context_test TRUE)
 
 # Customized js_shell for testing DOM.
-ADD_EXECUTABLE(dom_test_shell
+ADD_TEST_EXECUTABLE(dom_test_shell
   js_shell.cc
   dom_test_shell.cc
 )
@@ -66,7 +67,7 @@ JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)
 JS_TEST_WRAPPER(dom_test_shell dom1_test.js TRUE)
 
 IF(GGL_BUILD_LIBGGADGET_DBUS)
-ADD_EXECUTABLE(dbus_object_test_shell
+ADD_TEST_EXECUTABLE(dbus_object_test_shell
   js_shell.cc
   dbus_object_test_shell.cc
   ${CMAKE_SOURCE_DIR}/ggadget/tests/native_main_loop.cc)
