@@ -20,6 +20,10 @@ IF(WIN32)
     # TODO: not implemented yet.
   ENDMACRO(TEST_WRAPPER)
 ELSE(WIN32)
+  MACRO(ADD_TEST_EXECUTABLE target)
+    ADD_EXECUTABLE("${target}" EXCLUDE_FROM_ALL ${ARGN})
+  ENDMACRO(ADD_TEST_EXECUTABLE)
+
   MACRO(TEST_WRAPPER _wrappee_base)
     SET(TEST_WRAPPER_template ${CMAKE_SOURCE_DIR}/cmake/test_wrapper.sh)
     GET_TARGET_PROPERTY(TEST_WRAPPER_wrappee_location ${_wrappee_base} LOCATION)
@@ -53,6 +57,8 @@ ELSE(WIN32)
           -e "s,%%WRAPPEE_JS%%,${_wrappee_js},g"
           -e "s,%%CMAKE_SOURCE_DIR%%,${CMAKE_SOURCE_DIR},g"
           -e "s,%%CMAKE_CURRENT_SOURCE_DIR%%,${CMAKE_CURRENT_SOURCE_DIR},g"
+          -e "s,%%WRAPPEE_SHELL%%,${_wrappee_shell},g"
+          -e "s,%%CMAKE_CURRENT_BINARY_DIR%%,${CMAKE_CURRENT_BINARY_DIR},g"
           ${JS_TEST_WRAPPER_template}
           > ${JS_TEST_WRAPPER_output}
       COMMAND chmod +x ${JS_TEST_WRAPPER_output}

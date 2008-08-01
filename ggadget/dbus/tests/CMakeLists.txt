@@ -20,14 +20,14 @@ APPLY_CONFIG(PTHREAD)
 
 SET(LIBS gtest ggadget ggadget-dbus ${DBUS_LIBRARIES} ${PTHREAD_LIBRARIES})
 
-ADD_EXECUTABLE(dbus_test dbus_test.cc ../../tests/native_main_loop.cc)
+ADD_TEST_EXECUTABLE(dbus_test dbus_test.cc ../../tests/native_main_loop.cc)
 TARGET_LINK_LIBRARIES(dbus_test ${LIBS})
 TEST_WRAPPER(dbus_test TRUE)
 
-ADD_EXECUTABLE(dbus_marshaller_test dbus_marshaller_test.cc)
+ADD_TEST_EXECUTABLE(dbus_marshaller_test dbus_marshaller_test.cc)
 TARGET_LINK_LIBRARIES(dbus_marshaller_test ${LIBS})
 TEST_WRAPPER(dbus_marshaller_test TRUE)
 
-ADD_EXECUTABLE(dbus_result_receiver_test dbus_result_receiver_test.cc)
+ADD_TEST_EXECUTABLE(dbus_result_receiver_test dbus_result_receiver_test.cc)
 TARGET_LINK_LIBRARIES(dbus_result_receiver_test ${LIBS})
 TEST_WRAPPER(dbus_result_receiver_test TRUE)

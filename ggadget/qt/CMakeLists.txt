@@ -39,6 +39,8 @@ QT4_AUTOMOC(
   utilities.cc
 )
 
+ADD_SUBDIRECTORY(tests)
+
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})
 

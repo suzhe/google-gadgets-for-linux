@@ -30,7 +30,7 @@ SET(LIBS
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/third_party/editline)
 
 # General js_shell without custom objects.
-ADD_EXECUTABLE(js_shell
+ADD_TEST_EXECUTABLE(js_shell
   js_shell.cc
   init_custom_objects_stub.cc
 )
@@ -43,7 +43,7 @@ STRING(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 STRING(REPLACE "-Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Customized js_shell with test scriptables.
-ADD_EXECUTABLE(wrapper_test_shell
+ADD_TEST_EXECUTABLE(wrapper_test_shell
   js_shell.cc
   wrapper_test_shell.cc
   ${CMAKE_SOURCE_DIR}/ggadget/tests/scriptables.cc
@@ -52,15 +52,16 @@ TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
 TEST_WRAPPER(wrapper_test_shell)
 
 # Customized js_shell for testing DOM.
-ADD_EXECUTABLE(dom_test_shell
+ADD_TEST_EXECUTABLE(dom_test_shell
   js_shell.cc
   dom_test_shell.cc
 )
 TARGET_LINK_LIBRARIES(dom_test_shell ${LIBS})
 TEST_WRAPPER(dom_test_shell)
 
-# Cross Context 
-ADD_EXECUTABLE(cross_context_test cross_context_test.cc)
+# Cross Context
+ADD_TEST_EXECUTABLE(cross_context_test
+  cross_context_test.cc)
 TARGET_LINK_LIBRARIES(cross_context_test ${LIBS})
 TEST_WRAPPER(cross_context_test TRUE)
 
