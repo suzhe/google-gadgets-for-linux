@@ -59,7 +59,8 @@ static bool DecodeJSONString(const char *json_string, UTF16String *result) {
 class WebPage : public QWebPage {
   Q_OBJECT
  public:
-  WebPage(BrowserElement::Impl *url_handler) : QWebPage(), handler_(url_handler) {
+  WebPage(QObject *parent, BrowserElement::Impl *url_handler)
+      : QWebPage(parent), handler_(url_handler) {
 #if QT_VERSION >= 0x040400
     connect(this, SIGNAL(linkHovered(const QString &, const QString &,
                                      const QString &)),
@@ -94,7 +95,7 @@ class WebView : public QWebView {
   Q_OBJECT
  public:
   WebView(BrowserElement::Impl *owner) : owner_(owner) {
-    setPage(new WebPage(owner));
+    setPage(new WebPage(this, owner));
 #if QT_VERSION >= 0x040400
     page()->setLinkDelegationPolicy(QWebPage::DelegateExternalLinks);
     connect(this, SIGNAL(linkClicked(const QUrl&)),
@@ -126,6 +127,7 @@ class BrowserElement::Impl {
   }
 
   ~Impl() {
+    DLOG("delete browser_element: webview %p, parent %p", child_, parent_);
     if (parent_) {
       parent_->SetChild(NULL);
     }
@@ -192,7 +194,7 @@ class BrowserElement::Impl {
     std::string utf8str = "";
     ConvertStringUTF16ToUTF8(utf16str.c_str(), utf16str.length(), &utf8str);
 
-    DLOG("Content: %s", utf8str.c_str());
+    // DLOG("Content: %s", utf8str.c_str());
     child_->setContent(utf8str.c_str());
   }
 
@@ -234,7 +236,7 @@ QWebPage *WebPage::createWindow(
 
 void WebView::OnParentDestroyed(QObject *obj) {
   if (owner_->parent_ == obj) {
-    DLOG("Parent widget destroyed");
+    DLOG("Parent widget %p destroyed, this %p", obj, this);
     owner_->parent_ = NULL;
   }
 }
