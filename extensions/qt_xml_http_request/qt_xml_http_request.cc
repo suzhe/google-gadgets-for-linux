@@ -769,14 +769,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     QByteArray array = http_->readAll();
     response_body_.clear();
     response_body_.append(array.data(), array.length());
-#if _DEBUG
-    QTextStream out(stdout);
+
     DLOG("responseFinished: %d, %zu, %d",
          id,
          response_body_.length(),
          array.length());
-    DLOG("reponse: %s", response_body_.c_str());
-#endif
+    // DLOG("reponse: %s", response_body_.c_str());
     ChangeState(DONE);
   }
 
