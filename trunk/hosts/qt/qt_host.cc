@@ -338,6 +338,10 @@ class QtHost::Impl {
       delete gadget;
       return false;
     }
+
+    gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
+    gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
+
     GadgetInfo *info = new GadgetInfo(gadget);
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);

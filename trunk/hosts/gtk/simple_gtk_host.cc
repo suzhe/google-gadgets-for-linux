@@ -324,10 +324,11 @@ class SimpleGtkHost::Impl {
       return false;
     }
 
+    gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
+    gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
+
     if (gadgets_shown_)
       gadget->ShowMainView();
-
-    gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
 
     // If debug console is opened during view host creation, the title is
     // not set then because main view is not available. Set the title now.

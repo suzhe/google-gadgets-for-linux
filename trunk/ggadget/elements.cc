@@ -38,13 +38,11 @@ class Elements::Impl {
   Impl(ElementFactory *factory, BasicElement *owner, View *view)
       : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
-        scrollable_(false) {
+        scrollable_(false), element_removed_(false) {
     ASSERT(view);
   }
 
   ~Impl() {
-    // To prevent from calling owner_->QueueDraw();
-    owner_ = NULL;
     RemoveAllElements();
   }
 
@@ -119,19 +117,21 @@ class Elements::Impl {
     view_->OnElementRemove(*ite);
     delete *ite;
     children_.erase(ite);
+    element_removed_ = true;
     return true;
   }
 
   void RemoveAllElements() {
-    if (owner_)
-      owner_->QueueDraw();
-    for (Children::iterator ite = children_.begin();
-         ite != children_.end(); ++ite) {
-      view_->OnElementRemove(*ite);
-      delete *ite;
+    if (children_.size()) {
+      for (Children::iterator ite = children_.begin();
+           ite != children_.end(); ++ite) {
+        view_->OnElementRemove(*ite);
+        delete *ite;
+      }
+      Children v;
+      children_.swap(v);
+      element_removed_ = true;
     }
-    Children v;
-    children_.swap(v);
   }
 
   BasicElement *GetItem(const Variant &index_or_name) {
@@ -293,7 +293,7 @@ class Elements::Impl {
   void Layout() {
     Children::iterator it = children_.begin();
     Children::iterator end = children_.end();
-    bool need_update_extents = false;
+    bool need_update_extents = element_removed_;
     for (; it != end; ++it) {
       (*it)->Layout();
       if ((*it)->IsPositionChanged() || (*it)->IsSizeChanged())
@@ -318,6 +318,8 @@ class Elements::Impl {
       width_ = view_->GetWidth();
       height_ = view_->GetHeight();
     }
+
+    element_removed_ = false;
   }
 
   void Draw(CanvasInterface *canvas) {
@@ -392,6 +394,7 @@ class Elements::Impl {
   double width_;
   double height_;
   bool scrollable_;
+  bool element_removed_;
 };
 
 Elements::Elements(ElementFactory *factory,
@@ -489,6 +492,8 @@ bool Elements::RemoveElement(BasicElement *element) {
 
 void Elements::RemoveAllElements() {
   impl_->RemoveAllElements();
+  if (impl_->element_removed_)
+    impl_->owner_->QueueDraw();
 }
 
 void Elements::Layout() {

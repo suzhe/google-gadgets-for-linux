@@ -335,8 +335,9 @@ class ScrollBarElement::Impl {
 
 ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
                                    const char *name)
-    : BasicElement(parent, view, "scrollbar", name, false),
-      impl_(new Impl(this)) {
+  : BasicElement(parent, view, "scrollbar", name, false),
+    impl_(new Impl(this)) {
+  SetEnabled(true);
 }
 
 void ScrollBarElement::DoClassRegister() {
