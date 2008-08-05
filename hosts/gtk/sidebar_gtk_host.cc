@@ -1262,12 +1262,16 @@ class SideBarGtkHost::Impl {
       return false;
     }
 
-    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR || gadgets_shown_)
-      gadget->ShowMainView();
-
-    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR)
+    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
       it->second.main_decorator->SetDockEdge(
           sidebar_position_ == SIDEBAR_POSITION_RIGHT);
+      gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_DOCK));
+    } else {
+      gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
+    }
+
+    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR || gadgets_shown_)
+      gadget->ShowMainView();
 
     // If debug console is opened during view host creation, the title is
     // not set then because main view is not available. Set the title now.
@@ -1589,9 +1593,6 @@ class SideBarGtkHost::Impl {
     if (impl->auto_hide_source_) {
       g_source_remove(impl->auto_hide_source_);
       impl->auto_hide_source_ = 0;
-    }
-    if (widget == impl->sidebar_window_ && !impl->sidebar_->IsMinimized()) {
-      impl->ShowOrHideAllGadgets(true);
     }
     return FALSE;
   }

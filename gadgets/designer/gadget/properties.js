@@ -151,8 +151,13 @@ Properties.prototype = {
 
   SelectProperty: function(name) {
     var index = this.name_to_index_[name];
-    if (index !== undefined)
-      this.listbox_.selectedIndex = index;
+    if (index !== undefined) {
+      if (this.listbox_.selectedIndex != index) {
+        this.listbox_.selectedIndex = index;
+      } else {
+        this.OnSelectionChange();
+      }
+    }
   }
 };
 

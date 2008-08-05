@@ -564,10 +564,10 @@ EventResult GtkEditImpl::OnKeyEvent(const KeyboardEvent &event) {
   } else { // EVENT_KEY_PRESS
     if (keyval == GDK_Return || keyval == GDK_KP_Enter) {
       // If multiline_ is unset, just ignore new_line.
-      if (multiline_) EnterText("\n");
-    } else if (keyval == GDK_Tab) {
-      // The Tab key will likely be consumed by input method.
-      EnterText("\t");
+      if (multiline_)
+        EnterText("\n");
+      else
+        return EVENT_RESULT_UNHANDLED;
     } else {
       return EVENT_RESULT_UNHANDLED;
     }

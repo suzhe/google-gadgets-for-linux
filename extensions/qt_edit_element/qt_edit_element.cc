@@ -549,10 +549,10 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
   } else { // EVENT_KEY_PRESS
     if (keyval == Qt::Key_Return) {
       // If multiline_ is unset, just ignore new_line.
-      if (multiline_) EnterText("\n");
-    } else if (keyval == Qt::Key_Tab) {
-      // The Tab key will likely be consumed by input method.
-      EnterText("\t");
+      if (multiline_)
+        EnterText("\n");
+      else
+        return EVENT_RESULT_UNHANDLED;
     } else {
       return EVENT_RESULT_UNHANDLED;
     }

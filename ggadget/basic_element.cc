@@ -1315,7 +1315,10 @@ bool BasicElement::IsEnabled() const {
 }
 
 void BasicElement::SetEnabled(bool enabled) {
-  impl_->enabled_ = enabled;
+  if (impl_->enabled_ != enabled) {
+    impl_->enabled_ = enabled;
+    QueueDraw();
+  }
 }
 
 std::string BasicElement::GetName() const {

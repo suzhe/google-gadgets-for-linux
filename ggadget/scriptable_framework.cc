@@ -122,7 +122,7 @@ class ScriptableAudioclip : public ScriptableHelperDefault {
 class ScriptableAudio::Impl {
  public:
   Impl(AudioInterface *audio, Gadget *gadget)
-    : audio_(audio), gadget_(NULL) {
+    : audio_(audio), gadget_(gadget) {
   }
 
   ScriptableAudioclip *Open(const char *src, Slot *method) {
