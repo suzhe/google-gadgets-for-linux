@@ -166,7 +166,10 @@ class DrivesInterface {
 
  public:
   virtual int GetCount() const = 0;
-  virtual DriveInterface *GetItem(int index) = 0;
+  virtual bool AtEnd() = 0;
+  virtual DriveInterface *GetItem() = 0;
+  virtual void MoveFirst() = 0;
+  virtual void MoveNext() = 0;
 };
 
 /** IDrive. */
@@ -203,7 +206,10 @@ class FoldersInterface {
 
  public:
   virtual int GetCount() const = 0;
-  virtual FolderInterface *GetItem(int index) = 0;
+  virtual bool AtEnd() = 0;
+  virtual FolderInterface *GetItem() = 0;
+  virtual void MoveFirst() = 0;
+  virtual void MoveNext() = 0;
 };
 
 /** IFolder. */
@@ -250,7 +256,10 @@ class FilesInterface {
 
  public:
   virtual int GetCount() const = 0;
-  virtual FileInterface *GetItem(int index) = 0;
+  virtual bool AtEnd() = 0;
+  virtual FileInterface *GetItem() = 0;
+  virtual void MoveFirst() = 0;
+  virtual void MoveNext() = 0;
 };
 
 /** IFile. */

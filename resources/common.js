@@ -265,6 +265,10 @@ function Enumerator(coll) {
   if (coll.constructor != Array && typeof(coll.item) != "function")
     throw "Enumerator's argument must be either a JavaScript array" +
           " or an object providing item(integer) method.";
+  if (coll.count != undefined && coll.moveFirst != undefined &&
+      coll.moveNext != undefined && coll.item != undefined &&
+      coll.atEnd != undefined)
+    return coll;
 
   this.atEnd = function() {
     try {

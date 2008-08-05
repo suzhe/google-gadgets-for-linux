@@ -33,9 +33,11 @@ check_PROGRAMS		= perfmon_test \
                     power_test \
                     process_test \
                     filesystem_test \
-                    filesystem_folder_test \
-                    filesystem_file_test \
                     filesystem_textstream_test
+
+                    # TODO: temporarily disabled.
+                    #filesystem_folder_test
+                    #filesystem_file_test
 
 machine_test_SOURCES		= machine_test.cc
 memory_test_SOURCES     = memory_test.cc

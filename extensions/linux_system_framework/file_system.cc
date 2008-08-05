@@ -22,9 +22,8 @@
 #include <dirent.h>
 #include <vector>
 #include <iterator>
-
 #include "ggadget/string_utils.h"
-
+#include "ggadget/system_utils.h"
 #include "file_system.h"
 
 namespace ggadget {
@@ -77,7 +76,7 @@ static void InitFilePath(const char *filename,
   } else {
     // filename is in absolute path
     name = str_path.substr(last_index + 1,
-                            str_path.size() - last_index - 1);
+                           str_path.size() - last_index - 1);
     base = str_path.substr(0, last_index + 1);
     path = str_path;
   }
@@ -92,13 +91,12 @@ class Drives : public DrivesInterface {
   virtual void Destroy() { }
 
  public:
-  virtual int GetCount() const {
-    return 0;
-  }
-
-  virtual DriveInterface *GetItem(int index) {
-    return NULL;
-  }
+  virtual int GetCount() const { return 0; }
+  // TODO: finish these methods later.
+  virtual bool AtEnd() { return true; }
+  virtual DriveInterface *GetItem() { return NULL; }
+  virtual void MoveFirst() { }
+  virtual void MoveNext() { }
 };
 
 class Drive : public DriveInterface {
@@ -162,50 +160,6 @@ class Drive : public DriveInterface {
   virtual bool IsReady() {
     return false;
   }
-};
-
-class Files : public FilesInterface {
- public:
-  Files() {
-  }
-
-  virtual void Destroy() {
-    for (size_t i = 0; i < files_.size(); ++i) {
-      files_[i]->Destroy();
-      files_[i] = NULL;
-    }
-    files_.clear();
-    delete this;
-  }
-
- public:
-  virtual int GetCount() const {
-    return static_cast<int>(files_.size());
-  }
-
-  virtual FileInterface *GetItem(int index) {
-    if ((size_t)index < 0 || (size_t)index >= files_.size())
-      return NULL;
-    FileSystem filesytem;
-    return filesytem.GetFile(files_[index]->GetPath().c_str());
-  }
-
-  void AddItem(FileInterface *file_ptr) {
-    if (file_ptr)
-      files_.push_back(file_ptr);
-  }
-
-  void AddItems(FilesInterface *files_ptr) {
-    if (!files_ptr)
-      return;
-
-    for (int i = 0; i < files_ptr->GetCount(); ++i) {
-      files_.push_back(files_ptr->GetItem(i));
-    }
-  }
-
- private:
-  std::vector<FileInterface *> files_;
 };
 
 class File : public FileInterface {
@@ -423,53 +377,96 @@ class File : public FileInterface {
   FileSystem filesystem_;
 };
 
-/** IFolderCollection. */
-class Folders : public FoldersInterface {
+class Files : public FilesInterface {
  public:
-   Folders() {
-   }
+  Files(const char *path)
+      : path_(path),
+        dir_(NULL),
+        at_end_(true) {
+  }
 
-   virtual void Destroy() {
-     for (size_t i = 0; i < folders_.size(); ++i) {
-       folders_[i]->Destroy();
-       folders_[i] = NULL;
-     }
-     folders_.clear();
-     delete this;
-   }
+  ~Files() {
+    if (dir_)
+      closedir(dir_);
+  }
+
+  bool Init() {
+    if (dir_)
+      closedir(dir_);
+    dir_ = opendir(path_.c_str());
+    if (!dir_)
+      return false;
+    at_end_ = false;
+    MoveNext();
+    return true;
+  }
+
+  virtual void Destroy() {
+    delete this;
+  }
 
  public:
   virtual int GetCount() const {
-    return static_cast<int>(folders_.size());
+    int count = 0;
+    DIR *dir = opendir(path_.c_str());
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+        continue;
+      struct stat stat_value;
+      memset(&stat_value, 0, sizeof(stat_value));
+      std::string filename = ggadget::BuildFilePath(path_.c_str(),
+                                                    entry->d_name,
+                                                    NULL);
+      if (::stat(filename.c_str(), &stat_value) == 0) {
+        if (!S_ISDIR(stat_value.st_mode))
+          ++count;
+      }
+    }
+    closedir(dir);
+    return count;
   }
 
-  virtual FolderInterface *GetItem(int index) {
-    if (index < 0 || (size_t)index >= folders_.size())
+  virtual bool AtEnd() {
+    return at_end_;
+  }
+
+  virtual FileInterface *GetItem() {
+    if (current_file_.empty())
       return NULL;
-    FileSystem filesytem;
-    return filesytem.GetFolder(folders_[index]->GetPath().c_str());
+    return new File(current_file_.c_str());
   }
 
-  void AddItem(FolderInterface *folder_ptr) {
-    if (folder_ptr) {
-      FileSystem filesytem;
-      // the added item will be destroyed in destructor
-      folders_.push_back(filesytem.GetFolder(folder_ptr->GetPath().c_str()));
-    }
+  virtual void MoveFirst() {
+    Init();
   }
 
-  void AddItems(FoldersInterface *folders_ptr) {
-    if (!folders_ptr)
-      return;
-
-    for (int i = 0; i < folders_ptr->GetCount(); ++i) {
-      // the added item will be destroyed in destructor
-      folders_.push_back(folders_ptr->GetItem(i));
+  virtual void MoveNext() {
+    struct dirent *entry;
+    while ((entry = readdir(dir_)) != NULL) {
+      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+        continue;
+      struct stat stat_value;
+      memset(&stat_value, 0, sizeof(stat_value));
+      std::string filename = ggadget::BuildFilePath(path_.c_str(),
+                                                    entry->d_name,
+                                                    NULL);
+      if (::stat(filename.c_str(), &stat_value) == 0) {
+        if (!S_ISDIR(stat_value.st_mode)) {
+          current_file_ = filename;
+          return;
+        }
+      }
     }
+    at_end_ = true;
+    return;
   }
 
  private:
-  std::vector<FolderInterface *> folders_;
+  std::string path_;
+  DIR *dir_;
+  bool at_end_;
+  std::string current_file_;
 };
 
 static void InitFolder(const char *filename,
@@ -497,6 +494,94 @@ static void InitFolder(const char *filename,
       return;
   }
 }
+
+class Folders : public FoldersInterface {
+ public:
+  Folders(const char *path)
+      : path_(path),
+        dir_(NULL),
+        at_end_(true) {
+  }
+
+  ~Folders() {
+    if (dir_)
+      closedir(dir_);
+  }
+
+  bool Init() {
+    if (dir_)
+      closedir(dir_);
+    dir_ = opendir(path_.c_str());
+    if (!dir_)
+      return false;
+    at_end_ = false;
+    MoveNext();
+    return true;
+  }
+
+  virtual void Destroy() {
+    delete this;
+  }
+
+ public:
+  virtual int GetCount() const {
+    int count = 0;
+    DIR *dir = opendir(path_.c_str());
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+        continue;
+      struct stat stat_value;
+      memset(&stat_value, 0, sizeof(stat_value));
+      std::string filename = ggadget::BuildFilePath(path_.c_str(),
+                                                    entry->d_name,
+                                                    NULL);
+      if (::stat(filename.c_str(), &stat_value) == 0) {
+        if (S_ISDIR(stat_value.st_mode))
+          ++count;
+      }
+    }
+    closedir(dir);
+    return count;
+  }
+
+  virtual bool AtEnd() {
+    return at_end_;
+  }
+
+  virtual FolderInterface *GetItem();
+
+  virtual void MoveFirst() {
+    Init();
+  }
+
+  virtual void MoveNext() {
+    struct dirent *entry;
+    while ((entry = readdir(dir_)) != NULL) {
+      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+        continue;
+      struct stat stat_value;
+      memset(&stat_value, 0, sizeof(stat_value));
+      std::string filename = ggadget::BuildFilePath(path_.c_str(),
+                                                    entry->d_name,
+                                                    NULL);
+      if (::stat(filename.c_str(), &stat_value) == 0) {
+        if (S_ISDIR(stat_value.st_mode)) {
+          current_file_ = filename;
+          return;
+        }
+      }
+    }
+    at_end_ = true;
+    return;
+  }
+
+ private:
+  std::string path_;
+  DIR *dir_;
+  bool at_end_;
+  std::string current_file_;
+};
 
 class Folder : public FolderInterface {
  public:
@@ -703,20 +788,23 @@ class Folder : public FolderInterface {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
         continue;
 
-      if (entry->d_type == DT_DIR) {
-        // sum up the folder's size
-        std::string foldername = filesystem_.BuildPath(path_.c_str(),
-                                                       entry->d_name);
-        FolderInterface *folder = filesystem_.GetFolder(foldername.c_str());
-        size += folder->GetSize();
-        folder->Destroy();
-      } else {
-        // sum up the file's size
-        std::string filename = filesystem_.BuildPath(path_.c_str(),
-                                                     entry->d_name);
-        FileInterface *file = filesystem_.GetFile(filename.c_str());
-        size += file->GetSize();
-        file->Destroy();
+      struct stat stat_value;
+      memset(&stat_value, 0, sizeof(stat_value));
+      std::string filename = ggadget::BuildFilePath(path_.c_str(),
+                                                    entry->d_name,
+                                                    NULL);
+      if (::stat(filename.c_str(), &stat_value) == 0) {
+        if (S_ISDIR(stat_value.st_mode)) {
+          // sum up the folder's size
+          FolderInterface *folder = filesystem_.GetFolder(filename.c_str());
+          size += folder->GetSize();
+          folder->Destroy();
+        } else {
+          // sum up the file's size
+          FileInterface *file = filesystem_.GetFile(filename.c_str());
+          size += file->GetSize();
+          file->Destroy();
+        }
       }
     }
 
@@ -733,43 +821,11 @@ class Folder : public FolderInterface {
       return NULL;
 
     // creates the Folders instance
-    Folders* folders_ptr = new Folders();
-
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-
-    dir = opendir(path_.c_str());
-    if (!dir)
-      return false;
-
-    while ((entry = readdir(dir)) != NULL) {
-      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-        continue;
-
-      if (entry->d_type == DT_DIR) {
-        // sum up the folder's size
-        std::string foldername = filesystem_.BuildPath(path_.c_str(),
-                                                       entry->d_name);
-        // needn't delete folder_ptr
-        FolderInterface *folder_ptr =
-          filesystem_.GetFolder(foldername.c_str());
-
-        // add the current folder
-        folders_ptr->AddItem(folder_ptr);
-
-        FoldersInterface *subfolders_ptr = folder_ptr->GetSubFolders();
-
-        // add all the sub-folders of current folder
-        folders_ptr->AddItems(subfolders_ptr);
-
-        // destroy the folders points (its elements needn't to be detroyed)
-        subfolders_ptr->Destroy();
-      }
-    }
-
-    closedir(dir);
-
-    return folders_ptr;
+    Folders* folders_ptr = new Folders(path_.c_str());
+    if (folders_ptr->Init())
+      return folders_ptr;
+    folders_ptr->Destroy();
+    return NULL;
   }
 
   virtual FilesInterface *GetFiles() {
@@ -779,47 +835,12 @@ class Folder : public FolderInterface {
     if (!filesystem_.FolderExists(path_.c_str()))
       return NULL;
 
-    // creates the Files instance
-    Files* files_ptr = new Files();
-
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-
-    dir = opendir(path_.c_str());
-    if (!dir)
-      return false;
-
-    while ((entry = readdir(dir)) != NULL) {
-      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-        continue;
-
-      if (entry->d_type == DT_DIR) {
-        // sum up the files' size in the subfolders
-        std::string foldername = filesystem_.BuildPath(path_.c_str(),
-                                                               entry->d_name);
-        FolderInterface *folder = filesystem_.GetFolder(foldername.c_str());
-        FilesInterface *subfiles = folder->GetFiles();
-
-        // add all the files in subfolders
-        files_ptr->AddItems(subfiles);
-
-        subfiles->Destroy();
-        folder->Destroy();
-      } else {
-        // sum up the file's size
-        std::string filename = filesystem_.BuildPath(path_.c_str(),
-                                                       entry->d_name);
-        // needn't delete file_ptr
-        FileInterface *file_ptr = filesystem_.GetFile(filename.c_str());
-
-        // add the current file
-        files_ptr->AddItem(file_ptr);
-      }
-    }
-
-    closedir(dir);
-
-    return files_ptr;
+    // Creates the Files instance.
+    Files* files_ptr = new Files(path_.c_str());
+    if (files_ptr->Init())
+      return files_ptr;
+    files_ptr->Destroy();
+    return NULL;
   }
 
   virtual TextStreamInterface *CreateTextFile(const char *filename,
@@ -851,7 +872,11 @@ class Folder : public FolderInterface {
   FileSystem filesystem_;
 };
 
-
+FolderInterface *Folders::GetItem() {
+  if (current_file_.empty())
+    return NULL;
+  return new Folder(current_file_.c_str());
+}
 
 class TextStream : public TextStreamInterface {
  public:
@@ -931,8 +956,6 @@ class TextStream : public TextStreamInterface {
       }
       result = result + std::string(buffer);
     }
-
-
 
     // update member variable line_ and column_
     UpdateLineAndColumn(result.c_str());
