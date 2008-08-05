@@ -33,17 +33,18 @@ namespace ggadget {
  *   void Destroy();
  *   bool AtEnd();
  *   ItemType GetItem();
- *   bool MoveFirst();
- *   bool MoveNext();
+ *   void MoveFirst();
+ *   void MoveNext();
  * };
  * </code>
  */
-template <typename E, typename Wrapper, uint64_t ClassId>
+template <typename E, typename Wrapper, typename Param, uint64_t ClassId>
 class ScriptableEnumerator : public SharedScriptable<ClassId> {
  public:
   ScriptableEnumerator(ScriptableInterface *owner,
-                       E *enumerator)
-      : enumerator_(enumerator), owner_(owner) {
+                       E *enumerator,
+                       Param param)
+      : owner_(owner), enumerator_(enumerator), param_(param) {
     ASSERT(enumerator);
     ASSERT(owner);
     owner_->Ref();
@@ -55,31 +56,38 @@ class ScriptableEnumerator : public SharedScriptable<ClassId> {
   }
 
   Wrapper *GetItem() {
-    return new Wrapper(this->enumerator_->GetItem());
+    return (this->enumerator_->GetItem() != NULL) ?
+      new Wrapper(this->enumerator_->GetItem(), param_) : NULL;
   }
 
  protected:
   virtual void DoClassRegister() {
     RegisterMethod("atEnd",
                    NewSlot(&E::AtEnd,
-                           &ScriptableEnumerator<E, Wrapper, ClassId>
+                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
                                ::enumerator_));
     RegisterMethod("moveFirst",
                    NewSlot(&E::MoveFirst,
-                           &ScriptableEnumerator<E, Wrapper, ClassId>
+                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
                                ::enumerator_));
     RegisterMethod("moveNext",
                    NewSlot(&E::MoveNext,
-                           &ScriptableEnumerator<E, Wrapper, ClassId>
+                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
                                ::enumerator_));
     RegisterMethod("item",
-                   NewSlot(&ScriptableEnumerator<E, Wrapper, ClassId>
+                   NewSlot(&ScriptableEnumerator<E, Wrapper, Param, ClassId>
                                ::GetItem));
+    RegisterProperty("count",
+                     NewSlot(&E::GetCount,
+                             &ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                                 ::enumerator_),
+                     NULL);
   }
-  E *enumerator_;
 
  private:
   ScriptableInterface *owner_;
+  E *enumerator_;
+  Param param_;
 };
 
 } // namespace ggadget

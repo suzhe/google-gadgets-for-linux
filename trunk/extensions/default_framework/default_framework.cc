@@ -169,7 +169,10 @@ class DefaultDrives : public DrivesInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetCount() const { return 0; }
-  virtual DriveInterface *GetItem(int index) { return NULL; }
+  virtual bool AtEnd() { return true; }
+  virtual DriveInterface *GetItem() { return NULL; }
+  virtual void MoveFirst() { }
+  virtual void MoveNext() { }
 };
 
 class DefaultDrive : public DriveInterface {
@@ -195,7 +198,10 @@ class DefaultFolders : public FoldersInterface {
  public:
   virtual void Destroy() { }
   virtual int GetCount() const { return 0; }
-  virtual FolderInterface *GetItem(int index) { return NULL; }
+  virtual bool AtEnd() { return true; }
+  virtual FolderInterface *GetItem() { return NULL; }
+  virtual void MoveFirst() { }
+  virtual void MoveNext() { }
 };
 
 class DefaultFolder : public FolderInterface {
@@ -231,7 +237,10 @@ class DefaultFiles : public FilesInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetCount() const { return 0; }
-  virtual FileInterface *GetItem(int index) { return NULL; }
+  virtual bool AtEnd() { return true; }
+  virtual FileInterface *GetItem() { return NULL; }
+  virtual void MoveFirst() { }
+  virtual void MoveNext() { }
 };
 
 class DefaultFile : public FileInterface {

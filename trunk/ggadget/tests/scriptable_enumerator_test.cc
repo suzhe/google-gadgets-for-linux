@@ -55,17 +55,13 @@ class MyEnumeratable {
     return MyItem(*str_);
   }
 
-  bool MoveFirst() {
+  void MoveFirst() {
     str_ = start_;
-    return true;
   }
 
-  bool MoveNext() {
-    if (*str_) {
-      return *(++str_) != 0;
-    } else {
-      return false;
-    }
+  void MoveNext() {
+    if (*str_)
+      ++str_;
   }
 
  private:
@@ -78,7 +74,7 @@ class MyItemWrapper : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x33dff5245c8811dd, ScriptableInterface);
 
-  MyItemWrapper(MyItem item) : data_(item.GetValue()) {
+  MyItemWrapper(MyItem item, int) : data_(item.GetValue()) {
   }
 
   Variant GetValue() {
@@ -100,15 +96,18 @@ TEST(ScriptableEnumeratorTest, CreateAndDestroy) {
   base->Ref();
   ggadget::ScriptableEnumerator<MyEnumeratable,
                                 MyItemWrapper,
+                                int,
                                 UINT64_C(0x09129e0a5c6011dd)> *enumerator =
                                     new ggadget::ScriptableEnumerator<
                                         MyEnumeratable,
                                         MyItemWrapper,
+                                        int,
                                         UINT64_C(0x09129e0a5c6011dd)>(
                                             base,
                                             new MyEnumeratable(
                                                 "test",
-                                                &removed));
+                                                &removed),
+                                            0);
   enumerator->Ref();
 
   enumerator->Unref();
@@ -119,6 +118,7 @@ TEST(ScriptableEnumeratorTest, CreateAndDestroy) {
 
 char GetItem(ggadget::ScriptableEnumerator<MyEnumeratable,
                                            MyItemWrapper,
+                                           int,
                                            UINT64_C(0x09129e0a5c6011dd)> *e) {
   Variant get_item;
   EXPECT_TRUE(e->GetPropertyInfo("item", &get_item) ==
@@ -142,38 +142,33 @@ char GetItem(ggadget::ScriptableEnumerator<MyEnumeratable,
   return data;
 }
 
-bool MoveFirst(ggadget::ScriptableEnumerator<MyEnumeratable,
+void MoveFirst(ggadget::ScriptableEnumerator<MyEnumeratable,
                                              MyItemWrapper,
+                                             int,
                                              UINT64_C(0x09129e0a5c6011dd)> *e) {
   Variant move_first;
   EXPECT_TRUE(e->GetPropertyInfo("moveFirst", &move_first) ==
                   ggadget::ScriptableInterface::PROPERTY_METHOD);
   EXPECT_TRUE(move_first.type() == Variant::TYPE_SLOT);
   // Calls the method.
-  ResultVariant result =
-      VariantValue<Slot *>()(move_first)->Call(e, 0, NULL);
-  // Retrieves the wrapper.
-  bool data = VariantValue<bool>()(result.v());
-  return data;
+  VariantValue<Slot *>()(move_first)->Call(e, 0, NULL);
 }
 
-bool MoveNext(ggadget::ScriptableEnumerator<MyEnumeratable,
+void MoveNext(ggadget::ScriptableEnumerator<MyEnumeratable,
                                             MyItemWrapper,
+                                            int,
                                             UINT64_C(0x09129e0a5c6011dd)> *e) {
   Variant move_next;
   EXPECT_TRUE(e->GetPropertyInfo("moveNext", &move_next) ==
                   ggadget::ScriptableInterface::PROPERTY_METHOD);
   EXPECT_TRUE(move_next.type() == Variant::TYPE_SLOT);
   // Calls the method.
-  ResultVariant result =
-      VariantValue<Slot *>()(move_next)->Call(e, 0, NULL);
-  // Retrieves the wrapper.
-  bool data = VariantValue<bool>()(result.v());
-  return data;
+  VariantValue<Slot *>()(move_next)->Call(e, 0, NULL);
 }
 
 bool AtEnd(ggadget::ScriptableEnumerator<MyEnumeratable,
                                          MyItemWrapper,
+                                         int,
                                          UINT64_C(0x09129e0a5c6011dd)> *e) {
   Variant at_end;
   EXPECT_TRUE(e->GetPropertyInfo("atEnd", &at_end) ==
@@ -192,38 +187,39 @@ TEST(ScriptableEnumeratorTest, Enumerate) {
   base->Ref();
   ggadget::ScriptableEnumerator<MyEnumeratable,
                                 MyItemWrapper,
+                                int,
                                 UINT64_C(0x09129e0a5c6011dd)> *enumerator =
                                     new ggadget::ScriptableEnumerator<
                                         MyEnumeratable,
                                         MyItemWrapper,
+                                        int,
                                         UINT64_C(0x09129e0a5c6011dd)>(
                                             base,
                                             new MyEnumeratable(
                                                 "test",
-                                                NULL));
+                                                NULL),
+                                            0);
   enumerator->Ref();
 
   EXPECT_FALSE(AtEnd(enumerator));
   EXPECT_EQ('t', GetItem(enumerator));
 
-  EXPECT_TRUE(MoveNext(enumerator));
+  MoveNext(enumerator);
   EXPECT_FALSE(AtEnd(enumerator));
   EXPECT_EQ('e', GetItem(enumerator));
 
-  EXPECT_TRUE(MoveNext(enumerator));
+  MoveNext(enumerator);
   EXPECT_FALSE(AtEnd(enumerator));
   EXPECT_EQ('s', GetItem(enumerator));
 
-  EXPECT_TRUE(MoveNext(enumerator));
+  MoveNext(enumerator);
   EXPECT_FALSE(AtEnd(enumerator));
   EXPECT_EQ('t', GetItem(enumerator));
 
-  EXPECT_FALSE(MoveNext(enumerator));
+  MoveNext(enumerator);
   EXPECT_TRUE(AtEnd(enumerator));
 
-  EXPECT_FALSE(MoveNext(enumerator));
-
-  EXPECT_TRUE(MoveFirst(enumerator));
+  MoveFirst(enumerator);
   EXPECT_FALSE(AtEnd(enumerator));
   EXPECT_EQ('t', GetItem(enumerator));
 

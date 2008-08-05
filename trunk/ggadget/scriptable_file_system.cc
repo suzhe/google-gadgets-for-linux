@@ -15,6 +15,7 @@
 */
 
 #include "scriptable_file_system.h"
+#include "scriptable_enumerator.h"
 #include "file_system_interface.h"
 #include "scriptable_array.h"
 #include "string_utils.h"
@@ -24,42 +25,6 @@
 namespace ggadget {
 
 namespace framework {
-
-template <typename Wrapper, typename Collection, typename Owner>
-class ScriptableCollection : public ScriptableHelperDefault {
- public:
-  DEFINE_CLASS_ID(0xad83bfee5d1b11dd, ScriptableInterface);
-
-  ScriptableCollection(Collection *collection, Owner *owner)
-      : collection_(collection), owner_(owner) {
-  }
-
-  ~ScriptableCollection() {
-    collection_->Destroy();
-  }
-
-  Variant GetItem(int index) {
-    return index >= 0 && index < collection_->GetCount() ?
-        Variant(new Wrapper(collection_->GetItem(index), owner_)) : Variant();
-  }
-
- protected:
-  virtual void DoClassRegister() {
-    RegisterProperty(
-        "count",
-        NewSlot(&Collection::GetCount,
-                &ScriptableCollection<Wrapper, Collection, Owner>::collection_),
-        NULL);
-    RegisterMethod(
-        "item",
-        NewSlot(&ScriptableCollection<Wrapper, Collection, Owner>::GetItem));
-  }
-
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptableCollection);
-  Collection *collection_;
-  Owner *owner_;
-};
 
 // Default args for File.Delete() and Folder.Delete().
 static const Variant kDeleteDefaultArgs[] = {
@@ -367,9 +332,12 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetSubFolders"));
         return NULL;
       }
-      return new ScriptableCollection<ScriptableFolder,
-                                      FoldersInterface,
-                                      Impl>(folders, impl_);
+      return new ScriptableEnumerator<FoldersInterface,
+                                      ScriptableFolder,
+                                      Impl *,
+                                      UINT64_C(0x6d148a105ed311dd)>(this,
+                                                                    folders,
+                                                                    impl_);
     }
 
     ScriptableInterface *GetFiles() {
@@ -378,9 +346,12 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Folder.GetFiles"));
         return NULL;
       }
-      return new ScriptableCollection<ScriptableFile,
-                                      FilesInterface,
-                                      Impl>(files, impl_);
+      return new ScriptableEnumerator<FilesInterface,
+                                      ScriptableFile,
+                                      Impl *,
+                                      UINT64_C(0x6d148a105ed311dd)>(this,
+                                                                    files,
+                                                                    impl_);
     }
 
     ScriptableTextStream *CreateTextFile(const char *filename,
@@ -537,9 +508,12 @@ class ScriptableFileSystem::Impl {
           "FileSystem.GetDrives"));
       return NULL;
     }
-    return new ScriptableCollection<ScriptableDrive,
-                                    DrivesInterface,
-                                    Impl>(drives, this);
+    return new ScriptableEnumerator<DrivesInterface,
+                                    ScriptableDrive,
+                                    Impl *,
+                                    UINT64_C(0x98e7d3665ed011dd)>(owner_,
+                                                                  drives,
+                                                                  this);
   }
 
   ScriptableDrive *GetDrive(const char *drive_spec) {
