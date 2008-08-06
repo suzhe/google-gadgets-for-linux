@@ -22,6 +22,7 @@
 #include <dirent.h>
 #include <vector>
 #include <iterator>
+#include <errno.h>
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
 #include "file_system.h"
@@ -394,8 +395,9 @@ class Files : public FilesInterface {
     if (dir_)
       closedir(dir_);
     dir_ = opendir(path_.c_str());
-    if (!dir_)
-      return false;
+    if (dir_ == NULL) {
+      return errno == EACCES;
+    }
     at_end_ = false;
     MoveNext();
     return true;
@@ -409,6 +411,8 @@ class Files : public FilesInterface {
   virtual int GetCount() const {
     int count = 0;
     DIR *dir = opendir(path_.c_str());
+    if (dir == NULL)
+        return 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
@@ -442,6 +446,8 @@ class Files : public FilesInterface {
   }
 
   virtual void MoveNext() {
+    if (dir_ == NULL)
+        return;
     struct dirent *entry;
     while ((entry = readdir(dir_)) != NULL) {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
@@ -512,8 +518,9 @@ class Folders : public FoldersInterface {
     if (dir_)
       closedir(dir_);
     dir_ = opendir(path_.c_str());
-    if (!dir_)
-      return false;
+    if (dir_ == NULL) {
+      return errno == EACCES;
+    }
     at_end_ = false;
     MoveNext();
     return true;
@@ -527,6 +534,8 @@ class Folders : public FoldersInterface {
   virtual int GetCount() const {
     int count = 0;
     DIR *dir = opendir(path_.c_str());
+    if (dir == NULL)
+        return 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
@@ -556,6 +565,8 @@ class Folders : public FoldersInterface {
   }
 
   virtual void MoveNext() {
+    if (dir_ == NULL)
+        return;
     struct dirent *entry;
     while ((entry = readdir(dir_)) != NULL) {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
@@ -781,8 +792,8 @@ class Folder : public FolderInterface {
     struct dirent *entry = NULL;
 
     dir = opendir(path_.c_str());
-    if (!dir)
-      return false;
+    if (dir == NULL)
+      return 0;
 
     while ((entry = readdir(dir)) != NULL) {
       if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
