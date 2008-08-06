@@ -36,6 +36,8 @@
 #include "xml_http_request_interface.h"
 #include "xml_utils.h"
 #include "string_utils.h"
+#include "permissions.h"
+#include "system_utils.h"
 
 namespace ggadget {
 
@@ -60,7 +62,7 @@ class ScriptableView::Impl {
     if (script_context_) {
       script_context_->SetGlobalObject(&global_object_);
       script_context_->RegisterClass("DOMDocument",
-          NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
+          NewSlot(this, &Impl::CreateDOMDocument));
       script_context_->RegisterClass("XMLHttpRequest",
           NewSlot(view->GetGadget(), &Gadget::CreateXMLHttpRequest));
       script_context_->RegisterClass("DetailsView",
@@ -259,6 +261,33 @@ class ScriptableView::Impl {
       }
     }
     return true;
+  }
+
+  // Create a customized DOMDocument object with optional "load()" method,
+  // for microsoft compatibility.
+  DOMDocumentInterface *CreateDOMDocument() {
+    DOMDocumentInterface *dom = GetXMLParser()->CreateDOMDocument();
+    // Register "load" method if has required permission.
+    if (view_->GetGadget()->GetPermissions()->IsRequiredAndGranted(
+        Permissions::FILE_READ) && dom) {
+      RegisterableInterface *registerable = dom->GetRegisterable();
+      if (registerable) {
+        registerable->RegisterMethod("load", NewSlot(LoadXMLFromFile, dom));
+      } else {
+        DLOG("Can't register load() method to DOMDocument object.");
+      }
+    }
+    return dom;
+  }
+
+  // To emulate Microsoft XMLDOM's load() method.
+  // Only supports loading xml from local file.
+  // TODO: Is it necessary to support remote URL?
+  static bool LoadXMLFromFile(const char *file, DOMDocumentInterface *dom) {
+    std::string xml;
+    if (IsAbsolutePath(file) && ReadFileContents(file, &xml) && xml.length())
+      return dom->LoadXML(xml.c_str());
+    return false;
   }
 
   ScriptableView *owner_;

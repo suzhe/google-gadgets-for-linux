@@ -302,5 +302,39 @@ function VBArray(array) {
   this.toArray = function() { return array; };
 }
 
+// Emulates some popular ActiveX objects
+// "Microsoft.XMLHTTP"
+// "Microsoft.XMLDOM"
+// "Shell.Application"
+// "WScript.Shell"
+// "Scripting.FileSystemObject"
+// "Msxml.DOMDocument"
+// "Msxml2.ServerXMLHTTP.3.0"
+// "Msxml2.DOMDocument.3.0"
+function ActiveXObject(name) {
+  var openUrl = function (url) {
+    debug.trace("Open URL by ActiveX object:" + url);
+    framework.openUrl(url);
+  }
+  name = name.toLowerCase();
+  debug.trace("new ActiveXObject: " + name);
+  if (name == "shell.application") {
+    this.open = openUrl;
+    this.Open = openUrl;
+    this.ShellExecute = openUrl;
+    this.shellExecute = openUrl;
+    this.shellexecute = openUrl;
+  } else if (name == "wscript.shell") {
+    this.Run = openUrl;
+    this.run = openUrl;
+  } else if (name == "scripting.filesystemobject") {
+    return framework.system.filesystem;
+  } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmlhttp|serverxmlhttp)/)) {
+    return new XMLHttpRequest();
+  } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmldom|domdocument)/)) {
+    return new DOMDocument();
+  }
+}
+
 // Date.prototype.getVarDate() and Array.prototype.toArray() are defined in
 // C++ programs to avoid the methods from being enumerated.

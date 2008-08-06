@@ -450,13 +450,13 @@ class ViewWidgetBinder::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     int delta_x = 0, delta_y = 0;
     if (event->direction == GDK_SCROLL_UP) {
-      delta_y = -MouseEvent::kWheelDelta;
-    } else if (event->direction == GDK_SCROLL_DOWN) {
       delta_y = MouseEvent::kWheelDelta;
+    } else if (event->direction == GDK_SCROLL_DOWN) {
+      delta_y = -MouseEvent::kWheelDelta;
     } else if (event->direction == GDK_SCROLL_LEFT) {
-      delta_x = -MouseEvent::kWheelDelta;
-    } else if (event->direction == GDK_SCROLL_RIGHT) {
       delta_x = MouseEvent::kWheelDelta;
+    } else if (event->direction == GDK_SCROLL_RIGHT) {
+      delta_x = -MouseEvent::kWheelDelta;
     }
 
     MouseEvent e(Event::EVENT_MOUSE_WHEEL,
