@@ -51,6 +51,10 @@
 
 namespace ggadget {
 
+// Maximum allowed idle time (in milliseconds) after user interaction.
+// IsInUserInteraction() returns true within this idle time.
+static const uint64_t kMaxAllowedUserInteractionIdleTime = 10000;
+
 class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
@@ -159,7 +163,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         in_user_interaction_(false),
         remove_me_timer_(0),
-        debug_console_config_(debug_console_config) {
+        debug_console_config_(debug_console_config),
+        last_user_interaction_time_(0) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -860,7 +865,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool SetInUserInteraction(bool in_user_interaction) {
     bool old_value = in_user_interaction_;
     in_user_interaction_ = in_user_interaction;
+    // Record time when ending user interaction.
+    if (old_value && !in_user_interaction_) {
+      last_user_interaction_time_ = GetGlobalMainLoop()->GetCurrentTime();
+    }
     return old_value;
+  }
+
+  bool IsInUserInteraction() {
+    uint64_t now = GetGlobalMainLoop()->GetCurrentTime();
+    return in_user_interaction_ || (now - last_user_interaction_time_) <=
+        kMaxAllowedUserInteractionIdleTime;
   }
 
   bool OpenURL(const char *url) {
@@ -971,6 +986,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool in_user_interaction_;
   int remove_me_timer_;
   int debug_console_config_;
+  uint64_t last_user_interaction_time_;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -1118,7 +1134,7 @@ bool Gadget::SetInUserInteraction(bool in_user_interaction) {
 }
 
 bool Gadget::IsInUserInteraction() const {
-  return impl_->in_user_interaction_;
+  return impl_->IsInUserInteraction();
 }
 
 bool Gadget::OpenURL(const char *url) const {

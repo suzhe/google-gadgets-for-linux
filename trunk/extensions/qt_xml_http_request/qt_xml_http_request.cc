@@ -240,7 +240,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     std::string path = "/";
     size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
-    if (sep > 0) path = url_.substr(sep);
+    if (sep != std::string::npos) path = url_.substr(sep);
 
     request_header_ = new QHttpRequestHeader(method, path.c_str());
     request_header_->setValue("Host", host_.c_str());

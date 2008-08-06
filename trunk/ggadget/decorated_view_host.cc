@@ -808,6 +808,7 @@ class DecoratedViewHost::Impl {
     }
 
     virtual EventResult OnOtherEvent(const Event &event) {
+      EventResult result = EVENT_RESULT_UNHANDLED;
       Event::Type t = event.GetType();
       if (t == Event::EVENT_POPOUT && !popped_out_) {
         original_child_view_ = GetChildView();
@@ -826,17 +827,22 @@ class DecoratedViewHost::Impl {
         SetChildViewVisible(false);
         UpdateToggleExpandedButton();
         UpdateViewSize();
+        // Let child view to handle popout event after it has been popped out.
+        result = ViewDecoratorBase::OnOtherEvent(event);
       } else if (t == Event::EVENT_POPIN && popped_out_) {
+        // Let child view to handle popin event first.
+        result = ViewDecoratorBase::OnOtherEvent(event);
         original_child_view_ = NULL;
         popped_out_ = false;
         snapshot_->SetVisible(false);
         SetChildViewVisible(!minimized_);
         UpdateToggleExpandedButton();
         UpdateViewSize();
+      } else {
+        result = ViewDecoratorBase::OnOtherEvent(event);
       }
 
-      // Handle popout/popin events.
-      return ViewDecoratorBase::OnOtherEvent(event);
+      return result;
     }
 
     virtual void SetCaption(const char *caption) {

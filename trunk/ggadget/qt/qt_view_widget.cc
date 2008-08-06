@@ -271,9 +271,9 @@ void QtViewWidget::leaveEvent(QEvent *event) {
 void QtViewWidget::wheelEvent(QWheelEvent * event) {
   int delta_x = 0, delta_y = 0;
   if (event->orientation() == Qt::Horizontal) {
-    delta_x = -event->delta();
+    delta_x = event->delta();
   } else {
-    delta_y = -event->delta();
+    delta_y = event->delta();
   }
   MouseEvent e(Event::EVENT_MOUSE_WHEEL,
                event->x() / zoom_, event->y() / zoom_,

@@ -30,6 +30,7 @@
 #include "logger.h"
 #include "slot.h"
 #include "system_utils.h"
+#include "string_utils.h"
 
 namespace ggadget {
 
@@ -39,12 +40,18 @@ class LocalizedFileManager::Impl {
     : file_manager_(file_manager) {
     std::string locale_name = GetSystemLocaleName();
     prefixes_.push_back(locale_name);
+    std::string lower_locale_name = ToLower(locale_name);
+    if (lower_locale_name != locale_name)
+      prefixes_.push_back(lower_locale_name);
 
     std::string locale_name_temp(locale_name);
     size_t pos = locale_name_temp.find('-');
     if (pos != locale_name_temp.npos) {
       locale_name_temp.replace(pos, 1, 1, '_');
+      lower_locale_name.replace(pos, 1, 1, '_');
       prefixes_.push_back(locale_name_temp);
+      if (lower_locale_name != locale_name)
+        prefixes_.push_back(lower_locale_name);
     }
 
     // for windows compatibility.

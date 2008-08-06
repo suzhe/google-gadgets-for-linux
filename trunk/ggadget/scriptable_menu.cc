@@ -66,7 +66,7 @@ class ScriptableMenu::Impl {
   ~Impl() {
     for (std::vector<ScriptableMenu *>::iterator it = submenus_.begin();
          it != submenus_.end(); ++it) {
-      delete *it;
+      (*it)->Unref();
     }
     submenus_.clear();
   }
@@ -80,6 +80,7 @@ class ScriptableMenu::Impl {
   ScriptableMenu *AddPopup(const char *popup_text) {
     ScriptableMenu *submenu = new ScriptableMenu(gadget_,
             menu_->AddPopup(popup_text, MenuInterface::MENU_ITEM_PRI_CLIENT));
+    submenu->Ref();
     submenus_.push_back(submenu);
     return submenu;
   }
