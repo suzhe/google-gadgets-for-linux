@@ -33,7 +33,8 @@ gst_video_element_la_CPPFLAGS = @GSTREAMER_CFLAGS@ \
 				$(PREDEFINED_MACROS)
 
 gst_video_element_la_LIBADD = @GSTREAMER_LIBS@ \
-			      $(GSTVIDEOSINK_LIBRARIES) \
+			      @PTHREAD_LIBS@ \
+			      @GSTVIDEOSINK_LIBRARIES@ \
 			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_video_element_la_LDFLAGS = -avoid-version \

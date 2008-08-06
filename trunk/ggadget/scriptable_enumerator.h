@@ -32,9 +32,10 @@ namespace ggadget {
  * class NativeEnumerator {
  *   void Destroy();
  *   bool AtEnd();
- *   ItemType GetItem();
+ *   ItemType *GetItem();
  *   void MoveFirst();
  *   void MoveNext();
+ *   size_t GetCount();
  * };
  * </code>
  */

@@ -33,6 +33,7 @@ curl_xml_http_request_la_CPPFLAGS = \
 
 curl_xml_http_request_la_LIBADD = \
 			  @LIBCURL@ \
+			  @PTHREAD_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 curl_xml_http_request_la_LDFLAGS = \

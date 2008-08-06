@@ -520,15 +520,16 @@ PKG_CHECK_MODULES(GTK2,
 		   [has_gtk2=yes], [has_gtk2=no])
 
 # Check gstreamer-0.10 related libraries.
-has_gstreamer_plugins_base=no
+has_gstreamer=no
 has_gstreamer_video=no
 PKG_CHECK_MODULES(GSTREAMER,
-		  [gstreamer-0.10 >= 0.10.0 gstreamer-plugins-base-0.10 >= 0.10.0],
-		  [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
-if test x$has_gstreamer_plugins_base = xyes; then
+		  [gstreamer-0.10 >= 0.10.0
+		   gstreamer-base-0.10 >= 0.10.0
+		   gstreamer-plugins-base-0.10 >= 0.10.0],
+		  [has_gstreamer=yes], [has_gstreamer=no])
+if test x$has_gstreamer = xyes; then
   CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
   CXXFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
-  LDFLAGS="$LDFLAGS $GSTREAMER_LIBS -L/usr/lib/gstreamer-0.10 -L/usr/local/lib/gstreamer-0.10"
   AC_CHECK_HEADERS([gst/video/gstvideosink.h], [has_gstreamer_video=yes], [has_gstreamer_video=no])
   if test x$has_gstreamer_video = xyes; then
     GSTVIDEOSINK_LIBRARIES="-lgstvideo-0.10"
@@ -536,7 +537,6 @@ if test x$has_gstreamer_plugins_base = xyes; then
   fi
   CFLAGS=$ggl_save_CFLAGS
   CXXFLAGS=$ggl_save_CXXFLAGS
-  LDFLAGS=$ggl_save_LDFLAGS
 fi
 
 # Check libcurl.
@@ -566,8 +566,8 @@ if test x$has_dbus != xno; then
   if test x$has_dbus = xold; then
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DDBUS_API_SUBJECT_TO_CHANGE=1"
   fi
-  CFLAGS="$CFLAGS $DBUS_CFLAGS"
-  LDFLAGS="$LDFLAGS $DBUS_LIBS"
+  CFLAGS="$DBUS_CFLAGS"
+  LDFLAGS="$DBUS_LIBS"
   AC_CHECK_FUNC(dbus_watch_get_unix_fd,
 		[PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_WATCH_GET_UNIX_FD"])
   CFLAGS=$ggl_save_CFLAGS
@@ -647,21 +647,17 @@ if test x$has_libcurl != xyes; then
   fi
 fi
 
-if test x$has_gstreamer_plugins_base != xyes -a x$build_gst_audio_framework = xyes; then
-  AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-audio-framework extension will not be built.])
+if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
+  AC_MSG_WARN([Library gstreamer(>=0.10.0) is not available, gst-audio-framework extension will not be built.])
   build_gst_audio_framework=no
 fi
 
 if test x$build_gst_video_element = xyes; then
   build_gst_video_element=no
-  if test x$has_gstreamer_plugins_base = xyes; then
-    if test x$has_gstreamer_video = xyes; then
-      build_gst_video_element=yes
-    else
-      AC_MSG_WARN([Libgstreamer-plugins-base-dev is not available, gst-video-element extension will not be built.])
-    fi
+  if test x$has_gstreamer = xyes -a x$has_gstreamer_video = xyes; then
+    build_gst_video_element=yes
   else
-    AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-video-element extension will not be built.])
+    AC_MSG_WARN([Library gstreamer(>=0.10.0) is not available, gst-video-element extension will not be built.])
   fi
 fi
 
@@ -670,6 +666,9 @@ if test x$has_gtk2 != xyes; then
   build_gtk_host=no
   build_gtk_system_framework=no
   build_libggadget_gtk=no
+else
+  gtk2_target=`$PKG_CONFIG --variable=target gtk+-2.0`
+  AM_CONDITIONAL([GTK2_TARGET_X11], [test x$gtk2_target = xx11])
 fi
 
 if test x$has_qt4 != xyes; then
