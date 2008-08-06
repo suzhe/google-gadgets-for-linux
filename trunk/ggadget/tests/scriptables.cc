@@ -244,12 +244,12 @@ ScriptableArray *ExtScriptable::ConcatArray(ScriptableInterface *array1,
   size_t count1 = VariantValue<size_t>()(array1->GetProperty("length").v());
   size_t count2 = VariantValue<size_t>()(array2->GetProperty("length").v());
 
-  Variant *new_array = new Variant[count1 + count2];
+  ScriptableArray *array = new ScriptableArray();
   for (size_t i = 0; i < count1; i++)
-    new_array[i] = array1->GetPropertyByIndex(i).v();
+    array->Append(array1->GetPropertyByIndex(i).v());
   for (size_t i = 0; i < count2; i++)
-    new_array[i + count1] = array2->GetPropertyByIndex(i).v();
-  return ScriptableArray::Create(new_array, count1 + count2);
+    array->Append(array2->GetPropertyByIndex(i).v());
+  return array;
 }
 
 void ExtScriptable::SetCallback(Slot *callback) {

@@ -86,7 +86,7 @@ class GtkSystemBrowseForFileHelper {
   ScriptableArray *BrowseForFiles(const char *filter) {
     std::vector<std::string> files;
     BrowseForFilesImpl(filter, true, &files);
-    return ScriptableArray::Create(files.begin(), files.size());
+    return ScriptableArray::Create(files.begin(), files.end());
   }
 
   bool BrowseForFilesImpl(const char *filter,

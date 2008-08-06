@@ -246,7 +246,7 @@ class DBusProxy::Impl {
       bool ret = proxy_->Call(prototype_.name.c_str(), true, -1, argv, argc,
                               NewSlot(this, &MethodSlot::GetReturnValue));
       if (!ret) return ResultVariant();
-      return ResultVariant(MergeArguments());
+      return MergeArguments();
     }
     virtual bool HasMetadata() const {
       return true;
@@ -263,14 +263,15 @@ class DBusProxy::Impl {
     }
    private:
     bool GetReturnValue(int id, const Variant &value) const {
-      return_values_.push_back(value);
+      return_values_.push_back(ResultVariant(value));
       return true;
     }
-    Variant MergeArguments() const {
-      if (return_values_.size() == 0) return Variant(true);
+    ResultVariant MergeArguments() const {
+      if (return_values_.size() == 0) return ResultVariant(Variant(true));
       if (return_values_.size() == 1) return return_values_[0];
-      return Variant(ScriptableArray::Create(return_values_.begin(),
-                                             return_values_.size()));
+      return ResultVariant(
+          Variant(ScriptableArray::Create(return_values_.begin(),
+                                          return_values_.end())));
     }
     Variant::Type DBusTypeToVariantType(const char *s) const {
       switch (*s) {
@@ -301,7 +302,7 @@ class DBusProxy::Impl {
     DBusProxy *proxy_;
     Prototype prototype_;
     Variant::Type *arg_types_;
-    mutable std::vector<Variant> return_values_;
+    mutable std::vector<ResultVariant> return_values_;
   };
   static DBusHandlerResult MessageFilter(DBusConnection *connection,
                                          DBusMessage *message,

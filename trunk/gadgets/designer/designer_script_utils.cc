@@ -107,7 +107,7 @@ class ScriptableFileManager : public ScriptableHelperDefault {
   ScriptableArray *GetAllFiles() {
     std::vector<std::string> files;
     fm_->EnumerateFiles("", NewSlot(GetFile, &files));
-    return ScriptableArray::Create(files.begin(), files.size());
+    return ScriptableArray::Create(files.begin(), files.end());
   }
 
   FileManagerInterface *fm_;

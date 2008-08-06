@@ -224,12 +224,11 @@ class BrowserElement::Impl {
             kCallbackFeedback, params.size());
       } else {
         size_t callback_params_count = params.size() - 3;
-        Variant *callback_params = new Variant[callback_params_count];
-        for (size_t i = 0; i < callback_params_count; i++)
-          callback_params[i] = Variant(JSONString(params[i + 3]));
-        JSONString result_json = callback_signal_(
-            JSONString(params[2]),
-            ScriptableArray::Create(callback_params, callback_params_count));
+        ScriptableArray *callback_params = new ScriptableArray();
+        for (size_t i = 0; i < callback_params_count; ++i)
+          callback_params->Append(Variant(JSONString(params[i + 3])));
+        JSONString result_json =
+            callback_signal_(JSONString(params[2]), callback_params);
         result = result_json.value;
       }
     } else if (strcmp(type, kOpenURLFeedback) == 0) {

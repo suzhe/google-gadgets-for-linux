@@ -14,31 +14,30 @@
   limitations under the License.
 */
 
+#include <vector>
 #include "scriptable_array.h"
 
 namespace ggadget {
 
 class ScriptableArray::Impl {
  public:
-  Impl(ScriptableArray *owner, Variant *array, size_t count)
-      : owner_(owner), array_(array), count_(count) {
-    // Simulates JavaScript array.
-    owner_->SetArrayHandler(NewSlot(owner_, &ScriptableArray::GetItem), NULL);
+  Impl(ScriptableArray *owner) : owner_(owner) {
   }
 
   ScriptableArray *ToArray() { return owner_; }
 
+  // Use ResultVariant to add reference to scriptable items, to prevent them
+  // from being destroyed by others.
+  // It's not necessary to handle the situation that an scriptable item is
+  // deleted by others. They shall not be deleted explicitly.
+  std::vector<ResultVariant> array_;
   ScriptableArray *owner_;
-  Variant *array_;
-  size_t count_;
 };
 
-ScriptableArray::ScriptableArray(Variant *array, size_t count)
-    : impl_(new Impl(this, array, count)) {
-}
-
 ScriptableArray::ScriptableArray()
-    : impl_(new Impl(this, NULL, 0)) {
+    : impl_(new Impl(this)) {
+  // Simulates JavaScript array.
+  SetArrayHandler(NewSlot(this, &ScriptableArray::GetItem), NULL);
 }
 
 void ScriptableArray::DoClassRegister() {
@@ -51,8 +50,8 @@ void ScriptableArray::DoClassRegister() {
 }
 
 ScriptableArray::~ScriptableArray() {
-  delete [] impl_->array_;
   delete impl_;
+  impl_ = NULL;
 }
 
 bool ScriptableArray::EnumerateProperties(
@@ -64,8 +63,9 @@ bool ScriptableArray::EnumerateProperties(
 
 bool ScriptableArray::EnumerateElements(EnumerateElementsCallback *callback) {
   ASSERT(callback);
-  for (size_t i = 0; i < impl_->count_; i++) {
-    if (!(*callback)(static_cast<int>(i), impl_->array_[i])) {
+  size_t count = impl_->array_.size();
+  for (size_t i = 0; i < count; i++) {
+    if (!(*callback)(static_cast<int>(i), impl_->array_[i].v())) {
       delete callback;
       return false;
     }
@@ -75,11 +75,15 @@ bool ScriptableArray::EnumerateElements(EnumerateElementsCallback *callback) {
 }
 
 size_t ScriptableArray::GetCount() const {
-  return impl_->count_;
+  return impl_->array_.size();
 }
 
 Variant ScriptableArray::GetItem(size_t index) const {
-  return index < impl_->count_ ? impl_->array_[index] : Variant();
+  return index < impl_->array_.size() ? impl_->array_[index].v() : Variant();
+}
+
+void ScriptableArray::Append(const Variant &item) {
+  impl_->array_.push_back(ResultVariant(item));
 }
 
 } // namespace ggadget

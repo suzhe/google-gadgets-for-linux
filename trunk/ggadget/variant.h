@@ -55,6 +55,8 @@ struct Date {
   uint64_t value;
 };
 
+class ResultVariant;
+
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
@@ -114,6 +116,11 @@ class Variant {
    * Construct a @c Variant by type with default value (zero).
    */
   explicit Variant(Type a_type);
+
+  /**
+   * Construct a @c Variant with a @c ResultVariant value.
+   */
+  explicit Variant(const ResultVariant &source);
 
   /**
    * Construct a @c Variant with a @c bool value.

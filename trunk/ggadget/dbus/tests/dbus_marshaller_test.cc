@@ -78,14 +78,13 @@ void TestBasicMarshal<std::string>(const char *signature, int dbus_type,
 
 template <typename T>
 ResultVariant GenerateVariantArray(size_t size, T first, T diff) {
-  std::vector<ResultVariant> values;
+  ScriptableArray *array = new ScriptableArray();
   T value = first;
   for (size_t i = 0; i < size; ++i) {
-    values.push_back(ResultVariant(Variant(value)));
+    array->Append(Variant(value));
     value = value + diff;
   }
-  ScriptableDBusContainer *sa = new ScriptableDBusContainer(&values);
-  return ResultVariant(Variant(sa));
+  return ResultVariant(Variant(array));
 }
 
 template <typename P1, typename P2>
@@ -107,17 +106,16 @@ ResultVariant GenerateVariantDict(size_t size, P1 key, P1 key_diff,
 }
 
 ResultVariant GenerateVariantStruct(size_t size, ...) {
-  std::vector<ResultVariant> values;
+  ScriptableArray *array = new ScriptableArray();
   va_list args;
   va_start(args, size);
   for (size_t i = 0; i < size; ++i) {
     Variant *v;
     v = va_arg(args, Variant*);
-    values.push_back(ResultVariant(*v));
+    array->Append(*v);
   }
   va_end(args);
-  ScriptableDBusContainer *sa = new ScriptableDBusContainer(&values);
-  return ResultVariant(Variant(sa));
+  return ResultVariant(Variant(array));
 }
 
 void TestArrayMarshal() {

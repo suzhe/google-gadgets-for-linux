@@ -19,6 +19,7 @@ limitations under the License.
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
+#include <ggadget/scriptable_array.h>
 
 namespace ggadget {
 namespace dbus {
@@ -566,8 +567,8 @@ class DBusMarshaller::Impl {
           Argument arg;
           std::string signature("a"), item_sig;
           std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
-          std::vector<ResultVariant> values;
           bool ret = true;
+          ScriptableHolder<ScriptableArray> array(new ScriptableArray());
           for (size_t i = 0; i < size && ret; ++i) {
             type = static_cast<MessageType>(va_arg(*va_args, int));
             ret = ValistItemAdaptor(&arg, type, va_args);
@@ -577,32 +578,30 @@ class DBusMarshaller::Impl {
               DLOG("Types of items in the array are not same.");
               ret = false;
             }
-            values.push_back(arg.value);
+            array.Get()->Append(arg.value.v());
           }
           if (!ret) return false;
           signature.append(item_sig);
-          ScriptableDBusContainer *array = new ScriptableDBusContainer(&values);
-          in_arg->value = ResultVariant(Variant(array));
+          in_arg->value = ResultVariant(Variant(array.Get()));
           in_arg->signature = signature;
           break;
         }
       case MESSAGE_TYPE_STRUCT:
         {
           std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
-          std::vector<ResultVariant> values;
           std::string signature("(");
           Argument arg;
           bool ret = true;
+          ScriptableHolder<ScriptableArray> array(new ScriptableArray());
           for (size_t i = 0; i < size && ret; ++i) {
             type = static_cast<MessageType>(va_arg(*va_args, int));
             ret = ValistItemAdaptor(&arg, type, va_args);
             signature.append(arg.signature);
-            values.push_back(arg.value);
+            array.Get()->Append(arg.value.v());
           }
           if (!ret) return false;
           signature.append(")");
-          ScriptableDBusContainer *array = new ScriptableDBusContainer(&values);
-          in_arg->value = ResultVariant(Variant(array));
+          in_arg->value = ResultVariant(Variant(array.Get()));
           in_arg->signature = signature;
           break;
         }
@@ -617,7 +616,7 @@ class DBusMarshaller::Impl {
       case MESSAGE_TYPE_DICT:
         {
           std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
-          ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+          ScriptableDBusContainerHolder obj(new ScriptableDBusContainer());
           std::string signature("a{"), key_sig, value_sig;
           Argument arg;
           bool ret = true;
@@ -647,17 +646,14 @@ class DBusMarshaller::Impl {
               ret = false;
               break;
             }
-            obj->AddProperty(str.c_str(), arg.value.v());
+            obj.Get()->AddProperty(str.c_str(), arg.value.v());
           }
-          if (!ret) {
-            delete obj;
-            return false;
-          }
+          if (!ret) return false;
           signature.append(key_sig);
           signature.append(value_sig);
           signature.append("}");
           in_arg->signature = signature;
-          in_arg->value = ResultVariant(Variant(obj));
+          in_arg->value = ResultVariant(Variant(obj.Get()));
           break;
         }
       default:
@@ -849,7 +845,7 @@ class DBusDemarshaller::Impl {
             if (sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str()))
               return false;
             Impl dict(iter_);
-            ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+            ScriptableDBusContainerHolder obj(new ScriptableDBusContainer());
             bool ret;
             do {
               Impl sub(dict.iter_);
@@ -863,31 +859,27 @@ class DBusDemarshaller::Impl {
                 ret = false;
                 break;
               }
-              obj->AddProperty(name.c_str(), value.value.v());
+              obj.Get()->AddProperty(name.c_str(), value.value.v());
             } while(dict.MoveToNextItem());
-            if (!ret) {
-              delete obj;
-              return false;
-            }
-            arg->value = ResultVariant(Variant(obj));
+            if (!ret) return false;
+            arg->value = ResultVariant(Variant(obj.Get()));
             index += dict_sig.size();
           } else {
             std::string sub_type = GetElementType(index + 1);
             Impl sub(iter_);
             bool ret;
-            std::vector<ResultVariant> values;
+            ScriptableHolder<ScriptableArray> array(new ScriptableArray());
             do {
               Argument arg(sub_type.c_str());
               ret = sub.GetArgument(&arg);
               if (ret)
-                values.push_back(arg.value);
+                array.Get()->Append(arg.value.v());
             } while (ret && sub.MoveToNextItem());
             if (!ret) {
               DLOG("something wrong.");
               return false;
             }
-            ScriptableDBusContainer *obj = new ScriptableDBusContainer(&values);
-            arg->value = ResultVariant(Variant(obj));
+            arg->value = ResultVariant(Variant(array.Get()));
             index += sub_type.size();
           }
           break;
@@ -903,19 +895,18 @@ class DBusDemarshaller::Impl {
               (sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str())))
             return false;
           Impl sub(iter_);
-          std::vector<ResultVariant> values;
+          ScriptableHolder<ScriptableArray> array(new ScriptableArray());
           bool ret = false;
           for (StringList::iterator it = sig_list.begin();
                it != sig_list.end(); ++it) {
             Argument arg(it->c_str());
             ret = sub.GetArgument(&arg);
             if (!ret) break;
-            values.push_back(arg.value);
+            array.Get()->Append(arg.value.v());
             sub.MoveToNextItem();
           }
           if (!ret) return false;
-          ScriptableDBusContainer *obj = new ScriptableDBusContainer(&values);
-          arg->value = ResultVariant(Variant(obj));
+          arg->value = ResultVariant(Variant(array.Get()));
           index += struct_sig.size() - 1;
           break;
         }
