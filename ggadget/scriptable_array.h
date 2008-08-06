@@ -19,6 +19,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
@@ -34,19 +35,23 @@ class ScriptableArray : public ScriptableHelperDefault {
   /** Creates an empty ScriptableArray object. */
   ScriptableArray();
 
+  /** Appends an item to the array. */
+  void Append(const Variant &item);
+
  public:
   /**
-   * Creates a @c ScriptableArray with an iterator and count.
-   * @param start the start position of an iterator. It can also be the start
-   *     address of an array. A copy of this array will be made.
-   * @param count number of elements in the array.
+   * Creates a @c ScriptableArray with begin and end iterators.
+   * All items between [begin, end) will be stored in the newly created array.
+   *
+   * @param begin the begin iterator.
+   * @param end the end iterator.
    */
   template <typename I>
-  static ScriptableArray *Create(I start, size_t count) {
-    Variant *variant_array = new Variant[count];
-    for (size_t i = 0; i < count; i++)
-      variant_array[i] = Variant(*start++);
-    return new ScriptableArray(variant_array, count);
+  static ScriptableArray *Create(I begin, I end) {
+    ScriptableArray *array = new ScriptableArray();
+    for (I it = begin; it != end; ++it)
+      array->Append(Variant(*it));
+    return array;
   }
 
   /**
@@ -54,19 +59,14 @@ class ScriptableArray : public ScriptableHelperDefault {
    * A copy of the input array will be made.
    */
   template <typename T>
-  static ScriptableArray *Create(T *const *array) {
-    size_t size = 0;
-    for (; array[size]; size++);
-    return Create(array, size);
-  }
-
-  /**
-   * Create a @c ScriptableArray with a pre-allocated @c Variant array.
-   * The created @c ScriptableArray will take the ownership of the input
-   * array.
-   */
-  static ScriptableArray *Create(Variant *array, size_t count) {
-    return new ScriptableArray(array, count);
+  static ScriptableArray *Create(T *const *ptr) {
+    ScriptableArray *array = NULL;
+    if (ptr) {
+      array = new ScriptableArray();
+      for (; *ptr; ++ptr)
+        array->Append(Variant(*ptr));
+    }
+    return array;
   }
 
   /**
@@ -80,7 +80,6 @@ class ScriptableArray : public ScriptableHelperDefault {
   Variant GetItem(size_t index) const;
 
  protected:
-  ScriptableArray(Variant *array, size_t count);
   virtual void DoClassRegister();
   virtual ~ScriptableArray();
 

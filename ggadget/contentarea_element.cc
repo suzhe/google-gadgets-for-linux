@@ -354,7 +354,7 @@ class ContentAreaElement::Impl {
 
   ScriptableArray *ScriptGetContentItems() {
     return ScriptableArray::Create(content_items_.begin(),
-                                   content_items_.size());
+                                   content_items_.end());
   }
 
   void ScriptSetContentItems(ScriptableInterface *array) {
@@ -405,11 +405,11 @@ class ContentAreaElement::Impl {
   }
 
   ScriptableArray *ScriptGetPinImages() {
-    Variant *values = new Variant[3];
-    values[0] = Variant(pin_images_[PIN_IMAGE_UNPINNED].Get());
-    values[1] = Variant(pin_images_[PIN_IMAGE_UNPINNED_OVER].Get());
-    values[2] = Variant(pin_images_[PIN_IMAGE_PINNED].Get());
-    return ScriptableArray::Create(values, 3);
+    ScriptableArray *array = new ScriptableArray();
+    array->Append(Variant(pin_images_[PIN_IMAGE_UNPINNED].Get()));
+    array->Append(Variant(pin_images_[PIN_IMAGE_UNPINNED_OVER].Get()));
+    array->Append(Variant(pin_images_[PIN_IMAGE_PINNED].Get()));
+    return array;
   }
 
   void ScriptSetPinImage(PinImageIndex index, const ResultVariant &v) {

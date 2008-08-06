@@ -45,6 +45,11 @@ Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
   operator=(source);
 }
 
+Variant::Variant(const ResultVariant &source) : type_(TYPE_VOID) {
+  memset(&v_, 0, sizeof(v_));
+  operator=(source.v());
+}
+
 Variant::Variant(Type type) : type_(type) {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
     new (&v_.string_place_) std::string(kNullString);

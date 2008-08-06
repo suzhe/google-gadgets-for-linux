@@ -927,14 +927,13 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
   }
 
   ScriptableArray *GetGadgetMetadata() {
+    ScriptableArray *array = new ScriptableArray();
     // Iterate all instances to refresh metadata for local gadgets.
     int size = static_cast<int>(gadget_manager_->instance_statuses_.size());
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < size; ++i)
       gadget_manager_->GetGadgetInfoOfInstance(i);
 
     const GadgetInfoMap &map = gadget_manager_->GetAllGadgetInfo();
-    Variant *array = new Variant[map.size()];
-    size_t i = 0;
     for (GadgetInfoMap::const_iterator it = map.begin();
          it != map.end(); ++it) {
       const GadgetInfo &info = it->second;
@@ -951,9 +950,9 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
           continue;
         }
       }
-      array[i++] = Variant(new ScriptableGadgetInfo(it->second));
+      array->Append(Variant(new ScriptableGadgetInfo(it->second)));
     }
-    return ScriptableArray::Create(array, i);
+    return array;
   }
 
   void SaveThumbnailToCache(const char *thumbnail_url,

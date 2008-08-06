@@ -96,18 +96,14 @@ class DisplayWindow::Impl {
     }
 
     ScriptableArray *GetListBoxItems(ListBoxElement *listbox) {
+      ScriptableArray *array = new ScriptableArray();
       int count = listbox->GetChildren()->GetCount();
-      Variant *array = new Variant[count];
-      size_t actual_count = 0;
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < count; ++i) {
         BasicElement *item = listbox->GetChildren()->GetItemByIndex(i);
-        if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
-          array[actual_count] =
-              Variant(down_cast<ItemElement *>(item)->GetLabelText());
-          actual_count++;
-        }
+        if (item->IsInstanceOf(ItemElement::CLASS_ID))
+          array->Append(Variant(down_cast<ItemElement*>(item)->GetLabelText()));
       }
-      return ScriptableArray::Create(array, actual_count);
+      return array;
     }
 
     void SetEnabled(bool enabled) {

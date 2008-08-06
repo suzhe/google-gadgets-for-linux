@@ -23,6 +23,7 @@
 #include <jsnum.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
+#include <ggadget/scriptable_holder.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/unicode_utils.h>
@@ -540,6 +541,8 @@ static JSBool GetCollectionItem(JSContext *cx, JSObject *obj,
 
 static JSBool ConvertNativeArrayToJS(JSContext *cx, ScriptableArray *array,
                                      jsval *js_val) {
+  // To make sure that the array will be destroyed correctly.
+  ScriptableHolder<ScriptableArray> array_holder(array);
   size_t length = array->GetCount();
   if (length > JSVAL_INT_MAX)
     return JS_FALSE;

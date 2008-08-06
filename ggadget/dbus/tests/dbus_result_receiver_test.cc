@@ -66,6 +66,7 @@ TEST(DBusResultReceiver, ArrayResultReceiver) {
   };
 
   ScriptableArray *array = ScriptableArray::Create(values);
+  array->Ref();
   DBusProxy::ResultCallback *slot = result_receiver.NewSlot();
 
   ASSERT_TRUE((*slot)(0, Variant(array)));
@@ -74,6 +75,7 @@ TEST(DBusResultReceiver, ArrayResultReceiver) {
     ASSERT_STREQ(values[i], result[i].c_str());
 
   delete slot;
+  array->Unref();
 }
 
 int main(int argc, char **argv) {

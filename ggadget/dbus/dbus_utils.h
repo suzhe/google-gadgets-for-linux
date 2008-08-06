@@ -24,6 +24,7 @@ limitations under the License.
 #include "dbus_proxy.h"
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/scriptable_holder.h>
 
 class DBusConnection;
 class DBusMessage;
@@ -42,9 +43,6 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
   DEFINE_CLASS_ID(0x7829c86eb35a4168, ScriptableInterface);
   ScriptableDBusContainer() {
   }
-  explicit ScriptableDBusContainer(std::vector<ResultVariant> *array) {
-    AddArray(array);
-  }
 
   /**
    * Don't use @c RegisterConstant() directly, since we want to register
@@ -58,32 +56,11 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
     RegisterConstant((keys_.end() - 1)->c_str(), value);
   }
 
-  /**
-   * All elements in array will be moved into the ScriptableDBusContainer
-   * object.
-   */
-  void AddArray(std::vector<ResultVariant> *array) {
-    ASSERT(array);
-    array->swap(array_);
-    array->clear();
-    RegisterConstant("length", array_.size());
-  }
-
-  bool EnumerateElements(EnumerateElementsCallback *callback) {
-    ASSERT(callback);
-    for (size_t i = 0; i < array_.size(); i++)
-      if (!(*callback)(static_cast<int>(i), array_[i].v())) {
-        delete callback;
-        return false;
-      }
-    delete callback;
-    return true;
-  }
-
  private:
   std::vector<std::string> keys_;
-  std::vector<ResultVariant> array_;
 };
+
+typedef ScriptableHolder<ScriptableDBusContainer> ScriptableDBusContainerHolder;
 
 std::string GetVariantSignature(const Variant &value);
 
