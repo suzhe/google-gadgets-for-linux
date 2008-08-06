@@ -29,16 +29,19 @@
 
 #include "file_system.h"
 #include "runtime.h"
-#include "machine.h"
-#include "network.h"
-#include "power.h"
-#include "wireless.h"
 #include "memory.h"
 #include "perfmon.h"
 #include "process.h"
-#include "wireless_access_point.h"
-#include "user.h"
 #include "open_url.h"
+
+#ifdef HAVE_DBUS_LIBRARY
+#include "machine.h"
+#include "network.h"
+#include "power.h"
+#include "user.h"
+#include "wireless.h"
+#include "wireless_access_point.h"
+#endif
 
 #define Initialize linux_system_framework_LTX_Initialize
 #define Finalize linux_system_framework_LTX_Finalize
@@ -52,24 +55,28 @@ namespace framework {
 namespace linux_system{
 
 static Runtime g_runtime_;
-static Machine g_machine_;
 static Memory g_memory_;
-static Network g_network_;
-static Power g_power_;
 static Process g_process_;
 static FileSystem g_filesystem_;
 static Perfmon g_perfmon_;
-static User g_user_;
 
 static ScriptableRuntime g_script_runtime_(&g_runtime_);
+static ScriptableMemory g_script_memory_(&g_memory_);
+static ScriptableProcess g_script_process_(&g_process_);
+
+#ifdef HAVE_DBUS_LIBRARY
+static Machine g_machine_;
+static Network g_network_;
+static Power g_power_;
+static User g_user_;
+
 static ScriptableBios g_script_bios_(&g_machine_);
 static ScriptableMachine g_script_machine_(&g_machine_);
-static ScriptableMemory g_script_memory_(&g_memory_);
 static ScriptableNetwork g_script_network_(&g_network_);
 static ScriptablePower g_script_power_(&g_power_);
-static ScriptableProcess g_script_process_(&g_process_);
 static ScriptableProcessor g_script_processor_(&g_machine_);
 static ScriptableUser g_script_user_(&g_user_);
+#endif
 
 } // namespace linux_system
 } // namespace framework
@@ -150,28 +157,31 @@ extern "C" {
     // FIXME: Should runtime be restricted by <devicestatus/> ?
     reg_framework->RegisterVariantConstant("runtime",
                                            Variant(&g_script_runtime_));
-    reg_system->RegisterVariantConstant("bios",
-                                        Variant(&g_script_bios_));
-    reg_system->RegisterVariantConstant("machine",
-                                        Variant(&g_script_machine_));
     reg_system->RegisterVariantConstant("memory",
                                         Variant(&g_script_memory_));
-    reg_system->RegisterVariantConstant("network",
-                                        Variant(&g_script_network_));
-    reg_system->RegisterVariantConstant("power",
-                                        Variant(&g_script_power_));
     reg_system->RegisterVariantConstant("process",
                                         Variant(&g_script_process_));
-    reg_system->RegisterVariantConstant("processor",
-                                        Variant(&g_script_processor_));
-    reg_system->RegisterVariantConstant("user",
-                                        Variant(&g_script_user_));
 
     // ScriptablePerfmon is per gadget, so create a new instance here.
     ScriptablePerfmon *script_perfmon =
         new ScriptablePerfmon(&g_perfmon_, gadget);
 
     reg_system->RegisterVariantConstant("perfmon", Variant(script_perfmon));
+
+#ifdef HAVE_DBUS_LIBRARY
+    reg_system->RegisterVariantConstant("bios",
+                                        Variant(&g_script_bios_));
+    reg_system->RegisterVariantConstant("machine",
+                                        Variant(&g_script_machine_));
+    reg_system->RegisterVariantConstant("network",
+                                        Variant(&g_script_network_));
+    reg_system->RegisterVariantConstant("power",
+                                        Variant(&g_script_power_));
+    reg_system->RegisterVariantConstant("processor",
+                                        Variant(&g_script_processor_));
+    reg_system->RegisterVariantConstant("user",
+                                        Variant(&g_script_user_));
+#endif
     return true;
   }
 }

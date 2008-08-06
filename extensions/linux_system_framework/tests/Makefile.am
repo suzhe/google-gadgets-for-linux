@@ -18,37 +18,40 @@ INCLUDES		= -I$(top_builddir) \
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
 			  ../libggadget-linux.la
 
 AM_CPPFLAGS		= $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-noinst_HEADERS		=
-
 check_PROGRAMS		= perfmon_test \
-                    machine_test \
-                    network_test \
-                    memory_test \
-                    power_test \
-                    process_test \
-                    filesystem_test \
-                    filesystem_textstream_test
+			  memory_test \
+			  process_test \
+			  filesystem_test \
+			  filesystem_textstream_test
 
-                    # TODO: temporarily disabled.
-                    #filesystem_folder_test
-                    #filesystem_file_test
+# TODO: temporarily disabled.
+#filesystem_folder_test
+#filesystem_file_test
 
-machine_test_SOURCES		= machine_test.cc
-memory_test_SOURCES     = memory_test.cc
-process_test_SOURCES     = process_test.cc
-filesystem_test_SOURCES    = filesystem_test.cc
-filesystem_folder_test_SOURCES    = filesystem_folder_test.cc
-filesystem_file_test_SOURCES    = filesystem_file_test.cc
-filesystem_textstream_test_SOURCES    = filesystem_textstream_test.cc
-network_test_SOURCES		= network_test.cc
-power_test_SOURCES 		= power_test.cc
-perfmon_test_SOURCES   = perfmon_test.cc $(top_srcdir)/ggadget/tests/native_main_loop.cc
+memory_test_SOURCES = memory_test.cc
+process_test_SOURCES = process_test.cc
+filesystem_test_SOURCES = filesystem_test.cc
+#filesystem_folder_test_SOURCES = filesystem_folder_test.cc
+#filesystem_file_test_SOURCES = filesystem_file_test.cc
+filesystem_textstream_test_SOURCES = filesystem_textstream_test.cc
+perfmon_test_SOURCES = perfmon_test.cc $(top_srcdir)/ggadget/tests/native_main_loop.cc
+
+if GGL_BUILD_LIBGGADGET_DBUS
+LDADD += $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+
+check_PROGRAMS += machine_test \
+		  network_test \
+		  power_test
+
+machine_test_SOURCES = machine_test.cc
+network_test_SOURCES = network_test.cc
+power_test_SOURCES = power_test.cc
+endif
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

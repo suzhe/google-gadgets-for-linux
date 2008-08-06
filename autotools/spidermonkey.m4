@@ -56,9 +56,9 @@ min_smjs_version=ifelse([$1], , 160, [$1])
 
 AC_MSG_CHECKING([for SpiderMonkey version >= $min_smjs_version])
 
-ggl_save_CPPFLAGS="$CPPFLAGS"
-ggl_save_LIBS="$LIBS"
-ggl_save_LDFLAGS="$LDFLAGS"
+smjs_save_CPPFLAGS="$CPPFLAGS"
+smjs_save_LIBS="$LIBS"
+smjs_save_LDFLAGS="$LDFLAGS"
 
 smjs_CPPFLAGS="$smjs_cppflags"
 smjs_LDFLAGS=""
@@ -89,9 +89,9 @@ if test "x$has_pkg_smjs" != "xno"; then
     fi
   fi
 
-  CPPFLAGS="$smjs_CPPFLAGS $ggl_save_CPPFLAGS"
-  LIBS="$smjs_LIBS $ggl_save_LIBS"
-  LDFLAGS="$smjs_LDFLAGS $ggl_save_LDFLAGS"
+  CPPFLAGS="$smjs_CPPFLAGS"
+  LIBS="$smjs_LIBS"
+  LDFLAGS="$smjs_LDFLAGS"
   GGL_TRY_SMJS([$min_smjs_version], [smjs_found=yes], [smjs_found=no])
 fi
 
@@ -122,11 +122,11 @@ if test "x$smjs_found" != "xyes"; then
     smjs_LDFLAGS="$smjs_LDFLAGS -L$smjs_libdir"
   fi
 
-  CPPFLAGS="$smjs_CPPFLAGS $ggl_save_CPPFLAGS"
-  LDFLAGS="$smjs_LDFLAGS $ggl_save_LDFLAGS"
+  CPPFLAGS="$smjs_CPPFLAGS"
+  LDFLAGS="$smjs_LDFLAGS"
   for checklib in js smjs mozjs; do
     smjs_LIBS="-l$checklib"
-    LIBS="$smjs_LIBS $ggl_save_LIBS"
+    LIBS="$smjs_LIBS"
     GGL_TRY_SMJS([$min_smjs_version], [smjs_found=yes], [smjs_found=no])
     if test "x$smjs_found" = "xyes"; then
       break
@@ -152,9 +152,9 @@ else
   ifelse([$3], , :, [$3])
 fi
 
-CPPFLAGS=$ggl_save_CPPFLAGS
-LIBS=$ggl_save_LIBS
-LDFLAGS=$ggl_save_LDFLAGS
+CPPFLAGS=$smjs_save_CPPFLAGS
+LIBS=$smjs_save_LIBS
+LDFLAGS=$smjs_save_LDFLAGS
 ])
 
 

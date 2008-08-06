@@ -311,6 +311,7 @@ function VBArray(array) {
 // "Msxml.DOMDocument"
 // "Msxml2.ServerXMLHTTP.3.0"
 // "Msxml2.DOMDocument.3.0"
+// TODO: Is it necessary to emulate "ADODB.Stream"?
 function ActiveXObject(name) {
   var openUrl = function (url) {
     debug.trace("Open URL by ActiveX object:" + url);

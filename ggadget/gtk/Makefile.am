@@ -80,6 +80,11 @@ libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic
 
+if GTK2_TARGET_X11
+libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS += $(X_CFLAGS)
+libggadget_gtk@GGL_EPOCH@_la_LIBADD += $(X_LIBS)
+endif
+
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-gtk@GGL_EPOCH@.pc
 endif

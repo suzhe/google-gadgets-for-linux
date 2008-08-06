@@ -40,9 +40,9 @@ min_zlib_version=ifelse([$1], , 1.2.3, [$1])
 
 AC_MSG_CHECKING([for zlib version >= $min_zlib_version])
 
-ac_save_CPPFLAGS="$CPPFLAGS"
-ac_save_LIBS="$LIBS"
-ac_save_LDFLAGS="$LDFLAGS"
+zlib_save_CPPFLAGS="$CPPFLAGS"
+zlib_save_LIBS="$LIBS"
+zlib_save_LDFLAGS="$LDFLAGS"
 
 zlib_CPPFLAGS=""
 zlib_LDFLAGS=""
@@ -100,7 +100,7 @@ else
   ifelse([$3], , :, [$3])
 fi
 
-CPPFLAGS=$ac_save_CPPFLAGS
-LIBS=$ac_save_LIBS
-LDFLAGS=$ac_save_LDFLAGS
+CPPFLAGS=$zlib_save_CPPFLAGS
+LIBS=$zlib_save_LIBS
+LDFLAGS=$zlib_save_LDFLAGS
 ])

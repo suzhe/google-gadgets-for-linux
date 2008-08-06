@@ -16,7 +16,6 @@
 
 # libggadget-dbus is mandatory for linux-system-framework.
 if GGL_HOST_LINUX
-if GGL_BUILD_LIBGGADGET_DBUS
 
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests
@@ -43,30 +42,38 @@ noinst_LTLIBRARIES	= libggadget-linux.la
 libggadget_linux_la_SOURCES = \
 			  file_system.cc \
 			  runtime.cc \
-			  machine.cc \
 			  memory.cc \
-			  network.cc \
 			  open_url.cc \
 			  perfmon.cc \
+			  process.cc
+
+if GGL_BUILD_LIBGGADGET_DBUS
+libggadget_linux_la_SOURCES += \
+			  machine.cc \
+			  network.cc \
 			  power.cc \
-			  process.cc \
+			  user.cc \
 			  wireless.cc \
-			  wireless_access_point.cc \
-			  user.cc
+			  wireless_access_point.cc
+endif
 
 libggadget_linux_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_linux_la_CPPFLAGS = \
-			  $(DBUS_CFLAGS) \
 			  $(X_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_linux_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
-			  $(DBUS_LIB) \
 			  $(X_LIBS)
+
+if GGL_BUILD_LIBGGADGET_DBUS
+libggadget_linux_la_CPPFLAGS += $(DBUS_CFLAGS)
+libggadget_linux_la_LIBADD += \
+			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
+			  $(DBUS_LIB)
+endif
 
 extension_LTLIBRARIES	= linux-system-framework.la
 extensiondir		= $(GGL_MODULE_DIR)
@@ -81,13 +88,16 @@ linux_system_framework_la_CPPFLAGS = \
 
 linux_system_framework_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  libggadget-linux.la
+
+if GGL_BUILD_LIBGGADGET_DBUS
+linux_system_framework_la_LIBADD += \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
-			  libggadget-linux.la \
 			  $(DBUS_LIB)
+endif
 
 linux_system_framework_la_LDFLAGS = \
 			  -avoid-version \
 			  -module
 
-endif
 endif
