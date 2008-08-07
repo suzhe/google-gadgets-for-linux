@@ -95,7 +95,7 @@ class Session {
 #else
   void RestoreCookie(QHttpRequestHeader *header) {}
   void SaveCookie(const QHttpResponseHeader& header) {}
-  #endif
+#endif
 };
 
 class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
@@ -110,6 +110,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         request_header_(NULL),
         session_(session),
         handler_(NULL),
+        send_data_(NULL),
         async_(false),
         state_(UNSENT),
         send_flag_(false),
@@ -206,13 +207,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            (kMaxDataSize - current) / block_size > num_blocks;
   }
 
-  virtual ExceptionCode Open(const char *method, const char *url, bool async,
-                             const char *user, const char *password) {
-    DLOG("Open %s with %s", url, method);
-    Abort();
-    if (!method || !url)
-      return NULL_POINTER_ERR;
-
+  ExceptionCode OpenInternal(const char *url) {
     QUrl qurl(url);
     if (!qurl.isValid()) return SYNTAX_ERR;
 
@@ -225,26 +220,38 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     else
       return SYNTAX_ERR;
 
-    if (strcasecmp(method, "HEAD") != 0 && strcasecmp(method, "GET") != 0
-        && strcasecmp(method, "POST") != 0) {
-      LOG("XMLHttpRequest: Unsupported method: %s", method);
-      return SYNTAX_ERR;
-    }
-
     url_ = url;
     host_ = qurl.host().toStdString();
-    async_ = async;
     http_ = new QHttp(qurl.host(), mode);
-    http_->setUser(user, password);
+    http_->setUser(user_, password_);
     handler_ = new HttpHandler(this, http_);
 
     std::string path = "/";
     size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
     if (sep != std::string::npos) path = url_.substr(sep);
 
-    request_header_ = new QHttpRequestHeader(method, path.c_str());
+    request_header_ = new QHttpRequestHeader(method_, path.c_str());
     request_header_->setValue("Host", host_.c_str());
     DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
+    return NO_ERR;
+  }
+
+  virtual ExceptionCode Open(const char *method, const char *url, bool async,
+                             const char *user, const char *password) {
+    DLOG("Open %s with %s", url, method);
+    Abort();
+
+    if (strcasecmp(method, "HEAD") != 0 && strcasecmp(method, "GET") != 0
+        && strcasecmp(method, "POST") != 0) {
+      LOG("XMLHttpRequest: Unsupported method: %s", method);
+      return SYNTAX_ERR;
+    }
+    method_ = method;
+    async_ = async;
+    user_ = user;
+    password_ = password;
+    ExceptionCode code = OpenInternal(url);
+    if (code != NO_ERR) return code;
     ChangeState(OPENED);
     return NO_ERR;
   }
@@ -384,7 +391,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  virtual void Abort() {
+  void FreeResource() {
     if (handler_) {
       delete handler_;
       handler_ = NULL;
@@ -408,6 +415,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       response_dom_ = NULL;
     }
 
+    if (send_data_) {
+      delete send_data_;
+      send_data_ = NULL;
+    }
+  }
+
+  virtual void Abort() {
+    FreeResource();
     Done(true);
   }
 
@@ -741,41 +756,57 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void OnResponseHeaderReceived(const QHttpResponseHeader &header) {
-    response_header_ = header;
-    response_headers_ = header.toString().toStdString();
-    response_content_type_ = header.contentType().toStdString();
     status_ = static_cast<unsigned short>(header.statusCode());
-    SplitStatusAndHeaders();
-    ParseResponseHeaders();
+    if (status_ == 301) {
+      redirected_url_ = header.value("Location").toUtf8().data();
+    } else {
+      response_header_ = header;
+      response_headers_ = header.toString().toStdString();
+      response_content_type_ = header.contentType().toStdString();
+      SplitStatusAndHeaders();
+      ParseResponseHeaders();
 
 #if _DEBUG
-    QTextStream out(stdout);
-    out << "Receive Header:"
-        << header.contentType() << "\n"
-        << header.statusCode() << "\n"
-        << header.toString()  << "\n";
+      QTextStream out(stdout);
+      out << "Receive Header:"
+          << header.contentType() << "\n"
+          << header.statusCode() << "\n"
+          << header.toString()  << "\n";
 #endif
 
-    if (session_)
-      session_->SaveCookie(header);
+      if (session_)
+        session_->SaveCookie(header);
 
-    ChangeState(HEADERS_RECEIVED);
-    ChangeState(LOADING);
+      ChangeState(HEADERS_RECEIVED);
+      ChangeState(LOADING);
+    }
   }
 
   void OnRequestFinished(int id, bool error) {
-    if (error)
-      LOG("Error %s", http_->errorString().toStdString().c_str());
-    QByteArray array = http_->readAll();
-    response_body_.clear();
-    response_body_.append(array.data(), array.length());
+    if (status_ == 301) {
+      FreeResource();
+      send_flag_ = false;
+      if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
+        ChangeState(HEADERS_RECEIVED);
+        ChangeState(LOADING);
+        ChangeState(DONE);
+      } else {
+        Send(NULL, 0);
+      }
+    } else {
+      if (error)
+        LOG("Error %s", http_->errorString().toStdString().c_str());
+      QByteArray array = http_->readAll();
+      response_body_.clear();
+      response_body_.append(array.data(), array.length());
 
-    DLOG("responseFinished: %d, %zu, %d",
-         id,
-         response_body_.length(),
-         array.length());
-    // DLOG("reponse: %s", response_body_.c_str());
-    ChangeState(DONE);
+      DLOG("responseFinished: %d, %zu, %d",
+           id,
+           response_body_.length(),
+           array.length());
+      // DLOG("reponse: %s", response_body_.c_str());
+      ChangeState(DONE);
+    }
   }
 
   MainLoopInterface *main_loop_;
@@ -796,6 +827,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // It will be true after send() is called in async mode.
   bool send_flag_;
 
+  std::string redirected_url_;
   std::string response_headers_;
   std::string response_content_type_;
   std::string response_encoding_;
@@ -803,6 +835,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string status_text_;
   std::string response_body_;
   std::string response_text_;
+  QString user_;
+  QString password_;
+  QString method_;
   DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
   static Backoff backoff_;
