@@ -167,6 +167,7 @@ class QtHost::Impl {
         .append(description)
         .append("\n\n")
         .append(GM_("GADGET_REQUIRED_PERMISSIONS"))
+        .append("\n")
         .append(permissions_msg);
     int ret = QMessageBox::question(
         NULL,
