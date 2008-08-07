@@ -919,6 +919,7 @@ AC_CONFIG_FILES([Makefile
 		 gadgets/digital_alarm_clock/Makefile
 		 gadgets/igoogle/Makefile
 		 gadgets/rss/Makefile
+		 gadgets/photos/Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc
