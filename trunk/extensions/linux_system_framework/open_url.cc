@@ -186,7 +186,7 @@ bool OpenURL(const char *url, const Gadget *gadget) {
 
   const Permissions *permissions = gadget->GetPermissions();
   if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) == 0 ||
-      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1 == 0)) {
+      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) == 0) {
     if (!permissions->IsRequiredAndGranted(Permissions::NETWORK)) {
       LOG("No permission to open a remote url.");
       return false;
