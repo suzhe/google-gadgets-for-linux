@@ -510,7 +510,12 @@ SlideShower.prototype = {
     this.states.matrixItems = [];
   },
 
-  detailsOnClose: function(flag) {
+  detailsOnClose: function(dv, flag) {
+    var detailsSize = dv.detailsViewData.getValue("detailsSize");
+    if (detailsSize) {
+      optionsPut("detailsSize", {width: detailsSize.width,
+                                 height: detailsSize.height});
+    }
     if (flag == gddDetailsViewFlagRemoveButton) {
       this.addToBlack(this.states.detailsShowing);
     }
@@ -550,13 +555,12 @@ SlideShower.prototype = {
       false,
       0);
     dv.detailsViewData.putValue("sourceItem", sourceItem);
-    dv.detailsViewData.putValue("scaleModel", this.states.scaleModel);
     this.states.detailsShowing = sourceItem;
     plugin.ShowDetailsView(dv,
                            sourceItem.title,
                            gddDetailsViewFlagToolbarOpen |
                            gddDetailsViewFlagRemoveButton,
-                           bindFunction(this.detailsOnClose, this));
+                           bindFunction(this.detailsOnClose, this, dv));
   },
 
   resizedImage: function(shower, container) {
