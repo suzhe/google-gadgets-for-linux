@@ -34,6 +34,7 @@ class JSScriptRuntime::Impl {
 
 JSScriptRuntime::JSScriptRuntime()
     : impl_(new Impl) {
+  InitScriptContextData();
 }
 
 JSScriptRuntime::~JSScriptRuntime() {

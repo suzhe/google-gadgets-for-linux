@@ -17,6 +17,7 @@
 IF(GGL_BUILD_QT_SCRIPT_RUNTIME)
 
 APPLY_CONFIG(QT)
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
@@ -27,6 +28,8 @@ SET(SRCS
   converter.cc
   json.cc
 )
+
+QT4_AUTOMOC(js_function_slot.cc)
 
 ADD_LIBRARY(ggadget-qtscript ${SRCS})
 ADD_MODULE(qt-script-runtime qt_script_runtime.cc)

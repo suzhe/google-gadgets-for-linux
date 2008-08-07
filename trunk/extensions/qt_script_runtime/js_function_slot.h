@@ -57,6 +57,8 @@ class JSFunctionSlot : public Slot {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSFunctionSlot);
 
+  class QtObject;
+  QtObject *q_obj_;
   const Slot *prototype_;
   QScriptEngine *engine_;
   bool code_; // true if set by src code
@@ -65,6 +67,21 @@ class JSFunctionSlot : public Slot {
   int line_no_;
   QScriptValue function_;
 };
+
+class JSFunctionSlot::QtObject : public QObject {
+  Q_OBJECT
+ public:
+  QtObject(QScriptEngine *engine) : valid_(true) {
+    connect(engine, SIGNAL(destroyed()),
+            this, SLOT(OnScriptEngineDestroyed()));
+  }
+  bool valid_;
+ public slots:
+  void OnScriptEngineDestroyed() {
+    valid_ = false;
+  }
+};
+
 
 } // namespace qt
 } // namespace ggadget

@@ -30,44 +30,54 @@
 namespace ggadget {
 namespace qt {
 
-extern JSScriptContext *GetEngineContext(QScriptEngine *engine);
-
+#ifdef _DEBUG
 static int i = 0;
+#endif
 JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
                                QScriptEngine *engine,
                                const char *script,
                                const char *file_name,
                                int lineno)
-    : prototype_(prototype),
+    : q_obj_(new QtObject(engine)),
+      prototype_(prototype),
       engine_(engine),
       code_(true),
       script_(QString::fromUtf8(script)),
       file_name_(file_name ? file_name: ""),
       line_no_(lineno) {
+#ifdef _DEBUG
   i++;
-  LOG("New JSFunctionSlot:#%d", i);
+  DLOG("New JSFunctionSlot:#%d", i);
+#endif
 }
 
 JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
                                QScriptEngine *engine, QScriptValue function)
-    : prototype_(prototype),
+    : q_obj_(new QtObject(engine)),
+      prototype_(prototype),
       engine_(engine),
       code_(false),
       function_(function) {
+#ifdef _DEBUG
   i++;
-  LOG("New JSFunctionSlot:#%d", i);
+  DLOG("New JSFunctionSlot:#%d", i);
+#endif
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
+#ifdef _DEBUG
   DLOG("JSFunctionSlot deleted");
   i--;
   LOG("Delete JSFunctionSlot:#%d", i);
+#endif
 }
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
-  ScopedLogContext log_context(GetEngineContext(engine_));
   Variant return_value(GetReturnType());
+  if (!q_obj_->valid_)
+    return ResultVariant(return_value);
+  ScopedLogContext log_context(GetEngineContext(engine_));
   QScriptValue qval;
   if (code_) {
     DLOG("JSFunctionSlot::Call: %s", script_.toUtf8().data());
@@ -109,3 +119,4 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
 
 } // namespace qt
 } // namespace ggadget
+#include "js_function_slot.moc"
