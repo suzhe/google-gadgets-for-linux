@@ -116,7 +116,8 @@ static bool ConvertJSToSlot(QScriptEngine *e,
 
 static bool ConvertJSToNativeDate(const QScriptValue &qval, Variant *val) {
   QDateTime t = qval.toDateTime();
-  uint64_t time_in_msec = t.toTime_t() * 1000;
+  uint64_t time_in_msec = t.toTime_t();
+  time_in_msec *= 1000;
   time_in_msec += t.time().msec();
   *val = Variant(Date(time_in_msec));
   return true;

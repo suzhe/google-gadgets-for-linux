@@ -28,10 +28,18 @@
 namespace ggadget {
 namespace qt {
 
-static std::map<QScriptEngine*, JSScriptContext*> g_data;
+static std::map<QScriptEngine*, JSScriptContext*> *g_data = NULL;
 
 JSScriptContext *GetEngineContext(QScriptEngine *engine) {
-  return g_data[engine];
+  return (*g_data)[engine];
+}
+
+static JSScriptContext::Impl* GetEngineContextImpl(QScriptEngine *engine) {
+  return (*g_data)[engine]->impl_;
+}
+
+void InitScriptContextData() {
+  if (!g_data) g_data = new std::map<QScriptEngine*, JSScriptContext*>();
 }
 
 // String.substr is not ecma standard and qtscript doesn't provide it, so make
@@ -46,32 +54,31 @@ static QScriptValue substr(QScriptContext *context, QScriptEngine *engine) {
   return QScriptValue(engine, self.toString().mid(start, length));
 }
 
-QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
-  if (!ctx->argument(0).isString())
-    return ctx->callee().data().construct(ctx->argumentsObject());
-
-  QString arg = ctx->argument(0).toString();
+static QDateTime CustomParseDate(const QString &arg) {
   QDateTime dt = QDateTime::fromString(arg, Qt::TextDate);
   if (!dt.isValid()) {
-    // try custom parsing
-    QRegExp re("(January|February|March|April|May|June|July|August|September|October|November|December) ([0-9]+), ([0-9]+) ([0-9]{2}):([0-9]{2}):([0-9]{2})");
+    DLOG("CustomParseDate: %s", arg.toStdString().c_str());
+    static QHash<QString, int> monthsHash;
+    if (monthsHash.isEmpty()) {
+      monthsHash["Jan"] = 1;
+      monthsHash["Feb"] = 2;
+      monthsHash["Mar"] = 3;
+      monthsHash["Apr"] = 4;
+      monthsHash["May"] = 5;
+      monthsHash["Jun"] = 6;
+      monthsHash["Jul"] = 7;
+      monthsHash["Aug"] = 8;
+      monthsHash["Sep"] = 9;
+      monthsHash["Oct"] = 10;
+      monthsHash["Nov"] = 11;
+      monthsHash["Dec"] = 12;
+    }
+    // try custom parsing format as "May 11, 1979 11:11:11"
+    QRegExp re("(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* ([0-9]+), ([0-9]+) ([0-9]{2}):([0-9]{2}):([0-9]{2})");
+    // try custom parsing format as "11 May 1979 11:11:11"
+    QRegExp re1("([0-9]+) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* ([0-9]+) ([0-9]{2}):([0-9]{2}):([0-9]{2})");
     if (re.indexIn(arg) != -1) {
       QString monthName = re.cap(1);
-      static QHash<QString, int> monthsHash;
-      if (monthsHash.isEmpty()) {
-        monthsHash["January"] = 1;
-        monthsHash["February"] = 2;
-        monthsHash["March"] = 3;
-        monthsHash["April"] = 4;
-        monthsHash["May"] = 5;
-        monthsHash["June"] = 6;
-        monthsHash["July"] = 7;
-        monthsHash["August"] = 8;
-        monthsHash["September"] = 9;
-        monthsHash["October"] = 10;
-        monthsHash["November"] = 11;
-        monthsHash["December"] = 12;
-      }
       int month = monthsHash.value(monthName);
       if (month != 0) {
         int day = re.cap(2).toInt();
@@ -81,9 +88,35 @@ QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
         int seconds = re.cap(6).toInt();
         dt = QDateTime(QDate(year, month, day), QTime(hours, minutes, seconds));
       }
+    } else if (re1.indexIn(arg) != -1) {
+      Qt::TimeSpec ts = Qt::LocalTime;
+      if (arg.contains("GMT"))
+        ts = Qt::UTC;
+      int day = re1.cap(1).toInt();
+      int month = monthsHash.value(re1.cap(2));
+      int year = re1.cap(3).toInt();
+      int hours = re1.cap(4).toInt();
+      int minutes = re1.cap(5).toInt();
+      int seconds = re1.cap(6).toInt();
+      dt = QDateTime(QDate(year, month, day), QTime(hours, minutes, seconds), ts);
     }
+    DLOG("\t%s", dt.toString().toUtf8().data());
   }
-  return eng->newDate(dt);
+  return dt;
+}
+
+QScriptValue ParseDate(QScriptContext *ctx, QScriptEngine *eng) {
+  if (!ctx->argument(0).isString())
+    return ctx->callee().data().construct(ctx->argumentsObject());
+  QString arg = ctx->argument(0).toString();
+  return eng->newDate(CustomParseDate(arg));
+}
+
+QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
+  if (!ctx->argument(0).isString())
+    return ctx->callee().data().construct(ctx->argumentsObject());
+  QString arg = ctx->argument(0).toString();
+  return eng->newDate(CustomParseDate(arg));
 }
 // Check if obj has pending exception, if so, raise exception with ctx and
 // return false.
@@ -158,6 +191,7 @@ class JSScriptContext::Impl {
     // Suport Date("May 5, 2008 00:00:00")
     QScriptValue originalDateCtor = engine_.globalObject().property("Date");
     QScriptValue newDateCtor = engine_.newFunction(CustomDateConstructor);
+    newDateCtor.setProperty("parse", engine_.newFunction(ParseDate));
     newDateCtor.setData(originalDateCtor);
     engine_.globalObject().setProperty("Date", newDateCtor);
 
@@ -218,19 +252,20 @@ class JSScriptContext::Impl {
   int line_number_;
 };
 
-#ifdef _DEBUG
+#define SCW_COUNT_DEBUG 0
+#if SCW_COUNT_DEBUG
 static int scw_count = 0;
 #endif
 class SlotCallerWrapper : public QObject {
  public:
   SlotCallerWrapper(ScriptableInterface *object, Slot *slot)
     : object_(object), slot_(slot) {
-#ifdef _DEBUG
+#if SCW_COUNT_DEBUG
     scw_count++;
     DLOG("SlotCallerWrapper:%d", scw_count);
 #endif
   }
-#ifdef _DEBUG
+#if SCW_COUNT_DEBUG
   ~SlotCallerWrapper() {
     scw_count--;
     DLOG("delete SlotCallerWrapper:%d", scw_count);
@@ -271,7 +306,7 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
     return engine->undefinedValue();
   } else {
     // Update filename and line number
-    JSScriptContext::Impl *impl = g_data[engine]->impl_;
+    JSScriptContext::Impl *impl = GetEngineContext(engine)->impl_;
     QScriptContextInfo info(context);
     impl->file_name_ = info.fileName();
     impl->line_number_ = info.lineNumber();
@@ -283,7 +318,8 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   }
 }
 
-#ifdef _DEBUG
+#define SC_COUNT_DEBUG 0
+#if SC_COUNT_DEBUG
 static int sc_count = 0;
 #endif
 ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
@@ -300,7 +336,7 @@ ResolverScriptClass::ResolverScriptClass(QScriptEngine *engine,
     ResultVariant p = object->GetProperty("");
     call_slot_ = VariantValue<Slot*>()(p.v());
   }
-#ifdef _DEBUG
+#if SC_COUNT_DEBUG
   sc_count++;
   LOG("new ResolverScriptClass:%d, %p", sc_count, this);
 #endif
@@ -311,7 +347,7 @@ ResolverScriptClass::~ResolverScriptClass() {
     on_reference_change_connection_->Disconnect();
     object_->Unref();
   }
-#ifdef _DEBUG
+#if SC_COUNT_DEBUG
   sc_count--;
   LOG("delete ResolverScriptClass:%d, %p", sc_count, this);
 #endif
@@ -375,7 +411,7 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
 
   std::string sname = name.toStdString();
   if (global_) {
-    JSScriptContext::Impl *impl = g_data[engine()]->impl_;
+    JSScriptContext::Impl *impl = GetEngineContextImpl(engine());
     if (impl->class_constructors_.find(sname) !=
         impl->class_constructors_.end()) {
       *id = PT_GLOBAL; // access class constructors
@@ -402,7 +438,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
                                            uint id) {
   std::string sname = name.toString().toStdString();
 
-  JSScriptContext::Impl *impl = g_data[engine()]->impl_;
+  JSScriptContext::Impl *impl = GetEngineContextImpl(engine());
 
   if (id == PT_GLOBAL) {
     Slot *slot = impl->class_constructors_[sname];
@@ -504,13 +540,13 @@ QVariant ResolverScriptClass::extension(Extension extension,
 }
 
 JSScriptContext::JSScriptContext() : impl_(new Impl(this)){
-  g_data[&impl_->engine_] = this;
+  (*g_data)[&impl_->engine_] = this;
 }
 
 JSScriptContext::~JSScriptContext() {
   QScriptEngine *engine = &impl_->engine_;
+  g_data->erase(engine);
   delete impl_;
-  g_data.erase(engine);
 }
 
 void JSScriptContext::Destroy() {

@@ -83,6 +83,7 @@ class JSScriptContext : public ScriptContextInterface {
 };
 
 JSScriptContext *GetEngineContext(QScriptEngine *engine);
+void InitScriptContextData();
 ScriptableInterface *GetNativeObject(const QScriptValue &qval);
 
 } // namespace qt

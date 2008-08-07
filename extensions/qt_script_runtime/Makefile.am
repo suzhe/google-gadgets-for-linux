@@ -16,6 +16,8 @@
 if GGL_BUILD_QT_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
+MOC_FILES		= js_function_slot.moc
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
@@ -69,4 +71,10 @@ qt_script_runtime_la_LIBADD = \
 qt_script_runtime_la_LDFLAGS = \
 			  -avoid-version \
 			  -module
+
+BUILT_SOURCES		= $(MOC_FILES)
+CLEANFILES		= $(MOC_FILES)
+
+js_function_slot.moc:js_function_slot.h
+	$(MOC) $< -o $@
 endif
