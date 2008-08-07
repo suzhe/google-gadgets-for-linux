@@ -15,15 +15,45 @@
 */
 
 function detailsOpen() {
+  optionsPut("detailsSize", {}, 1);
+  var osize = optionsGet("detailsSize");
   var sitem = detailsViewData.getValue("sourceItem");
   detimg.src = sitem.image;
-  resizedDetails();
+  var imageSize = {width: detimg.srcWidth, height: detimg.srcHeight};
+  var maxsize = {
+    width: osize.width || 50,
+    height: osize.height || 50
+  };
+  if (system && system.screen) {
+    maxsize.width = Math.max(system.screen.size.width / 2, maxsize.width);
+    maxsize.height = Math.max(system.screen.size.height / 2, maxsize.height);
+  } else {
+    maxsize.width = Math.max(800, maxsize.width);
+    maxsize.height = Math.max(600, maxsize.height);
+  }
+  if (osize.width && osize.height) {
+    var area = imageSize.width * imageSize.height;
+    var oarea = osize.width * osize.height;
+    var scale = Math.sqrt(oarea / area);
+    imageSize.width *= scale;
+    imageSize.height *= scale;
+  }
+  if (imageSize.width > maxsize.width || imageSize.height > maxsize.height) {
+    scaleToMax(imageSize, maxsize);
+  }
+  view.onsizing = resizingDetails;
+  view.resizeTo(imageSize.width, imageSize.height);
+  resizedImage(detimg, view, "whole");
+  view.onsize = resizedDetails;
+}
+
+function resizingDetails() {
+  if (event.width < 50 || event.height < 50) {
+    event.returnValue = false;
+  }
 }
 
 function resizedDetails() {
-  if (view.width < 100) view.width = 100;
-  if (view.height < 50) view.height = 50;
-  resizedImage(detimg, view, detailsViewData.getValue("scaleModel"));
+  detailsViewData.putValue("detailsSize", {width: view.width, height: view.height});
+  resizedImage(detimg, view, "whole");
 }
-
-view.onsize = resizedDetails;
