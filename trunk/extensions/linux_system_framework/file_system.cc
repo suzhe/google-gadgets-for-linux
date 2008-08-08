@@ -1293,7 +1293,8 @@ FolderInterface *FileSystem::GetFolder(const char *folder_path) {
 
 FolderInterface *FileSystem::GetSpecialFolder(SpecialFolder special_folder) {
   // FIXME
-  return NULL;
+  // Returns a folder to make the gadgets relying this feature happy.
+  return new Folder("/tmp");
 }
 
 bool FileSystem::DeleteFile(const char *file_spec, bool force) {

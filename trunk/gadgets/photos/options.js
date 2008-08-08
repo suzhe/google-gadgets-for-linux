@@ -145,6 +145,7 @@ function onAddUrl() {
     urlitems.removeString(s);
     urlitems.appendElement(listItemWrap(s));
     urlitems.clearSelection();
+    urleditor.value = "";
   } else {
     alert(OPTIONS_INVALIDURL.replace("%s", s));
   }
