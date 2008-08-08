@@ -35,3 +35,9 @@ This page is dedicated for recording notable changes of each release.
     * Debug Console has been added for both ggl-gtk and ggl-qt. Use -dc command option to enable it.
     * qt_script_runtime has been added, though there are still some bugs.
     * Many other bugfixes.
+
+  * 0.10.1 - Aug 8th 2008
+    * To celebrate the opening of the Beijing 2008 Olympic Games.
+    * A prototype of Gadget Designer gadget has been added. Just add it from add gadget dialog and drag it out of sidebar (it's too large to fit in sidebar). Currently it only supports editing existing gadget. It's also a demo to show the power of Google Desktop Gadgets API, because itself is a gadget.
+    * A new Photos gadget has been added, which can display your favorite photos from web or local directory as a slideshow.
+    * Lots of bugs have been fixed, and some popular gadgets can run without problem, such as facebook and Google Calendar gadgets.
