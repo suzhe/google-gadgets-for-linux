@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2008 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<view height="600" resizable="true" width="800" onopen="view_onopen()"
+  onsize="view_onsize()" onmouseover="view_onmouseover()"
+  oncontextmenu="view_oncontextmenu()">
+  <div visible="false" name="e_for_metadata">
+    <!-- metadata.js uses the following elements to determine the default
+      values of each property of each element. -->
+    <div name="e_for_metadata_div"/>
+    <img name="e_for_metadata_img"/>
+    <button name="e_for_metadata_button"/>
+    <edit name="e_for_metadata_edit"/>
+    <checkbox name="e_for_metadata_checkbox"/>
+    <radio name="e_for_metadata_radio"/>
+    <a name="e_for_metadata_a"/>
+    <label name="e_for_metadata_label"/>
+    <contentarea name="e_for_metadata_contentarea"/>
+    <listbox name="e_for_metadata_listbox"/>
+    <combobox name="e_for_metadata_combobox"/>
+    <progressbar name="e_for_metadata_progressbar"/>
+    <scrollbar name="e_for_metadata_scrollbar"/>
+    <listbox name="e_for_metadata_item"><item/></listbox>
+  </div>
+	<div width="100%" height="100%" background="#808080" name="e_whole_ui">
+	  <div visible="false" height="38" name="e_toolbar" background="#ECE9E7"/>
+	  <div visible="false" name="e_tool_views" width="200" height="100%"
+	    pinX="100%" x="100%" background="#FFFFFF">
+	    <combobox width="100%" itemWidth="100%" itemHeight="20" height="200"
+	      name="e_file_list" background="#FFFFFF" type="droplist"
+	      onchange="file_list_onchange()"/>
+	    <div y="20" background="#C0C0C0" width="100%" height="20">
+	      <label width="100%" align="center" vAlign="middle">&PROPERTIES;</label>
+	    </div>
+	    <listbox width="100%" itemWidth="100%" y="40" itemHeight="18"
+	      height="180" autoscroll="true" itemSeparator="true"
+	      name="e_properties_list" onchange="properties_list_onchange()"/>
+      <div y="220" background="#C0C0C0" width="100%" height="20">
+        <label width="100%" align="center" vAlign="middle">&EVENTS;</label>
+      </div>
+	    <listbox width="100%" itemWidth="100%" y="240" itemHeight="18"
+	      height="160" autoscroll="true" itemSeparator="true"
+	      name="e_events_list" onchange="events_list_onchange()"/>
+      <div y="400" background="#C0C0C0" width="100%" height="20">
+        <label width="100%" align="center" vAlign="middle">&ELEMENTS;</label>
+      </div>
+	    <listbox width="100%" itemWidth="100%" y="420" itemHeight="18"
+	      height="180" autoscroll="true" name="e_elements_list"
+	      onchange="elements_list_onchange()"/>
+	  </div>
+	  <div visible="false" name="e_designer" y="38" onsize="designer_onsize()">
+	    <div name="e_designer_view" onsize="designer_onsize()"
+	      background="images/view_background.png"/>
+	    <div enabled="true" name="e_designer_panel" width="100%" height="100%"
+	      onmousedown="designer_panel_onmousedown()"
+	      onmousemove="designer_panel_onmousemove()"
+	      onmouseup="designer_panel_onmouseup()">
+		    <div enabled="true" name="e_selection"
+		      onmousedown="selection_onmousedown()"
+		      onmousemove="selection_onmousemove()"
+		      onmouseup="selection_onmouseup()"
+		      onfocusin="selection_onfocusin()"
+		      onkeydown="selection_onkeydown()" onkeyup="selection_onkeyup()">
+		      <div cursor="sizeall" enabled="true" height="5" width="100%"
+            background="images/selection_border.png"
+		        onmousedown="selection_border_onmousedown()"
+		        onmousemove="selection_border_onmousemove()"
+		        onmouseup="selection_border_onmouseup()"/>
+		      <div cursor="sizeall" enabled="true" height="100%" width="5"
+            background="images/selection_border.png"
+		        onmousedown="selection_border_onmousedown()"
+		        onmousemove="selection_border_onmousemove()"
+		        onmouseup="selection_border_onmouseup()"/>
+		      <div cursor="sizeall" enabled="true" height="5" pinY="5"
+		        width="100%" x="0" y="100%"
+		        background="images/selection_border.png"
+		        onmousedown="selection_border_onmousedown()"
+		        onmousemove="selection_border_onmousemove()"
+		        onmouseup="selection_border_onmouseup()"/>
+		      <div cursor="sizeall" enabled="true" height="100%" pinX="5"
+		        width="5" x="100%" y="0"
+            background="images/selection_border.png"
+		        onmousedown="selection_border_onmousedown()"
+		        onmousemove="selection_border_onmousemove()"
+		        onmouseup="selection_border_onmouseup()"/>
+          <div name="e_rotation1" cursor="cross" enabled="true" height="5"
+            width="50%" x="100%" y="100%" pinX="100%" pinY="5"
+            background="#FFFF00" opacity="190"
+            onmousedown="rotation_onmousedown()"
+            onmousemove="rotation_onmousemove()"
+            onmouseup="rotation_onmouseup()"/>
+          <div name="e_rotation2" cursor="cross" enabled="true" height="50%"
+            width="5" x="100%" y="100%" pinX="5" pinY="100%"
+            background="#FFFF00" opacity="190"
+            onmousedown="rotation_onmousedown()"
+            onmousemove="rotation_onmousemove()"
+            onmouseup="rotation_onmouseup()"/>
+		      <div name="e_size_top_left" cursor="sizenwse" enabled="true" height="6"
+		        width="6" x="0" y="0" background="#0000FF"
+		        onmousedown="size_onmousedown(-1, -1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_top" cursor="sizens" enabled="true" height="6"
+		        pinX="3" width="6" x="50%" y="0" background="#0000FF"
+		        onmousedown="size_onmousedown(0, -1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_top_right" cursor="sizenesw" enabled="true"
+		        height="6" pinX="6" width="6" x="100%" y="0" background="#0000FF"
+		        onmousedown="size_onmousedown(1, -1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_left" cursor="sizewe" enabled="true" height="6"
+		        pinY="3" width="6" x="0" y="50%" background="#0000FF"
+		        onmousedown="size_onmousedown(-1, 0)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_right" cursor="sizewe" enabled="true" height="6"
+		        pinX="6" pinY="3" width="6" x="100%" y="50%" background="#0000FF"
+		        onmousedown="size_onmousedown(1, 0)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_bottom_left" cursor="sizenesw" enabled="true"
+		        height="6" pinY="6" width="6" x="0" y="100%"  background="#0000FF"
+		        onmousedown="size_onmousedown(-1, 1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_bottom" cursor="sizens" enabled="true" height="6"
+		        pinX="3" pinY="6" width="6" x="50%" y="100%" background="#0000FF"
+		        onmousedown="size_onmousedown(0, 1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		      <div name="e_size_bottom_right" cursor="sizenwse" enabled="true"
+		        height="6" pinX="6" pinY="6" width="6" x="100%" y="100%"
+		        background="#0000FF"
+		        onmousedown="size_onmousedown(1, 1)"
+		        onmousemove="size_onmousemove()"
+		        onmouseup="size_onmouseup()"/>
+		    </div>
+        <img enabled="true" name="e_pin" src="images/pin.png" pinX="1" pinY="8"
+          cursor="cross" onmousedown="pin_onmousedown()"
+          onmousemove="pin_onmousemove()" onmouseup="pin_onmouseup()"/>
+		  </div>
+	  </div>
+	</div>
+	<script src="tree.js"/>
+	<script src="properties.js"/>
+	<script src="metadata.js"/>
+	<script src="view_model.js"/>
+	<script src="designer.js"/>
+</view>
