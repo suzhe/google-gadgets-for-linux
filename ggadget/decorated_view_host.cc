@@ -1585,7 +1585,7 @@ class DecoratedViewHost::Impl {
       }
 
       DoLayout();
-      return ShowView(modal, 0, NULL);
+      return ViewDecoratorBase::ShowDecoratedView(modal, 0, NULL);
     }
 
     virtual void CloseDecoratedView() {

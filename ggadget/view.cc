@@ -1690,18 +1690,38 @@ bool View::OpenURL(const char *url) const {
 }
 
 void View::Alert(const char *message) const {
-  if (impl_->view_host_)
+  if (impl_->view_host_) {
+    bool old_interaction =
+      impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
     impl_->view_host_->Alert(this, message);
+    if (impl_->gadget_)
+      impl_->gadget_->SetInUserInteraction(old_interaction);
+  }
 }
 
 bool View::Confirm(const char *message) const {
-  return impl_->view_host_ ? impl_->view_host_->Confirm(this, message) : false;
+  bool result = false;
+  if (impl_->view_host_) {
+    bool old_interaction =
+      impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
+    result = impl_->view_host_->Confirm(this, message);
+    if (impl_->gadget_)
+      impl_->gadget_->SetInUserInteraction(old_interaction);
+  }
+  return result;
 }
 
 std::string View::Prompt(const char *message,
                          const char *default_result) const {
-  return impl_->view_host_ ?
-         impl_->view_host_->Prompt(this, message, default_result) : "";
+  std::string result;
+  if (impl_->view_host_) {
+    bool old_interaction =
+      impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
+    result = impl_->view_host_->Prompt(this, message, default_result);
+    if (impl_->gadget_)
+      impl_->gadget_->SetInUserInteraction(old_interaction);
+  }
+  return result;
 }
 
 uint64_t View::GetCurrentTime() const {
