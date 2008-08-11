@@ -33,4 +33,7 @@ Display a slideshow of your favorite photos right on your desktop.</GADGET_ABOUT
   <OPTIONS_MESSAGE_ADD>Google Desktop can display photos from your disk or online sources (either RSS or Atom feeds or regular URLs.) as a slideshow. Please select the folders or add URLs you would like to see photos from.</OPTIONS_MESSAGE_ADD>
   <OPTIONS_MESSAGE_SLIDEINTERVAL_BEFORE>Display each photo for</OPTIONS_MESSAGE_SLIDEINTERVAL_BEFORE>
   <OPTIONS_MESSAGE_SLIDEINTERVAL_AFTER>seconds</OPTIONS_MESSAGE_SLIDEINTERVAL_AFTER>
+
+  <MSG_DRAG_FEED_ACCEPTS>%d feed(s) added</MSG_DRAG_FEED_ACCEPTS>
+  <MSG_DRAG_FEED_INVALID>invalid feed(s)</MSG_DRAG_FEED_INVALID>
 </strings>

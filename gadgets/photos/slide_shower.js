@@ -125,6 +125,7 @@ SlideShower.prototype = {
     this.resizedImage(shower_up, this.options.showersWrap);
     shower_up.onclick = bindFunction(this.detailsToggle, this, sourceItem);
     shower_up.enabled = true;
+    shower_up.tooltip = sourceItem.title;
     if (!noEffect && this.options.slideInterval >= 6) {
       shower_up.opacity = 0;
       shower_down.opacity = 255;
@@ -493,6 +494,7 @@ SlideShower.prototype = {
         shower.visible = true;
         shower.onclick = bindFunction(this.detailsToggle,
                                       this, this.states.matrixItems[i]);
+        shower.tooltip = this.states.matrixItems[i].title;
         this.resizedImage(this.options.matrixShowers[i], mtcont);
       } else {
         shower.setSrcSize(0, 0);
