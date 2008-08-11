@@ -178,9 +178,15 @@ FeedItem.prototype = {
 
   checkValid: function() {
     if (!this.url || this.type == "just-comment") return undefined;
-    if (this.type != "file" || checkFile(this.url))
-      return this;
-    return undefined;
+    if (this.type == "file") {
+      var ft = checkFile(this.url);
+      if (ft == 1) {
+        var sitem = new SourceItem(this.url, this);
+        if (!sitem.checkValid()) return undefined;
+      }
+      if (ft == 0) return undefined;
+    }
+    return this;
   },
 
   fetch: function() {

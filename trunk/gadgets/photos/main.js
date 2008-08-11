@@ -23,6 +23,8 @@ view.onopen = function() {
 
 var kSlideShower;
 
+var kMessager;
+
 var kOptions = {
   feedurls: [],
   slideInterval: 15,
@@ -37,6 +39,48 @@ var kOptions = {
 
 var kBlackList = {};
 
+function Messager(wrap, messager, time) {
+  this.wrap = wrap;
+  this.messager = messager;
+  this.time = time || 3000;
+  this.stop();
+}
+
+Messager.prototype = {
+  animationToken: undefined,
+
+  set: function(msg) {
+    this.messager.innerText = msg;
+    this.start();
+  },
+
+  start: function() {
+    this.stop();
+    this.wrap.visible = true;
+    this.animationToken = beginAnimation(
+      bindFunction(this.animation, this),
+      100, 255, this.time);
+  },
+
+  stop: function() {
+    if (this.animationToken) {
+      cancelAnimation(this.animationToken);
+      this.animationToken = undefined;
+    }
+    this.wrap.visible =  false;
+  },
+
+  animation: function() {
+    if (event.value >= 253) {
+      this.stop();
+      return;
+    }
+    var opacity = 2 * event.value;
+    if (opacity > 255) opacity = 511 - opacity;
+    this.wrap.opacity = opacity;
+  }
+};
+
 function initMain() {
   optionsPut("feedurls",
       [
@@ -49,6 +93,8 @@ function initMain() {
   kOptions.feedurls = optionsGet("feedurls");
   kOptions.slideInterval = optionsGet("slideInterval") - 0;
   kBlackList = optionsGet("blackList");
+
+  kMessager = new Messager(messagerWrap, messager);
 
   kSlideShower = new SlideShower(kOptions);
   kSlideShower.onSlideStop = function() {
@@ -130,3 +176,34 @@ view.onpopout = function() {
 view.onpopin = function() {
   kSlideShower.closeMatrixView();
 };
+
+function onDragOver() {
+  var accepts = getDragDropFeeds(event.dragFiles);
+  if (accepts.length == 0) {
+    event.returnValue = false;
+    kMessager.set(MSG_DRAG_FEED_INVALID);
+    return;
+  }
+}
+
+function onDragDrop() {
+  var accepts = getDragDropFeeds(event.dragFiles);
+  if (accepts.length) {
+    var feeds = optionsGet("feedurls");
+    feeds = feeds.concat(accepts);
+    optionsPut("feedurls", feeds);
+  }
+  kMessager.set(MSG_DRAG_FEED_ACCEPTS.replace("%d", accepts.length));
+}
+
+function getDragDropFeeds(objs) {
+  objs = enumToArray(objs);
+  var accepts = [];
+  for (var i = 0; i < objs.length; ++i) {
+    var feed = new FeedItem(objs[i]);
+    if (feed.checkValid()) {
+      accepts.push(objs[i]);
+    }
+  }
+  return accepts;
+}
