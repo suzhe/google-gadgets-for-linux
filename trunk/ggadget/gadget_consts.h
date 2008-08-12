@@ -156,8 +156,6 @@ const char kContentItemUnpinned[] = "resource://unpinned.png";
 const char kContentItemUnpinnedOver[] = "resource://unpinned_over.png";
 const char kContentItemPinned[] = "resource://pinned.png";
 
-// The following kButtonXXX and kCheckBoxXXX images are not for element
-// defaults, but for convenience of native gadgets.
 const char kButtonImage[] = "resource://button_up.png";
 const char kButtonDownImage[] = "resource://button_down.png";
 const char kButtonOverImage[] = "resource://button_over.png";
@@ -167,6 +165,15 @@ const char kCheckBoxOverImage[] = "resource://checkbox_over.png";
 const char kCheckBoxCheckedImage[] = "resource://checkbox_checked_up.png";
 const char kCheckBoxCheckedDownImage[] = "resource://checkbox_checked_down.png";
 const char kCheckBoxCheckedOverImage[] = "resource://checkbox_checked_over.png";
+const char kRadioImage[] = "resource://radio_up.png";
+const char kRadioDownImage[] = "resource://radio_down.png";
+const char kRadioOverImage[] = "resource://radio_over.png";
+const char kRadioCheckedImage[] = "resource://radio_checked_up.png";
+const char kRadioCheckedDownImage[] = "resource://radio_checked_down.png";
+const char kRadioCheckedOverImage[] = "resource://radio_checked_over.png";
+
+const char kProgressBarFullImage[] = "resource://progressbar_full.png";
+const char kProgressBarEmptyImage[] = "resource://progressbar_empty.png";
 
 // The following are used by the view decorator.
 const char kVDButtonBackground[] = "resource://vd_button_background.png";

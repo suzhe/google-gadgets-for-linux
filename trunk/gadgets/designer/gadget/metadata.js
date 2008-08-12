@@ -341,17 +341,16 @@ function InitMetadata() {
   }
 
   function SetImage(value) {
-    return kGadgetFileManagerPrefix + value;
+    return value ? kGadgetFileManagerPrefix + value : "";
   }
   function GetImage(value) {
-    return value.substring(kGadgetFileManagerPrefix.length);
+    return value ? value.substring(kGadgetFileManagerPrefix.length) : "";
   }
   function SetColorOrImage(value) {
-    return value.charAt(0) == '#' ? value : kGadgetFileManagerPrefix + value;
+    return value ? (value.charAt(0) == '#' ? value : GetImage(value)) : "";
   }
   function GetColorOrImage(value) {
-    return value.charAt(0) == '#' ? value :
-           value.substring(kGadgetFileManagerPrefix.length);
+    return value ? (value.charAt(0) == '#' ? value : SetImage(value)) : "";
   }
 
   function InitGetterSetter(property, name) {

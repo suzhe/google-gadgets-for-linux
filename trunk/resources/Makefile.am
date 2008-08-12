@@ -32,6 +32,14 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
+		progressbar_empty.png \
+		progressbar_full.png \
+		radio_checked_down.png \
+		radio_checked_over.png \
+		radio_checked_up.png \
+		radio_down.png \
+		radio_over.png \
+		radio_up.png \
 		scroll_background.png \
 		scroll_background_h.png \
 		scrollbar_d.png \

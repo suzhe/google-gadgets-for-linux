@@ -405,7 +405,6 @@ class DisplayWindow::Impl {
             ButtonElement *element = down_cast<ButtonElement *>(
                 elements->AppendElement("button", ctrl_id));
             element->GetTextFrame()->SetSize(kLabelTextSize);
-            element->UseDefaultImages();
             control = new Control(owner_, element);
             element->ConnectOnClickEvent(NewSlot(control, &Control::OnClick));
             break;
@@ -414,7 +413,6 @@ class DisplayWindow::Impl {
             CheckBoxElement *element = down_cast<CheckBoxElement *>(
                 elements->AppendElement("checkbox", ctrl_id));
             element->GetTextFrame()->SetSize(kLabelTextSize);
-            element->UseDefaultImages();
             // Default value of gadget checkbox element is false, but here
             // the default value should be false.
             element->SetValue(false);
