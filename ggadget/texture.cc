@@ -55,9 +55,11 @@ class Texture::Impl {
   void Draw(CanvasInterface *canvas, double x, double y,
             double width, double height) const {
     if (image_) {
-      // Don't apply opacity_ here because it is only applicable with color_.
-      canvas->DrawFilledRectWithCanvas(x, y, width, height,
-                                       image_->GetCanvas());
+      const CanvasInterface *image_canvas = image_->GetCanvas();
+      if (image_canvas) {
+        // Don't apply opacity_ here because it is only applicable with color_.
+        canvas->DrawFilledRectWithCanvas(x, y, width, height, image_canvas);
+      }
     } else if (opacity_ > 0) {
       if (opacity_ != 1.0) {
         canvas->PushState();
@@ -77,10 +79,12 @@ class Texture::Impl {
                 CanvasInterface::Trimming trimming,
                 int text_flags) const {
     if (image_) {
-      // Don't apply opacity_ here because it is only applicable with color_.
-      canvas->DrawTextWithTexture(x, y, width, height, text, f,
-                                  image_->GetCanvas(),
-                                  align, valign, trimming, text_flags);
+      const CanvasInterface *image_canvas = image_->GetCanvas();
+      if (image_canvas) {
+        // Don't apply opacity_ here because it is only applicable with color_.
+        canvas->DrawTextWithTexture(x, y, width, height, text, f, image_canvas,
+                                    align, valign, trimming, text_flags);
+      }
     } else if (opacity_ > 0) {
       if (opacity_ != 1.0) {
         canvas->PushState();

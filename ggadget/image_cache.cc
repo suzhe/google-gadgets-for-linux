@@ -31,14 +31,14 @@ class ImageCache::Impl {
 
   class SharedImage : public ImageInterface {
    public:
-    SharedImage(ImageMap *owner, ImageInterface *image)
-      : owner_(owner), image_(image), ref_(1) {
+    SharedImage(const std::string &tag, ImageMap *owner, ImageInterface *image)
+        : tag_(tag), owner_(owner), image_(image), ref_(1) {
       ASSERT(owner_);
-      ASSERT(image_);
     }
 
     virtual ~SharedImage() {
-      image_->Destroy();
+      if (image_)
+        image_->Destroy();
     }
 
     void Ref() {
@@ -51,7 +51,7 @@ class ImageCache::Impl {
       --ref_;
       if (ref_ == 0) {
         if (owner_)
-          owner_->erase(image_->GetTag());
+          owner_->erase(tag_);
         delete this;
       }
     }
@@ -61,23 +61,27 @@ class ImageCache::Impl {
     }
 
     virtual const CanvasInterface *GetCanvas() const {
-      return image_->GetCanvas();
+      return image_ ? image_->GetCanvas() : NULL;
     }
     virtual void Draw(CanvasInterface *canvas, double x, double y) const {
-      image_->Draw(canvas, x, y);
+      if (image_)
+        image_->Draw(canvas, x, y);
     }
     virtual void StretchDraw(CanvasInterface *canvas,
                              double x, double y,
                              double width, double height) const {
-      image_->StretchDraw(canvas, x, y, width, height);
+      if (image_)
+        image_->StretchDraw(canvas, x, y, width, height);
     }
     virtual double GetWidth() const {
-      return image_->GetWidth();
+      return image_ ? image_->GetWidth() : 0;
     }
     virtual double GetHeight() const {
-      return image_->GetHeight();
+      return image_ ? image_->GetHeight() : 0;
     }
     virtual ImageInterface *MultiplyColor(const Color &color) const {
+      if (!image_)
+        return NULL;
       // TODO: share images with color multiplied.
 
       // Reture self if the color is white.
@@ -91,15 +95,16 @@ class ImageCache::Impl {
     }
     virtual bool GetPointValue(double x, double y,
                                Color *color, double *opacity) const {
-      return image_->GetPointValue(x, y, color, opacity);
+      return image_ ? image_->GetPointValue(x, y, color, opacity) : false;
     }
     virtual std::string GetTag() const {
-      return image_->GetTag();
+      return tag_;
     }
     virtual bool IsFullyOpaque() const {
-      return image_->IsFullyOpaque();
+      return image_ ? image_->IsFullyOpaque() : false;
     }
    public:
+    std::string tag_;
     ImageMap *owner_;
     ImageInterface *image_;
     int ref_;
@@ -169,35 +174,27 @@ class ImageCache::Impl {
     std::string data;
     FileManagerInterface *global_fm = GetGlobalFileManager();
 
-    bool is_global = false;
     if (fm && fm->ReadFile(filename, &data)) {
-      is_global = false;
+      img = gfx->NewImage(filename, data, is_mask);
+      image_map = is_mask ? &mask_images_ : &images_;
+#ifdef _DEBUG
+      num_new_images_++;
+#endif
     } else if (global_fm && global_fm->ReadFile(filename, &data)) {
-      is_global = true;
+      img = gfx->NewImage(filename, data, is_mask);
+      image_map = is_mask ? &global_mask_images_ : &global_images_;
+#ifdef _DEBUG
+      global_num_new_images_++;
+#endif
     } else {
-      // Failed to load the image.
-      return NULL;
+      // Still return a SharedImage because the gadget wants the src of an
+      // image even if the image can't be loaded.
+      image_map = is_mask ? &mask_images_ : &images_;
     }
 
-    img = gfx->NewImage(filename, data, is_mask);
-    if (img) {
-      if (is_global) {
-        image_map = is_mask ? &global_mask_images_ : &global_images_;
-#ifdef _DEBUG
-        global_num_new_images_++;
-#endif
-      } else {
-        image_map = is_mask ? &mask_images_ : &images_;
-#ifdef _DEBUG
-        num_new_images_++;
-#endif
-      }
-
-      SharedImage *shared_img = new SharedImage(image_map, img);
-      (*image_map)[tag] = shared_img;
-      return shared_img;
-    }
-    return NULL;
+    SharedImage *shared_img = new SharedImage(tag, image_map, img);
+    (*image_map)[tag] = shared_img;
+    return shared_img;
   }
 
  private:

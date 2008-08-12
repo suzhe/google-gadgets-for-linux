@@ -155,7 +155,13 @@ TEST(ImageCache, LoadImage) {
   img2 = img_cache.LoadImage(&gfx, NULL, "/global-image2", false);
   ASSERT_STREQ("", local_root->requested_file_.c_str());
   ASSERT_STREQ("global-image2", global_root->requested_file_.c_str());
-  ASSERT_FALSE(img2);
+  ASSERT_TRUE(img2);
+  ASSERT_STREQ("/global-image2", img2->GetTag().c_str());
+  ASSERT_FALSE(img2->GetCanvas());
+  img2->Destroy();
+
+  ASSERT_FALSE(img_cache.LoadImage(&gfx, NULL, "", false));
+  ASSERT_FALSE(img_cache.LoadImage(&gfx, NULL, NULL, false));
 }
 
 int main(int argc, char *argv[]) {

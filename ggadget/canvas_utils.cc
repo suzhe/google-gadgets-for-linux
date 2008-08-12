@@ -161,7 +161,6 @@ void StretchMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
   }
 
   const CanvasInterface *src_canvas = src->GetCanvas();
-  ASSERT(src_canvas);
   if (!src_canvas)
     return;
 

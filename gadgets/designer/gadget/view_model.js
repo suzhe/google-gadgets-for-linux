@@ -335,10 +335,10 @@ function GetNewElementName(type) {
 kElementInitXML = {
   div: "<div name='&NAME;' width='32' height='32' background='#00CCEE'/>",
   img: "<img name='&NAME;'/>",
-  button: "<button name='&NAME;'/>", // TODO: default images.
+  button: "<button name='&NAME;' width='64' height='22'/>",
   edit: "<edit name='&NAME;' width='64' height='16' value='Text'/>",
-  checkbox: "<checkbox name='&NAME;' caption='&NAME;'/>", // TODO:
-  radio: "<radio name='&NAME;' caption='&NAME;'/>", // TODO:
+  checkbox: "<checkbox name='&NAME;' caption='&NAME;'/>",
+  radio: "<radio name='&NAME;' caption='&NAME;'/>",
   a: "<a name='&NAME;' href='www.google.com'/>",
   label: "<label name='&NAME;'>&NAME;</label>",
   contentarea: "<contentarea name='&NAME;' width='100' height='100'/>",
@@ -352,7 +352,7 @@ kElementInitXML = {
             " <item><label>Label #0</label></item>" +
             " <item><label>Label #1</label></item>" +
             "</combobox>",
-  progressbar: "<progressbar name='&NAME;' width='100' height='16'/>",
+  progressbar: "<progressbar name='&NAME;'/>",
   scrollbar: "<scrollbar name='&NAME;' width='16' height='100'/>"
 };
 

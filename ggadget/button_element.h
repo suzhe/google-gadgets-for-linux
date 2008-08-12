@@ -43,9 +43,6 @@ class ButtonElement : public BasicElement {
   virtual void DoClassRegister();
 
  public:
-  /** Lets this button use default images. */
-  void UseDefaultImages();
-
   /** Gets and sets the file name of default button image. */
   Variant GetImage() const;
   void SetImage(const Variant &img);
