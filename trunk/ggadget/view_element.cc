@@ -372,7 +372,7 @@ EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
 
   EventResult result = impl_->child_view_->OnDragEvent(new_event);
 
-  if (result == EVENT_RESULT_HANDLED)
+  if (result != EVENT_RESULT_UNHANDLED)
     *fired_element = this;
 
   return result;

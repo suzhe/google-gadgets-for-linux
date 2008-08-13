@@ -159,7 +159,7 @@ view.onsize = function() {
   if (view.width < 95) view.width = 95;
   if (view.height < 50) view.height = 50;
   kSlideShower.resizedView();
-  messagerWrap.width = view.width - 10;
+  messagerWrap.width = view.width - 11;
 };
 
 view.ondock = function() {
@@ -179,7 +179,7 @@ view.onpopin = function() {
 };
 
 function onDragOver() {
-  var accepts = getDragDropFeeds(event.dragFiles);
+  var accepts = getDragDropFeeds(event);
   if (accepts.length == 0) {
     event.returnValue = false;
     kMessager.set(MSG_DRAG_FEED_INVALID);
@@ -188,7 +188,7 @@ function onDragOver() {
 }
 
 function onDragDrop() {
-  var accepts = getDragDropFeeds(event.dragFiles);
+  var accepts = getDragDropFeeds(event);
   if (accepts.length) {
     var feeds = optionsGet("feedurls");
     feeds = feeds.concat(accepts);
@@ -197,13 +197,13 @@ function onDragDrop() {
   kMessager.set(MSG_DRAG_FEED_ACCEPTS.replace("%d", accepts.length));
 }
 
-function getDragDropFeeds(objs) {
-  objs = enumToArray(objs);
+function getDragDropFeeds(e) {
+  var uris = enumToArray(e.dragFiles).concat(enumToArray(e.dragUrls));
   var accepts = [];
-  for (var i = 0; i < objs.length; ++i) {
-    var feed = new FeedItem(objs[i]);
+  for (var i = 0; i < uris.length; ++i) {
+    var feed = new FeedItem(uris[i]);
     if (feed.checkValid()) {
-      accepts.push(objs[i]);
+      accepts.push(uris[i]);
     }
   }
   return accepts;
