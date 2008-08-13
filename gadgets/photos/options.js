@@ -19,11 +19,12 @@ function escapeEntity(str) {
 }
 
 function listItemWrap(str) {
-  return "<item><label>" + escapeEntity(str) + "</label></item>";
+  return "<item>" + itemWrap(str) + "</item>";
 }
 
 function itemWrap(str) {
-  return "<label>" + escapeEntity(str) + "</label>";
+  var estr = escapeEntity(str).replace(/\'/g, "&apos;");
+  return "<label tooltip='" + estr + "'>" + estr + "</label>";
 }
 
 function optionOpen() {
@@ -155,6 +156,7 @@ function onRemoveUrl() {
   var achs = childrenToArray(urlitems.children);
   for (var i = 0; i < achs.length; ++i) {
     if (achs[i].selected) {
+      urleditor.value = getText(achs[i]);
       urlitems.removeElement(achs[i]);
     }
   }

@@ -77,8 +77,8 @@
     </div>
   </div>
 
-  <div name="messagerWrap" width="100%" height="30" background="#afafaf">
-    <label name="messager" color="#ffff00"></label>
+  <div name="messagerWrap"  height="30" background="#afafaf" x="4" y="4">
+    <label name="messager" width="100%" height="100%" align="center" vAlign="middle" color="#ffff00"></label>
   </div>
 
   <script src="shared.js" />
