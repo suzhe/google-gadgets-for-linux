@@ -315,7 +315,7 @@ void GtkEditImpl::SetText(const char* text) {
   const char *end = NULL;
   g_utf8_validate(text, -1, &end);
 
-  std::string txt((text && *text && end > text) ? "" : std::string(text, end));
+  std::string txt((text && *text && end > text) ? std::string(text, end) : "");
   if (txt == text_)
     return; // prevent some redraws
 

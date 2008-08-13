@@ -891,9 +891,9 @@ class BasicElement::Impl {
     ScriptableEvent scriptable_event(&event, owner_, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (event.GetType() != Event::EVENT_DRAG_MOTION)
-      DLOG("%s(%s|%s): %g %g file0=%s", scriptable_event.GetName(),
+      DLOG("%s(%s|%s): %g %g text=%s", scriptable_event.GetName(),
            name_.c_str(), tag_name_,
-           event.GetX(), event.GetY(), event.GetDragFiles()[0]);
+           event.GetX(), event.GetY(), event.GetDragText());
 #endif
 
     switch (event.GetType()) {
