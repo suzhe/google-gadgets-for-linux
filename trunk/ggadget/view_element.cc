@@ -365,8 +365,10 @@ EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
   DragEvent new_event(type == Event::EVENT_DRAG_OVER ?
                       Event::EVENT_DRAG_MOTION : type,
                       event.GetX() / impl_->scale_,
-                      event.GetY() / impl_->scale_,
-                      event.GetDragFiles());
+                      event.GetY() / impl_->scale_);
+  new_event.SetDragFiles(event.GetDragFiles());
+  new_event.SetDragUrls(event.GetDragUrls());
+  new_event.SetDragText(event.GetDragText());
 
   EventResult result = impl_->child_view_->OnDragEvent(new_event);
 

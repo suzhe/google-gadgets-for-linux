@@ -316,16 +316,25 @@ class KeyboardEvent : public Event {
  */
 class DragEvent : public PositionEvent {
  public:
-  DragEvent(Type t, double x, double y, const char **drag_files)
-      : PositionEvent(t, x, y), drag_files_(drag_files) {
+  DragEvent(Type t, double x, double y)
+    : PositionEvent(t, x, y), drag_files_(NULL),
+      drag_urls_(NULL), drag_text_(NULL) {
     ASSERT(IsDragEvent());
   }
 
-  const char **GetDragFiles() const { return drag_files_; }
-  void SetDragFiles(const char **drag_files) { drag_files_ = drag_files; }
+  const char *const *GetDragFiles() const { return drag_files_; }
+  void SetDragFiles(const char *const *drag_files) { drag_files_ = drag_files; }
+
+  const char *const *GetDragUrls() const { return drag_urls_; }
+  void SetDragUrls(const char *const *drag_urls) { drag_urls_ = drag_urls; }
+
+  const char *GetDragText() const { return drag_text_; }
+  void SetDragText(const char *drag_text) { drag_text_ = drag_text; }
 
  private:
-  const char **drag_files_;
+  const char *const *drag_files_;
+  const char *const *drag_urls_;
+  const char *drag_text_;
 };
 
 /**

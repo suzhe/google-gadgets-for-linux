@@ -315,6 +315,9 @@ function VBArray(array) {
 function ActiveXObject(name) {
   var openUrl = function (url) {
     debug.trace("Open URL by ActiveX object:" + url);
+    // If the url doesn't have prefix, assume it's a file path.
+    if (url.indexOf("://") < 0)
+      url = encodeURI("file://" + url);
     framework.openUrl(url);
   }
   name = name.toLowerCase();
