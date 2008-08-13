@@ -159,6 +159,7 @@ view.onsize = function() {
   if (view.width < 95) view.width = 95;
   if (view.height < 50) view.height = 50;
   kSlideShower.resizedView();
+  messagerWrap.width = view.width - 10;
 };
 
 view.ondock = function() {

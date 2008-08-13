@@ -31,7 +31,7 @@ function SlideShower(kOptions) {
 SlideShower.prototype = {
   options: {
     checkFeedsMax: 50,//max num of check(not fetch)  feeds every interval
-    checkFeedsInterval: 60 * 1000,// should be greater then the every processing time
+    checkFeedsInterval: 15 * 1000,// should be greater then the every processing time
     processingFeedsMax: 5,
 
     showers: [],
