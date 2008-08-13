@@ -46,6 +46,7 @@ function fromPlainString(str) {
 
 function enumToArray(coll) {
   var aa = [];
+  if (!coll) return aa;
   if (coll.atEnd == undefined || ! coll.atEnd instanceof Function) {
     coll = new Enumerator(coll);
   }
