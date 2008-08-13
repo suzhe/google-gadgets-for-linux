@@ -687,8 +687,10 @@ class View::Impl {
         // on EVENT_DRAG_DROP.
         if (dragover_result_ != EVENT_RESULT_HANDLED)
           type = Event::EVENT_DRAG_OUT;
-        DragEvent new_event(type, event.GetX(), event.GetY(),
-                            event.GetDragFiles());
+        DragEvent new_event(type, event.GetX(), event.GetY());
+        new_event.SetDragFiles(event.GetDragFiles());
+        new_event.SetDragUrls(event.GetDragUrls());
+        new_event.SetDragText(event.GetDragText());
         MapChildPositionEvent(event, dragover_element_.Get(), &new_event);
         BasicElement *temp;
         result = dragover_element_.Get()->OnDragEvent(new_event, true, &temp);
@@ -714,8 +716,10 @@ class View::Impl {
 
       if (old_dragover_element) {
         DragEvent dragout_event(Event::EVENT_DRAG_OUT,
-                                event.GetX(), event.GetY(),
-                                event.GetDragFiles());
+                                event.GetX(), event.GetY());
+        dragout_event.SetDragFiles(event.GetDragFiles());
+        dragout_event.SetDragUrls(event.GetDragUrls());
+        dragout_event.SetDragText(event.GetDragText());
         MapChildPositionEvent(event, old_dragover_element, &dragout_event);
         BasicElement *temp;
         old_dragover_element->OnDragEvent(dragout_event, true, &temp);
@@ -727,8 +731,10 @@ class View::Impl {
           dragover_element_.Reset(NULL);
         } else {
           DragEvent dragover_event(Event::EVENT_DRAG_OVER,
-                                   event.GetX(), event.GetY(),
-                                   event.GetDragFiles());
+                                   event.GetX(), event.GetY());
+          dragover_event.SetDragFiles(event.GetDragFiles());
+          dragover_event.SetDragUrls(event.GetDragUrls());
+          dragover_event.SetDragText(event.GetDragText());
           MapChildPositionEvent(event, dragover_element_.Get(),
                                 &dragover_event);
           BasicElement *temp;

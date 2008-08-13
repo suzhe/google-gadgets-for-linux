@@ -315,19 +315,13 @@ void GtkEditImpl::SetText(const char* text) {
   const char *end = NULL;
   g_utf8_validate(text, -1, &end);
 
-  if (text && *text && end > text) {
-    std::string txt(text, end - text);
-    if (txt == text_) {
-      return; // prevent some redraws
-    }
+  std::string txt((text && *text && end > text) ? "" : std::string(text, end));
+  if (txt == text_)
+    return; // prevent some redraws
 
-    text_ = multiline_ ? txt : CleanupLineBreaks(txt.c_str());
-    text_length_ = static_cast<int>(g_utf8_strlen(text_.c_str(),
-                                                  text_.length()));
-  } else {
-    text_.clear();
-    text_length_ = 0;
-  }
+  text_ = multiline_ ? txt : CleanupLineBreaks(txt.c_str());
+  text_length_ = static_cast<int>(g_utf8_strlen(text_.c_str(),
+                                                text_.length()));
   cursor_ = 0;
   selection_bound_ = 0;
   need_im_reset_ = true;

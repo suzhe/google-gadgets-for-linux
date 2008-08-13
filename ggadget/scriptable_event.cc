@@ -76,6 +76,12 @@ class ScriptableEvent::Impl {
     return ScriptableArray::Create(drag_event->GetDragFiles());
   }
 
+  ScriptableArray *ScriptGetDragUrls() {
+    ASSERT(event_->IsDragEvent());
+    const DragEvent *drag_event = static_cast<const DragEvent *>(event_);
+    return ScriptableArray::Create(drag_event->GetDragUrls());
+  }
+
   bool ScriptGetReturnValue() {
     return return_value_ != EVENT_RESULT_CANCELED;
   }
@@ -101,6 +107,9 @@ class ScriptableEvent::Impl {
   DEFINE_DELEGATE_GETTER_CONST(
       GetPositionEvent, static_cast<const PositionEvent *>(src->impl_->event_),
       ScriptableEvent, PositionEvent);
+  DEFINE_DELEGATE_GETTER_CONST(
+      GetDragEvent, static_cast<const DragEvent *>(src->impl_->event_),
+      ScriptableEvent, DragEvent);
   DEFINE_DELEGATE_GETTER_CONST(
       GetKeyboardEvent, static_cast<const KeyboardEvent *>(src->impl_->event_),
       ScriptableEvent, KeyboardEvent);
@@ -172,6 +181,10 @@ void ScriptableEvent::DoClassRegister() {
           NewSlot(&PositionEvent::GetY, Impl::GetPositionEvent), NULL);
       RegisterProperty("dragFiles",
           NewSlot(&Impl::ScriptGetDragFiles, &ScriptableEvent::impl_), NULL);
+      RegisterProperty("dragUrls",
+          NewSlot(&Impl::ScriptGetDragUrls, &ScriptableEvent::impl_), NULL);
+      RegisterProperty("dragText",
+          NewSlot(&DragEvent::GetDragText, Impl::GetDragEvent), NULL);
       break;
     case kSizingEventClassId:
       ASSERT(impl_->output_event_ &&

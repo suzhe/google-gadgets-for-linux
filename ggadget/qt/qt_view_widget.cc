@@ -351,14 +351,15 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
 
 void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
   DLOG("drag leave");
-  DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0, drag_files_);
+  DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0);
+  drag_event.SetDragFiles(drag_files_);
   view_->OnDragEvent(drag_event);
 }
 
 void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
   DragEvent drag_event(Event::EVENT_DRAG_MOTION,
-                       event->pos().x(), event->pos().y(),
-                       drag_files_);
+                       event->pos().x(), event->pos().y());
+  drag_event.SetDragFiles(drag_files_);
   if (view_->OnDragEvent(drag_event) != EVENT_RESULT_UNHANDLED)
     event->acceptProposedAction();
   else
@@ -368,8 +369,8 @@ void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
 void QtViewWidget::dropEvent(QDropEvent *event) {
   LOG("drag drop");
   DragEvent drag_event(Event::EVENT_DRAG_DROP,
-                       event->pos().x(), event->pos().y(),
-                       drag_files_);
+                       event->pos().x(), event->pos().y());
+  drag_event.SetDragFiles(drag_files_);
   if (view_->OnDragEvent(drag_event) == EVENT_RESULT_UNHANDLED) {
     event->ignore();
   }

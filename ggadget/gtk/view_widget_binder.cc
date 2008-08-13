@@ -15,6 +15,8 @@
 */
 
 #include <algorithm>
+#include <string>
+#include <vector>
 #include <cairo.h>
 
 #include "view_widget_binder.h"
@@ -24,6 +26,7 @@
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
+#include <ggadget/string_utils.h>
 #include "cairo_canvas.h"
 #include "cairo_graphics.h"
 #include "key_convert.h"
@@ -32,7 +35,8 @@
 namespace ggadget {
 namespace gtk {
 
-static const char *kUriListTarget = "text/uri-list";
+static const char kUriListTarget[] = "text/uri-list";
+static const char kPlainTextTarget[] = "text/plain";
 
 // A small motion threshold to prevent a click with tiny mouse move from being
 // treated as window move or resize.
@@ -85,6 +89,7 @@ class ViewWidgetBinder::Impl {
 
     static const GtkTargetEntry kDragTargets[] = {
       { const_cast<char *>(kUriListTarget), 0, 0 },
+      { const_cast<char *>(kPlainTextTarget), 0, 0 },
     };
 
     gtk_drag_dest_set(widget_, static_cast<GtkDestDefaults>(0),
@@ -541,10 +546,8 @@ class ViewWidgetBinder::Impl {
   static gboolean DragDropHandler(GtkWidget *widget, GdkDragContext *context,
                                   gint x, gint y, guint time,
                                   gpointer user_data) {
-    gboolean result = OnDragEvent(widget, context, x, y, time,
-                                  Event::EVENT_DRAG_DROP, user_data);
-    gtk_drag_finish(context, result, FALSE, time);
-    return result;
+    return OnDragEvent(widget, context, x, y, time,
+                       Event::EVENT_DRAG_DROP, user_data);
   }
 
   static gboolean GrabBrokenHandler(GtkWidget *widget, GdkEvent *event,
@@ -569,59 +572,105 @@ class ViewWidgetBinder::Impl {
       return;
     }
 
+    std::string drag_text;
+    std::vector<std::string> uri_strings;
     gchar **uris = gtk_selection_data_get_uris(data);
-    if (!uris) {
-      DLOG("No URI in drag data");
-      DisableDrag(widget, context, time);
-      return;
-    }
-
-    guint count = g_strv_length(uris);
-    const char **drag_files = new const char *[count + 1];
-
-    guint accepted_count = 0;
-    for (guint i = 0; i < count; i++) {
-      gchar *hostname;
-      gchar *filename = g_filename_from_uri(uris[i], &hostname, NULL);
-      if (filename) {
-        if (!hostname)
-          drag_files[accepted_count++] = filename;
-        else
-          g_free(filename);
+    if (uris) {
+      // The data is an uri-list.
+      for (gchar **p = uris; *p; ++p) {
+        if (**p) {
+          if (drag_text.length())
+            drag_text.append("\n");
+          drag_text.append(*p);
+          uri_strings.push_back(*p);
+        }
       }
-      g_free(hostname);
-    }
-
-    if (accepted_count == 0) {
-      DLOG("No acceptable URI in drag data");
-      DisableDrag(widget, context, time);
-      return;
-    }
-
-    drag_files[accepted_count] = NULL;
-
-    impl->current_drag_event_->SetDragFiles(drag_files);
-    EventResult result = impl->view_->OnDragEvent(*impl->current_drag_event_);
-    if (result == ggadget::EVENT_RESULT_HANDLED) {
-      Event::Type type = impl->current_drag_event_->GetType();
-      if (type == Event::EVENT_DRAG_DROP || type == Event::EVENT_DRAG_OUT) {
-        gtk_drag_unhighlight(widget);
-      } else {
-        gdk_drag_status(context, GDK_ACTION_COPY, time);
-        gtk_drag_highlight(widget);
-      }
+      g_strfreev(uris);
     } else {
-      // Drag event is not accepted by the gadget.
-      DisableDrag(widget, context, time);
+      // Otherwise, try to get plain text from data.
+      gchar *text = reinterpret_cast<gchar*>(gtk_selection_data_get_text(data));
+      if (text && *text) {
+        drag_text.append(text);
+        gchar *prev = text;
+        gchar *p = text;
+        // Treates \n  or \r as separator of the url list.
+        while(1) {
+          if (*p == '\n' || *p == '\r' || *p == 0) {
+            if (p > prev) {
+              std::string str = TrimString(std::string(prev, p));
+              if (str.length())
+                uri_strings.push_back(str);
+            }
+            prev = p + 1;
+          }
+          if (*p == 0) break;
+          ++p;
+        }
+      }
+      g_free(text);
+    }
+
+    if (drag_text.length() == 0) {
+      DLOG("No acceptable URI or text in drag data");
+      gdk_drag_status(context, static_cast<GdkDragAction>(0), time);
+      return;
+    }
+
+    const char **drag_files = NULL;
+    const char **drag_urls = NULL;
+    if (uri_strings.size()) {
+      drag_files = g_new0(const char *, uri_strings.size() + 1);
+      drag_urls = g_new0(const char *, uri_strings.size() + 1);
+      size_t files_count = 0;
+      size_t urls_count = 0;
+      for (std::vector<std::string>::iterator it = uri_strings.begin();
+           it != uri_strings.end(); ++it) {
+        if (IsValidURL(it->c_str())) {
+          drag_urls[urls_count++] = it->c_str();
+        } else {
+          gchar *hostname;
+          gchar *filename = g_filename_from_uri(it->c_str(), &hostname, NULL);
+          if (filename && !hostname) {
+            *it = std::string(filename);
+            drag_files[files_count++] = it->c_str();;
+          }
+          g_free(filename);
+          g_free(hostname);
+        }
+      }
+    }
+
+    Event::Type type = impl->current_drag_event_->GetType();
+    impl->current_drag_event_->SetDragFiles(drag_files);
+    impl->current_drag_event_->SetDragUrls(drag_urls);
+    impl->current_drag_event_->SetDragText(drag_text.c_str());
+    EventResult result = impl->view_->OnDragEvent(*impl->current_drag_event_);
+    if (result == EVENT_RESULT_HANDLED && type == Event::EVENT_DRAG_MOTION) {
+      gdk_drag_status(context, GDK_ACTION_COPY, time);
+    } else {
+      gdk_drag_status(context, static_cast<GdkDragAction>(0), time);
+    }
+#ifdef _DEBUG
+    const char *type_name = NULL;
+    switch (type) {
+      case Event::EVENT_DRAG_MOTION: type_name = "motion"; break;
+      case Event::EVENT_DRAG_DROP: type_name = "drop"; break;
+      case Event::EVENT_DRAG_OUT: type_name = "out"; break;
+      default: type_name = "unknown"; break;
+    }
+    DLOG("Drag %s event was %s: x:%d, y:%d, time:%d, text:\n%s\n", type_name,
+         (result == EVENT_RESULT_HANDLED ? "handled" : "not handled"),
+         x, y, time, drag_text.c_str());
+#endif
+    if (type == Event::EVENT_DRAG_DROP) {
+     DLOG("Drag operation finished.");
+      gtk_drag_finish(context, result == EVENT_RESULT_HANDLED, FALSE, time);
     }
 
     delete impl->current_drag_event_;
     impl->current_drag_event_ = NULL;
-    for (guint i = 0; i < count; i++) {
-      g_free(const_cast<gchar *>(drag_files[i]));
-    }
-    delete[] drag_files;
-    g_strfreev(uris);
+    g_free(drag_files);
+    g_free(drag_urls);
   }
 
   static void ScreenChangedHandler(GtkWidget *widget, GdkScreen *last_screen,
@@ -635,12 +684,6 @@ class ViewWidgetBinder::Impl {
     impl->SetupBackgroundMode();
   }
 
-  static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
-                          guint time) {
-    gdk_drag_status(context, static_cast<GdkDragAction>(0), time);
-    gtk_drag_unhighlight(widget);
-  }
-
   static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
                               gint x, gint y, guint time,
                               Event::Type event_type, gpointer user_data) {
@@ -652,17 +695,16 @@ class ViewWidgetBinder::Impl {
       impl->current_drag_event_ = NULL;
     }
 
-    impl->current_drag_event_ = new DragEvent(event_type, x, y, NULL);
+    impl->current_drag_event_ = new DragEvent(event_type, x, y);
     GdkAtom target = gtk_drag_dest_find_target(
         widget, context, gtk_drag_dest_get_target_list(widget));
     if (target != GDK_NONE) {
       gtk_drag_get_data(widget, context, target, time);
       return TRUE;
-    } else {
-      DLOG("Drag target or action not acceptable");
-      DisableDrag(widget, context, time);
-      return FALSE;
     }
+    DLOG("Drag target or action not acceptable");
+    gdk_drag_status(context, static_cast<GdkDragAction>(0), time);
+    return FALSE;
   }
 
   ViewInterface *view_;
