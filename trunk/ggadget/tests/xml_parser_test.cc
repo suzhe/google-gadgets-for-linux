@@ -110,15 +110,15 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   EXPECT_STREQ("v1", doc_ele->GetAttribute("a1").c_str());
   DOMNodeListInterface *children = doc_ele->GetChildNodes();
   children->Ref();
-  EXPECT_EQ(13U, children->GetLength());
+  EXPECT_EQ(6U, children->GetLength());
 
-  DOMNodeInterface *sub_node = children->GetItem(9);
+  DOMNodeInterface *sub_node = children->GetItem(4);
   ASSERT_TRUE(sub_node);
   ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, sub_node->GetNodeType());
   DOMElementInterface *sub_ele = down_cast<DOMElementInterface *>(sub_node);
   DOMNodeListInterface *sub_children = sub_ele->GetChildNodes();
   sub_children->Ref();
-  EXPECT_EQ(7U, sub_children->GetLength());
+  EXPECT_EQ(4U, sub_children->GetLength());
   EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
             sub_children->GetItem(0)->GetNodeType());
   EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
@@ -128,9 +128,9 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   // Entities in comments should not be replaced.
   EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
   EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
-            sub_children->GetItem(5)->GetNodeType());
+            sub_children->GetItem(3)->GetNodeType());
   // Entities in cdata should not be replaced.
-  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(5)->GetNodeValue());
+  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(3)->GetNodeValue());
 
   DOMNodeInterface *pi_node = domdoc->GetFirstChild();
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,

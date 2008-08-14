@@ -352,18 +352,44 @@ static xmlDoc *ParseXML(const std::string &xml,
   return result;
 }
 
+static bool IsBlankText(const char *text) {
+  for (const char *p = text; *p; p++) {
+    if (strchr(" \r\n\t", *p) == NULL)
+      return false;
+  }
+  return true;
+}
+
+static bool IsTextNode(xmlNode *xmlnode) {
+  return xmlnode && (xmlnode->type == XML_TEXT_NODE ||
+                     xmlnode->type == XML_ENTITY_REF_NODE);
+}
+
 static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
                                         DOMNodeInterface *parent,
-                                        xmlNode *xmltext) {
-  char *text = FromXmlCharPtr(xmlNodeGetContent(xmltext));
+                                        xmlNode *xmlnode) {
+  char *text = FromXmlCharPtr(xmlNodeGetContent(xmlnode));
   UTF16String utf16_text;
+  // Text containing all white spaces between markups (other than entity refs)
+  // will be removed. Though the XML spec requires non-validating parsers to
+  // return any white spaces, we still remove blank text node to save memory,
+  // improve performance and make some gadgets happy.
+  // Blanks will be preverved if the text node is the only child of
+  // parent, or the previous sibling or next sibling is text node.
   if (text) {
-    ConvertStringUTF8ToUTF16(text, strlen(text), &utf16_text);
+    if (xmlnode->type != XML_TEXT_NODE ||
+        (xmlnode->prev == NULL && xmlnode->next == NULL) ||
+        IsTextNode(xmlnode->prev) || IsTextNode(xmlnode->next) ||
+        !IsBlankText(text)) {
+      // Don't trim the text. The caller can trim based on their own
+      // requirements.
+      ConvertStringUTF8ToUTF16(text, strlen(text), &utf16_text);
+    }
     xmlFree(text);
   }
 
   DOMCharacterDataInterface *data = NULL;
-  switch (xmltext->type) {
+  switch (xmlnode->type) {
     case XML_TEXT_NODE:
       // Don't create empty text nodes.
       if (!utf16_text.empty())
@@ -383,7 +409,7 @@ static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
       break;
   }
   if (data) {
-    data->SetRow(static_cast<int>(xmlGetLineNo(xmltext)));
+    data->SetRow(static_cast<int>(xmlGetLineNo(xmlnode)));
     parent->AppendChild(data);
   }
 }
