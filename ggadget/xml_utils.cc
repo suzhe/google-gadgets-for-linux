@@ -259,6 +259,7 @@ BasicElement *InsertElementFromDOM(Elements *elements,
     }
   }
   // Set the "innerText" property.
+  // Trimming is required for compatibility.
   text = TrimString(text);
   if (!text.empty()) {
     SetScriptableProperty(element, script_context, filename,

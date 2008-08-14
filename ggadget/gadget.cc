@@ -929,6 +929,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                                               manifest_info_map)) {
       return false;
     }
+
+    for (StringMap::iterator it = strings_map->begin();
+         it != strings_map->end(); ++it) {
+      // Trimming is required for compatibility.
+      it->second = TrimString(it->second);
+    }
     return true;
   }
 
