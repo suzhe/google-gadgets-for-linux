@@ -80,17 +80,17 @@ MACRO(COPY_TARGET _target_name _dest_dir)
       GET_TARGET_PROPERTY(COPY_TARGET_soversion ${_target_name} SOVERSION)
       GET_TARGET_PROPERTY(COPY_TARGET_version ${_target_name} VERSION)
       # SOVERSION symbolic link.
-      IF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
-        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_soversion}
-          ${COPY_TARGET_location}/${COPY_TARGET_name}.${COPY_TARGET_soversion}
-          ${_target_name})
-      ENDIF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
+      #IF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
+        #COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_soversion}
+        #  ${COPY_TARGET_location}.${COPY_TARGET_name}.${COPY_TARGET_soversion}
+        #  ${_target_name})
+      #ENDIF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
       # VERSION symbolic link.
-      IF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
-        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_version}
-          ${COPY_TARGET_location}/${COPY_TARGET_name}.${COPY_TARGET_version}
-          ${_target_name})
-      ENDIF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
+      #IF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
+        #COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_version}
+        #  ${COPY_TARGET_location}.${COPY_TARGET_name}.${COPY_TARGET_version}
+        #  ${_target_name})
+      #ENDIF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
     ENDIF(NOT WIN32)
   ENDIF(${ARGC} GREATER 2)
 ENDMACRO(COPY_TARGET)

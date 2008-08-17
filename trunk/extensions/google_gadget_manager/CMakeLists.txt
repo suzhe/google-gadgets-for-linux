@@ -31,3 +31,5 @@ ADD_DIR_TO_ZIP(gadget_browser
   ../../output/bin/google-gadget-browser.gg)
 ADD_TARGET_TO_ZIP(gadget-browser-script-utils
   ../../output/bin/google-gadget-browser.gg)
+
+INSTALL_GADGET(google-gadget-browser.gg)

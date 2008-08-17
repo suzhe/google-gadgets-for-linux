@@ -72,5 +72,7 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ggadget
 )
 OUTPUT_EXECUTABLE(gtkmoz-browser-child)
+INSTALL(TARGETS gtkmoz-browser-child
+  DESTINATION "${LIB_INSTALL_DIR}/google-gadgets/")
 
 ENDIF(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-SET(PRODUCT_NAME libggadget)
+SET(PRODUCT_NAME google-gadgets)
 
 PROJECT(google_gadgets_for_linux)
 
@@ -79,11 +79,9 @@ ADD_DEFINITIONS(
   -D__STDC_CONSTANT_MACROS
   # TODO: only for Linux by now
   -DGGL_HOST_LINUX
-  -DGGL_MODULE_DIR=\\\"../modules\\\"
-  # TODO:
-  -DGGL_RESOURCE_DIR=\\\".\\\"
-  # TODO:
-  -DGGL_LIBEXEC_DIR=\\\".\\\")
+  -DGGL_MODULE_DIR=\\\"${LIB_INSTALL_DIR}/${PRODUCT_NAME}/modules\\\"
+  -DGGL_RESOURCE_DIR=\\\"${CMAKE_INSTALL_PREFIX}/share/google-gadgets\\\"
+  -DGGL_LIBEXEC_DIR=\\\"${LIB_INSTALL_DIR}/${PRODUCT_NAME}/\\\")
 
 IF(UNIX)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror")

@@ -39,4 +39,13 @@ ENDMACRO(ADD_MODULE _target_name)
 
 MACRO(OUTPUT_MODULE _target_name)
   OUTPUT_TARGET(${_target_name} modules)
+  INSTALL(TARGETS ${_target_name}
+    LIBRARY DESTINATION "${LIB_INSTALL_DIR}/google-gadgets/modules/"
+    )
 ENDMACRO(OUTPUT_MODULE _target_name)
+
+MACRO(INSTALL_GADGET _gadget_name)
+  INSTALL( FILES "${CMAKE_BINARY_DIR}/output/bin/${_gadget_name}"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/google-gadgets"
+  )
+ENDMACRO(INSTALL_GADGET _gadget_name)
