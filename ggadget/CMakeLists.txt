@@ -14,6 +14,13 @@
 # limitations under the License.
 #
 
+IF(NOT WIN32)
+  CONFIGURE_FILE("libggadget-1.0.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/libggadget-1.0.pc"
+  @ONLY)
+
+ENDIF(NOT WIN32)
+
+
 ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(qt)
@@ -109,4 +116,121 @@ SET(LIBS
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget ${LIBS})
+
+SET_TARGET_PROPERTIES(ggadget PROPERTIES
+                              VERSION ${GGL_LIB_VERSION}
+                              SOVERSION ${GGL_MAJOR_VERSION})
+
 OUTPUT_LIBRARY(ggadget)
+
+INSTALL( TARGETS ggadget
+    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+)
+
+INSTALL(FILES
+  anchor_element.h
+  audioclip_interface.h
+  backoff.h
+  basic_element.h
+  button_element.h
+  canvas_interface.h
+  canvas_utils.h
+  checkbox_element.h
+  clip_region.h
+  color.h
+  common.h
+  combobox_element.h
+  content_item.h
+  contentarea_element.h
+  copy_element.h
+  decorated_view_host.h
+  details_view_data.h
+  digest_utils.h
+  dir_file_manager.h
+  display_window.h
+  div_element.h
+  edit_element_base.h
+  element_factory.h
+  elements.h
+  encryptor_interface.h
+  event.h
+  extension_manager.h
+  file_manager_factory.h
+  file_manager_interface.h
+  file_manager_wrapper.h
+  file_system_interface.h
+  font_interface.h
+  framework_interface.h
+  gadget.h
+  gadget_consts.h
+  gadget_manager_interface.h
+  graphics_interface.h
+  host_interface.h
+  image_cache.h
+  image_interface.h
+  img_element.h
+  item_element.h
+  label_element.h
+  listbox_element.h
+  locales.h
+  localized_file_manager.h
+  logger.h
+  main_loop_interface.h
+  messages.h
+  math_utils.h
+  memory_options.h
+  menu_interface.h
+  module.h
+  object_element.h
+  object_videoplayer.h
+  options_interface.h
+  permissions.h
+  progressbar_element.h
+  registerable_interface.h
+  run_once.h
+  scoped_ptr.h
+  script_context_interface.h
+  script_runtime_interface.h
+  script_runtime_manager.h
+  scriptable_array.h
+  scriptable_binary_data.h
+  scriptable_enumerator.h
+  scriptable_event.h
+  scriptable_file_system.h
+  scriptable_framework.h
+  scriptable_helper.h
+  scriptable_holder.h
+  scriptable_image.h
+  scriptable_interface.h
+  scriptable_map.h
+  scriptable_menu.h
+  scriptable_options.h
+  scriptable_view.h
+  scrollbar_element.h
+  scrolling_element.h
+  sidebar.h
+  signals.h
+  slot.h
+  small_object.h
+  string_utils.h
+  system_utils.h
+  host_utils.h
+  text_frame.h
+  texture.h
+  unicode_utils.h
+  video_element_base.h
+  variant.h
+  view.h
+  view_element.h
+  view_host_interface.h
+  view_interface.h
+  xml_dom_interface.h
+  xml_dom.h
+  xml_http_request_interface.h
+  xml_parser_interface.h
+  xml_utils.h
+  zip_file_manager.h
+  DESTINATION ${INCLUDE_INSTALL_DIR} COMPONENT Devel)
+

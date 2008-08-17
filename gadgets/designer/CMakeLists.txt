@@ -19,3 +19,5 @@ TARGET_LINK_LIBRARIES(designer-script-utils ggadget)
 
 ADD_DIR_TO_ZIP(gadget ../../output/bin/designer.gg)
 ADD_TARGET_TO_ZIP(designer-script-utils ../../output/bin/designer.gg)
+
+INSTALL_GADGET(designer.gg)

@@ -44,6 +44,25 @@ ADD_SUBDIRECTORY(tests)
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})
 
+SET_TARGET_PROPERTIES(ggadget-qt PROPERTIES
+                              VERSION ${GGL_LIB_VERSION}
+                              SOVERSION ${GGL_MAJOR_VERSION})
+
+
 OUTPUT_LIBRARY(ggadget-qt)
+
+INSTALL( TARGETS ggadget-qt
+    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+)
+INSTALL(FILES
+  qt_view_widget.h
+  qt_graphics.h
+  qt_main_loop.h
+  qt_menu.h
+  qt_view_host.h
+  utilities.h
+  DESTINATION "${INCLUDE_INSTALL_DIR}/qt" COMPONENT Devel)
 
 ENDIF(GGL_BUILD_LIBGGADGET_QT)

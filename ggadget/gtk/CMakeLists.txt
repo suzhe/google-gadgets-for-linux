@@ -34,12 +34,15 @@ SET(SRCS
   main_loop.cc
   menu_builder.cc
   pixbuf_image.cc
-  rsvg_image.cc
   single_view_host.cc
   tooltip.cc
   utilities.cc
   view_widget_binder.cc
 )
+
+if(RSVG_FOUND)
+  SET(SRCS ${SRCS} rsvg_image.cc)
+endif(RSVG_FOUND)
 
 ADD_SUBDIRECTORY(tests)
 
@@ -52,5 +55,27 @@ TARGET_LINK_LIBRARIES(ggadget-gtk
   ${RSVG_LIBRARIES}
 )
 OUTPUT_LIBRARY(ggadget-gtk)
+
+SET_TARGET_PROPERTIES(ggadget-gtk PROPERTIES
+                              VERSION ${GGL_LIB_VERSION}
+                              SOVERSION ${GGL_MAJOR_VERSION})
+
+INSTALL( TARGETS ggadget-gtk
+    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+)
+
+INSTALL(FILES
+  cairo_graphics.h
+  hotkey.h
+  key_convert.h
+  main_loop.h
+  menu_builder.h
+  single_view_host.h
+  tooltip.h
+  utilities.h
+  view_widget_binder.h
+  DESTINATION "${INCLUDE_INSTALL_DIR}/gtk" COMPONENT Devel)
 
 ENDIF(GGL_BUILD_LIBGGADGET_GTK)

@@ -17,10 +17,25 @@
 ADD_SUBDIRECTORY(tests)
 
 ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
-  COMMAND flex -o $@ $<
-  MAIN_DEPENDENCY jscript_massager.l
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  COMMAND flex -o jscript_massager.cc ${CMAKE_CURRENT_SOURCE_DIR}/jscript_massager.l
+  MAIN_DEPENDENCY jscript_massager.l )
 
 ADD_LIBRARY(ggadget-js SHARED jscript_massager.cc js_utils.cc)
 TARGET_LINK_LIBRARIES(ggadget-js ggadget)
+
+SET_TARGET_PROPERTIES(ggadget-js PROPERTIES
+                              VERSION ${GGL_LIB_VERSION}
+                              SOVERSION ${GGL_MAJOR_VERSION})
+
 OUTPUT_LIBRARY(ggadget-js)
+
+INSTALL( TARGETS ggadget-js
+    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+)
+
+INSTALL(FILES
+  jscript_massager.h
+  js_utils.h
+  DESTINATION "${INCLUDE_INSTALL_DIR}/js" COMPONENT Devel)
