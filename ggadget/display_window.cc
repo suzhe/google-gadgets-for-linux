@@ -404,6 +404,7 @@ class DisplayWindow::Impl {
           case TYPE_BUTTON_PUSH: {
             ButtonElement *element = down_cast<ButtonElement *>(
                 elements->AppendElement("button", ctrl_id));
+            element->SetDefaultRendering(true);
             element->GetTextFrame()->SetSize(kLabelTextSize);
             control = new Control(owner_, element);
             element->ConnectOnClickEvent(NewSlot(control, &Control::OnClick));
@@ -412,6 +413,7 @@ class DisplayWindow::Impl {
           case TYPE_BUTTON_CHECK: {
             CheckBoxElement *element = down_cast<CheckBoxElement *>(
                 elements->AppendElement("checkbox", ctrl_id));
+            element->SetDefaultRendering(true);
             element->GetTextFrame()->SetSize(kLabelTextSize);
             // Default value of gadget checkbox element is false, but here
             // the default value should be false.
