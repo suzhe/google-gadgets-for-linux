@@ -54,6 +54,10 @@ namespace gtk {
 
 static const char kOptionHotKey[] = "hotkey";
 static const char kOptionGadgetsShown[] = "gadgets_shown";
+static const char kOptionFontSize[] = "font_size";
+
+static const int kMinFontSize = 4;
+static const int kMaxFontSize = 16;
 
 class SimpleGtkHost::Impl {
   struct GadgetInfo {
@@ -88,6 +92,7 @@ class SimpleGtkHost::Impl {
       debug_console_config_(debug_console_config),
       gadgets_shown_(true),
       transparent_(SupportsComposite(NULL)),
+      font_size_(kDefaultFontSize),
       gadget_manager_(GetGadgetManager()),
       expanded_original_(NULL),
       expanded_popout_(NULL),
@@ -107,6 +112,8 @@ class SimpleGtkHost::Impl {
       }
       options_->GetInternalValue(
           kOptionGadgetsShown).ConvertToBool(&gadgets_shown_);
+      options_->GetInternalValue(kOptionFontSize).ConvertToInt(&font_size_);
+      font_size_ = std::min(kMaxFontSize, std::max(kMinFontSize, font_size_));
     }
 
     // Connect gadget related signals.
@@ -137,28 +144,35 @@ class SimpleGtkHost::Impl {
   }
 
   void SetupUI() {
+    const int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     host_menu_ = gtk_menu_new();
     MenuBuilder menu_builder(GTK_MENU_SHELL(host_menu_));
 
-    menu_builder.AddItem(
-        GM_("MENU_ITEM_ADD_GADGETS"), 0,
-        NewSlot(this, &Impl::AddGadgetMenuCallback),
-        MenuInterface::MENU_ITEM_PRI_HOST);
+    menu_builder.AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
+                         NewSlot(this, &Impl::AddGadgetMenuCallback),
+                         priority);
+    menu_builder.AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
+                         NewSlot(this, &Impl::ShowAllMenuCallback),
+                         priority);
+    menu_builder.AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0,
+                         NewSlot(this, &Impl::HideAllMenuCallback),
+                         priority);
+    menu_builder.AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
+                         NewSlot(this, &Impl::ChangeHotKeyMenuCallback),
+                         priority);
 
-    menu_builder.AddItem(
-        GM_("MENU_ITEM_SHOW_ALL"), 0,
-        NewSlot(this, &Impl::ShowAllMenuCallback),
-        MenuInterface::MENU_ITEM_PRI_HOST);
-
-    menu_builder.AddItem(
-        GM_("MENU_ITEM_HIDE_ALL"), 0,
-        NewSlot(this, &Impl::HideAllMenuCallback),
-        MenuInterface::MENU_ITEM_PRI_HOST);
-
-    menu_builder.AddItem(
-        GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
-        NewSlot(this, &Impl::ChangeHotKeyMenuCallback),
-        MenuInterface::MENU_ITEM_PRI_HOST);
+    MenuInterface *sub = menu_builder.AddPopup(GM_("MENU_ITEM_FONT_SIZE"),
+                                               priority);
+    sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGER"),
+                 font_size_ >= kMaxFontSize ?
+                 MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                 NewSlot(this, &Impl::FontSizeMenuHandler, 1), priority);
+    sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
+                 NewSlot(this, &Impl::FontSizeMenuHandler, 0), priority);
+    sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALLER"),
+                 font_size_ <= kMinFontSize ?
+                 MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                 NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
 
     // Separator
     menu_builder.AddItem(NULL, 0, 0, MenuInterface::MENU_ITEM_PRI_HOST);
@@ -469,6 +483,40 @@ class SimpleGtkHost::Impl {
       HideAllMenuCallback(NULL);
     else
       ShowAllMenuCallback(NULL);
+  }
+
+  void MarkRedrawAll() {
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
+      if (it->second.main) {
+        it->second.main->GetView()->MarkRedraw();
+        it->second.main->QueueDraw();
+      }
+      if (it->second.details) {
+        it->second.details->GetView()->MarkRedraw();
+        it->second.details->QueueDraw();
+      }
+      if (it->second.popout) {
+        it->second.popout->GetView()->MarkRedraw();
+        it->second.popout->QueueDraw();
+      }
+    }
+  }
+
+  void FontSizeMenuHandler(const char *str, int delta) {
+    int new_font_size;
+    if (delta == 0) {
+      new_font_size = kDefaultFontSize;
+    } else {
+      new_font_size = std::min(std::max(font_size_ + delta, kMinFontSize),
+                               kMaxFontSize);
+    }
+    if (new_font_size != font_size_) {
+      font_size_ = new_font_size;
+      if (options_)
+        options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
+      MarkRedrawAll();
+    }
   }
 
   void ExitMenuCallback(const char *) {
@@ -808,6 +856,7 @@ class SimpleGtkHost::Impl {
   Gadget::DebugConsoleConfig debug_console_config_;
   bool gadgets_shown_;
   bool transparent_;
+  int font_size_;
 
   GadgetManagerInterface *gadget_manager_;
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
@@ -861,6 +910,10 @@ void SimpleGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
 
 void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
+}
+
+int SimpleGtkHost::GetDefaultFontSize() {
+  return impl_->font_size_;
 }
 
 } // namespace gtk

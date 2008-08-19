@@ -37,7 +37,7 @@ class ButtonElement::Impl {
       over_image_(NULL), disabled_image_(NULL),
       icon_image_(NULL), icon_disabled_image_(NULL),
       stretch_middle_(false),
-      default_rendering_(true),
+      default_rendering_(false),
       icon_position_(ICON_LEFT) {
     text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER);
     text_.SetAlign(CanvasInterface::ALIGN_CENTER);
@@ -45,68 +45,50 @@ class ButtonElement::Impl {
   }
 
   ~Impl() {
-    DestroyButtonImages();
+    DestroyImage(image_);
+    DestroyImage(down_image_);
+    DestroyImage(over_image_);
+    DestroyImage(disabled_image_);
     DestroyImage(icon_image_);
     DestroyImage(icon_disabled_image_);
   }
 
-  void DestroyButtonImages() {
-    DestroyImage(image_);
-    image_ = NULL;
-    DestroyImage(down_image_);
-    down_image_ = NULL;
-    DestroyImage(over_image_);
-    over_image_ = NULL;
-    DestroyImage(disabled_image_);
-    disabled_image_ = NULL;
-  }
-
-  void LeaveDefaultRendering() {
-    if (default_rendering_) {
-      default_rendering_ = false;
-      DestroyButtonImages();
-    }
-  }
-
   void LoadImage(ImageInterface **image, const Variant &src, bool queue_draw) {
-    ImageInterface *new_image = owner_->GetView()->LoadImage(src, false);
-    if (new_image) {
-      if (default_rendering_) {
-        default_rendering_ = false;
-        DestroyButtonImages();
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      } else {
-        DestroyImage(*image);
-      }
-      *image = new_image;
-      // The caller may also call QueueDraw() if needed.
-    } else if (!default_rendering_) {
-      // Check if we should go back to default rendering.
+    if (src != Variant(GetImageTag(*image))) {
       DestroyImage(*image);
-      *image = NULL;
-      default_rendering_ =
-          !image_ && !over_image_ && !down_image_ && !disabled_image_;
-      if (default_rendering_) {
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      }
+      *image = owner_->GetView()->LoadImage(src, false);
+      if (queue_draw)
+        owner_->QueueDraw();
     }
-    // Otherwise don't destroy the default image.
-
-    if (queue_draw)
-      owner_->QueueDraw();
   }
 
   void EnsureDefaultImages() {
-    if (default_rendering_ && !image_) {
-      ASSERT(!over_image_ && !down_image_ && !disabled_image_);
+    if (default_rendering_) {
       View *view = owner_->GetView();
-      image_ = view->LoadImageFromGlobal(kButtonImage, false);
-      over_image_ = view->LoadImageFromGlobal(kButtonOverImage, false);
-      down_image_ = view->LoadImageFromGlobal(kButtonDownImage, false);
+      if (!image_)
+        image_ = view->LoadImageFromGlobal(kButtonImage, false);
+      if (!over_image_)
+        over_image_ = view->LoadImageFromGlobal(kButtonOverImage, false);
+      if (!down_image_)
+        down_image_ = view->LoadImageFromGlobal(kButtonDownImage, false);
       // No default disabled image.
     }
+  }
+
+  void DestroyDefaultImages() {
+    if (GetImageTag(image_) == kButtonImage) {
+      DestroyImage(image_);
+      image_ = NULL;
+    }
+    if (GetImageTag(over_image_) == kButtonOverImage) {
+      DestroyImage(over_image_);
+      over_image_ = NULL;
+    }
+    if (GetImageTag(down_image_) == kButtonDownImage) {
+      DestroyImage(down_image_);
+      down_image_ = NULL;
+    }
+    // No default disabled image.
   }
 
   DEFINE_DELEGATE_GETTER(GetTextFrame,
@@ -162,7 +144,7 @@ void ButtonElement::DoClassRegister() {
                    NewSlot(&ButtonElement::IsStretchMiddle),
                    NewSlot(&ButtonElement::SetStretchMiddle));
 
-  // iconImage, iconDisabledImage and iconPosition 
+  // iconImage, iconDisabledImage, iconPosition, defaultRendering
   // are currently only supported by GGL.
   RegisterProperty("iconImage",
                    NewSlot(&ButtonElement::GetIconImage),
@@ -175,6 +157,9 @@ void ButtonElement::DoClassRegister() {
                              NewSlot(&ButtonElement::SetIconPosition),
                              kButtonIconPositionNames,
                              arraysize(kButtonIconPositionNames));
+  RegisterProperty("defaultRendering",
+                   NewSlot(&ButtonElement::IsDefaultRendering),
+                   NewSlot(&ButtonElement::SetDefaultRendering));
 }
 
 ButtonElement::~ButtonElement() {
@@ -254,48 +239,41 @@ void ButtonElement::DoDraw(CanvasInterface *canvas) {
 }
 
 Variant ButtonElement::GetImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->image_));
+  std::string tag = GetImageTag(impl_->image_);
+  return Variant(tag == kButtonImage ? "" : tag);
 }
 
 void ButtonElement::SetImage(const Variant &img) {
-  if (img != GetImage()) {
-    // Changing image always queue draw, because it effects the default size.
-    impl_->LoadImage(&impl_->image_, img, true);
-  }
+  // Changing image always queue draw, because it effects the default size.
+  impl_->LoadImage(&impl_->image_, img, true);
 }
 
 Variant ButtonElement::GetDisabledImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->disabled_image_));
+  return Variant(GetImageTag(impl_->disabled_image_));
 }
 
 void ButtonElement::SetDisabledImage(const Variant &img) {
-  if (img != GetDisabledImage())
-    impl_->LoadImage(&impl_->disabled_image_, img, !IsEnabled());
+  impl_->LoadImage(&impl_->disabled_image_, img, !IsEnabled());
 }
 
 Variant ButtonElement::GetOverImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->over_image_));
+  std::string tag = GetImageTag(impl_->over_image_);
+  return Variant(tag == kButtonOverImage ? "" : tag);
 }
 
 void ButtonElement::SetOverImage(const Variant &img) {
-  if (img != GetOverImage()) {
-    impl_->LoadImage(&impl_->over_image_, img,
-                     impl_->mouseover_ && IsEnabled());
-  }
+  impl_->LoadImage(&impl_->over_image_, img,
+                   impl_->mouseover_ && IsEnabled());
 }
 
 Variant ButtonElement::GetDownImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->down_image_));
+  std::string tag = GetImageTag(impl_->down_image_);
+  return Variant(tag == kButtonDownImage ? "" : tag);
 }
 
 void ButtonElement::SetDownImage(const Variant &img) {
-  if (img != GetDownImage())
-    impl_->LoadImage(&impl_->down_image_, img,
-                     impl_->mousedown_ && IsEnabled());
+  impl_->LoadImage(&impl_->down_image_, img,
+                   impl_->mousedown_ && IsEnabled());
 }
 
 Variant ButtonElement::GetIconImage() const {
@@ -304,7 +282,6 @@ Variant ButtonElement::GetIconImage() const {
 
 void ButtonElement::SetIconImage(const Variant &img) {
   if (img != GetIconImage()) {
-    // SetIconImage() should not effect default_rendering_.
     DestroyImage(impl_->icon_image_);
     impl_->icon_image_ = GetView()->LoadImage(img, false);
     QueueDraw();
@@ -317,7 +294,6 @@ Variant ButtonElement::GetIconDisabledImage() const {
 
 void ButtonElement::SetIconDisabledImage(const Variant &img) {
   if (img != GetIconDisabledImage()) {
-    // SetIconDisabledImage() should not effect default_rendering_.
     DestroyImage(impl_->icon_disabled_image_);
     impl_->icon_disabled_image_ = GetView()->LoadImage(img, false);
     if (!IsEnabled()) {
@@ -427,6 +403,19 @@ void ButtonElement::SetIconPosition(ButtonElement::IconPosition position) {
   impl_->icon_position_ = position;
   if (impl_->icon_image_)
     QueueDraw();
+}
+
+bool ButtonElement::IsDefaultRendering() const {
+  return impl_->default_rendering_;
+}
+
+void ButtonElement::SetDefaultRendering(bool default_rendering) {
+  if (default_rendering != impl_->default_rendering_) {
+    impl_->default_rendering_ = default_rendering;
+    if (!default_rendering)
+      impl_->DestroyDefaultImages();
+    QueueDraw();
+  }
 }
 
 bool ButtonElement::HasOpaqueBackground() const {

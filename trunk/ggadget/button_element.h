@@ -82,6 +82,10 @@ class ButtonElement : public BasicElement {
   IconPosition GetIconPosition() const;
   void SetIconPosition(IconPosition position);
 
+  /** Gets and sets if the button should be rendered with default images. */
+  bool IsDefaultRendering() const;
+  void SetDefaultRendering(bool default_rendering);
+
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);

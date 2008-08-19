@@ -558,6 +558,10 @@ void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 
+int QtHost::GetDefaultFontSize() {
+  return kDefaultFontSize;
+}
+
 } // namespace qt
 } // namespace hosts
 #include "qt_host_internal.moc"

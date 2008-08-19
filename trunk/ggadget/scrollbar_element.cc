@@ -103,6 +103,9 @@ class ScrollBarElement::Impl {
       : owner_(owner),
         left_state_(STATE_NORMAL), right_state_(STATE_NORMAL),
         thumb_state_(STATE_NORMAL),
+        // ScrollBarElement's default rendering is true, which is an exception
+        // of default rendering.
+        default_rendering_(true),
         // The values below are the default ones in Windows.
         min_(0), max_(100), value_(0), pagestep_(10), linestep_(1),
         accum_wheel_delta_(0), drag_delta_(0.),
@@ -120,7 +123,7 @@ class ScrollBarElement::Impl {
       DestroyImage(images_[i]);
   }
 
-  // Called when the orientation changes.
+  // Called when the orientation changes or default rendering is switched off.
   void DestroyDefaultImages() {
     for (int i = 0; i < IMAGE_COUNT; i++) {
       if (image_is_default_[i]) {
@@ -131,12 +134,14 @@ class ScrollBarElement::Impl {
   }
 
   void EnsureDefaultImages() {
-    View *view = owner_->GetView();
-    const char **images_src = orientation_ == ORIENTATION_HORIZONTAL ?
-                              kHorizontalImages : kVerticalImages;
-    for (int i = 0; i < IMAGE_COUNT; i++) {
-      if (!images_[i] && image_is_default_[i])
-        images_[i] = view->LoadImageFromGlobal(images_src[i], false);
+    if (default_rendering_) {
+      View *view = owner_->GetView();
+      const char **images_src = orientation_ == ORIENTATION_HORIZONTAL ?
+                                kHorizontalImages : kVerticalImages;
+      for (int i = 0; i < IMAGE_COUNT; i++) {
+        if (!images_[i] && image_is_default_[i])
+          images_[i] = view->LoadImageFromGlobal(images_src[i], false);
+      }
     }
   }
 
@@ -313,10 +318,18 @@ class ScrollBarElement::Impl {
     }
   }
 
-  void LoadImage(const Variant &src, ScrollBarImage image) {
-    DestroyImage(images_[image]);
-    images_[image] = owner_->GetView()->LoadImage(src, false);
-    image_is_default_[image] = false;
+  void LoadImage(const Variant &src, ScrollBarImage image, bool queue_draw) {
+    if (src != Variant(GetImageTag(images_[image]))) {
+      DestroyImage(images_[image]);
+      images_[image] = owner_->GetView()->LoadImage(src, false);
+      image_is_default_[image] = false;
+      if (queue_draw)
+        owner_->QueueDraw();
+    }
+  }
+
+  Variant GetImageSrc(ScrollBarImage image) {
+    return Variant(image_is_default_[image] ? "" : GetImageTag(images_[image]));
   }
 
   ScrollBarElement *owner_;
@@ -326,6 +339,7 @@ class ScrollBarElement::Impl {
   Rectangle left_rect_, right_rect_, thumb_rect_;
   ImageInterface *images_[IMAGE_COUNT];
   bool image_is_default_[IMAGE_COUNT];
+  bool default_rendering_;
   int min_, max_, value_, pagestep_, linestep_;
   int accum_wheel_delta_;
   double drag_delta_;
@@ -394,6 +408,11 @@ void ScrollBarElement::DoClassRegister() {
   RegisterProperty("value",
                    NewSlot(&ScrollBarElement::GetValue),
                    NewSlot(&ScrollBarElement::SetValue));
+
+  // Undocumented property.
+  RegisterProperty("defaultRendering",
+                   NewSlot(&ScrollBarElement::IsDefaultRendering),
+                   NewSlot(&ScrollBarElement::SetDefaultRendering));
 
   RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
                       &ScrollBarElement::impl_);
@@ -483,141 +502,111 @@ void ScrollBarElement::SetOrientation(ScrollBarElement::Orientation o) {
 }
 
 Variant ScrollBarElement::GetBackground() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_BACKGROUND]));
+  return impl_->GetImageSrc(IMAGE_BACKGROUND);
 }
 
 void ScrollBarElement::SetBackground(const Variant &img) {
-  if (img != GetBackground()) {
-    impl_->LoadImage(img, IMAGE_BACKGROUND);
-    QueueDraw();
-  }
+  impl_->LoadImage(img, IMAGE_BACKGROUND, true);
 }
 
 Variant ScrollBarElement::GetGrippyImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_GRIPPY]));
+  return impl_->GetImageSrc(IMAGE_GRIPPY);
 }
 
 void ScrollBarElement::SetGrippyImage(const Variant &img) {
-  if (img != GetGrippyImage()) {
-    impl_->LoadImage(img, IMAGE_GRIPPY);
-    QueueDraw();
-  }
+  impl_->LoadImage(img, IMAGE_GRIPPY, true);
 }
 
 Variant ScrollBarElement::GetLeftDownImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_LEFT_DOWN]));
+  return impl_->GetImageSrc(IMAGE_LEFT_DOWN);
 }
 
 void ScrollBarElement::SetLeftDownImage(const Variant &img) {
-  if (img != GetLeftDownImage()) {
-    impl_->LoadImage(img, IMAGE_LEFT_DOWN);
-    if (impl_->left_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_LEFT_DOWN,
+                   impl_->left_state_ == STATE_DOWN);
 }
 
 Variant ScrollBarElement::GetLeftImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_LEFT_NORMAL]));
+  return impl_->GetImageSrc(IMAGE_LEFT_NORMAL);
 }
 
 void ScrollBarElement::SetLeftImage(const Variant &img) {
-  if (img != GetLeftImage()) {
-    impl_->LoadImage(img, IMAGE_LEFT_NORMAL);
-    if (impl_->left_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_LEFT_NORMAL,
+                   impl_->left_state_ == STATE_NORMAL);
 }
 
 Variant ScrollBarElement::GetLeftOverImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_LEFT_OVER]));
+  return impl_->GetImageSrc(IMAGE_LEFT_OVER);
 }
 
 void ScrollBarElement::SetLeftOverImage(const Variant &img) {
-  if (img != GetLeftOverImage()) {
-    impl_->LoadImage(img, IMAGE_LEFT_OVER);
-    if (impl_->left_state_ == STATE_OVER) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_LEFT_OVER,
+                   impl_->left_state_ == STATE_OVER);
 }
 
 Variant ScrollBarElement::GetRightDownImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_RIGHT_DOWN]));
+  return impl_->GetImageSrc(IMAGE_RIGHT_DOWN);
 }
 
 void ScrollBarElement::SetRightDownImage(const Variant &img) {
-  if (img != GetRightDownImage()) {
-    impl_->LoadImage(img, IMAGE_RIGHT_DOWN);
-    if (impl_->right_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_RIGHT_DOWN,
+                   impl_->right_state_ == STATE_DOWN);
 }
 
 Variant ScrollBarElement::GetRightImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_RIGHT_NORMAL]));
+  return impl_->GetImageSrc(IMAGE_RIGHT_NORMAL);
 }
 
 void ScrollBarElement::SetRightImage(const Variant &img) {
-  if (img != GetRightImage()) {
-    impl_->LoadImage(img, IMAGE_RIGHT_NORMAL);
-    if (impl_->right_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_RIGHT_NORMAL,
+                   impl_->right_state_ == STATE_NORMAL);
 }
 
 Variant ScrollBarElement::GetRightOverImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_RIGHT_OVER]));
+  return impl_->GetImageSrc(IMAGE_RIGHT_OVER);
 }
 
 void ScrollBarElement::SetRightOverImage(const Variant &img) {
-  if (img != GetRightOverImage()) {
-    impl_->LoadImage(img, IMAGE_RIGHT_OVER);
-    if (impl_->right_state_ == STATE_OVER) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_RIGHT_OVER, 
+                   impl_->right_state_ == STATE_OVER);
 }
 
 Variant ScrollBarElement::GetThumbDownImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_THUMB_DOWN]));
+  return impl_->GetImageSrc(IMAGE_THUMB_DOWN);
 }
 
 void ScrollBarElement::SetThumbDownImage(const Variant &img) {
-  if (img != GetThumbDownImage()) {
-    impl_->LoadImage(img, IMAGE_THUMB_DOWN);
-    if (impl_->thumb_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_THUMB_DOWN, impl_->thumb_state_ == STATE_DOWN);
 }
 
 Variant ScrollBarElement::GetThumbImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_THUMB_NORMAL]));
+  return impl_->GetImageSrc(IMAGE_THUMB_NORMAL);
 }
 
 void ScrollBarElement::SetThumbImage(const Variant &img) {
-  if (img != GetThumbImage()) {
-    impl_->LoadImage(img, IMAGE_THUMB_NORMAL);
-    if (impl_->thumb_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
-  }
+  impl_->LoadImage(img, IMAGE_THUMB_NORMAL,
+                   impl_->thumb_state_ == STATE_NORMAL);
 }
 
 Variant ScrollBarElement::GetThumbOverImage() const {
-  return Variant(GetImageTag(impl_->images_[IMAGE_THUMB_OVER]));
+  return impl_->GetImageSrc(IMAGE_THUMB_OVER);
 }
 
 void ScrollBarElement::SetThumbOverImage(const Variant &img) {
-  if (img != GetThumbOverImage()) {
-    impl_->LoadImage(img, IMAGE_THUMB_OVER);
-    if (impl_->thumb_state_ == STATE_OVER) {
-      QueueDraw();
-    }
+  impl_->LoadImage(img, IMAGE_THUMB_OVER,
+                   impl_->thumb_state_ == STATE_OVER);
+}
+
+bool ScrollBarElement::IsDefaultRendering() const {
+  return impl_->default_rendering_;
+}
+
+void ScrollBarElement::SetDefaultRendering(bool default_rendering) {
+  if (default_rendering != impl_->default_rendering_) {
+    impl_->default_rendering_ = default_rendering;
+    if (!default_rendering)
+      impl_->DestroyDefaultImages();
+    QueueDraw();
   }
 }
 

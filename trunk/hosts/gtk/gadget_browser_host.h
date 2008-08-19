@@ -17,6 +17,7 @@
 #ifndef HOSTS_GTK_GADGET_BROWSER_HOST_H__
 #define HOSTS_GTK_GADGET_BROWSER_HOST_H__
 
+#include <ggadget/gadget_consts.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
@@ -46,6 +47,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
     owner_->ShowGadgetAboutDialog(gadget);
   }
   void ShowGadgetDebugConsole(Gadget *gadget) {}
+  int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

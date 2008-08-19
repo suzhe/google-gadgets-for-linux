@@ -130,7 +130,9 @@ EventResult AnchorElement::HandleMouseEvent(const MouseEvent &event) {
       QueueDraw();
       break;
     case Event::EVENT_MOUSE_CLICK:
-      if (!impl_->href_.empty()) {
+      // Some gadgets use the HTML convention href="#" to make the anchor have
+      // no action.
+      if (!impl_->href_.empty() && impl_->href_ != "#") {
          GetView()->OpenURL(impl_->href_.c_str()); // ignore return
       }
       break;

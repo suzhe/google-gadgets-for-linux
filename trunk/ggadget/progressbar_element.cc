@@ -41,7 +41,7 @@ class ProgressBarElement::Impl {
         min_(0), max_(100), value_(0),
         drag_delta_(0.),
         orientation_(ORIENTATION_HORIZONTAL),
-        default_rendering_(true) {
+        default_rendering_(false) {
   }
 
   ~Impl() {
@@ -64,42 +64,32 @@ class ProgressBarElement::Impl {
   }
 
   void LoadImage(ImageInterface **image, const Variant &src, bool queue_draw) {
-    ImageInterface *new_image = owner_->GetView()->LoadImage(src, false);
-    if (new_image) {
-      if (default_rendering_) {
-        default_rendering_ = false;
-        DestroyImages();
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      } else {
-        DestroyImage(*image);
-      }
-      *image = new_image;
-      // The caller may also call QueueDraw() if needed.
-    } else if (!default_rendering_) {
-      // Check if we should go back to default rendering.
+    if (src != Variant(GetImageTag(*image))) {
       DestroyImage(*image);
-      *image = NULL;
-      default_rendering_ =
-          !emptyimage_ && !fullimage_ && !thumbdisabledimage_ &&
-          !thumbdownimage_ && !thumboverimage_ && !thumbimage_;
-      if (default_rendering_) {
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      }
+      *image = owner_->GetView()->LoadImage(src, false);
+      if (queue_draw)
+        owner_->QueueDraw();
     }
-    // Otherwise don't destroy the default image.
-
-    if (queue_draw)
-      owner_->QueueDraw();
   }
 
   void EnsureDefaultImages() {
-    if (default_rendering_ && !emptyimage_) {
-      ASSERT(!fullimage_);
+    if (default_rendering_) {
       View *view = owner_->GetView();
-      emptyimage_ = view->LoadImageFromGlobal(kProgressBarEmptyImage, false);
-      fullimage_ = view->LoadImageFromGlobal(kProgressBarFullImage, false);
+      if (!emptyimage_)
+        emptyimage_ = view->LoadImageFromGlobal(kProgressBarEmptyImage, false);
+      if (!fullimage_)
+        fullimage_ = view->LoadImageFromGlobal(kProgressBarFullImage, false);
+    }
+  }
+
+  void DestroyDefaultImages() {
+    if (GetImageTag(emptyimage_) == kProgressBarEmptyImage) {
+      DestroyImage(emptyimage_);
+      emptyimage_ = NULL;
+    }
+    if (GetImageTag(fullimage_) == kProgressBarFullImage) {
+      DestroyImage(fullimage_);
+      fullimage_ = NULL;
     }
   }
 
@@ -249,6 +239,11 @@ void ProgressBarElement::DoClassRegister() {
   RegisterProperty("value",
                    NewSlot(&ProgressBarElement::GetValue),
                    NewSlot(&ProgressBarElement::SetValue));
+
+  // Undocumented property.
+  RegisterProperty("defaultRendering",
+                   NewSlot(&ProgressBarElement::IsDefaultRendering),
+                   NewSlot(&ProgressBarElement::SetDefaultRendering));
 
   RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
                       &ProgressBarElement::impl_);
@@ -404,26 +399,23 @@ void ProgressBarElement::SetOrientation(ProgressBarElement::Orientation o) {
 }
 
 Variant ProgressBarElement::GetEmptyImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->emptyimage_));
+  std::string tag = GetImageTag(impl_->emptyimage_);
+  return Variant(tag == kProgressBarEmptyImage ? "" : tag);
 }
 
 void ProgressBarElement::SetEmptyImage(const Variant &img) {
-  if (img != GetEmptyImage()) {
-    // Changing emptyImage always queue draw, because it effects the default
-    // size.
-    impl_->LoadImage(&impl_->emptyimage_, img, true);
-  }
+  // Changing emptyImage always queue draw, because it effects the default
+  // size.
+  impl_->LoadImage(&impl_->emptyimage_, img, true);
 }
 
 Variant ProgressBarElement::GetFullImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->fullimage_));
+  std::string tag = GetImageTag(impl_->fullimage_);
+  return Variant(tag == kProgressBarFullImage ? "" : tag);
 }
 
 void ProgressBarElement::SetFullImage(const Variant &img) {
-  if (img != GetFullImage())
-    impl_->LoadImage(&impl_->fullimage_, img, impl_->value_ != impl_->min_);
+  impl_->LoadImage(&impl_->fullimage_, img, impl_->value_ != impl_->min_);
 }
 
 Variant ProgressBarElement::GetThumbDisabledImage() const {
@@ -471,6 +463,20 @@ void ProgressBarElement::SetThumbOverImage(const Variant &img) {
                      impl_->thumbover_ && IsEnabled());
   }
 }
+
+bool ProgressBarElement::IsDefaultRendering() const {
+  return impl_->default_rendering_;
+}
+
+void ProgressBarElement::SetDefaultRendering(bool default_rendering) {
+  if (default_rendering != impl_->default_rendering_) {
+    impl_->default_rendering_ = default_rendering;
+    if (!default_rendering)
+      impl_->DestroyDefaultImages();
+    QueueDraw();
+  }
+}
+
 BasicElement *ProgressBarElement::CreateInstance(BasicElement *parent,
                                                  View *view,
                                                  const char *name) {

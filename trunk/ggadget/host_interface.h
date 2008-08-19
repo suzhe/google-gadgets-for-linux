@@ -78,6 +78,12 @@ class HostInterface {
    * Shows a debug console that will display all logs for the gadget.
    */
   virtual void ShowGadgetDebugConsole(Gadget *gadget) = 0;
+
+  /**
+   * Gets the default font size, which can be customized by the user.
+   * @return the default font point size.
+   */
+  virtual int GetDefaultFontSize() = 0;
 };
 
 } // namespace ggadget
