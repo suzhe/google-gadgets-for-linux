@@ -332,8 +332,11 @@ function size_onmousemove() {
     MoveSelectedElementInElementCoord(
         g_size_width_dir == -1 ? -size_delta.x : 0,
         g_size_height_dir == -1 ? -size_delta.y : 0);
-    g_drag_offset_x = x;
-    g_drag_offset_y = y;
+    var real_delta = ElementDeltaToView(g_selected_element,
+                                        size_delta.x * g_size_width_dir,
+                                        size_delta.y * g_size_height_dir);
+    g_drag_offset_x += real_delta.x;
+    g_drag_offset_y += real_delta.y;
   }
 }
 
@@ -745,6 +748,8 @@ function RefreshFileList() {
     if (files[i] == g_current_file)
       e_file_list.selectedIndex = i;
   }
+  for (var i = 0; i < e_file_list.children.count; i++)
+    e_file_list.children.item(i).children.item(0).size = 9;
 }
 
 function NewGadget() {

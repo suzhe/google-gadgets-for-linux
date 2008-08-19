@@ -82,6 +82,10 @@ class CheckBoxElement : public BasicElement {
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
 
+  /** Gets and sets if the button should be rendered with default images. */
+  bool IsDefaultRendering() const;
+  void SetDefaultRendering(bool default_rendering);
+
   bool IsCheckBox() const;
 
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);

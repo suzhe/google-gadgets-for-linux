@@ -17,6 +17,7 @@
 #include "text_frame.h"
 #include "basic_element.h"
 #include "color.h"
+#include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "string_utils.h"
 #include "texture.h"
@@ -25,7 +26,6 @@
 namespace ggadget{
 
 static const Color kDefaultColor(0, 0, 0);
-static const char *const kDefaultFont = "sans-serif";
 
 static const char *kAlignNames[] = {
   "left", "center", "right", "justify"
@@ -50,8 +50,9 @@ class TextFrame::Impl {
         align_(CanvasInterface::ALIGN_LEFT),
         valign_(CanvasInterface::VALIGN_TOP),
         trimming_(CanvasInterface::TRIMMING_NONE),
-        bold_(false), italic_(false), flags_(0), size_(10),
-        font_name_(kDefaultFont),
+        bold_(false), italic_(false), flags_(0),
+        size_(kDefaultFontSize), size_is_default_(true),
+        // font_name_ is left blank to indicate default font.
         width_(0.0), height_(0.0) {
   }
 
@@ -79,10 +80,19 @@ class TextFrame::Impl {
   }
 
   bool SetUpFont() {
+    if (size_is_default_) {
+      int default_size = view_->GetDefaultFontSize();
+      if (default_size != size_) {
+        size_ = default_size;
+        ResetFont();
+      }
+    }
+
     // The FontInterface object is cached on draw.
     if (!font_) {
       font_ = view_->GetGraphics()->NewFont(
-          font_name_.c_str(), size_,
+          font_name_.empty() ? kDefaultFontName : font_name_.c_str(),
+          size_,
           italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
           bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL);
       if (!font_) {
@@ -117,6 +127,7 @@ class TextFrame::Impl {
   bool bold_, italic_;
   int flags_;
   int size_;
+  bool size_is_default_;
   std::string font_name_, color_, text_;
   double width_, height_;
 };
@@ -240,14 +251,24 @@ void TextFrame::SetItalic(bool italic) {
 }
 
 int TextFrame::GetSize() const {
-  return impl_->size_;
+  return impl_->size_is_default_ ? -1 : impl_->size_;
 }
 
 void TextFrame::SetSize(int size) {
+  if (size == -1) {
+    impl_->size_is_default_ = true;
+    size = impl_->view_->GetDefaultFontSize();
+  } else {
+    impl_->size_is_default_ = false;
+  }
   if (size != impl_->size_) {
     impl_->size_ = size;
     impl_->ResetFont();
   }
+}
+
+int TextFrame::GetCurrentSize() const {
+  return impl_->size_;
 }
 
 bool TextFrame::IsStrikeout() const {

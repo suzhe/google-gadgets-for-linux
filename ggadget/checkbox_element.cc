@@ -34,6 +34,10 @@ enum CheckedState {
   STATE_COUNT
 };
 
+#define IMAGE(postfix) (is_checkbox_ ? kCheckBox##postfix : kRadio##postfix)
+#define IMPL_IMAGE(postfix) \
+    (impl_->is_checkbox_ ? kCheckBox##postfix : kRadio##postfix)
+
 class CheckBoxElement::Impl {
  public:
   Impl(CheckBoxElement *owner, View *view, bool is_checkbox)
@@ -42,7 +46,7 @@ class CheckBoxElement::Impl {
       text_(owner, view),
       mousedown_(false), mouseover_(false),
       checkbox_on_right_(false),
-      default_rendering_(true),
+      default_rendering_(false),
       value_(STATE_CHECKED) {
     for (int i = 0; i < STATE_COUNT; i++) {
       image_[i] = NULL;
@@ -55,19 +59,11 @@ class CheckBoxElement::Impl {
   }
 
   ~Impl() {
-    DestroyImages();
-  }
-
-  void DestroyImages() {
     for (int i = 0; i < STATE_COUNT; i++) {
       DestroyImage(image_[i]);
-      image_[i] = NULL;
       DestroyImage(downimage_[i]);
-      downimage_[i] = NULL;
       DestroyImage(overimage_[i]);
-      overimage_[i] = NULL;
       DestroyImage(disabledimage_[i]);
-      disabledimage_[i] = NULL;
     }
   }
 
@@ -107,62 +103,69 @@ class CheckBoxElement::Impl {
   }
 
   void LoadImage(ImageInterface **image, const Variant &src) {
-    bool queue_draw = false;
-    ImageInterface *new_image = owner_->GetView()->LoadImage(src, false);
-    if (new_image) {
-      if (default_rendering_) {
-        default_rendering_ = false;
-        DestroyImages();
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      } else {
-        DestroyImage(*image);
-      }
-      *image = new_image;
-      // The caller may also call QueueDraw() if needed.
-    } else if (!default_rendering_) {
-      // Check if we should go back to default rendering.
+    if (src != Variant(GetImageTag(*image))) {
       DestroyImage(*image);
-      *image = NULL;
-      default_rendering_ = true;
-      for (int i = 0; i < STATE_COUNT && default_rendering_; i++) {
-        default_rendering_ =
-            default_rendering_ && !image_[i] && !downimage_[i] &&
-            !overimage_[i] && !disabledimage_[i];
-      }
-      if (default_rendering_) {
-        // Queue draw because default rendering state changed.
-        queue_draw = true;
-      }
-    }
-    // Otherwise don't destroy the default image.
-
-    if (!queue_draw)
-      queue_draw = *image == GetCurrentImage();
-    if (queue_draw)
+      *image = owner_->GetView()->LoadImage(src, false);
       owner_->QueueDraw();
+    }
   }
 
   void EnsureDefaultImages() {
-    if (default_rendering_ && !image_[STATE_NORMAL]) {
-      ASSERT(!overimage_[STATE_NORMAL] && !downimage_[STATE_NORMAL] &&
-             !image_[STATE_CHECKED] && !overimage_[STATE_CHECKED] &&
-             !downimage_[STATE_CHECKED]);
-#define IMAGE(postfix) (is_checkbox_ ? kCheckBox##postfix : kRadio##postfix)
+    if (default_rendering_) {
       View *view = owner_->GetView();
-      image_[STATE_NORMAL] = view->LoadImageFromGlobal(IMAGE(Image), false);
-      overimage_[STATE_NORMAL] = view->LoadImageFromGlobal(
-          IMAGE(OverImage), false);
-      downimage_[STATE_NORMAL] = view->LoadImageFromGlobal(
-          IMAGE(DownImage), false);
-      image_[STATE_CHECKED] = view->LoadImageFromGlobal(
-          IMAGE(CheckedImage), false);
-      overimage_[STATE_CHECKED] = view->LoadImageFromGlobal(
-          IMAGE(CheckedOverImage), false);
-      downimage_[STATE_CHECKED] = view->LoadImageFromGlobal(
-          IMAGE(CheckedDownImage), false);
+      if (!image_[STATE_NORMAL]) {
+        image_[STATE_NORMAL] = view->LoadImageFromGlobal(IMAGE(Image), false);
+      }
+      if (!overimage_[STATE_NORMAL]) {
+        overimage_[STATE_NORMAL] = view->LoadImageFromGlobal(
+            IMAGE(OverImage), false);
+      }
+      if (!downimage_[STATE_NORMAL]) {
+        downimage_[STATE_NORMAL] = view->LoadImageFromGlobal(
+            IMAGE(DownImage), false);
+      }
+      if (!image_[STATE_CHECKED]) {
+        image_[STATE_CHECKED] = view->LoadImageFromGlobal(
+            IMAGE(CheckedImage), false);
+      }
+      if (!overimage_[STATE_CHECKED]) {
+        overimage_[STATE_CHECKED] = view->LoadImageFromGlobal(
+            IMAGE(CheckedOverImage), false);
+      }
+      if (!downimage_[STATE_CHECKED]) {
+        downimage_[STATE_CHECKED] = view->LoadImageFromGlobal(
+            IMAGE(CheckedDownImage), false);
+      }
       // No default disabled images.
     }
+  }
+
+  void DestroyDefaultImages() {
+    if (GetImageTag(image_[STATE_NORMAL]) == IMAGE(Image)) {
+      DestroyImage(image_[STATE_NORMAL]);
+      image_[STATE_NORMAL] = NULL;
+    }
+    if (GetImageTag(overimage_[STATE_NORMAL]) == IMAGE(OverImage)) {
+      DestroyImage(overimage_[STATE_NORMAL]);
+      overimage_[STATE_NORMAL] = NULL;
+    }
+    if (GetImageTag(downimage_[STATE_NORMAL]) == IMAGE(DownImage)) {
+      DestroyImage(downimage_[STATE_NORMAL]);
+      downimage_[STATE_NORMAL] = NULL;
+    }
+    if (GetImageTag(image_[STATE_CHECKED]) == IMAGE(CheckedImage)) {
+      DestroyImage(image_[STATE_CHECKED]);
+      image_[STATE_CHECKED] = NULL;
+    }
+    if (GetImageTag(overimage_[STATE_CHECKED]) == IMAGE(CheckedOverImage)) {
+      DestroyImage(overimage_[STATE_CHECKED]);
+      overimage_[STATE_CHECKED] = NULL;
+    }
+    if (GetImageTag(downimage_[STATE_CHECKED]) == IMAGE(CheckedDownImage)) {
+      DestroyImage(downimage_[STATE_CHECKED]);
+      downimage_[STATE_CHECKED] = NULL;
+    }
+    // No default disabled images.
   }
 
   DEFINE_DELEGATE_GETTER(GetTextFrame,
@@ -220,14 +223,17 @@ void CheckBoxElement::DoClassRegister() {
   RegisterProperty("checkedDisabledImage",
                    NewSlot(&CheckBoxElement::GetCheckedDisabledImage),
                    NewSlot(&CheckBoxElement::SetCheckedDisabledImage));
-
-  // undocumented properties
   RegisterProperty("caption",
                    NewSlot(&TextFrame::GetText, Impl::GetTextFrameConst),
                    NewSlot(&TextFrame::SetText, Impl::GetTextFrame));
   RegisterProperty("checkboxOnRight",
                    NewSlot(&CheckBoxElement::IsCheckBoxOnRight),
                    NewSlot(&CheckBoxElement::SetCheckBoxOnRight));
+
+  // Undocumented property.
+  RegisterProperty("defaultRendering",
+                   NewSlot(&CheckBoxElement::IsDefaultRendering),
+                   NewSlot(&CheckBoxElement::SetDefaultRendering));
 
   RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
                       &CheckBoxElement::impl_);
@@ -294,83 +300,86 @@ void CheckBoxElement::SetValue(bool value) {
 }
 
 Variant CheckBoxElement::GetImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->image_[STATE_NORMAL]));
+  std::string tag = GetImageTag(impl_->image_[STATE_NORMAL]);
+  return Variant(tag == IMPL_IMAGE(Image) ? "" : tag);
 }
 
 void CheckBoxElement::SetImage(const Variant &img) {
-  if (img != GetImage())
-    impl_->LoadImage(&impl_->image_[STATE_NORMAL], img);
+  impl_->LoadImage(&impl_->image_[STATE_NORMAL], img);
 }
 
 Variant CheckBoxElement::GetDisabledImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->disabledimage_[STATE_NORMAL]));
+  return Variant(GetImageTag(impl_->disabledimage_[STATE_NORMAL]));
 }
 
 void CheckBoxElement::SetDisabledImage(const Variant &img) {
-  if (img != GetDisabledImage())
-    impl_->LoadImage(&impl_->disabledimage_[STATE_NORMAL], img);
+  impl_->LoadImage(&impl_->disabledimage_[STATE_NORMAL], img);
 }
 
 Variant CheckBoxElement::GetOverImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->overimage_[STATE_NORMAL]));
+  std::string tag = GetImageTag(impl_->overimage_[STATE_NORMAL]);
+  return Variant(tag == IMPL_IMAGE(OverImage) ? "" : tag);
 }
 
 void CheckBoxElement::SetOverImage(const Variant &img) {
-  if (img != GetOverImage())
-    impl_->LoadImage(&impl_->overimage_[STATE_NORMAL], img);
+  impl_->LoadImage(&impl_->overimage_[STATE_NORMAL], img);
 }
 
 Variant CheckBoxElement::GetDownImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->downimage_[STATE_NORMAL]));
+  std::string tag = GetImageTag(impl_->downimage_[STATE_NORMAL]);
+  return Variant(tag == IMPL_IMAGE(DownImage) ? "" : tag);
 }
 
 void CheckBoxElement::SetDownImage(const Variant &img) {
-  if (img != GetDownImage())
-    impl_->LoadImage(&impl_->downimage_[STATE_NORMAL], img);
+  impl_->LoadImage(&impl_->downimage_[STATE_NORMAL], img);
 }
 
 Variant CheckBoxElement::GetCheckedImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->image_[STATE_CHECKED]));
+  std::string tag = GetImageTag(impl_->image_[STATE_CHECKED]);
+  return Variant(tag == IMPL_IMAGE(CheckedImage) ? "" : tag);
 }
 
 void CheckBoxElement::SetCheckedImage(const Variant &img) {
-  if (img != GetCheckedImage())
-    impl_->LoadImage(&impl_->image_[STATE_CHECKED], img);
+  impl_->LoadImage(&impl_->image_[STATE_CHECKED], img);
 }
 
 Variant CheckBoxElement::GetCheckedDisabledImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->disabledimage_[STATE_CHECKED]));
+  return Variant(GetImageTag(impl_->disabledimage_[STATE_CHECKED]));
 }
 
 void CheckBoxElement::SetCheckedDisabledImage(const Variant &img) {
-  if (img != GetCheckedDisabledImage())
-    impl_->LoadImage(&impl_->disabledimage_[STATE_CHECKED], img);
+  impl_->LoadImage(&impl_->disabledimage_[STATE_CHECKED], img);
 }
 
 Variant CheckBoxElement::GetCheckedOverImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->overimage_[STATE_CHECKED]));
+  std::string tag = GetImageTag(impl_->overimage_[STATE_CHECKED]);
+  return Variant(tag == IMPL_IMAGE(CheckedOverImage) ? "" : tag);
 }
 
 void CheckBoxElement::SetCheckedOverImage(const Variant &img) {
-  if (img != GetCheckedOverImage())
-    impl_->LoadImage(&impl_->overimage_[STATE_CHECKED], img);
+  impl_->LoadImage(&impl_->overimage_[STATE_CHECKED], img);
 }
 
 Variant CheckBoxElement::GetCheckedDownImage() const {
-  return Variant(impl_->default_rendering_ ?
-                 "" : GetImageTag(impl_->downimage_[STATE_CHECKED]));
+  std::string tag = GetImageTag(impl_->downimage_[STATE_CHECKED]);
+  return Variant(tag == IMPL_IMAGE(CheckedDownImage) ? "" : tag);
 }
 
 void CheckBoxElement::SetCheckedDownImage(const Variant &img) {
-  if (img != GetCheckedDownImage())
-    impl_->LoadImage(&impl_->downimage_[STATE_CHECKED], img);
+  impl_->LoadImage(&impl_->downimage_[STATE_CHECKED], img);
+}
+
+bool CheckBoxElement::IsDefaultRendering() const {
+  return impl_->default_rendering_;
+}
+
+void CheckBoxElement::SetDefaultRendering(bool default_rendering) {
+  if (default_rendering != impl_->default_rendering_) {
+    impl_->default_rendering_ = default_rendering;
+    if (!default_rendering)
+      impl_->DestroyDefaultImages();
+    QueueDraw();
+  }
 }
 
 TextFrame *CheckBoxElement::GetTextFrame() {
@@ -435,6 +444,7 @@ Connection *CheckBoxElement::ConnectOnChangeEvent(Slot0<void> *handler) {
 
 void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   impl_->EnsureDefaultImages();
+
   double image_width = 0, image_height = 0;
   ImageInterface *image = impl_->GetCurrentImage();
   if (image) {

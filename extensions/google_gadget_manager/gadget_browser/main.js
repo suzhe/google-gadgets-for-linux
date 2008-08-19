@@ -133,7 +133,7 @@ function UpdateLanguageBox() {
     var language = languages[i].lang;
     language_box.appendElement(
       "<item name='" + language +
-      "'><label vAlign='middle'>" + languages[i].disp +
+      "'><label vAlign='middle' size='10'>" + languages[i].disp +
       "</label></item>");
 
     if (default_language == language)
@@ -152,7 +152,7 @@ function AddCategoryButton(category, y) {
   categories_div.appendElement(
     "<label align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
     category +
-    "' width='100%' height='" + kCategoryButtonHeight + "' y='" + y +
+    "' size='10' width='100%' height='" + kCategoryButtonHeight + "' y='" + y +
     "' onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +
     " onclick='SelectCategory(\"" + category + "\")'>&#160;" +
     GetDisplayCategory(category) + "</label>");
@@ -188,7 +188,8 @@ function AddPluginBox(plugin, index, row, column) {
     " onmouseover='pluginbox_onmouseover(" + index + ")'" +
     " onmouseout='pluginbox_onmouseout(" + index + ")'>" +
     " <img width='100%' height='100%' stretchMiddle='true'/>" +
-    " <label x='7' y='6' width='120' align='center' color='#FFFFFF' trimming='character-ellipsis'/>" +
+    " <label x='7' y='6' size='10' width='120' align='center' color='#FFFFFF' " +
+    "  trimming='character-ellipsis'/>" +
     " <img x='16' y='75' opacity='70' src='images/thumbnails_shadow.png'/>" +
     " <div x='27' y='33' width='80' height='83' background='#FFFFFF'>" +
     "  <img width='80' height='60' src='images/default_thumbnail.jpg' cropMaintainAspect='true'/>" +
@@ -196,7 +197,7 @@ function AddPluginBox(plugin, index, row, column) {
     "  <img src='images/thumbnails_default_mask.png'/>" +
     " </div>" +
     " <button x='22' y='94' width='90' height='30' visible='false' color='#FFFFFF'" +
-    "  stretchMiddle='true' trimming='character-ellipsis'" +
+    "  size='10' stretchMiddle='true' trimming='character-ellipsis'" +
     "  downImage='images/add_button_down.png' overImage='images/add_button_hover.png'" +
     "  onmousedown='add_button_onmousedown(" + index + ")'" +
     "  onmouseover='add_button_onmouseover(" + index + ")'" +

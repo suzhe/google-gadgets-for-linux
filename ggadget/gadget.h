@@ -315,6 +315,12 @@ class Gadget {
   /** Gets Permissions of this gadget. */
   const Permissions* GetPermissions() const;
 
+  /**
+   * Gets the default font size, which can be customized by the user.
+   * @return the default font point size.
+   */
+  int GetDefaultFontSize() const;
+
  public:
   /**
    * A utility to get the manifest infomation of a gadget without

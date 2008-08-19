@@ -455,6 +455,12 @@ class View : public ViewInterface {
    */
   void CloseView();
 
+  /**
+   * Gets the default font size, which can be customized by the user.
+   * @return the default font point size.
+   */
+  int GetDefaultFontSize() const;
+
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);
   Connection *ConnectOnClickEvent(Slot0<void> *handler);

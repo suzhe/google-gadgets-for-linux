@@ -44,6 +44,7 @@ class QtHost : public ggadget::HostInterface {
   virtual void Run();
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
+  virtual int GetDefaultFontSize();
 
  private:
   class Impl;

@@ -30,9 +30,10 @@
 namespace ggadget {
 
 static const int kMinWidthToUseLongVersionOfTimeString = 125;
-static const int kNormalFontSize = 9;
-static const int kExtraInfoFontSize = 8;
-static const int kSnippetFontSize = 8;
+// -1 means to use the gadget default font size.
+static const int kNormalFontSize = -1;
+static const int kExtraInfoFontSize = -1;
+static const int kSnippetFontSize = -1;
 
 // In this order: y top, x right, y bottom, x left
 static const int kItemBorderOffsets[] = {2, 3, 3, 3};

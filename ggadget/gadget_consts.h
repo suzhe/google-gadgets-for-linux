@@ -268,6 +268,9 @@ const char kDebugConsoleOption[] = "debug_console";
  */
 const char kPermissionsOption[] = "permissions";
 
+const char kDefaultFontName[] = "sans-serif";
+const int kDefaultFontSize = 8;
+
 } // namespace ggadget
 
 #endif // GGADGET_GADGET_CONSTS_H__

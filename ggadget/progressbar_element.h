@@ -77,6 +77,10 @@ class ProgressBarElement : public BasicElement {
   int GetValue() const;
   void SetValue(int value);
 
+  /** Gets and sets if the button should be rendered with default images. */
+  bool IsDefaultRendering() const;
+  void SetDefaultRendering(bool default_rendering);
+
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  protected:

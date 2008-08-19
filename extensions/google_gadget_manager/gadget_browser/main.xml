@@ -30,7 +30,7 @@
        color="#D04040" size="12" wordwrap="true">&UPDATE_METADATA_FAILED;</label>
    </div>
    <div width="100%" height="100%" name="main_ui" visible="false">
-    <label enabled="true" name="language_label" x="10" y="19"
+    <label enabled="true" name="language_label" x="10" y="19" size="10"
       onsize="language_label_onsize()" color="#FFFFFF"
       vAlign="middle">&SHOW_ONLY_LABEL;
     </label>
@@ -69,7 +69,7 @@
       downImage="images/previous_down.png" image="images/previous_default.png"
       overImage="images/previous_hover.png"/>
     <label enabled="true" height="39" name="page_label" x="620" y="511"
-      onsize="page_label_onsize()" align="center" color="#FFFFFF"
+      onsize="page_label_onsize()" align="center" color="#FFFFFF" size="10"
       vAlign="middle"/>
     <button name="next_button" x="665" y="511" onclick="next_button_onclick()"
       downImage="images/next_down.png" image="images/next_default.png"

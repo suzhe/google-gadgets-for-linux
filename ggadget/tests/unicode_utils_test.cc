@@ -279,6 +279,17 @@ TEST(UnicodeUtils, DetectAndConvertStreamToUTF8) {
   EXPECT_STREQ("", result.c_str());
   EXPECT_STREQ("", encoding.c_str());
 
+  std::string bomless_utf16le_input("S\0o\0m\0e\0", 8);
+  EXPECT_TRUE(DetectAndConvertStreamToUTF8(bomless_utf16le_input,
+                                           &result, &encoding));
+  EXPECT_STREQ("Some", result.c_str());
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+  std::string bomless_utf16be_input("\0S\0o\0m\0e", 8);
+  EXPECT_TRUE(DetectAndConvertStreamToUTF8(bomless_utf16be_input,
+                                           &result, &encoding));
+  EXPECT_STREQ("Some", result.c_str());
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+
   std::string utf32le_input(kUTF32LEBOM, sizeof(kUTF32LEBOM));
   EXPECT_TRUE(DetectAndConvertStreamToUTF8(utf32le_input, &result, &encoding));
   EXPECT_STREQ("", result.c_str());

@@ -38,7 +38,6 @@
 #include "main_loop_interface.h"
 #include "gadget_consts.h"
 #include "gadget.h"
-#include "host_interface.h"
 #include "graphics_interface.h"
 #include "image_cache.h"
 #include "image_interface.h"
@@ -1755,6 +1754,11 @@ bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
 void View::CloseView() {
   if (impl_->view_host_)
     impl_->view_host_->CloseView();
+}
+
+int View::GetDefaultFontSize() const {
+  return impl_->gadget_ ?
+         impl_->gadget_->GetDefaultFontSize() : kDefaultFontSize;
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

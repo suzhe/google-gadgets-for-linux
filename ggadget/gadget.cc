@@ -1156,6 +1156,10 @@ const Permissions* Gadget::GetPermissions() const {
   return &impl_->permissions_;
 }
 
+int Gadget::GetDefaultFontSize() const {
+  return impl_->host_->GetDefaultFontSize();
+}
+
 // static methods
 bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
   ASSERT(base_path);

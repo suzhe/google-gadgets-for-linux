@@ -79,7 +79,10 @@ class TextFrame {
   void SetColor(const Variant &color);
   void SetColor(const Color &color, double opacity);
 
-  /** Gets and sets the text font. */
+  /**
+   * Gets and sets the text font. Setting font to blank or NULL will reset
+   * the font to default.
+   */
   std::string GetFont() const;
   void SetFont(const char *font);
 
@@ -87,9 +90,19 @@ class TextFrame {
   bool IsItalic() const;
   void SetItalic(bool italic);
 
-  /** Gets and sets the text size in points. */
+  /**
+   * Gets and sets the text size in points. Setting size to -1 will reset the
+   * font size to default. The gadget host may allow the user to change the
+   * default font size.
+   */
   int GetSize() const;
   void SetSize(int size);
+
+  /**
+   * Same as GetSize(), except that if size is default, GetCurrentSize()
+   * returns the current default point size instead of -1.
+   */
+  int GetCurrentSize() const;
 
   /** Gets and sets whether the text is struke-out. */
   bool IsStrikeout() const;

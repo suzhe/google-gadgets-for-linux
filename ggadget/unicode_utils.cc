@@ -600,32 +600,34 @@ bool DetectAndConvertStreamToUTF8(const std::string &stream,
     ConvertUTF16BEStreamToString(stream.c_str() + sizeof(kUTF16BEBOM),
                                  content_size - sizeof(kUTF16BEBOM), &utf16);
     valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+    // No BOM, try UTF-16 first
   } else {
-    // No BOM, try UTF-8.
-    valid = IsLegalUTF8String(stream);
-    if (valid) {
-      if (encoding) *encoding = "UTF-8";
-      *result = stream;
-    } else {
-      // The try BOM-less UTF-16.
-      switch (DetectUTF16Encoding(stream)) {
-        case 1: {
-          UTF16String utf16;
-          ConvertUTF16LEStreamToString(stream.c_str(), content_size, &utf16);
-          if (encoding) *encoding = "UTF-16LE";
-          valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
-          break;
+    // The try BOM-less UTF-16.
+    switch (DetectUTF16Encoding(stream)) {
+      case 0:
+        // Not UTF-16BE or UTF-16LE, try UTF-8.
+        valid = IsLegalUTF8String(stream);
+        if (valid) {
+          if (encoding) *encoding = "UTF-8";
+          *result = stream;
         }
-        case 2: {
-          UTF16String utf16;
-          ConvertUTF16LEStreamToString(stream.c_str(), content_size, &utf16);
-          if (encoding) *encoding = "UTF-16LE";
-          valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
-          break;
-        }
-        default:
-          break;
+        break;
+      case 1: {
+        UTF16String utf16;
+        ConvertUTF16LEStreamToString(stream.c_str(), content_size, &utf16);
+        if (encoding) *encoding = "UTF-16LE";
+        valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+        break;
       }
+      case 2: {
+        UTF16String utf16;
+        ConvertUTF16BEStreamToString(stream.c_str(), content_size, &utf16);
+        if (encoding) *encoding = "UTF-16BE";
+        valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+        break;
+      }
+      default:
+        break;
     }
   }
 

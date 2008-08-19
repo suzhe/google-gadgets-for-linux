@@ -66,9 +66,11 @@ static const char kOptionPositionInSideBar[] = "position_in_sidebar";
 
 static const int kAutoHideTimeout         = 200;
 static const int kAutoShowTimeout         = 200;
-static const int kDefaultFontSize         = 14;
 static const int kDefaultSideBarWidth     = 200;
 static const int kDefaultMonitor          = 0;
+
+static const int kMinFontSize             = 4;
+static const int kMaxFontSize             = 16;
 
 enum SideBarPosition {
   SIDEBAR_POSITION_LEFT,
@@ -309,7 +311,7 @@ class SideBarGtkHost::Impl {
   }
 
   void OnSideBarMenu(MenuInterface *menu) {
-    int priority = MenuInterface::MENU_ITEM_PRI_HOST;
+    const int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
                   NewSlot(this, &Impl::AddGadgetMenuHandler), priority);
     menu->AddItem(NULL, 0, NULL, priority);
@@ -343,18 +345,20 @@ class SideBarGtkHost::Impl {
                    NewSlot(this, &Impl::SideBarPositionMenuHandler,
                            static_cast<int>(SIDEBAR_POSITION_RIGHT)), priority);
     }
-    /* comment since font size change is not supported yet.
     {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"),
                                           priority);
-      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGER"), 0,
-                   NewSlot(this, &Impl::FontSizeMenuHandler, 2), priority);
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGER"),
+                   font_size_ >= kMaxFontSize ?
+                   MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                   NewSlot(this, &Impl::FontSizeMenuHandler, 1), priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
                    NewSlot(this, &Impl::FontSizeMenuHandler, 0), priority);
-      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALLER"), 0,
-                   NewSlot(this, &Impl::FontSizeMenuHandler, -2), priority);
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALLER"),
+                   font_size_ <= kMinFontSize ?
+                   MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                   NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
     }
-    */
     menu->AddItem(NULL, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_EXIT"), 0,
                   NewSlot(this, &Impl::ExitMenuHandler), priority);
@@ -493,6 +497,7 @@ class SideBarGtkHost::Impl {
     value.ConvertToInt(&sidebar_monitor_);
     value = options_->GetInternalValue(kOptionFontSize);
     value.ConvertToInt(&font_size_);
+    font_size_ = std::min(kMaxFontSize, std::max(kMinFontSize, font_size_));
 
     // Auto hide can't work correctly without always on top.
     if (auto_hide_)
@@ -1523,13 +1528,39 @@ class SideBarGtkHost::Impl {
     ShowOrHideSideBar(true);
   }
 
+  void MarkRedrawAll() {
+    sidebar_->GetSideBarViewHost()->GetView()->MarkRedraw();
+    sidebar_->GetSideBarViewHost()->QueueDraw();
+    for (GadgetsMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
+      if (it->second.details) {
+        it->second.details->GetView()->MarkRedraw();
+        it->second.details->QueueDraw();
+      }
+      if (it->second.floating) {
+        it->second.floating->GetView()->MarkRedraw();
+        it->second.floating->QueueDraw();
+      }
+      if (it->second.popout) {
+        it->second.popout->GetView()->MarkRedraw();
+        it->second.popout->QueueDraw();
+      }
+    }
+  }
+
   void FontSizeMenuHandler(const char *str, int delta) {
-    // TODO: Actual font size handler code is not implemented yet.
-    if (delta == 0)
-      font_size_ = kDefaultFontSize;
-    else
-      font_size_ += delta;
-    options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
+    int new_font_size;
+    if (delta == 0) {
+      new_font_size = kDefaultFontSize;
+    } else {
+      new_font_size = std::min(std::max(font_size_ + delta, kMinFontSize),
+                               kMaxFontSize);
+    }
+    if (new_font_size != font_size_) {
+      font_size_ = new_font_size;
+      options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
+      MarkRedrawAll();
+    }
   }
 
   void ExitMenuHandler(const char *str) {
@@ -1776,6 +1807,10 @@ bool SideBarGtkHost::LoadFont(const char *filename) {
   return ggadget::gtk::LoadFont(filename);
 }
 
+void SideBarGtkHost::Run() {
+  gtk_main();
+}
+
 void SideBarGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
   ggadget::gtk::ShowGadgetAboutDialog(gadget);
 }
@@ -1784,8 +1819,8 @@ void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 
-void SideBarGtkHost::Run() {
-  gtk_main();
+int SideBarGtkHost::GetDefaultFontSize() {
+  return impl_->font_size_;
 }
 
 } // namespace gtk
