@@ -12,13 +12,15 @@ Options:
 
     -sign command       The command for signing the mail.
 
+    -ct times           Commit times, default 1.
+
     -genpatch command   The command for generating patch for reviewing. The
                         default genpatch command is:
-                        "git diff HEAD^1 HEAD"
+                        "git diff HEAD^<commit_time> HEAD"
 
     -genlog command     The command for generating log for reviewing. The
                         default genlog command is:
-                        "git log -1"
+                        "git log -<commit_time>"
 
     -stat command       The command for getting file modification time. The
                         default stat command for Linux is:
@@ -55,6 +57,8 @@ if [ -f "$target_dir/.gitmail" ]; then
   . "$target_dir/.gitmail"
 fi
 
+commit_time=1
+
 # Parse the command line.
 state=0
 for i in "$@"
@@ -85,6 +89,9 @@ do
       ;;
     -stat )
       state=8
+      ;;
+    -ct )
+      state=9
       ;;
     --help | -h )
       showhelp
@@ -132,6 +139,10 @@ do
     stat="$i"
     state=0
     ;;
+  9 )
+    commit_time="$i"
+    state=0
+    ;;
   esac
 done
 
@@ -151,6 +162,10 @@ do
   read -p "Please enter the reviewer's id: " m
 done
 
+if [ "$default_host" = "" ];  then
+  default_host="gmail.com"
+fi
+
 if [ "$stat" = "" ]; then
   stat="stat -c \"%y\""
 fi
@@ -164,11 +179,11 @@ if [ "$from" = "" ]; then
 fi
 
 if [ "$genpatch" = "" ]; then
-  genpatch="git diff HEAD^1 HEAD"
+  genpatch="git diff HEAD~$commit_time HEAD"
 fi
 
 if [ "$genlog" = "" ]; then
-  genlog="git log -1"
+  genlog="git log -$commit_time"
 fi
 
 if [ "$VISUAL" != "" ]; then
@@ -211,6 +226,8 @@ fi
 
 subject="$size code review ($USER `date +'%Y-%m-%d %H:%M:%S'`)"
 
+# Append default host name to receiptors without host name
+m=`echo $m | sed  -e "s/\([^@,]*\),/\1@$default_host,/g" -e "s/\([^@,]\)$/\1@$default_host/g"`
 # Generate the mail.
 tempfile=`mktemp /tmp/gitmail.XXXXXXX`
 cat<<EOF > "$tempfile"
