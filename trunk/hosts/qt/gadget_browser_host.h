@@ -45,7 +45,8 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   virtual void ShowGadgetAboutDialog(Gadget *gadget) {
     owner_->ShowGadgetAboutDialog(gadget);
   }
-  void ShowGadgetDebugConsole(Gadget *gadget) {}
+  virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
+  virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

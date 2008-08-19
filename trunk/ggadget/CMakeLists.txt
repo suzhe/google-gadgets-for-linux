@@ -232,5 +232,6 @@ INSTALL(FILES
   xml_parser_interface.h
   xml_utils.h
   zip_file_manager.h
+  ${CMAKE_BINARY_DIR}/ggadget/sysdeps.h
   DESTINATION ${INCLUDE_INSTALL_DIR} COMPONENT Devel)
 
