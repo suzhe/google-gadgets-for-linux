@@ -227,7 +227,7 @@ fi
 subject="$size code review ($USER `date +'%Y-%m-%d %H:%M:%S'`)"
 
 # Append default host name to receiptors without host name
-m=`echo $m | sed  -e "s/\([^@,]*\),/\1@$default_host,/g" -e "s/\([^@,]\)$/\1@$default_host/g"`
+m=`echo $m | sed -e "s/ *\(,\|$\)/@$default_host\1/g;s/\(@[^@,]*\)@[^@,]*/\1/g"`
 # Generate the mail.
 tempfile=`mktemp /tmp/gitmail.XXXXXXX`
 cat<<EOF > "$tempfile"
