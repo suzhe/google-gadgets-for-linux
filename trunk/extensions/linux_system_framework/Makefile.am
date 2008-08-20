@@ -28,7 +28,6 @@ noinst_HEADERS		= file_system.h \
 			  machine.h \
 			  memory.h \
 			  network.h \
-			  open_url.h \
 			  perfmon.h \
 			  power.h \
 			  process.h \
@@ -43,7 +42,6 @@ libggadget_linux_la_SOURCES = \
 			  file_system.cc \
 			  runtime.cc \
 			  memory.cc \
-			  open_url.cc \
 			  perfmon.cc \
 			  process.cc
 
@@ -88,6 +86,7 @@ linux_system_framework_la_CPPFLAGS = \
 
 linux_system_framework_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
 			  libggadget-linux.la
 
 if GGL_BUILD_LIBGGADGET_DBUS

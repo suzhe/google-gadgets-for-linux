@@ -14,5 +14,20 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip xdgmime
+ADD_DEFINITIONS(
+  -DXDG_PREFIX=_ggl_xdg
+)
+
+SET(SRCS
+  xdgmime.c
+  xdgmimealias.c
+  xdgmimecache.c
+  xdgmimeglob.c
+  xdgmimeicon.c
+  xdgmimeint.c
+  xdgmimemagic.c
+  xdgmimeparent.c
+)
+
+ADD_LIBRARY(xdgmime ${SRCS})
+

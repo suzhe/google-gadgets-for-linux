@@ -69,12 +69,12 @@ TEST(StringUtils, StringPrintf) {
   delete buf;
 }
 
-TEST(StringUtils, EncodeURL) {
+TEST(StringUtils, EncodeDecodeURL) {
   // Valid url chars, no conversion
-  char src1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=;',./~!@#$%^&*()_+|:?";
+  char src1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=;',./~!@#$^&*()_+|:?";
 
   // Invalid url chars, will be converted
-  char src2[] = " []{}<>\"";
+  char src2[] = " []{}<>\"%";
 
   // Back slash, will be converted to '/'
   char src3[] = "\\";
@@ -85,22 +85,38 @@ TEST(StringUtils, EncodeURL) {
   // Non-ascii chars(except \x7f), will be converted
   char src5[] = "\x7f\x80\x81 asd\x8f 3\x9a\xaa\xfe\xff";
 
+  // Invalid encoded URL.
+  char src6[] = "%25%3X%5babc%5";
+
   std::string dest;
 
   dest = EncodeURL(src1);
   EXPECT_STREQ(src1, dest.c_str());
+  dest = DecodeURL(dest);
+  EXPECT_STREQ(src1, dest.c_str());
 
   dest = EncodeURL(src2);
-  EXPECT_STREQ("%20%5b%5d%7b%7d%3c%3e%22", dest.c_str());
+  EXPECT_STREQ("%20%5b%5d%7b%7d%3c%3e%22%25", dest.c_str());
+  dest = DecodeURL(dest);
+  EXPECT_STREQ(src2, dest.c_str());
 
   dest = EncodeURL(src3);
+  EXPECT_STREQ("/", dest.c_str());
+  dest = DecodeURL(dest);
   EXPECT_STREQ("/", dest.c_str());
 
   dest = EncodeURL(src4);
   EXPECT_STREQ("%07%08%0c%0a%0d%09%0b%07%0b%0b%07", dest.c_str());
+  dest = DecodeURL(dest);
+  EXPECT_STREQ(src4, dest.c_str());
 
   dest = EncodeURL(src5);
   EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest.c_str());
+  dest = DecodeURL(dest);
+  EXPECT_STREQ(src5, dest.c_str());
+
+  dest = DecodeURL(src6);
+  EXPECT_STREQ("%%3X[abc%5", dest.c_str());
 }
 
 TEST(StringUtils, GetHostFromURL) {
@@ -125,6 +141,19 @@ TEST(StringUtils, GetHostFromURL) {
   EXPECT_STREQ("a.com", GetHostFromURL("http://@a.com:1234/path/path?param=value").c_str());
 }
 
+TEST(StringUtils, GetFileNameFromURL) {
+  EXPECT_STREQ("", GetFileNameFromURL(NULL).c_str());
+  EXPECT_STREQ("", GetFileNameFromURL("").c_str());
+  EXPECT_STREQ("", GetFileNameFromURL("http://abc").c_str());
+  EXPECT_STREQ("", GetFileNameFromURL("mailto:a@b.com").c_str());
+  EXPECT_STREQ("", GetFileNameFromURL("file://").c_str());
+  EXPECT_STREQ("/", GetFileNameFromURL("file:///").c_str());
+  EXPECT_STREQ("/abc", GetFileNameFromURL("file:///abc").c_str());
+  EXPECT_STREQ("/abc/dev", GetFileNameFromURL("file:///abc/dev").c_str());
+  EXPECT_STREQ("/dev", GetFileNameFromURL("file://abc/dev").c_str());
+  EXPECT_STREQ("/dev fff", GetFileNameFromURL("file://abc/dev%20fff").c_str());
+}
+
 TEST(StringUtils, EncodeJavaScriptString) {
   UTF16Char src1[] = { '\"', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
   std::string dest = EncodeJavaScriptString(src1);
@@ -133,7 +162,7 @@ TEST(StringUtils, EncodeJavaScriptString) {
 
 TEST(StringUtils, SplitString) {
   std::string left, right;
-  EXPECT_TRUE(SplitString("", "", &left, &right));
+  EXPECT_FALSE(SplitString("", "", &left, &right));
   EXPECT_STREQ("", left.c_str());
   EXPECT_STREQ("", right.c_str());
   EXPECT_TRUE(SplitString("abcde", "", &left, &right));
@@ -154,6 +183,29 @@ TEST(StringUtils, SplitString) {
   EXPECT_FALSE(SplitString("abcde", "cb", &left, &right));
   EXPECT_STREQ("abcde", left.c_str());
   EXPECT_STREQ("", right.c_str());
+}
+
+TEST(StringUtils, SplitStringList) {
+  std::vector<std::string> result;
+  EXPECT_FALSE(SplitStringList("", "", &result));
+  EXPECT_EQ(static_cast<size_t>(0), result.size());
+  EXPECT_FALSE(SplitStringList("abc", "", &result));
+  EXPECT_EQ(static_cast<size_t>(1), result.size());
+  EXPECT_STREQ("abc", result[0].c_str());
+  EXPECT_TRUE(SplitStringList(":ab::cd:ef:", ":", &result));
+  EXPECT_EQ(static_cast<size_t>(3), result.size());
+  EXPECT_STREQ("ab", result[0].c_str());
+  EXPECT_STREQ("cd", result[1].c_str());
+  EXPECT_STREQ("ef", result[2].c_str());
+  EXPECT_TRUE(SplitStringList("::ab::cde::f::ghi", "::", &result));
+  EXPECT_EQ(static_cast<size_t>(4), result.size());
+  EXPECT_STREQ("ab", result[0].c_str());
+  EXPECT_STREQ("cde", result[1].c_str());
+  EXPECT_STREQ("f", result[2].c_str());
+  EXPECT_STREQ("ghi", result[3].c_str());
+  EXPECT_FALSE(SplitStringList("abcdef", "ce", &result));
+  EXPECT_EQ(static_cast<size_t>(1), result.size());
+  EXPECT_STREQ("abcdef", result[0].c_str());
 }
 
 TEST(StringUtils, CompressWhiteSpaces) {

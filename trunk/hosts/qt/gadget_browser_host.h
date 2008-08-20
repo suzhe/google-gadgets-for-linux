@@ -17,6 +17,7 @@
 #ifndef HOSTS_QT_GADGET_BROWSER_HOST_H__
 #define HOSTS_QT_GADGET_BROWSER_HOST_H__
 
+#include <ggadget/gadget_consts.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/utilities.h>
@@ -47,6 +48,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
+  int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

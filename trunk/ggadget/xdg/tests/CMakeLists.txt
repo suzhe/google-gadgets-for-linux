@@ -14,5 +14,13 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip xdgmime
+ADD_DEFINITIONS(-DUNIT_TEST)
+
+MACRO(UNIT_TEST TEST_NAME)
+  ADD_TEST_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gtest ggadget ggadget-xdg
+    ${GTHREAD_LIBRARIES})
+  TEST_WRAPPER(${TEST_NAME} TRUE)
+ENDMACRO(UNIT_TEST TEST_NAME)
+
+UNIT_TEST(desktop_entry_test)

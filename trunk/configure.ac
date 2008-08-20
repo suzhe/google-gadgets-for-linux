@@ -605,6 +605,7 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
+AC_CHECK_FUNC(mmap, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MMAP"])
 
 # Check flex
 AC_PROG_LEX
@@ -867,42 +868,58 @@ AC_CONFIG_HEADERS([config.h])
 # Specifies configurable files.
 AC_CONFIG_FILES([Makefile
 		 extensions/Makefile
+		 extensions/curl_xml_http_request/Makefile
 		 extensions/dbus_script_class/Makefile
 		 extensions/default_framework/Makefile
-		 extensions/gtk_edit_element/Makefile
-		 extensions/qt_edit_element/Makefile
-		 extensions/gtkmoz_browser_element/Makefile
-		 extensions/qtwebkit_browser_element/Makefile
-		 extensions/gst_audio_framework/Makefile
-		 extensions/gst_video_element/Makefile
-		 extensions/gtk_system_framework/Makefile
-		 extensions/qt_system_framework/Makefile
-		 extensions/linux_system_framework/Makefile
-		 extensions/linux_system_framework/tests/Makefile
-		 extensions/qt_script_runtime/Makefile
-		 extensions/qt_script_runtime/tests/Makefile
-		 extensions/smjs_script_runtime/Makefile
-		 extensions/smjs_script_runtime/tests/Makefile
-		 extensions/qt_xml_http_request/Makefile
-		 extensions/curl_xml_http_request/Makefile
-		 extensions/libxml2_xml_parser/Makefile
 		 extensions/default_options/Makefile
 		 extensions/default_options/tests/Makefile
 		 extensions/google_gadget_manager/Makefile
 		 extensions/google_gadget_manager/gadget_browser/Makefile
 		 extensions/google_gadget_manager/tests/Makefile
-		 ggadget/sysdeps.h
+		 extensions/gst_audio_framework/Makefile
+		 extensions/gst_video_element/Makefile
+		 extensions/gtk_edit_element/Makefile
+		 extensions/gtk_system_framework/Makefile
+		 extensions/gtkmoz_browser_element/Makefile
+		 extensions/libxml2_xml_parser/Makefile
+		 extensions/linux_system_framework/Makefile
+		 extensions/linux_system_framework/tests/Makefile
+		 extensions/qt_edit_element/Makefile
+		 extensions/qt_script_runtime/Makefile
+		 extensions/qt_script_runtime/tests/Makefile
+		 extensions/qt_system_framework/Makefile
+		 extensions/qt_xml_http_request/Makefile
+		 extensions/qtwebkit_browser_element/Makefile
+		 extensions/smjs_script_runtime/Makefile
+		 extensions/smjs_script_runtime/tests/Makefile
+		 gadgets/Makefile
+		 gadgets/analog_clock/Makefile
+		 gadgets/designer/Makefile
+		 gadgets/designer/gadget/Makefile
+		 gadgets/digital_alarm_clock/Makefile
+		 gadgets/igoogle/Makefile
+		 gadgets/photos/Makefile
+		 gadgets/rss/Makefile
 		 ggadget/Makefile
+		 ggadget/libggadget-1.0.pc
+		 ggadget/sysdeps.h
 		 ggadget/tests/Makefile
 		 ggadget/tests/test_modules/Makefile
 		 ggadget/dbus/Makefile
 		 ggadget/dbus/tests/Makefile
-		 ggadget/qt/Makefile
-		 ggadget/qt/tests/Makefile
+		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
+		 ggadget/gtk/libggadget-gtk-1.0.pc
 		 ggadget/js/Makefile
 		 ggadget/js/tests/Makefile
+		 ggadget/js/libggadget-js-1.0.pc
+		 ggadget/qt/Makefile
+		 ggadget/qt/tests/Makefile
+		 ggadget/qt/libggadget-qt-1.0.pc
+		 ggadget/xdg/Makefile
+		 ggadget/xdg/tests/Makefile
+		 ggadget/xdg/libggadget-xdg-1.0.pc
 		 hosts/Makefile
 		 hosts/gtk/Makefile
 		 hosts/qt/Makefile
@@ -911,20 +928,8 @@ AC_CONFIG_FILES([Makefile
 		 third_party/codesighs/Makefile
 		 third_party/editline/Makefile
 		 third_party/unzip/Makefile
+		 third_party/xdgmime/Makefile
 		 unittest/Makefile
-		 gadgets/Makefile
-		 gadgets/analog_clock/Makefile
-		 gadgets/designer/Makefile
-		 gadgets/designer/gadget/Makefile
-		 gadgets/digital_alarm_clock/Makefile
-		 gadgets/igoogle/Makefile
-		 gadgets/rss/Makefile
-		 gadgets/photos/Makefile
-		 ggadget/libggadget-1.0.pc
-		 ggadget/dbus/libggadget-dbus-1.0.pc
-		 ggadget/gtk/libggadget-gtk-1.0.pc
-		 ggadget/js/libggadget-js-1.0.pc
-		 ggadget/qt/libggadget-qt-1.0.pc
 		 xdg/Makefile
 		 ])
 AC_OUTPUT

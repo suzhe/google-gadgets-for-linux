@@ -143,7 +143,7 @@ void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
   }
 }
 
-std::string StringPrintf(const char* format, ...) {
+std::string StringPrintf(const char *format, ...) {
   std::string dst;
   va_list ap;
   va_start(ap, format);
@@ -152,13 +152,13 @@ std::string StringPrintf(const char* format, ...) {
   return dst;
 }
 
-std::string StringVPrintf(const char* format, va_list ap) {
+std::string StringVPrintf(const char *format, va_list ap) {
   std::string dst;
   StringAppendVPrintf(&dst, format, ap);
   return dst;
 }
 
-void StringAppendPrintf(std::string *string, const char* format, ...) {
+void StringAppendPrintf(std::string *string, const char *format, ...) {
   va_list ap;
   va_start(ap, format);
   StringAppendVPrintf(string, format, ap);
@@ -169,10 +169,13 @@ bool IsValidURLChar(unsigned char c) {
   // See RFC 2396 for information: http://www.ietf.org/rfc/rfc2396.txt
   // check for INVALID character (in US-ASCII: 0-127) and consider all
   // others valid
-  return !(c <= ' ' || '<'==c || '>'==c || '\"'==c || '{'==c || '}'==c ||
-          // '|'==c ||     // Technically | is unadvised, but it is valid, and some URLs use it
-          // '^'==c ||     // Also technically invalid but Yahoo news use it... others too
-          // '`'==c ||     // Yahoo uses this
+  return !(c <= ' ' || '<' == c || '>' == c || '\"' == c ||
+           '{' == c || '}' == c ||
+          // '|'==c || // Technically | is unadvised, but it is valid,
+                       // and some URLs use it
+          // '^'==c || // Also technically invalid but Yahoo news use it...
+                       // others too
+          // '`'==c || // Yahoo uses this
           kBackSlash==c || '['==c || ']'==c || '\n' == c || '\r' == c
           // Comparison below is always false for char:
           || c >= 128);  // Enable converting non-ascii chars
@@ -180,8 +183,8 @@ bool IsValidURLChar(unsigned char c) {
 
 std::string EncodeURL(const std::string &source) {
   std::string dest;
-  for (size_t c = 0; c < source.length(); c++) {
-    unsigned char src = source[c];
+  for (std::string::const_iterator i = source.begin(); i != source.end(); ++i) {
+    unsigned char src = *i;
 
     if (src == kBackSlash) {
       dest.append(1, kSlash);
@@ -190,7 +193,8 @@ std::string EncodeURL(const std::string &source) {
 
     // %-encode disallowed URL chars (b/w 0-127)
     // (chars >=128 are considered valid... although technically they're not)
-    if (!IsValidURLChar(src)) {
+    // encode '%' as well.
+    if (!IsValidURLChar(src) || '%' == src) {
       // output the percent, followed by the hex value of the character
       // Note: we know it's a char in US-ASCII (0-127)
       //
@@ -207,10 +211,55 @@ std::string EncodeURL(const std::string &source) {
   return dest;
 }
 
-bool IsValidRSSURL(const char* url) {
-  if (!url) {
-    return false;
+std::string DecodeURL(const std::string &source) {
+#define VALID_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') || \
+                           ((c) >= 'A' && (c) <= 'F') || \
+                           ((c) >= 'a' && (c) <= 'f'))
+#define DECODE_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : ( \
+                            ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : ( \
+                            ((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : 0)))
+  std::string dest;
+  std::string::const_iterator end = source.end();
+  for (std::string::const_iterator i = source.begin(); i != end; ++i) {
+    unsigned char src = *i;
+    if (src == '%' && i + 1 != end && i + 2 != end &&
+        VALID_HEX_CHAR(*(i + 1)) && VALID_HEX_CHAR(*(i + 2))) {
+      src = (DECODE_HEX_CHAR(*(i + 1)) << 4) | DECODE_HEX_CHAR(*(i + 2));
+      dest.append(1, src);
+      i += 2;
+    } else {
+      // not a special char: just copy
+      dest.append(1, src);
+    }
   }
+  return dest;
+#undef VALID_HEX_CHAR
+#undef DECODE_HEX_CHAR
+}
+
+bool IsValidURL(const char* uri) {
+  if (!uri || !*uri) return false;
+
+  const char *p = uri;
+  size_t count = 0;
+  while (p) {
+    p = strstr(p, "://");
+    if (p) {
+      ++count;
+      p += 3;
+    }
+  }
+  if (count != 1) return false;
+
+  for (p = uri; *p; ++p)
+    if (!IsValidURLChar(*p))
+      return false;
+
+  return true;
+}
+
+bool IsValidRSSURL(const char* url) {
+  if (!IsValidURL(url)) return false;
 
   if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
       strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
@@ -218,19 +267,11 @@ bool IsValidRSSURL(const char* url) {
     return false;
   }
 
-  for (int i = 0; url[i]; i++) {
-    if (!IsValidURLChar(url[i])) {
-      return false;
-    }
-  }
-
   return true;
 }
 
-bool IsValidURL(const char* url) {
-  if (!url) {
-    return false;
-  }
+bool IsValidWebURL(const char* url) {
+  if (!IsValidURL(url)) return false;
 
   if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
       strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1)) {
@@ -238,10 +279,15 @@ bool IsValidURL(const char* url) {
     return false;
   }
 
-  for (int i = 0; url[i]; i++) {
-    if (!IsValidURLChar(url[i])) {
-      return false;
-    }
+  return true;
+}
+
+bool IsValidFileURL(const char* url) {
+  if (!IsValidURL(url)) return false;
+
+  if (strncasecmp(url, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1)) {
+    // Don't allow ftp://.
+    return false;
   }
 
   return true;
@@ -276,6 +322,18 @@ std::string GetHostFromURL(const char *url) {
   return result;
 }
 
+std::string GetFileNameFromURL(const char *url) {
+  std::string result;
+  if (IsValidFileURL(url)) {
+    const char *path_part = url + arraysize(kFileUrlPrefix) - 1;
+    if (*path_part != '/')
+      path_part = strchr(path_part, '/');
+    if (path_part)
+      result = DecodeURL(path_part);
+  }
+  return result;
+}
+
 std::string EncodeJavaScriptString(const UTF16Char *source) {
   ASSERT(source);
 
@@ -304,7 +362,7 @@ std::string EncodeJavaScriptString(const UTF16Char *source) {
 bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right) {
   std::string::size_type pos = source.find(separator);
-  if (pos == source.npos) {
+  if (pos == source.npos || !source.length()) {
     if (result_left && result_left != &source)
       *result_left = source;
     if (result_right)
@@ -319,6 +377,33 @@ bool SplitString(const std::string &source, const std::string &separator,
   if (result_right)
     *result_right = source_copy.substr(pos + separator.length());
   return true;
+}
+
+bool SplitStringList(const std::string &source, const std::string &separator,
+                     std::vector<std::string> *result) {
+  if (result)
+    result->clear();
+  if (!source.length())
+    return false;
+  if (!separator.length()) {
+    if (result)
+      result->push_back(source);
+    return false;
+  }
+  std::string::size_type start = 0;
+  bool ret = false;
+  while(1) {
+    if (start >= source.length()) break;
+    std::string::size_type pos = source.find(separator, start);
+    std::string part =
+        source.substr(start, (pos == std::string::npos ? pos : pos - start));
+    if (part.length() && result)
+      result->push_back(part);
+    if (pos == std::string::npos) break;
+    ret = true;
+    start = pos + separator.length();
+  }
+  return ret;
 }
 
 std::string CompressWhiteSpaces(const char *source) {

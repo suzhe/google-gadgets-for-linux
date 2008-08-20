@@ -73,6 +73,15 @@ class ImageInterface {
   /**
    * Creates a new image in which each pixel equals the color multiplied
    * with corresponding pixel in the current image.
+   *
+   * The result color if a pixel is calculated with following rules:
+   * (value range: 0 ~ 1)
+   * result.red = original.red * color.red * 2;
+   * result.green = original.green * color.green * 2;
+   * result.blue = original.blue * color.blue * 2;
+   *
+   * So when color equals to Color(0.5, 0.5, 0.5), the image won't be changed.
+   * It allows to make the image not only darker but also lighter.
    */
   virtual ImageInterface *MultiplyColor(const Color &color) const = 0;
 
