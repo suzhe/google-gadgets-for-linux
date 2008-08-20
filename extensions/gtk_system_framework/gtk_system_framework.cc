@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <unistd.h>
 #include <vector>
 #include <gtk/gtk.h>
 #include <ggadget/common.h>
@@ -27,6 +28,9 @@
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/system_utils.h>
+#include <ggadget/xdg/desktop_entry.h>
+#include <ggadget/xdg/utilities.h>
 
 #define Initialize gtk_system_framework_LTX_Initialize
 #define Finalize gtk_system_framework_LTX_Finalize
@@ -163,6 +167,103 @@ class GtkSystemBrowseForFileHelper {
   Gadget *gadget_;
 };
 
+// Looks up an icon file with specified name from current gtk icon theme.
+std::string LookupIconInIconTheme(const std::vector<std::string> &icon_names,
+                                  int size) {
+  GtkIconTheme *theme = gtk_icon_theme_get_default();
+  std::vector<std::string>::const_iterator it = icon_names.begin();
+  for (; it != icon_names.end(); ++it) {
+    if (gtk_icon_theme_has_icon(theme, it->c_str())) {
+      int flags = 0;
+#ifdef HAVE_RSVG_LIBRARY
+      flags |= GTK_ICON_LOOKUP_FORCE_SVG;
+#endif
+      GtkIconInfo *icon = gtk_icon_theme_lookup_icon(
+          theme, it->c_str(), size, static_cast<GtkIconLookupFlags>(flags));
+      const char *file = gtk_icon_info_get_filename(icon);
+      std::string file_str(file && *file ? file : "");
+      gtk_icon_info_free(icon);
+      if (file_str.length())
+        return file_str;
+    }
+  }
+  return std::string("");
+}
+
+// Gets the icon file of a DesktopEntry file.
+std::string GetDesktopEntryIcon(const char *file, int size) {
+  ASSERT(file);
+  ggadget::xdg::DesktopEntry entry(file);
+  if (entry.IsValid()) {
+    std::string icon = entry.GetIcon();
+    std::vector<std::string> icon_names;
+
+    // Remove suffix, icon theme don't like it.
+    size_t dot_pos = icon.find_last_of('.');
+    if (dot_pos != std::string::npos && dot_pos > 0)
+      icon_names.push_back(icon.substr(0, dot_pos));
+    else
+      icon_names.push_back(icon);
+
+    // Try lookup the icon in icon theme.
+    std::string icon_file = LookupIconInIconTheme(icon_names, size);
+
+    // Try lookup icon in xdg data dirs.
+    if (!icon_file.length())
+      icon_file = ggadget::xdg::FindIconFileInXDGDataDirs(icon.c_str());
+
+    if (!icon_file.length()) {
+      // Fallback icons.
+      icon_names.clear();
+      icon_names.push_back("application-x-executable");
+      icon_names.push_back("gnome-mime-application-x-executable");
+      icon_names.push_back("unknown");
+      icon_file = LookupIconInIconTheme(icon_names, size);
+    }
+    return icon_file;
+  }
+  return "";
+}
+
+std::string GetFileIcon(const char *file) {
+  static const int kDefaultIconSize = 256;
+
+  std::vector<std::string> icon_names;
+  std::string type = ggadget::xdg::GetFileMimeType(file);
+
+  if (type == ggadget::xdg::kDesktopEntryMimeType) {
+    return GetDesktopEntryIcon(file, kDefaultIconSize);
+  } else if (type == ggadget::xdg::kDirectoryMimeType) {
+    icon_names.push_back("gnome-fs-directory");
+    icon_names.push_back("gtk-directory");
+  } else {
+    std::string icon = ggadget::xdg::GetMimeTypeXDGIcon(type.c_str());
+
+    // XDG icon is the best choice, if it's available.
+    if (icon.length())
+      icon_names.push_back(icon);
+
+    icon = type;
+    for (size_t i = icon.find('/', 0); i != std::string::npos;
+         i = icon.find('/', i + 1))
+      icon[i] = '-';
+
+    // Try icon name similar than: text-plain
+    icon_names.push_back(icon);
+
+    // For backwards compatibility.
+    icon_names.push_back("gnome-mime-" + icon);
+
+    // Try generic name like text-x-generic.
+    icon = type.substr(0, type.find('/')) + "-x-generic";
+    icon_names.push_back(icon);
+    icon_names.push_back("gnome-mime-" + icon);
+
+    // Last resort
+    icon_names.push_back("unknown");
+  }
+  return LookupIconInIconTheme(icon_names, kDefaultIconSize);
+}
 
 static GtkSystemCursor g_cursor_;
 static GtkSystemScreen g_screen_;
@@ -196,26 +297,10 @@ extern "C" {
       return false;
 
     RegisterableInterface *reg_framework = framework->GetRegisterable();
-
     if (!reg_framework) {
       LOG("Specified framework is not registerable.");
       return false;
     }
-
-    // Check permissions.
-    const Permissions *permissions = gadget->GetPermissions();
-    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
-      LOG("No permission to access device status.");
-      return true;
-    }
-
-    GtkSystemBrowseForFileHelper *helper =
-        new GtkSystemBrowseForFileHelper(framework, gadget);
-
-    reg_framework->RegisterMethod("BrowseForFile",
-        NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFile));
-    reg_framework->RegisterMethod("BrowseForFiles",
-        NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFiles));
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.
@@ -242,10 +327,30 @@ extern "C" {
       return false;
     }
 
-    reg_system->RegisterVariantConstant("cursor",
-                                        Variant(&g_script_cursor_));
-    reg_system->RegisterVariantConstant("screen",
-                                        Variant(&g_script_screen_));
+    // Check permissions.
+    const Permissions *permissions = gadget->GetPermissions();
+    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ)) {
+      GtkSystemBrowseForFileHelper *helper =
+          new GtkSystemBrowseForFileHelper(framework, gadget);
+      reg_framework->RegisterMethod("BrowseForFile",
+          NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFile));
+      reg_framework->RegisterMethod("BrowseForFiles",
+          NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFiles));
+
+      reg_system->RegisterMethod("getFileIcon",
+          NewSlot(ggadget::framework::gtk_system_framework::GetFileIcon));
+    } else {
+      LOG("No permission to read file.");
+    }
+
+    if (permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+      reg_system->RegisterVariantConstant("cursor",
+                                          Variant(&g_script_cursor_));
+      reg_system->RegisterVariantConstant("screen",
+                                          Variant(&g_script_screen_));
+    } else {
+      LOG("No permission to access device status.");
+    }
     return true;
   }
 }

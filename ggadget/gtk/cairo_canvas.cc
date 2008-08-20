@@ -899,7 +899,7 @@ cairo_t *CairoCanvas::GetContext() const {
 void CairoCanvas::MultiplyColor(const Color &color) {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
   // Do nothing for white color.
-  if (color == Color::kWhite)
+  if (color == Color(0.5, 0.5, 0.5))
     return;
 
   cairo_surface_t *surface = impl_->GetSurface();

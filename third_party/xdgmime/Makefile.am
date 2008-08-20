@@ -14,5 +14,32 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip xdgmime
+AM_CPPFLAGS = $(PREDEFINED_MACROS) -DXDG_PREFIX=_ggl_xdg
+AM_CFLAGS = $(DEFAULT_COMPILE_FLAGS)
+
+noinst_LTLIBRARIES = libxdgmime.la
+
+noinst_HEADERS = \
+	xdgmime.h \
+	xdgmimealias.h \
+	xdgmimecache.h \
+	xdgmimeglob.h \
+	xdgmimeicon.h \
+	xdgmimeint.h \
+	xdgmimemagic.h \
+	xdgmimeparent.h
+
+libxdgmime_la_SOURCES = \
+	xdgmime.c \
+	xdgmimealias.c \
+	xdgmimecache.c \
+	xdgmimeglob.c \
+	xdgmimeicon.c \
+	xdgmimeint.c \
+	xdgmimemagic.c \
+	xdgmimeparent.c
+
+noinst_PROGRAMS = test-mime
+
+test_mime_SOURCES = test-mime.c
+test_mime_LDADD = libxdgmime.la

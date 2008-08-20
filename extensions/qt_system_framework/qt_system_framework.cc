@@ -143,6 +143,10 @@ class QtSystemBrowseForFileHelper {
   Gadget *gadget_;
 };
 
+std::string GetFileIcon(const char *file) {
+  // TODO
+  return "";
+}
 
 static QtSystemCursor g_cursor_;
 static QtSystemScreen g_screen_;
@@ -176,26 +180,10 @@ extern "C" {
       return false;
 
     RegisterableInterface *reg_framework = framework->GetRegisterable();
-
     if (!reg_framework) {
       LOG("Specified framework is not registerable.");
       return false;
     }
-
-    // Check permissions.
-    const Permissions *permissions = gadget->GetPermissions();
-    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
-      LOG("No permission to access device status.");
-      return true;
-    }
-
-    QtSystemBrowseForFileHelper *helper =
-        new QtSystemBrowseForFileHelper(framework, gadget);
-
-    reg_framework->RegisterMethod("BrowseForFile",
-        NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFile));
-    reg_framework->RegisterMethod("BrowseForFiles",
-        NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFiles));
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.
@@ -222,10 +210,31 @@ extern "C" {
       return false;
     }
 
-    reg_system->RegisterVariantConstant("cursor",
-                                        Variant(&g_script_cursor_));
-    reg_system->RegisterVariantConstant("screen",
-                                        Variant(&g_script_screen_));
+    // Check permissions.
+    const Permissions *permissions = gadget->GetPermissions();
+    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ)) {
+      QtSystemBrowseForFileHelper *helper =
+          new QtSystemBrowseForFileHelper(framework, gadget);
+
+      reg_framework->RegisterMethod("BrowseForFile",
+          NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFile));
+      reg_framework->RegisterMethod("BrowseForFiles",
+          NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFiles));
+
+      reg_system->RegisterMethod("getFileIcon",
+          NewSlot(ggadget::framework::qt_system_framework::GetFileIcon));
+    } else {
+      LOG("No permission to read file.");
+    }
+
+    if (permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+      reg_system->RegisterVariantConstant("cursor",
+                                          Variant(&g_script_cursor_));
+      reg_system->RegisterVariantConstant("screen",
+                                          Variant(&g_script_screen_));
+    } else {
+      LOG("No permission to access device status.");
+    }
     return true;
   }
 }

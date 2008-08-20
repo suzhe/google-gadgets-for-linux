@@ -18,30 +18,26 @@ SUBDIRS 		= tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-EXTRA_DIST		= jscript_massager.l \
-			  test_scripts
+xdgincludedir		= $(GGL_INCLUDE_DIR)/ggadget/xdg
+xdginclude_HEADERS	= desktop_entry.h \
+			  utilities.h
 
-jsincludedir		= $(GGL_INCLUDE_DIR)/ggadget/js
-jsinclude_HEADERS	= jscript_massager.h \
-			  js_utils.h
+lib_LTLIBRARIES		= libggadget-xdg@GGL_EPOCH@.la
 
-lib_LTLIBRARIES		= libggadget-js@GGL_EPOCH@.la
+libggadget_xdg@GGL_EPOCH@_la_SOURCES = \
+			  desktop_entry.cc \
+			  utilities.cc
 
-libggadget_js@GGL_EPOCH@_la_SOURCES = \
-			  jscript_massager.cc \
-			  js_utils.cc
+libggadget_xdg@GGL_EPOCH@_la_CPPFLAGS = \
+			  $(PREDEFINED_MACROS) \
+			  -DXDG_PREFIX=_ggl_xdg
 
-libggadget_js@GGL_EPOCH@_la_CPPFLAGS = \
+libggadget_xdg@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-libggadget_js@GGL_EPOCH@_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS)
-
-libggadget_js@GGL_EPOCH@_la_LIBADD = \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-
-jscript_massager.cc : jscript_massager.l
-	$(LEX) -o $@ $<
+libggadget_xdg@GGL_EPOCH@_la_LIBADD = \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/third_party/xdgmime/libxdgmime.la
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libggadget-js@GGL_EPOCH@.pc
+pkgconfig_DATA = libggadget-xdg@GGL_EPOCH@.pc

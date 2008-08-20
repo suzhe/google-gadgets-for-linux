@@ -26,13 +26,13 @@
 #include <ggadget/scriptable_file_system.h>
 #include <ggadget/permissions.h>
 #include <ggadget/gadget.h>
+#include <ggadget/xdg/utilities.h>
 
 #include "file_system.h"
 #include "runtime.h"
 #include "memory.h"
 #include "perfmon.h"
 #include "process.h"
-#include "open_url.h"
 
 #ifdef HAVE_DBUS_LIBRARY
 #include "machine.h"
@@ -112,7 +112,7 @@ extern "C" {
 
     // OpenURL will check permissions by itself.
     reg_framework->RegisterMethod("openUrl",
-            NewSlot(OpenURL, const_cast<const Gadget*>(gadget)));
+            NewSlot(ggadget::xdg::OpenURL, const_cast<const Gadget*>(gadget)));
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.

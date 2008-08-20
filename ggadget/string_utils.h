@@ -21,6 +21,7 @@
 #include <cstdarg>
 #include <map>
 #include <string>
+#include <vector>
 #include <stdint.h>         // Integer types and macros.
 #include <ggadget/common.h>
 #include <ggadget/unicode_utils.h>
@@ -129,24 +130,43 @@ std::string StringVPrintf(const char *format, va_list ap);
 /**
  * Append result to a supplied string
  */
-void StringAppendPrintf(std::string* dst, const char* format, ...)
+void StringAppendPrintf(std::string *dst, const char *format, ...)
   PRINTF_ATTRIBUTE(2,3);
-void StringAppendVPrintf(std::string* dst, const char* format, va_list ap);
+void StringAppendVPrintf(std::string *dst, const char *format, va_list ap);
 
-/** URL-encode the source string. */
+/**
+ * URI-encode the source string.
+ * Note: don't encode a valid uri twice, which will give wrong result.
+ */
 std::string EncodeURL(const std::string &source);
 
-/** Returns whether the given character is valid in a URL. See RFC2396. */
-bool IsValidURLChar(unsigned char c);
+/** URI-decode the source string. */
+std::string DecodeURL(const std::string &source);
 
-/** Returns whether the given string is a valid URL for a RSS feed. */
-bool IsValidRSSURL(const char* url);
+/** Returns whether the given character is valid in a URI. See RFC2396. */
+bool IsValidURLChar(unsigned char c);
 
 /**
  * Returns whether the given string is a valid URL.
+ * Doesn't support things like mailto:xxx.
+ */
+bool IsValidURL(const char *uri);
+
+/** Returns whether the given string is a valid URL for a RSS feed. */
+bool IsValidRSSURL(const char *url);
+
+/**
+ * Returns whether the given string is a valid URL.
+ * Only http:// and https:// prefix are allowed.
  * Not a very complete check at the moment.
  */
-bool IsValidURL(const char* url);
+bool IsValidWebURL(const char *url);
+
+/**
+ * Returns whether the given string is a valid file URL,
+ * which has file:// prefix.
+ */
+bool IsValidFileURL(const char *url);
 
 /**
  * Returns the host part of a URL in common Internet scheme syntax:
@@ -154,6 +174,12 @@ bool IsValidURL(const char* url);
  * Returns blank string if the URL is invalid.
  */
 std::string GetHostFromURL(const char *url);
+
+/**
+ * Returns the filename part of a file URL, or blank string if the url is not a
+ * valid file url.
+ */
+std::string GetFileNameFromURL(const char *url);
 
 /**
  * Encode a string into a JavaScript string literal (without the begining and
@@ -180,6 +206,16 @@ bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right);
 
 /**
+ * Splits a string into a list with specified separator.
+ * @param source the source string to split.
+ * @param separator the separator string to be used to split the source string.
+ * @param[out] result store the result string list.
+ * @return @c true if separator found.
+ */
+bool SplitStringList(const std::string &source, const std::string &separator,
+                     std::vector<std::string> *result);
+
+/**
  * Compresses white spaces in a string using the rule like HTML formatting:
  *   - Removing leading and trailing white spaces;
  *   - Converting all consecutive white spaces into single spaces;
@@ -204,7 +240,7 @@ bool ContainsHTML(const char *s);
 /**
  * Converts all '\r's, '\n's and '\r\n's into spaces. Useful to display
  * multi-line text in a single-line container.
- */ 
+ */
 std::string CleanupLineBreaks(const char *source);
 
 /**

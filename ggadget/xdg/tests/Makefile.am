@@ -13,6 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+INCLUDES		= -I$(top_builddir) \
+			  -I$(top_srcdir)
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip xdgmime
+LDADD			= $(top_builddir)/unittest/libgtest.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+AM_CPPFLAGS		= $(PREDEFINED_MACROS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
+
+check_PROGRAMS		= desktop_entry_test
+
+desktop_entry_test_SOURCES= desktop_entry_test.cc
+
+TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
+TESTS			= $(check_PROGRAMS)

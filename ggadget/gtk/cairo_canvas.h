@@ -139,6 +139,7 @@ class CairoCanvas : public CanvasInterface {
 
   /**
    * Multiplies a specified color to every pixel in the canvas.
+   * Color(0.5, 0.5, 0.5) is middle color.
    */
   void MultiplyColor(const Color &color);
 

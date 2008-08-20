@@ -517,4 +517,30 @@ bool CopyFile(const char *src, const char *dest) {
   return result;
 }
 
+std::string GetFullPathOfSystemCommand(const char *command) {
+  if (IsAbsolutePath(command))
+    return std::string(command);
+
+  const char *env_path_value = getenv("PATH");
+  if (env_path_value == NULL)
+    return "";
+
+  std::string all_path = std::string(env_path_value);
+  size_t cur_colon_pos = 0;
+  size_t next_colon_pos = 0;
+  // Iterator through all the parts in env value.
+  while ((next_colon_pos = all_path.find(":", cur_colon_pos)) !=
+         std::string::npos) {
+    std::string path =
+        all_path.substr(cur_colon_pos, next_colon_pos - cur_colon_pos);
+    path += "/";
+    path += command;
+    if (access(path.c_str(), X_OK) == 0) {
+      return path;
+    }
+    cur_colon_pos = next_colon_pos + 1;
+  }
+  return "";
+}
+
 }  // namespace ggadget

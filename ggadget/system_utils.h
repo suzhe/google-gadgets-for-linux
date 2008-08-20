@@ -94,6 +94,8 @@ bool EnsureDirectories(const char *path);
 /**
  * Read the contents of a file into memory.
  *
+ * The maximum size of loaded content will be no more than 20M bytes.
+ *
  * @param path the path of a directory. Normally it should be a absolute path,
  *     but relative path is also supported.
  * @param[out] data returns the file contents.
@@ -165,6 +167,17 @@ void Daemonize();
  * @return true if succeeded.
  */
 bool CopyFile(const char *src, const char *dest);
+
+/**
+ * Gets full path of a specified system command.
+ *
+ * If the specified command is an absolute path and it's executable, then just
+ * return it.
+ *
+ * Otherwise search the command in PATH and return the full patch if it's
+ * available and executable.
+ */
+std::string GetFullPathOfSystemCommand(const char *command);
 
 } // namespace ggadget
 

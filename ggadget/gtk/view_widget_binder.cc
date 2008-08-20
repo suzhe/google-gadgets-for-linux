@@ -625,9 +625,9 @@ class ViewWidgetBinder::Impl {
       size_t urls_count = 0;
       for (std::vector<std::string>::iterator it = uri_strings.begin();
            it != uri_strings.end(); ++it) {
-        if (IsValidURL(it->c_str())) {
+        if (IsValidWebURL(it->c_str())) {
           drag_urls[urls_count++] = it->c_str();
-        } else {
+        } else if (IsValidFileURL(it->c_str())) {
           gchar *hostname;
           gchar *filename = g_filename_from_uri(it->c_str(), &hostname, NULL);
           if (filename && !hostname) {

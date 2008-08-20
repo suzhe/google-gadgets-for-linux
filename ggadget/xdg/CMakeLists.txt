@@ -14,5 +14,27 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip xdgmime
+SET(SRCS
+  desktop_entry.cc
+  utilities.cc
+)
+
+ADD_SUBDIRECTORY(tests)
+
+ADD_LIBRARY(ggadget-xdg SHARED ${SRCS})
+OUTPUT_LIBRARY(ggadget-xdg)
+
+SET_TARGET_PROPERTIES(ggadget-xdg PROPERTIES
+                              VERSION ${GGL_LIB_VERSION}
+                              SOVERSION ${GGL_MAJOR_VERSION})
+
+INSTALL( TARGETS ggadget-xdg
+    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+)
+
+INSTALL(FILES
+  desktop_entry.h
+  utilities.h
+  DESTINATION "${INCLUDE_INSTALL_DIR}/xdg" COMPONENT Devel)

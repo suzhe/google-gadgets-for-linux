@@ -20,6 +20,7 @@ APPLY_CONFIG(GTK2)
 ADD_MODULE(gtk-system-framework gtk_system_framework.cc)
 TARGET_LINK_LIBRARIES(gtk-system-framework
   ggadget-gtk
+  ggadget-xdg
   ${GTK_LIBRARIES}
 )
 OUTPUT_MODULE(gtk-system-framework)

@@ -32,7 +32,8 @@ gtk_system_framework_la_CPPFLAGS = \
 
 gtk_system_framework_la_LIBADD = \
 			  @GTK2_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 gtk_system_framework_la_LDFLAGS = \
 			  -avoid-version \

@@ -64,9 +64,14 @@ class IntlDesktopEntryFunctor {
             ggadget::StringPrintf("%s=%s", key_.c_str(),
                                   localized_msg.c_str()));
       }
+      std::string lang_str(lang);
+      // Use '_' as conjunction character to conform freedesktop specificaton.
+      for (std::string::iterator it = lang_str.begin();
+           it != lang_str.end(); ++it)
+        if (*it == '-') *it = '_';
       result_content_->push_back(
-          ggadget::StringPrintf("%s[%s]=%s", key_.c_str(),
-                                lang, localized_msg.c_str()));
+          ggadget::StringPrintf("%s[%s]=%s", key_.c_str(), lang_str.c_str(),
+                                localized_msg.c_str()));
     }
     return true;
   }
