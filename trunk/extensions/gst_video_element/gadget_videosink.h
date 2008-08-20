@@ -27,6 +27,10 @@
 namespace ggadget {
 namespace gst {
 
+static const char kGadgetVideoSinkElementName[] = "gadget_videosink";
+static const char kGadgetVideoSinkMessageName[] =
+    "gadget_videosink_element_message";
+
 /**
  * This class implements a Gstreamer video sink plugin.
  * It should be used in following steps:
@@ -49,8 +53,6 @@ namespace gst {
  */
 class GadgetVideoSink {
  public:
-
-#define GADGET_VIDEOSINK_MESSAGE "gadgetvideosink_element_message"
 
   /** Element message types. */
   enum MessageType {
@@ -103,6 +105,7 @@ class GadgetVideoSink {
 
   /** Registers/returns the type of our video sink element to/from gstreamer. */
   static GType GadgetVideoSinkGetType(void);
+  static gboolean InitPlugin(GstPlugin *plugin);
 
   /** Initializes/Finalizes objects/class. */
   static void Init(GadgetVideoSink *videosink);

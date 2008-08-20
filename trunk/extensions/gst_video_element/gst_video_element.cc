@@ -111,13 +111,14 @@ GstVideoElement::GstVideoElement(BasicElement *parent, View *view,
     return;
 
   playbin_ = gst_element_factory_make("playbin", "player");
-  videosink_ = gst_element_factory_make("gadget_videosink", "videosink");
-
   // Only do further initialize if playbin is created correctly.
   if (!playbin_) {
     LOG("Failed to create gstreamer playbin element.");
     return;
   }
+
+  videosink_ = gst_element_factory_make(kGadgetVideoSinkElementName,
+                                        "videosink");
 
   if (!videosink_) {
     LOG("Failed to create gadget_videosink element.");
@@ -595,7 +596,7 @@ void GstVideoElement::OnElementMessage(GstMessage *msg) {
   if (GST_MESSAGE_SRC(msg) == reinterpret_cast<GstObject*>(videosink_)) {
     const GstStructure *structure = gst_message_get_structure(msg);
     const GValue* gvalue = gst_structure_get_value(structure,
-                                                   GADGET_VIDEOSINK_MESSAGE);
+                                                   kGadgetVideoSinkMessageName);
     GadgetVideoSink::MessageType type =
         static_cast<GadgetVideoSink::MessageType>(g_value_get_int(gvalue));
     if (type == GadgetVideoSink::NEW_IMAGE) {

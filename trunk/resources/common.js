@@ -307,19 +307,20 @@ function VBArray(array) {
 // "Microsoft.XMLDOM"
 // "Shell.Application"
 // "WScript.Shell"
+// "InternetExplorer.Application"
 // "Scripting.FileSystemObject"
 // "Msxml.DOMDocument"
 // "Msxml2.ServerXMLHTTP.3.0"
 // "Msxml2.DOMDocument.3.0"
 // TODO: Is it necessary to emulate "ADODB.Stream"?
 function ActiveXObject(name) {
-  var openUrl = function (url) {
+  var openUrl = function(url) {
     debug.trace("Open URL by ActiveX object:" + url);
     // If the url doesn't have prefix, assume it's a file path.
     if (url.indexOf("://") < 0)
       url = encodeURI("file://" + url);
     framework.openUrl(url);
-  }
+  };
   name = name.toLowerCase();
   debug.trace("new ActiveXObject: " + name);
   if (name == "shell.application") {
@@ -331,6 +332,12 @@ function ActiveXObject(name) {
   } else if (name == "wscript.shell") {
     this.Run = openUrl;
     this.run = openUrl;
+  } else if (name == "internetexplorer.application") {
+    this.Navigate = openUrl; 
+    this.navigate = openUrl;
+    // Only the first parameter of Navigate2() is supported.
+    this.Navigate2 = openUrl;
+    this.navigate2 = openUrl;
   } else if (name == "scripting.filesystemobject") {
     return framework.system.filesystem;
   } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmlhttp|serverxmlhttp)/)) {

@@ -97,7 +97,7 @@ class View::Impl {
 
       bool fire = true;
       bool ret = true;
-      int value = 0;
+      int value = end_; // In case of duration <= 0.
       uint64_t current_time = main_loop->GetCurrentTime();
 
       // Animation timer
