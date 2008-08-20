@@ -280,10 +280,34 @@ const GstElementDetails GadgetVideoSink::gst_videosink_details_ =
 bool GadgetVideoSink::Register() {
   if (registered_)
     return true;
-  if (!gst_element_register(NULL, "gadget_videosink",
-                            GST_RANK_SECONDARY, GadgetVideoSinkGetType()))
+// gst_plugin_register_static() is available after gstreamter 0.10.16.
+#if GST_VERSION_MAJOR > 0 || GST_VERSION_MINOR > 10 || \
+    (GST_VERSION_MINOR == 10 && GST_VERSION_MICRO >= 16)
+  if (!gst_plugin_register_static(GST_VERSION_MAJOR, GST_VERSION_MINOR,
+                                  "gadget_videosink_plugin", "",
+                                  GadgetVideoSink::InitPlugin,
+                                  "1.0", "unknown", "", "", "")
     return false;
-  return registered_ = true;
+#else
+  // Hacked GST_PLUGIN_DEFINE_STATIC. GST_PLUGIN_DEFINE_STATIC uses gcc
+  // specific "__attribute__((constructor))" which is not portable and reliable.
+  static GstPluginDesc plugin_desc = {
+    GST_VERSION_MAJOR, GST_VERSION_MINOR, "gadget_videosink_plugin", "",
+    GadgetVideoSink::InitPlugin, "1.0", "unknown", "", "", "",
+    GST_PADDING_INIT
+  };
+  _gst_plugin_register_static(&plugin_desc);
+#endif
+
+  // registered_ is set in InitPlugin().
+  return registered_;
+}
+
+gboolean GadgetVideoSink::InitPlugin(GstPlugin *plugin) {
+  registered_ = gst_element_register(plugin, kGadgetVideoSinkElementName,
+                                     GST_RANK_SECONDARY,
+                                     GadgetVideoSinkGetType());
+  return registered_;
 }
 
 GType GadgetVideoSink::GadgetVideoSinkGetType(void) {
@@ -915,9 +939,8 @@ gboolean GadgetVideoSink::PutImage(ImageBuffer *image) {
   // Send a message to notify that a new frame is coming.
   if (bus_) {
     GstStructure *structure =
-        gst_structure_new("New Image",
-                          GADGET_VIDEOSINK_MESSAGE, G_TYPE_INT, NEW_IMAGE,
-                          NULL);
+        gst_structure_new("New Image", kGadgetVideoSinkMessageName,
+                          G_TYPE_INT, NEW_IMAGE, NULL);
     GstMessage *message =
         gst_message_new_element(reinterpret_cast<GstObject*>(this), structure);
     if (message)

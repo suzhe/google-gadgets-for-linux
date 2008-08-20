@@ -17,15 +17,16 @@
 #include <vector>
 #include <gtk/gtk.h>
 #include <ggadget/common.h>
+#include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/framework_interface.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/permissions.h>
 #include <ggadget/registerable_interface.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
-#include <ggadget/gadget.h>
-#include <ggadget/permissions.h>
 
 #define Initialize gtk_system_framework_LTX_Initialize
 #define Finalize gtk_system_framework_LTX_Finalize
@@ -37,6 +38,8 @@ namespace framework {
 
 // To avoid naming conflicts.
 namespace gtk_system_framework {
+
+static const char kFileBrowserFolderOption[] = "file_browser_folder";
 
 class GtkSystemCursor : public CursorInterface {
  public:
@@ -102,6 +105,17 @@ class GtkSystemBrowseForFileHelper {
         GTK_STOCK_OK, GTK_RESPONSE_OK,
         NULL);
 
+    OptionsInterface *options = GetGlobalOptions();
+    if (options) {
+      std::string current_folder;
+      options->GetValue(kFileBrowserFolderOption).ConvertToString(
+          &current_folder);
+      if (current_folder.size()) {
+        gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
+                                            current_folder.c_str());
+      }
+    }
+
     gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), multiple);
     if (filter && *filter) {
       std::string filter_str(filter);
@@ -123,8 +137,17 @@ class GtkSystemBrowseForFileHelper {
     }
 
     GSList *selected_files = NULL;
-    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
       selected_files = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+      if (options) {
+        gchar *folder = gtk_file_chooser_get_current_folder(
+            GTK_FILE_CHOOSER(dialog));
+        if (folder) {
+          options->PutValue(kFileBrowserFolderOption, Variant(folder));
+          g_free(folder);
+        }
+      }
+    }
     gtk_widget_destroy(dialog);
 
     if (!selected_files)
