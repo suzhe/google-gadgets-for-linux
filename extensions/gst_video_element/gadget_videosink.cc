@@ -284,9 +284,10 @@ bool GadgetVideoSink::Register() {
 #if GST_VERSION_MAJOR > 0 || GST_VERSION_MINOR > 10 || \
     (GST_VERSION_MINOR == 10 && GST_VERSION_MICRO >= 16)
   if (!gst_plugin_register_static(GST_VERSION_MAJOR, GST_VERSION_MINOR,
-                                  "gadget_videosink_plugin", "",
+                                  "gadget_videosink_plugin",
+                                  const_cast<gchar *>(""),
                                   GadgetVideoSink::InitPlugin,
-                                  "1.0", "unknown", "", "", "")
+                                  "1.0", "unknown", "", "", ""))
     return false;
 #else
   // Hacked GST_PLUGIN_DEFINE_STATIC. GST_PLUGIN_DEFINE_STATIC uses gcc
