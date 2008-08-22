@@ -190,12 +190,8 @@ void JSNativeWrapper::FinalizeTracker(JSContext *cx, JSObject *obj) {
     if (cls && cls->finalize == js_reference_tracker_class_.finalize) {
       JSNativeWrapper *wrapper =
           reinterpret_cast<JSNativeWrapper *>(JS_GetPrivate(cx, obj));
-      if (wrapper) {
-        // The JavaScript reference should be the last reference to be released,
-        // because the object is added to root if there are native references.
-        ASSERT(wrapper->GetRefCount() == 1);
+      if (wrapper)
         wrapper->Unref();
-      }
     }
   }
 }
