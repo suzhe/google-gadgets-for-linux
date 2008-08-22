@@ -204,10 +204,8 @@ class SideBar::Impl : public View {
       }
     }
 
-    if (result != EVENT_RESULT_UNHANDLED ||
-        event.GetButton() != MouseEvent::BUTTON_LEFT) {
+    if (event.GetButton() != MouseEvent::BUTTON_LEFT)
       return result;
-    }
 
     int index = 0;
     double x, y;
@@ -253,9 +251,9 @@ class SideBar::Impl : public View {
         return result;
         break;
       case Event::EVENT_MOUSE_MOVE:  // handle it soon
-        if (mouse_move_event_x_ < 0 && mouse_move_event_y_ < 0) {
-          return EVENT_RESULT_HANDLED;
-        }
+        if ((mouse_move_event_x_ < 0 && mouse_move_event_y_ < 0) ||
+            result != EVENT_RESULT_UNHANDLED)
+          return result;
         if (!focused) {
           // if mouse over null_element_, BasicElement::GetMouseOverElement()
           // will not return it. Check it specially
