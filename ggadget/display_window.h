@@ -41,6 +41,9 @@ class DisplayWindow: public ScriptableHelperNativeOwnedDefault {
    */
   bool AdjustSize();
 
+ protected:
+  virtual void DoClassRegister();
+
  private:
   class Impl;
   Impl *impl_;

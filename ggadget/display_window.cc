@@ -34,9 +34,8 @@
 
 namespace ggadget {
 
-static const int kLabelTextSize = 9;
-static const int kListItemHeight = 19;
-static const double kZoomRatio = 1.2;
+static const int kLabelTextSize = -1;  // Default size.
+static const int kListItemHeight = 17;
 static const char *kControlBorderColor = "#A0A0A0";
 static const char *kBackgroundColor = "#FFFFFF";
 static const int kMinComboBoxHeight = 80;
@@ -72,27 +71,28 @@ class DisplayWindow::Impl {
     Control(DisplayWindow *window, BasicElement *element)
         : window_(window), element_(element),
           checkbox_clicked_(false) {
+    }
+
+    virtual void DoClassRegister() {
       // Incompatibility: we don't allow chaning id of a control.
-      RegisterProperty("id", NewSlot(element_, &BasicElement::GetName), NULL);
+      RegisterProperty("id",
+                       NewSlot(&BasicElement::GetName, &Control::element_),
+                       NULL);
       RegisterProperty("enabled",
-                       NewSlot(element_, &BasicElement::IsEnabled),
-                       NewSlot(this, &Control::SetEnabled));
+                       NewSlot(&BasicElement::IsEnabled, &Control::element_),
+                       NewSlot(&Control::SetEnabled));
       RegisterProperty("text",
-                       NewSlot(this, &Control::GetText),
-                       NewSlot(this, &Control::SetText));
+                       NewSlot(&Control::GetText),
+                       NewSlot(&Control::SetText));
       RegisterProperty("value",
-                       NewSlot(this, &Control::GetValue),
-                       NewSlot(this, &Control::SetValue));
-      RegisterProperty("x", NULL, // No getter.
-                       NewSlot(element_, &BasicElement::SetPixelX));
-      RegisterProperty("y", NULL, // No getter.
-                       NewSlot(element_, &BasicElement::SetPixelY));
-      RegisterProperty("width", NULL, // No getter.
-                       NewSlot(element_, &BasicElement::SetPixelWidth));
-      RegisterProperty("height", NULL, // No getter.
-                       NewSlot(element_, &BasicElement::SetPixelHeight));
-      RegisterSignal("onChanged", &onchanged_signal_);
-      RegisterSignal("onClicked", &onclicked_signal_);
+                       NewSlot(&Control::GetValue),
+                       NewSlot(&Control::SetValue));
+      RegisterProperty("x", NULL, NewSlot(DummySetter));
+      RegisterProperty("y", NULL, NewSlot(DummySetter));
+      RegisterProperty("width", NULL, NewSlot(DummySetter));
+      RegisterProperty("height", NULL, NewSlot(DummySetter));
+      RegisterClassSignal("onChanged", &Control::onchanged_signal_);
+      RegisterClassSignal("onClicked", &Control::onclicked_signal_);
     }
 
     ScriptableArray *GetListBoxItems(ListBoxElement *listbox) {
@@ -253,8 +253,7 @@ class DisplayWindow::Impl {
 
     void SetValue(const Variant &value) {
       bool valid = true;
-      if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
-          element_->IsInstanceOf(LabelElement::CLASS_ID) ||
+      if (element_->IsInstanceOf(LabelElement::CLASS_ID) ||
           element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
         SetText(value);
       } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
@@ -306,6 +305,7 @@ class DisplayWindow::Impl {
     }
 
     void OnSize(DivElement *div) {
+      div->SetPixelWidth(element_->GetPixelWidth() + 2);
       div->SetPixelHeight(element_->GetPixelHeight() + 2);
     }
 
@@ -392,8 +392,10 @@ class DisplayWindow::Impl {
             element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
-            element->ConnectOnSizeEvent(NewSlot(control, &Control::OnSize,
-                                                div));
+            // Because our combobox can't pop out of the dialog box, we must
+            // limit the height of the combobox
+            height = std::max(std::min(height, kMaxComboBoxHeight),
+                              kMinComboBoxHeight);
             break;
           }
         }
@@ -437,31 +439,13 @@ class DisplayWindow::Impl {
     }
 
     if (control) {
-      // The control sizes in the gadgets are too small for GTK.
-      x = static_cast<int>(x * kZoomRatio);
-      y = static_cast<int>(y * kZoomRatio);
-      width = static_cast<int>(width * kZoomRatio);
-      height = static_cast<int>(height * kZoomRatio);
-
       if (div) {
-        div->SetPixelX(x);
-        div->SetPixelY(y);
-        div->SetPixelWidth(width);
-        if (ctrl_type == TYPE_LIST_DROP) {
-          div->SetPixelHeight(kListItemHeight + 2);
-          // Because our combobox can't pop out of the dialog box, we must
-          // limit the height of the combobox
-          if (height < kMinComboBoxHeight)
-            height = kMinComboBoxHeight;
-          else if (height > kMaxComboBoxHeight)
-            height = kMaxComboBoxHeight;
-        } else {
-          div->SetPixelHeight(height);
-        }
-        control->SetRect(x + 1, y + 1, width - 2, height - 2);
-      } else {
-        control->SetRect(x, y, width, height);
+        div->SetPixelX(x - 1);
+        div->SetPixelY(y - 1);
+        control->element_->ConnectOnSizeEvent(NewSlot(control,
+                                                      &Control::OnSize, div));
       }
+      control->SetRect(x, y, width, height);
       control->SetText(text);
       min_x_ = std::min(std::max(0, x), min_x_);
       min_y_ = std::min(std::max(0, y), min_y_);
@@ -534,11 +518,16 @@ class DisplayWindow::Impl {
 DisplayWindow::DisplayWindow(View *view)
     : impl_(new Impl(this, view)) {
   ASSERT(view);
-  RegisterMethod("AddControl", NewSlot(impl_, &Impl::AddControl));
-  RegisterMethod("GetControl", NewSlot(impl_, &Impl::GetControl));
-  RegisterSignal("OnClose", &impl_->onclose_signal_);
-  impl_->view_->ConnectOnOkEvent(NewSlot(impl_, &Impl::OnOk));
-  impl_->view_->ConnectOnCancelEvent(NewSlot(impl_, &Impl::OnCancel));
+  view->ConnectOnOkEvent(NewSlot(impl_, &Impl::OnOk));
+  view->ConnectOnCancelEvent(NewSlot(impl_, &Impl::OnCancel));
+}
+
+void DisplayWindow::DoClassRegister() {
+  RegisterMethod("AddControl", NewSlot(&Impl::AddControl,
+                                       &DisplayWindow::impl_));
+  RegisterMethod("GetControl", NewSlot(&Impl::GetControl,
+                                       &DisplayWindow::impl_));
+  RegisterClassSignal("OnClose", &Impl::onclose_signal_, &DisplayWindow::impl_);
 }
 
 DisplayWindow::~DisplayWindow() {
