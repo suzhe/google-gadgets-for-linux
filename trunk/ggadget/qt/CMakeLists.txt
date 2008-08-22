@@ -42,7 +42,10 @@ QT4_AUTOMOC(
 ADD_SUBDIRECTORY(tests)
 
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})
+TARGET_LINK_LIBRARIES(ggadget-qt
+  ggadget-xdg
+  ${QT_LIBRARIES}
+  )
 
 SET_TARGET_PROPERTIES(ggadget-qt PROPERTIES
                               VERSION ${GGL_LIB_VERSION}
