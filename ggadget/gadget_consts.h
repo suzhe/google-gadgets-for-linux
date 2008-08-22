@@ -248,6 +248,7 @@ const char kHttpUrlPrefix[] = "http://";
 const char kHttpsUrlPrefix[] = "https://";
 const char kFeedUrlPrefix[] = "feed://";
 const char kFileUrlPrefix[] = "file://";
+const char kMailtoUrlPrefix[] = "mailto:";
 
 /** The fallback encoding used to parse text files. */
 const char kEncodingFallback[] = "ISO8859-1";

@@ -300,9 +300,11 @@ class Gadget {
   bool IsInUserInteraction() const;
 
   /**
-   * Open the given URL in the user's default web brower.
+   * Opens the given URL in the user's default web brower.
    * Only HTTP, HTTPS URLs are supported.
    * Only called during user interaction is allowed.
+   *
+   * This method is just a delegation of HostInterface::OpenURL().
    */
   bool OpenURL(const char *url) const;
 

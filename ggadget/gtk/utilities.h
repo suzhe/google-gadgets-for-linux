@@ -151,6 +151,35 @@ void SetGadgetWindowIcon(GtkWindow *window, const Gadget *gadget);
  */
 GtkWidget *NewGadgetDebugConsole(Gadget *gadget);
 
+/**
+ * Launches a desktop file.
+ *
+ * @param gadget The gadget which wants to launch the desktop file.
+ * @param desktop_file The desktop file to be launched.
+ * @return true if succeed.
+ */
+bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file);
+
+/**
+ * Opens a specified URL by system default application.
+ *
+ * Comparing to ggadget::xdg::OpenURL(), this function supports launching a
+ * desktop file.
+ *
+ * @param gadget The gadget which wants to open the url, the permissions of
+ *        this gadget will be checked to see if opening the url is allowed.
+ * @param url The url to open.
+ * @return true if succeed.
+ */
+bool OpenURL(const Gadget *gadget, const char *url);
+
+/**
+ * Gets the current desktop of a screen.
+ *
+ * @return The number of current desktop.
+ */
+int GetCurrentDesktopOfScreen(GdkScreen *screen);
+
 } // namespace gtk
 } // namespace ggadget
 

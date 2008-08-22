@@ -50,6 +50,7 @@ static const char kDesktopEntryAppGood1[] =
 static const char kDesktopEntryAppGood2[] =
   "[Desktop Entry]\n"
   "Type=Application\n"
+  "TryExec=yes\n"
   "Exec = hello %f\n"
   "Icon = hello\n"
   "Terminal=true\n"
@@ -150,6 +151,7 @@ TEST(DesktopEntry, AppGood2) {
     "file:///tmp/abc%20def"
   };
   EXPECT_STREQ("hello '/tmp/abc def'", entry.GetExecCommand(2, argv).c_str());
+  EXPECT_STREQ("hello", entry.GetExecCommand(0, NULL).c_str());
 }
 
 TEST(DesktopEntry, URLGood) {

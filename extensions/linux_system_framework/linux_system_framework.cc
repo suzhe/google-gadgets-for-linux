@@ -26,7 +26,6 @@
 #include <ggadget/scriptable_file_system.h>
 #include <ggadget/permissions.h>
 #include <ggadget/gadget.h>
-#include <ggadget/xdg/utilities.h>
 
 #include "file_system.h"
 #include "runtime.h"
@@ -109,10 +108,6 @@ extern "C" {
       LOG("Specified framework is not registerable.");
       return false;
     }
-
-    // OpenURL will check permissions by itself.
-    reg_framework->RegisterMethod("openUrl",
-            NewSlot(ggadget::xdg::OpenURL, const_cast<const Gadget*>(gadget)));
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.

@@ -22,6 +22,7 @@ namespace ggadget {
 
 const Color Color::kWhite(1, 1, 1);
 const Color Color::kBlack(0, 0, 0);
+const Color Color::kMiddleColor(0.5, 0.5, 0.5);
 
 std::string Color::ToString() const {
   return StringPrintf("#%02X%02X%02X",

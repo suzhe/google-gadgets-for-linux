@@ -90,6 +90,9 @@ struct Color {
   static const Color kWhite;
   static const Color kBlack;
 
+  /** Color(0.5, 0.5, 0.5) */
+  static const Color kMiddleColor;
+
   double red, green, blue;
 };
 

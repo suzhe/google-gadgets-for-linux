@@ -25,6 +25,7 @@
 #include <errno.h>
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
+#include "ggadget/xdg/utilities.h"
 #include "file_system.h"
 
 namespace ggadget {
@@ -334,10 +335,7 @@ class File : public FileInterface {
   }
 
   virtual std::string GetType() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return "";
-
-    return filesystem_.GetExtensionName(path_.c_str());
+    return ggadget::xdg::GetFileMimeType(path_.c_str());
   }
 
   virtual bool Delete(bool force) {
@@ -749,7 +747,7 @@ class Folder : public FolderInterface {
   }
 
   virtual std::string GetType() {
-    return "FOLDER";
+    return ggadget::xdg::GetFileMimeType(path_.c_str());
   }
 
   virtual bool Delete(bool force) {

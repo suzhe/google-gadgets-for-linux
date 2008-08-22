@@ -85,7 +85,7 @@ class ImageCache::Impl {
       // TODO: share images with color multiplied.
 
       // Reture self if the color is white.
-      if (color == Color::kWhite) {
+      if (color == Color::kMiddleColor) {
         SharedImage *img = const_cast<SharedImage *>(this);
         img->Ref();
         return img;

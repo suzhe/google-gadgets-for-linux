@@ -481,6 +481,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     // globals.
     global_.RegisterConstant("framework", &framework_);
     global_.SetInheritsFrom(&framework_);
+
+    // OpenURL will check permissions by itself.
+    framework_.RegisterMethod("openUrl", NewSlot(owner_, &Gadget::OpenURL));
   }
 
   class RemoveMeWatchCallback : public WatchCallbackInterface {
@@ -878,20 +881,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         kMaxAllowedUserInteractionIdleTime;
   }
 
-  bool OpenURL(const char *url) {
-    Variant open_url;
-    if (framework_.GetPropertyInfo("openUrl", &open_url) == PROPERTY_METHOD &&
-        open_url.type() == Variant::TYPE_SLOT) {
-      Variant argv[1] = { Variant(url) };
-      ResultVariant result =
-          VariantValue<Slot *>()(open_url)->Call(&framework_, 1, argv);
-      return VariantValue<bool>()(result.v());
-    }
-
-    DLOG("No method to open url.");
-    return false;
-  }
-
   static void RegisterStrings(const StringMap *strings,
                               ScriptableHelperNativeOwnedDefault *scriptable) {
     for (StringMap::const_iterator it = strings->begin();
@@ -1144,7 +1133,17 @@ bool Gadget::IsInUserInteraction() const {
 }
 
 bool Gadget::OpenURL(const char *url) const {
-  return impl_->OpenURL(url);
+  if (!impl_->permissions_.IsRequiredAndGranted(Permissions::NETWORK) &&
+      !impl_->permissions_.IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
+    LOG("No permission to open url.");
+    return false;
+  }
+
+  if (impl_->IsInUserInteraction())
+    return impl_->host_->OpenURL(this, url);
+
+  LOG("OpenURL() can only be called during user interaction.");
+  return false;
 }
 
 Connection *Gadget::ConnectLogListener(

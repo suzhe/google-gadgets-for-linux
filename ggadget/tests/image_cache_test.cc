@@ -112,11 +112,11 @@ TEST(ImageCache, LoadImage) {
   ASSERT_STREQ("local-image", local->requested_file_.c_str());
   ASSERT_STREQ("local-image", img1->GetTag().c_str());
 
-  img2 = img1->MultiplyColor(Color(0.5, 0.5, 0.5));
+  img2 = img1->MultiplyColor(Color(0.8, 0.3, 0.6));
   ASSERT_TRUE(img2);
   ASSERT_NE(img2, img1);
   img2->Destroy();
-  img2 = img1->MultiplyColor(Color::kWhite);
+  img2 = img1->MultiplyColor(Color::kMiddleColor);
   ASSERT_EQ(img2, img1);
   img2->Destroy();
 

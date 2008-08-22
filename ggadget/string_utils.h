@@ -147,10 +147,29 @@ std::string DecodeURL(const std::string &source);
 bool IsValidURLChar(unsigned char c);
 
 /**
- * Returns whether the given string is a valid URL.
- * Doesn't support things like mailto:xxx.
+ * Returns whether the given string has a valid url prefix.
+ *
+ * Valid url prefixes are:
+ * http://
+ * https://
+ * feed://
+ * file://
+ * mailto:
  */
-bool IsValidURL(const char *uri);
+bool HasValidURLPrefix(const char *url);
+
+/**
+ * Returns whether the given string is a valid url component,
+ * or in another word, if it only contains valid url chars.
+ */
+bool IsValidURLComponent(const char *url);
+
+/**
+ * Returns whether the given string is a valid URL.
+ *
+ * Equals to HasValidURLPrefix(url) && IsValidURLComponent(url)
+ */
+bool IsValidURL(const char *url);
 
 /** Returns whether the given string is a valid URL for a RSS feed. */
 bool IsValidRSSURL(const char *url);
@@ -269,6 +288,18 @@ bool SimpleMatchXPath(const char *xpath, const char *pattern);
  *     or @c true on success.
  */
 bool CompareVersion(const char *version1, const char *version2, int *result);
+
+/** Checks if a string has a specified prefix. */
+bool StartWith(const char *string, const char *prefix);
+
+/** Checks if a string has a specified prefix, ignoring the case. */
+bool StartWithNoCase(const char *string, const char *prefix);
+
+/** Checks if a string has a specified suffix. */
+bool EndWith(const char *string, const char *suffix);
+
+/** Checks if a string has a specified suffix, ignoring the case. */
+bool EndWithNoCase(const char *string, const char *suffix);
 
 } // namespace ggadget
 

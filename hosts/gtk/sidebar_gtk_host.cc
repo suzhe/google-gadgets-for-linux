@@ -1823,5 +1823,9 @@ int SideBarGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
 }
 
+bool SideBarGtkHost::OpenURL(const Gadget *gadget, const char *url) {
+  return ggadget::gtk::OpenURL(gadget, url);
+}
+
 } // namespace gtk
 } // namespace hosts

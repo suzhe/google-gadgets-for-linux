@@ -64,6 +64,7 @@ libggadget_linux_la_CPPFLAGS = \
 
 libggadget_linux_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
 			  $(X_LIBS)
 
 if GGL_BUILD_LIBGGADGET_DBUS
@@ -86,7 +87,6 @@ linux_system_framework_la_CPPFLAGS = \
 
 linux_system_framework_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
 			  libggadget-linux.la
 
 if GGL_BUILD_LIBGGADGET_DBUS

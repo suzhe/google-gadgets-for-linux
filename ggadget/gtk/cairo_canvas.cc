@@ -898,8 +898,9 @@ cairo_t *CairoCanvas::GetContext() const {
 
 void CairoCanvas::MultiplyColor(const Color &color) {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
-  // Do nothing for white color.
-  if (color == Color(0.5, 0.5, 0.5))
+  // Color(0.5, 0.5, 0.5) is the middle color, so multiplying a color greater
+  // than 0.5 makes the image brighter.
+  if (color == Color::kMiddleColor)
     return;
 
   cairo_surface_t *surface = impl_->GetSurface();
@@ -915,21 +916,24 @@ void CairoCanvas::MultiplyColor(const Color &color) {
     int height = cairo_image_surface_get_height(surface);
     int stride = cairo_image_surface_get_stride(surface);
     unsigned char *bytes = cairo_image_surface_get_data(surface);
-    uint32_t rm = static_cast<uint32_t>(color.red * 256);
-    uint32_t gm = static_cast<uint32_t>(color.green * 256);
-    uint32_t bm = static_cast<uint32_t>(color.blue * 256);
+    uint32_t rm = static_cast<uint32_t>(color.red * 512);
+    uint32_t gm = static_cast<uint32_t>(color.green * 512);
+    uint32_t bm = static_cast<uint32_t>(color.blue * 512);
 
     // We are sure that the surface format is CAIRO_FORMAT_ARGB32 or RGB24.
+    // FIXME: optimize this piece of code using assembly language.
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
         uint32_t *ptr =
             reinterpret_cast<uint32_t *>(bytes + (stride * y) + x * 4);
         uint32_t cell = *ptr;
-        cell = (cell & 0xFF000000) |
-               ((((cell & 0xFF) * bm) >> 8) & 0xFF) |
-               ((((cell & 0xFF00) * gm) >> 8) & 0xFF00) |
-               ((((cell & 0xFF0000) * rm) >> 8) & 0xFF0000);
-        *ptr = cell;
+        uint32_t a = cell >> 24;
+        // The color components are pre-multiplied, so no larger than alpha
+        // value.
+        uint32_t b = std::min(((cell & 0xFF) * bm) >> 8, a);
+        uint32_t g = std::min(((cell & 0xFF00) * gm) >> 8, a << 8);
+        uint32_t r = std::min(((cell & 0xFF0000) >> 8) * rm, a << 16);
+        *ptr = (cell & 0xFF000000) | (b & 0xFF) | (g & 0xFF00) | (r & 0xFF0000);
       }
     }
   }

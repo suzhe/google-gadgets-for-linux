@@ -28,6 +28,7 @@
 #include <ggadget/string_utils.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/view_interface.h>
+#include <ggadget/xdg/utilities.h>
 #include "utilities.h"
 #include "utilities_internal.h"
 
@@ -356,6 +357,12 @@ QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget** widget) {
   console->show();
   return console;
 }
+
+bool OpenURL(const Gadget *gadget, const char *url) {
+  // FIXME: Support launching desktop file.
+  return ggadget::xdg::OpenURL(gadget, url);
+}
+
 } // namespace qt
 } // namespace ggadget
 #include "utilities_internal.moc"

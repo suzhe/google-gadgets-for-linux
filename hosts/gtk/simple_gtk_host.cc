@@ -916,5 +916,9 @@ int SimpleGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
 }
 
+bool SimpleGtkHost::OpenURL(const Gadget *gadget, const char *url) {
+  return ggadget::gtk::OpenURL(gadget, url);
+}
+
 } // namespace gtk
 } // namespace hosts

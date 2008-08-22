@@ -562,6 +562,10 @@ int QtHost::GetDefaultFontSize() {
   return kDefaultFontSize;
 }
 
+bool QtHost::OpenURL(const ggadget::Gadget *gadget, const char *url) {
+  return ggadget::qt::OpenURL(gadget, url);
+}
+
 } // namespace qt
 } // namespace hosts
 #include "qt_host_internal.moc"

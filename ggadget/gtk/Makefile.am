@@ -69,12 +69,15 @@ libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @GTK2_CFLAGS@ \
 			  @RSVG_CFLAGS@ \
+			  @STARTUP_NOTIFICATION_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @GTK2_LIBS@ \
 			  @RSVG_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  @STARTUP_NOTIFICATION_LIBS@ \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

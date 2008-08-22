@@ -42,6 +42,8 @@ unsigned int GetKeyCode(int qt_key);
 
 QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget **widget);
 
+bool OpenURL(const Gadget *gadget, const char *url);
+
 } // namespace qt
 } // namespace ggadget
 

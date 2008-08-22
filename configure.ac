@@ -581,6 +581,10 @@ if test x$has_librsvg = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_RSVG_LIBRARY"
 fi
 
+# Check startup-notification library
+PKG_CHECK_MODULES(STARTUP_NOTIFICATION, [libstartup-notification-1.0 >= 0.9],
+		  [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_STARTUP_NOTIFICATION"])
+
 # Check gtkmozembed
 # Check priority:
 #  xulrunner 1.9: mozilla-gtkmozembed-embedding and mozilla-js
