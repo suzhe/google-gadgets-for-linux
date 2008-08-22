@@ -237,60 +237,49 @@ std::string DecodeURL(const std::string &source) {
 #undef DECODE_HEX_CHAR
 }
 
-bool IsValidURL(const char* uri) {
-  if (!uri || !*uri) return false;
+bool HasValidURLPrefix(const char *url) {
+  if (!url || !*url) return false;
 
-  const char *p = uri;
-  size_t count = 0;
-  while (p) {
-    p = strstr(p, "://");
-    if (p) {
-      ++count;
-      p += 3;
-    }
-  }
-  if (count != 1) return false;
+  static const char *kValidURLPrefixes[] = {
+    kHttpUrlPrefix, kHttpsUrlPrefix, kFeedUrlPrefix,
+    kFileUrlPrefix, kMailtoUrlPrefix, NULL
+  };
 
-  for (p = uri; *p; ++p)
+  for (size_t i = 0; kValidURLPrefixes[i]; ++i)
+    if (StartWithNoCase(url, kValidURLPrefixes[i]))
+      return true;
+  return false;
+}
+
+bool IsValidURLComponent(const char *url) {
+  if (!url) return false;
+
+  for (const char *p = url; *p; ++p)
     if (!IsValidURLChar(*p))
       return false;
 
   return true;
 }
 
+bool IsValidURL(const char* url) {
+  return HasValidURLPrefix(url) && IsValidURLComponent(url);
+}
+
 bool IsValidRSSURL(const char* url) {
-  if (!IsValidURL(url)) return false;
-
-  if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
-      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
-      strncasecmp(url, kFeedUrlPrefix, arraysize(kFeedUrlPrefix) - 1)) {
-    return false;
-  }
-
-  return true;
+  return (StartWithNoCase(url, kHttpUrlPrefix) ||
+          StartWithNoCase(url, kHttpsUrlPrefix) ||
+          StartWithNoCase(url, kFeedUrlPrefix)) && IsValidURLComponent(url);
 }
 
 bool IsValidWebURL(const char* url) {
-  if (!IsValidURL(url)) return false;
-
-  if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
-      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1)) {
-    // Don't allow ftp://.
-    return false;
-  }
-
-  return true;
+  // Don't allow ftp://
+  return (StartWithNoCase(url, kHttpUrlPrefix) ||
+          StartWithNoCase(url, kHttpsUrlPrefix)) && IsValidURLComponent(url);
 }
 
 bool IsValidFileURL(const char* url) {
-  if (!IsValidURL(url)) return false;
-
-  if (strncasecmp(url, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1)) {
-    // Don't allow ftp://.
-    return false;
-  }
-
-  return true;
+  // Don't allow ftp://.
+  return StartWithNoCase(url, kFileUrlPrefix) && IsValidURLComponent(url);
 }
 
 std::string GetHostFromURL(const char *url) {
@@ -684,6 +673,46 @@ bool CompareVersion(const char *version1, const char *version2, int *result) {
 
     *result = 0;
     return true;
+  }
+  return false;
+}
+
+bool StartWith(const char *string, const char *prefix) {
+  if (string && prefix) {
+    size_t string_len = strlen(string);
+    size_t prefix_len = strlen(prefix);
+    if (string_len >= prefix_len)
+      return strncmp(string, prefix, prefix_len) == 0;
+  }
+  return false;
+}
+
+bool StartWithNoCase(const char *string, const char *prefix) {
+  if (string && prefix) {
+    size_t string_len = strlen(string);
+    size_t prefix_len = strlen(prefix);
+    if (string_len >= prefix_len)
+      return strncasecmp(string, prefix, prefix_len) == 0;
+  }
+  return false;
+}
+
+bool EndWith(const char *string, const char *suffix) {
+  if (string && suffix) {
+    size_t string_len = strlen(string);
+    size_t suffix_len = strlen(suffix);
+    if (string_len >= suffix_len)
+      return strcmp(string + string_len - suffix_len, suffix) == 0;
+  }
+  return false;
+}
+
+bool EndWithNoCase(const char *string, const char *suffix) {
+  if (string && suffix) {
+    size_t string_len = strlen(string);
+    size_t suffix_len = strlen(suffix);
+    if (string_len >= suffix_len)
+      return strcasecmp(string + string_len - suffix_len, suffix) == 0;
   }
   return false;
 }

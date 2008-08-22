@@ -67,7 +67,8 @@ libggadget_qt@GGL_EPOCH@_la_CPPFLAGS = \
 
 libggadget_qt@GGL_EPOCH@_la_LIBADD = \
 			  @QT4_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_qt@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

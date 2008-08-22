@@ -287,6 +287,60 @@ TEST(StringUtils, CompareVersion) {
   ASSERT_EQ(1, result);
 }
 
+TEST(StringUtils, StartEndWith) {
+  EXPECT_TRUE(StartWith("", ""));
+  EXPECT_TRUE(StartWith("abcdef", ""));
+  EXPECT_TRUE(StartWith("abcdef", "ab"));
+  EXPECT_TRUE(StartWith("abcdef", "abcdef"));
+  EXPECT_FALSE(StartWith("abcdef", "aBc"));
+  EXPECT_FALSE(StartWith("abcdef", "abcdefg"));
+
+  EXPECT_TRUE(StartWithNoCase("", ""));
+  EXPECT_TRUE(StartWithNoCase("abcdef", ""));
+  EXPECT_TRUE(StartWithNoCase("abcdef", "ab"));
+  EXPECT_TRUE(StartWithNoCase("abcdef", "aBcDef"));
+  EXPECT_FALSE(StartWithNoCase("abcdef", "aBcdeFg"));
+
+  EXPECT_TRUE(EndWith("", ""));
+  EXPECT_TRUE(EndWith("abcdef", ""));
+  EXPECT_TRUE(EndWith("abcdef", "ef"));
+  EXPECT_TRUE(EndWith("abcdef", "abcdef"));
+  EXPECT_FALSE(EndWith("abcdef", "dEf"));
+  EXPECT_FALSE(EndWith("abcdef", "abcdefg"));
+
+  EXPECT_TRUE(EndWithNoCase("", ""));
+  EXPECT_TRUE(EndWithNoCase("abcdef", ""));
+  EXPECT_TRUE(EndWithNoCase("abcdef", "ef"));
+  EXPECT_TRUE(EndWithNoCase("abcdef", "DeF"));
+  EXPECT_FALSE(EndWithNoCase("abcdef", "aBcdeFg"));
+}
+
+TEST(StringUtils, ValidURL) {
+  EXPECT_TRUE(IsValidURLComponent("abc%20def"));
+  EXPECT_FALSE(IsValidURLComponent("abc def"));
+  EXPECT_TRUE(HasValidURLPrefix("http://"));
+  EXPECT_TRUE(HasValidURLPrefix("http://def"));
+  EXPECT_TRUE(HasValidURLPrefix("https://"));
+  EXPECT_TRUE(HasValidURLPrefix("feed://"));
+  EXPECT_TRUE(HasValidURLPrefix("file://"));
+  EXPECT_TRUE(HasValidURLPrefix("mailto:"));
+  EXPECT_FALSE(HasValidURLPrefix("mailto"));
+  EXPECT_FALSE(HasValidURLPrefix(" http://def"));
+  EXPECT_FALSE(HasValidURLPrefix(" http:/"));
+  EXPECT_TRUE(IsValidURL("http://www.abcdef.com/abc%20def"));
+  EXPECT_TRUE(IsValidURL("http://www.abcdef.com/abc%20def?a=http://a.cn&hl"));
+  EXPECT_FALSE(IsValidURL("http://www.abc def.com"));
+  EXPECT_FALSE(IsValidURL("ftp://www.abcdef.com"));
+  EXPECT_TRUE(IsValidWebURL("http://www.abcdef.com"));
+  EXPECT_TRUE(IsValidWebURL("https://www.abcdef.com"));
+  EXPECT_TRUE(IsValidFileURL("file:///abcdef"));
+  EXPECT_FALSE(IsValidFileURL("http:///abcdef"));
+  EXPECT_FALSE(IsValidRSSURL("file:///abcdef"));
+  EXPECT_TRUE(IsValidRSSURL("feed:///abcdef"));
+  EXPECT_TRUE(IsValidRSSURL("http:///abcdef"));
+  EXPECT_TRUE(IsValidRSSURL("https:///abcdef"));
+}
+
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();

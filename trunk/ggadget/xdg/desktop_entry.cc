@@ -87,8 +87,14 @@ class DesktopEntry::Impl {
         bool result = false;
         if (value == "Application") {
           type_ = DesktopEntry::APPLICATION;
+          std::string try_exec;
+          bool has_try_exec = ReadStringEntry("TryExec", &try_exec);
+          if (has_try_exec)
+            try_exec = GetFullPathOfSystemCommand(try_exec.c_str());
           // Exec is required for Application.
-          result = ReadStringEntry("Exec", NULL);
+          // If there is a TryExec key, then the command must be available.
+          result = (!has_try_exec || try_exec.length()) &&
+              ReadStringEntry("Exec", NULL);
         } else if (value == "Link") {
           type_ = DesktopEntry::LINK;
           // URL is required for Link.
@@ -396,7 +402,7 @@ std::string DesktopEntry::GetExecCommand(int argc, const char *argv[]) const {
         }
       } else if (field == 'k') {
         result.append(Impl::ShellQuote(impl_->file_.c_str()));
-      } else {
+      } else if (field == '%') {
         result.push_back(field);
       }
     }

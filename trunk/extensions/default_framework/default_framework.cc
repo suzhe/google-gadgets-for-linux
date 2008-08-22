@@ -483,11 +483,6 @@ static Date DefaultLocalTimeToUniversalTime(const Date &date) {
   return date;
 }
 
-static bool DefaultOpenURL(const char *url) {
-  LOG("Don't know how to open url.");
-  return false;
-}
-
 } // namespace default_framework
 } // namespace framework
 } // namespace ggadget
@@ -528,7 +523,6 @@ extern "C" {
                                   NewSlot(DefaultBrowseForFile));
     reg_framework->RegisterMethod("BrowseForFiles",
                                   NewSlot(DefaultBrowseForFiles));
-    reg_framework->RegisterMethod("openUrl", NewSlot(DefaultOpenURL));
 
     // ScriptableGraphics is per gadget, so create a new instance here.
     ScriptableGraphics *script_graphics = new ScriptableGraphics(gadget);

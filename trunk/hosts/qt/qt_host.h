@@ -45,6 +45,7 @@ class QtHost : public ggadget::HostInterface {
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();
+  virtual bool OpenURL(const Gadget *gadget, const char *url);
 
  private:
   class Impl;

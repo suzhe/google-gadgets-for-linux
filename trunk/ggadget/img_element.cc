@@ -52,12 +52,12 @@ class ImgElement::Impl {
     color_multiplied_image_ = NULL;
 
     if (image_) {
-      Color c(Color::kWhite);
+      Color c(Color::kMiddleColor);
       double op = 0;
       Color::FromString(color_multiply_.c_str(), &c, &op);
       // For now, the opacity value of colorMultiply only acts like a switch:
       // if zero, colorMultiply will be disabled; otherwise enabled.
-      if (op != 0 && c != Color::kWhite)
+      if (op != 0 && c != Color::kMiddleColor)
         color_multiplied_image_ = image_->MultiplyColor(c);
     }
   }

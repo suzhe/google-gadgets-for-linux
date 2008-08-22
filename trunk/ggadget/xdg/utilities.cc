@@ -68,9 +68,12 @@ static WmType DetermineWindowManager() {
 static bool OpenURLWithSystemCommand(const char *url) {
   char *argv[4] = { NULL, NULL, NULL, NULL };
 
-  // xdg-open is our first choice, if it's not available, then use window
-  // manager specific commands.
+  // xdg-open or desktop-launch is our first choice, if it's not available,
+  // then use window manager specific commands.
   std::string open_command = GetFullPathOfSystemCommand("xdg-open");
+  if (!open_command.length())
+    open_command = GetFullPathOfSystemCommand("desktop-launch");
+
   if (open_command.length()) {
     argv[0] = strdup(open_command.c_str());
     argv[1] = strdup(url);
@@ -126,23 +129,25 @@ static bool OpenURLWithSystemCommand(const char *url) {
   return true;
 }
 
-bool OpenURL(const char *url, const Gadget *gadget) {
+bool OpenURL(const Gadget *gadget, const char *url) {
   ASSERT(gadget);
   if (!url || !*url) {
     LOG("Invalid URL!");
     return false;
   }
 
-  if (!gadget->IsInUserInteraction()) {
-    LOG("framework.openUrl() can only be invoked by user interaction.");
-    return false;
-  }
-
-  if (strstr(url, "://") == NULL) {
+  if (IsAbsolutePath(url)) {
+    // Allow to open a file directly.
+    std::string new_url(kFileUrlPrefix);
+    new_url.append(url);
+    new_url = EncodeURL(new_url);
+    return OpenURL(gadget, new_url.c_str());
+  } else if (!HasValidURLPrefix(url)) {
     // URI without prefix, will be treated as http://
+    // Allow mailto:xxx.
     std::string new_url(kHttpUrlPrefix);
     new_url.append(url);
-    return OpenURL(new_url.c_str(), gadget);
+    return OpenURL(gadget, new_url.c_str());
   }
 
   std::string new_url(url);
@@ -152,16 +157,17 @@ bool OpenURL(const char *url, const Gadget *gadget) {
   const Permissions *permissions = gadget->GetPermissions();
   if (IsValidWebURL(new_url.c_str())) {
     if (!permissions->IsRequiredAndGranted(Permissions::NETWORK)) {
-      LOG("No permission to open a remote url.");
+      LOG("No permission to open a remote url: %s", url);
       return false;
     }
     return OpenURLWithSystemCommand(new_url.c_str());
-  } else if (IsValidFileURL(new_url.c_str())) {
+  } else if (IsValidURL(new_url.c_str())) {
+    // Support file or other special urls if allaccess is granted, including
+    // things like mailto:xxx, trash:/, sysinfo:/, etc.
     if (!permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
-      LOG("No permission to open a local file.");
+      LOG("No permission to open url: %s", url);
       return false;
     }
-    // TODO: Handle desktop file and executable file.
     return OpenURLWithSystemCommand(new_url.c_str());
   } else {
     LOG("Unsupported or malformed URL: %s", url);
@@ -174,17 +180,10 @@ std::string GetFileMimeType(const char *file) {
   static struct {
     const char *ext;
     const char *mime;
-    const size_t ext_len;
   } kDefaultMimeTypes[] = {
-    { kDesktopEntryFileExtension,
-      kDesktopEntryMimeType,
-      arraysize(kDesktopEntryFileExtension) - 1
-    },
-    { kGadgetFileSuffix,
-      kGoogleGadgetsMimeType,
-      arraysize(kGadgetFileSuffix) - 1
-    },
-    { NULL, NULL, 0 }
+    { kDesktopEntryFileExtension, kDesktopEntryMimeType, },
+    { kGadgetFileSuffix, kGoogleGadgetsMimeType, },
+    { NULL, NULL }
   };
 
   std::string mime(XDG_MIME_TYPE_UNKNOWN);
@@ -196,11 +195,8 @@ std::string GetFileMimeType(const char *file) {
       } else if (strcasecmp(file, kGadgetGManifest) == 0) {
         mime = kGoogleGadgetsMimeType;
       } else {
-        size_t file_len = strlen(file);
         for (size_t i = 0; kDefaultMimeTypes[i].ext; ++i) {
-          if (file_len > kDefaultMimeTypes[i].ext_len &&
-              strcasecmp(file + file_len - kDefaultMimeTypes[i].ext_len,
-                         kDefaultMimeTypes[i].ext) == 0) {
+          if (EndWithNoCase(file, kDefaultMimeTypes[i].ext)) {
             mime = kDefaultMimeTypes[i].mime;
             break;
           }
@@ -275,7 +271,7 @@ std::string FindIconFileInXDGDataDirs(const char *icon) {
   } else {
     // Try with standard extensions.
     static const char *kStandardIconExtensions[] = {
-      ".png", ".PNG", ".xpm", ".XPM", ".svg", ".SVG", NULL
+      ".png", ".PNG", ".svg", ".SVG", ".xpm", ".XPM", NULL
     };
     for (it = xdg_dirs.begin(); it != xdg_dirs.end(); ++it) {
       for (size_t ext = 0; kStandardIconExtensions[ext]; ++ext) {

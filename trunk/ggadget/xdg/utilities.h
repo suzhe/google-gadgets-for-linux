@@ -30,13 +30,11 @@ const char kDirectoryMimeType[] = "inode/directory";
 /**
  * Opens a specified URL by system default application.
  *
- * Gadget::RunCommand() will be called if the url is indeed a desktop entry.
- *
- * @param url The url to open.
  * @param gadget The gadget which wants to open the url, the permissions of
  *        this gadget will be checked to see if opening the url is allowed.
+ * @param url The url to open.
  */
-bool OpenURL(const char *url, const Gadget *gadget);
+bool OpenURL(const Gadget *gadget, const char *url);
 
 /** Gets the mimetype of a specified file. */
 std::string GetFileMimeType(const char *file);

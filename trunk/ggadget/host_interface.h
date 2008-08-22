@@ -84,6 +84,15 @@ class HostInterface {
    * @return the default font point size.
    */
   virtual int GetDefaultFontSize() = 0;
+
+  /**
+   * Opens the given URL in the user's default web brower.
+   * Only HTTP, HTTPS URLs are supported.
+   * Only called during user interaction is allowed.
+   *
+   * @param gadget The gadget wants to open the url.
+   */
+  virtual bool OpenURL(const Gadget *gadget, const char *url) = 0;
 };
 
 } // namespace ggadget

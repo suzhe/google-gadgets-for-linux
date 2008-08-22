@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <QtGui/QPixmap>
@@ -28,21 +29,25 @@ namespace qt {
 static void QImageMultiplyColor(QImage* dest,
                                 const QImage *src,
                                 const Color &c) {
+  // Note: assume that the source image is pre-multiplied.
+  // Color(0.5, 0.5, 0.5) is the middle color, so multiplying a color greater
+  // than 0.5 makes the image brighter.
   int width = src->width();
   int height = src->height();
-  int rm = c.RedInt();
-  int gm = c.GreenInt();
-  int bm = c.BlueInt();
+  int rm = c.RedInt() * 2;
+  int gm = c.GreenInt() * 2;
+  int bm = c.BlueInt() * 2;
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       QRgb rgb = src->pixel(x, y);
-      if (qAlpha(rgb) == 0) {
+      int a = qAlpha(rgb);
+      if (a == 0) {
         dest->setPixel(x, y, qRgba(0, 0, 0, 0));
       } else {
-        int r = (qRed(rgb) * rm) >> 8;
-        int g = (qGreen(rgb) * gm) >> 8;
-        int b = (qBlue(rgb) * bm) >> 8;
-        dest->setPixel(x, y, qRgb(r, g, b));
+        int r = std::min((qRed(rgb) * rm) >> 8, a);
+        int g = std::min((qGreen(rgb) * gm) >> 8, a);
+        int b = std::min((qBlue(rgb) * bm) >> 8, a);
+        dest->setPixel(x, y, qRgba(r, g, b, a));
       }
     }
   }

@@ -48,6 +48,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
+  virtual bool OpenURL(const Gadget *gadget, const char *url) { return false; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

@@ -28,17 +28,27 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+
+#if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
+#define SN_API_NOT_YET_FROZEN
+#include <libsn/sn-launcher.h>
+#endif
+
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/messages.h>
+#include <ggadget/permissions.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/system_utils.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/view.h>
 #include <ggadget/view_interface.h>
+#include <ggadget/xdg/desktop_entry.h>
+#include <ggadget/xdg/utilities.h>
 
 namespace ggadget {
 namespace gtk {
@@ -391,16 +401,48 @@ bool MaximizeWindow(GtkWidget *window,
 #endif
 }
 
+int GetCurrentDesktopOfScreen(GdkScreen *screen) {
+  int current_desktop = 0;
+#ifdef GDK_WINDOWING_X11
+  gdk_error_trap_push();
+  static GdkAtom net_current_desktop_atom = GDK_NONE;
+  if (net_current_desktop_atom == GDK_NONE)
+    net_current_desktop_atom = gdk_atom_intern ("_NET_CURRENT_DESKTOP", TRUE);;
+
+  if (!screen)
+    screen = gdk_screen_get_default();
+
+  GdkWindow *root = gdk_screen_get_root_window(screen);
+  if (!root)
+    root = gdk_get_default_root_window();
+
+  if (root) {
+    GdkAtom atom_ret;
+    gint format = 0;
+    gint length = 0;
+    guchar *data = NULL;
+    gboolean found = FALSE;
+
+    found = gdk_property_get(root, net_current_desktop_atom,
+                             GDK_NONE, 0, G_MAXLONG, FALSE,
+                             &atom_ret, &format, &length, &data);
+    if (found && format == 32 && length / sizeof(glong) > 0)
+      current_desktop = static_cast<int>(reinterpret_cast<glong*>(data)[0]);
+    if (found)
+      g_free (data);
+  }
+  gdk_error_trap_pop();
+#endif
+  return current_desktop;
+}
+
 void GetWorkAreaGeometry(GtkWidget *window, GdkRectangle *workarea) {
   ASSERT(GTK_IS_WINDOW(window));
   ASSERT(workarea);
 
+  gdk_error_trap_push();
 #ifdef GDK_WINDOWING_X11
-  static GdkAtom net_current_desktop_atom = GDK_NONE;
   static GdkAtom net_workarea_atom = GDK_NONE;
-
-  if (net_current_desktop_atom == GDK_NONE)
-    net_current_desktop_atom = gdk_atom_intern ("_NET_CURRENT_DESKTOP", TRUE);;
   if (net_workarea_atom == GDK_NONE)
     net_workarea_atom = gdk_atom_intern ("_NET_WORKAREA", TRUE);
 #endif
@@ -426,41 +468,34 @@ void GetWorkAreaGeometry(GtkWidget *window, GdkRectangle *workarea) {
 
   if (root) {
 #ifdef GDK_WINDOWING_X11
+    int desktop = GetCurrentDesktopOfScreen(screen);
     GdkAtom atom_ret;
     gint format = 0;
     gint length = 0;
-    gint cur = 0;
     guchar *data = NULL;
     gboolean found = FALSE;
-
-    found = gdk_property_get(root, net_current_desktop_atom,
-                             GDK_NONE, 0, G_MAXLONG, FALSE,
-                             &atom_ret, &format, &length, &data);
-    if (found && format == 32 && length / sizeof(glong) > 0)
-      cur = static_cast<gint>(reinterpret_cast<glong*>(data)[0]);
-    if (found)
-      g_free (data);
 
     found = gdk_property_get(root, net_workarea_atom,
                              GDK_NONE, 0, G_MAXLONG, FALSE,
                              &atom_ret, &format, &length, &data);
     if (found && format == 32 &&
-        static_cast<gint>(length / sizeof(glong)) >= (cur + 1) * 4) {
+        static_cast<gint>(length / sizeof(glong)) >= (desktop + 1) * 4) {
       workarea->x = std::max(
-            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4]), 0);
+          static_cast<int>(reinterpret_cast<glong*>(data)[desktop * 4]), 0);
       workarea->y = std::max(
-            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 1]), 0);
+          static_cast<int>(reinterpret_cast<glong*>(data)[desktop * 4 + 1]), 0);
       workarea->width = std::min(
-            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 2]),
-            screen_width);
+          static_cast<int>(reinterpret_cast<glong*>(data)[desktop * 4 + 2]),
+          screen_width);
       workarea->height = std::min(
-            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 3]),
-            screen_height);
+          static_cast<int>(reinterpret_cast<glong*>(data)[desktop * 4 + 3]),
+          screen_height);
     }
     if (found)
       g_free (data);
 #endif
   }
+  gdk_error_trap_pop();
 }
 
 #ifdef GDK_WINDOWING_X11
@@ -775,6 +810,172 @@ GtkWidget *NewGadgetDebugConsole(Gadget *gadget) {
                    console_info);
   // The caller must destroy the window before the gadget is deleted.
   return window;
+}
+
+#if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
+static const int kStartupNotifyTimeout = 1000 * 10; // 10 seconds
+
+static gboolean StartupNotifyTimeoutHandler(gpointer user_data) {
+  SnLauncherContext *ctx = static_cast<SnLauncherContext*>(user_data);
+  sn_launcher_context_complete(ctx);
+  sn_launcher_context_unref(ctx);
+  return FALSE;
+}
+
+static void StartupNotifyErrorTrapPush(SnDisplay *display, Display *xdisplay) {
+  gdk_error_trap_push();
+}
+
+static void StartupNotifyErrorTrapPop(SnDisplay *display, Display *xdisplay) {
+  gdk_error_trap_pop();
+}
+#endif
+
+bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
+  ASSERT(desktop_file);
+
+  ggadget::xdg::DesktopEntry desktop_entry(desktop_file);
+
+  // Use ggadget::xdg::OpenURL() to open a link.
+  if (desktop_entry.GetType() == ggadget::xdg::DesktopEntry::LINK) {
+    return ggadget::xdg::OpenURL(gadget, desktop_entry.GetURL().c_str());
+  }
+
+  if (desktop_entry.GetType() != ggadget::xdg::DesktopEntry::APPLICATION) {
+    DLOG("Invalid desktop file: %s", desktop_file);
+    return false;
+  }
+
+  gint argc = 0;
+  gchar **argv = NULL;
+  GError *error = NULL;
+  std::string command = desktop_entry.GetExecCommand(0, NULL);
+
+  // Parse command line first, to make sure it's correct.
+  if (!g_shell_parse_argv(command.c_str(), &argc, &argv, &error)) {
+    if (error) g_error_free(error);
+    if (argv) g_strfreev(argv);
+    DLOG("Failed to parse command line: %s", command.c_str());
+    return false;
+  }
+
+  if (error) {
+    g_error_free(error);
+    error = NULL;
+  }
+
+  GtkWidget *widget = static_cast<GtkWidget *>(
+      gadget ? gadget->GetMainView()->GetNativeWidget() : NULL);
+  GdkScreen *screen = widget ? gtk_widget_get_screen(widget) : NULL;
+
+  if (!screen)
+    screen = gdk_screen_get_default();
+
+#if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
+  SnDisplay *sn_display = NULL;
+  SnLauncherContext *sn_context = NULL;
+
+  if (desktop_entry.SupportStartupNotify()) {
+    sn_display = sn_display_new(GDK_SCREEN_XDISPLAY(screen),
+                                StartupNotifyErrorTrapPush,
+                                StartupNotifyErrorTrapPop);
+    if (sn_display) {
+      sn_context =
+          sn_launcher_context_new(sn_display, gdk_screen_get_number(screen));
+
+      std::string name = desktop_entry.GetName();
+      sn_launcher_context_set_description(sn_context, name.c_str());
+      sn_launcher_context_set_name(sn_context, name.c_str());
+      sn_launcher_context_set_binary_name(sn_context, argv[0]);
+      int workspace = GetCurrentDesktopOfScreen(screen);
+      sn_launcher_context_set_workspace(sn_context, workspace);
+      std::string wmclass = desktop_entry.GetStartupWMClass();
+      if (wmclass.length())
+        sn_launcher_context_set_wmclass(sn_context, wmclass.c_str());
+      std::string icon = desktop_entry.GetIcon();
+      if (icon.length())
+        sn_launcher_context_set_icon_name(sn_context, icon.c_str());
+
+      sn_launcher_context_initiate(sn_context, g_get_prgname(), argv[0],
+                                   gtk_get_current_event_time());
+    }
+  }
+#endif
+
+  GSpawnFlags flags = static_cast<GSpawnFlags>(
+      G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL |
+      G_SPAWN_SEARCH_PATH);
+  GSpawnChildSetupFunc setup_func = NULL;
+  gpointer user_data = NULL;
+#if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
+  if (sn_context) {
+    setup_func = reinterpret_cast<GSpawnChildSetupFunc>(
+        sn_launcher_context_setup_child_process);
+    user_data = reinterpret_cast<gpointer>(sn_context);
+  }
+#endif
+
+  std::string working_dir = desktop_entry.GetWorkingDirectory();
+  // Ignore relative or invalid path.
+  struct stat dir_stat;
+  if (!IsAbsolutePath(working_dir.c_str()) ||
+      stat(working_dir.c_str(), &dir_stat) != 0 || !S_ISDIR(dir_stat.st_mode))
+    working_dir = GetHomeDirectory();
+
+  bool result =
+      gdk_spawn_on_screen(screen,
+                          working_dir.length() ? working_dir.c_str() : NULL,
+                          argv, NULL, flags, setup_func, user_data,
+                          NULL, &error);
+
+  if (error) {
+    if (!result)
+      DLOG("Error when launching %s (%s): %s",
+           desktop_file, command.c_str(), error->message);
+    g_error_free(error);
+  }
+  if (argv)
+    g_strfreev(argv);
+#if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
+  if (sn_context) {
+    if (result) {
+      g_timeout_add(kStartupNotifyTimeout,
+                    StartupNotifyTimeoutHandler, sn_context);
+    } else {
+      sn_launcher_context_complete(sn_context);
+      sn_launcher_context_unref(sn_context);
+    }
+  }
+
+  if (sn_display)
+    sn_display_unref(sn_display);
+#endif
+  return result;
+}
+
+bool OpenURL(const Gadget *gadget, const char *url) {
+  ASSERT(gadget);
+  ASSERT(url && *url);
+
+  const Permissions *permissions = gadget->GetPermissions();
+  std::string path;
+  if (IsAbsolutePath(url)) {
+    path = url;
+  } else if (IsValidFileURL(url)) {
+    path = DecodeURL(url + arraysize(kFileUrlPrefix) - 1);
+  }
+
+  if (path.length()) {
+    if (!permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
+      LOG("No permission to open a local file: %s", url);
+      return false;
+    }
+    std::string mime = ggadget::xdg::GetFileMimeType(path.c_str());
+    if (mime == ggadget::xdg::kDesktopEntryMimeType)
+      return LaunchDesktopFile(gadget, path.c_str());
+  }
+
+  return ggadget::xdg::OpenURL(gadget, url);
 }
 
 } // namespace gtk

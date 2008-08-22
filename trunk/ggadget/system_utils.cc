@@ -19,12 +19,14 @@
 #include <cstdlib>
 #include <cerrno>
 #include <string>
+#include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <locale.h>
 #include <pwd.h>
 #include "system_utils.h"
+#include "string_utils.h"
 #include "common.h"
 #include "gadget_consts.h"
 #include "logger.h"
@@ -525,20 +527,13 @@ std::string GetFullPathOfSystemCommand(const char *command) {
   if (env_path_value == NULL)
     return "";
 
-  std::string all_path = std::string(env_path_value);
-  size_t cur_colon_pos = 0;
-  size_t next_colon_pos = 0;
-  // Iterator through all the parts in env value.
-  while ((next_colon_pos = all_path.find(":", cur_colon_pos)) !=
-         std::string::npos) {
-    std::string path =
-        all_path.substr(cur_colon_pos, next_colon_pos - cur_colon_pos);
-    path += "/";
-    path += command;
-    if (access(path.c_str(), X_OK) == 0) {
+  std::vector<std::string> paths;
+  SplitStringList(env_path_value, ":", &paths);
+  for (std::vector<std::string>::iterator i = paths.begin();
+       i != paths.end(); ++i) {
+    std::string path = BuildFilePath(i->c_str(), command, NULL);
+    if (access(path.c_str(), X_OK) == 0)
       return path;
-    }
-    cur_colon_pos = next_colon_pos + 1;
   }
   return "";
 }
