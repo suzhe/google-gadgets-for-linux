@@ -21,7 +21,13 @@ SET(SRCS
 
 ADD_SUBDIRECTORY(tests)
 
+ADD_DEFINITIONS(-DXDG_PREFIX=_ggl_xdg)
 ADD_LIBRARY(ggadget-xdg SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-xdg
+  ggadget
+  xdgmime
+  )
+
 OUTPUT_LIBRARY(ggadget-xdg)
 
 SET_TARGET_PROPERTIES(ggadget-xdg PROPERTIES
