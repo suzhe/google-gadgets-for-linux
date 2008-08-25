@@ -40,25 +40,35 @@ static const char *kMonthNames[] = {
   "July", "August", "September", "October", "November", "December"
 };
 
-std::string GetSystemGadgetPath(const char *basename) {
+std::string GetSystemGadgetPathInResourceDir(const char *resource_dir,
+                                             const char *basename) {
   std::string path;
-#if !defined(GGL_RESOURCE_DIR) && defined(_DEBUG)
-#define GGL_RESOURCE_DIR "."
-#endif
-
-#ifdef GGL_RESOURCE_DIR
   FileManagerInterface *file_manager = GetGlobalFileManager();
-  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL) + kGadgetFileSuffix;
+  path = BuildFilePath(resource_dir, basename, NULL) + kGadgetFileSuffix;
   if (file_manager->FileExists(path.c_str(), NULL) &&
       file_manager->IsDirectlyAccessible(path.c_str(), NULL))
     return file_manager->GetFullPath(path.c_str());
 
-  path = BuildFilePath(GGL_RESOURCE_DIR, basename, NULL);
+  path = BuildFilePath(resource_dir, basename, NULL);
   if (file_manager->FileExists(path.c_str(), NULL) &&
       file_manager->IsDirectlyAccessible(path.c_str(), NULL))
     return file_manager->GetFullPath(path.c_str());
-#endif
+
   return std::string();
+}
+
+std::string GetSystemGadgetPath(const char *basename) {
+  std::string result;
+#ifdef _DEBUG
+  // Try current directory first in debug mode, to ease in place build/debug.
+  result = GetSystemGadgetPathInResourceDir(".", basename);
+  if (!result.empty())
+    return result;
+#endif
+#ifdef GGL_RESOURCE_DIR
+  result = GetSystemGadgetPathInResourceDir(GGL_RESOURCE_DIR, basename);
+#endif
+  return result;
 }
 
 // Load gadget manifest and fill in GadgetInfo.
