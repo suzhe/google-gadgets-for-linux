@@ -45,8 +45,8 @@ libggadget_dbus@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_dbus@GGL_EPOCH@_la_LDFLAGS = \
-	-version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
-	-export-dynamic
+			  -version-info $(LIBGGADGET_VERSION) \
+			  -export-dynamic
 
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-dbus@GGL_EPOCH@.pc

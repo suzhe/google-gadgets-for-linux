@@ -40,6 +40,10 @@ libggadget_js@GGL_EPOCH@_la_CXXFLAGS = \
 libggadget_js@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
+libggadget_js@GGL_EPOCH@_la_LDFLAGS = \
+			  -version-info $(LIBGGADGET_VERSION) \
+			  -export-dynamic
+
 jscript_massager.cc : jscript_massager.l
 	$(LEX) -o $@ $<
 

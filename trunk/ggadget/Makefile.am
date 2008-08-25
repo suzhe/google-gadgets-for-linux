@@ -231,7 +231,7 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/third_party/unzip/libunzip.la
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
-			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
+			  -version-info $(LIBGGADGET_VERSION) \
 			  -export-dynamic \
 			  @LIBLTDL@
 

@@ -39,5 +39,9 @@ libggadget_xdg@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/xdgmime/libxdgmime.la
 
+libggadget_xdg@GGL_EPOCH@_la_LDFLAGS = \
+			  -version-info $(LIBGGADGET_VERSION) \
+			  -export-dynamic
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libggadget-xdg@GGL_EPOCH@.pc

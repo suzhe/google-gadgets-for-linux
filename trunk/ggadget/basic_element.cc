@@ -743,6 +743,9 @@ class BasicElement::Impl {
       DestroyCanvas(cache_);
       cache_ = NULL;
     }
+
+    // To make sure that this element can be redrew correctly.
+    QueueDraw();
   }
 
   bool IsReallyVisible() {
