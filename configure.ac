@@ -73,9 +73,12 @@ LIBGGADGET_REVISION=0
 # precedence over adding, so set to 0 if both happened.
 LIBGGADGET_AGE=0
 
+LIBGGADGET_VERSION=$LIBGGADGET_CURRENT:$LIBGGADGET_REVISION:$LIBGGADGET_AGE
+
 AC_SUBST(LIBGGADGET_CURRENT)
 AC_SUBST(LIBGGADGET_REVISION)
 AC_SUBST(LIBGGADGET_AGE)
+AC_SUBST(LIBGGADGET_VERSION)
 
 # Define a string for the earliest version that this release has
 # binary compatibility with. This is used for module locations.
@@ -582,8 +585,12 @@ if test x$has_librsvg = xyes; then
 fi
 
 # Check startup-notification library
-PKG_CHECK_MODULES(STARTUP_NOTIFICATION, [libstartup-notification-1.0 >= 0.9],
-		  [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_STARTUP_NOTIFICATION"])
+has_startup_notification=no
+PKG_CHECK_MODULES(STARTUP_NOTIFICATION, [libstartup-notification-1.0 >= 0.8],
+		  [has_startup_notification=yes], [has_startup_notification=no])
+if test x$has_startup_notification = xyes; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_STARTUP_NOTIFICATION"
+fi
 
 # Check gtkmozembed
 # Check priority:

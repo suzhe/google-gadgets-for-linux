@@ -80,7 +80,7 @@ libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
-			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
+			  -version-info $(LIBGGADGET_VERSION) \
 			  -export-dynamic
 
 if GTK2_TARGET_X11
