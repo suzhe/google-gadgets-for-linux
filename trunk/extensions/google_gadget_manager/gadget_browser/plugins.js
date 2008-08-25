@@ -189,9 +189,7 @@ function DownloadPlugin(plugin, is_updating) {
   var request = new XMLHttpRequest();
   try {
     request.open("GET", download_url);
-    request.onreadystatechange = function() {
-      OnRequestStateChange();
-    };
+    request.onreadystatechange = OnRequestStateChange;
     request.send();
     gActiveDownloads.push(request);
   } catch (e) {

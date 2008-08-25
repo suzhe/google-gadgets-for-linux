@@ -181,29 +181,39 @@ class DisplayWindow::Impl {
       } else {
         std::string text_str;
         if (text.ConvertToString(&text_str)) {
-          if (element_->IsInstanceOf(ButtonElement::CLASS_ID)) {
-            ButtonElement *button = down_cast<ButtonElement *>(element_);
-            button->GetTextFrame()->SetText(text_str.c_str());
-          } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
-            CheckBoxElement *checkbox = down_cast<CheckBoxElement *>(element_);
-            checkbox->GetTextFrame()->SetText(text_str.c_str());
-          } else if (element_->IsInstanceOf(LabelElement::CLASS_ID)) {
-            LabelElement *label = down_cast<LabelElement *>(element_);
-            TextFrame *text_frame = label->GetTextFrame();
-            text_frame->SetText(text_str.c_str());
-
-            text_frame->SetSize(kLabelTextSize);
-            // Shrink the font size if the given rect can't enclose the text.
-            double text_width, text_height;
-            text_frame->GetExtents(element_->GetPixelWidth(),
-                                   &text_width, &text_height);
-            if (text_height > element_->GetPixelHeight())
-              text_frame->SetSize(kLabelTextSize - 1);
-          } else if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
+          if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
             EditElementBase *edit = down_cast<EditElementBase *>(element_);
             edit->SetValue(text_str.c_str());
           } else {
-            invalid = true;
+            // Erase hotkey indicator in the string.
+            size_t pos = text_str.find('&');
+            if (pos != text_str.npos)
+              text_str.erase(pos, 1);
+            if (element_->IsInstanceOf(ButtonElement::CLASS_ID)) {
+              ButtonElement *button = down_cast<ButtonElement *>(element_);
+              button->GetTextFrame()->SetText(text_str.c_str());
+            } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
+              CheckBoxElement *checkbox =
+                  down_cast<CheckBoxElement *>(element_);
+              checkbox->GetTextFrame()->SetText(text_str.c_str());
+            } else if (element_->IsInstanceOf(LabelElement::CLASS_ID)) {
+              LabelElement *label = down_cast<LabelElement *>(element_);
+              TextFrame *text_frame = label->GetTextFrame();
+              text_frame->SetText(text_str.c_str());
+  
+              text_frame->SetSize(kLabelTextSize);
+              // Shrink the font size if the given rect can't enclose the text.
+              double text_width, text_height;
+              text_frame->GetExtents(element_->GetPixelWidth(),
+                                     &text_width, &text_height);
+              if (text_height > element_->GetPixelHeight())
+                text_frame->SetSize(kLabelTextSize - 1);
+            } else if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
+              EditElementBase *edit = down_cast<EditElementBase *>(element_);
+              edit->SetValue(text_str.c_str());
+            } else {
+              invalid = true;
+            }
           }
         } else {
           invalid = true;

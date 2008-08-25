@@ -77,9 +77,7 @@ function StartThumbnailTask(task) {
                                cached_date.toUTCString().replace("UTC", "GMT"));
     }
 
-    request.onreadystatechange = function() {
-      OnRequestStateChange();
-    };
+    request.onreadystatechange = OnRequestStateChange;
     request.send();
     gWorkingTasks.push(task);
   } catch (e) {
