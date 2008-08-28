@@ -74,10 +74,16 @@ class EnumerateModuleTester {
 
     std::string value;
 
-    if (count_ < paths_.size())
+    if (count_ < paths_.size()) {
       value = paths_[count_];
-    else
+    } else {
+#ifdef _DEBUG
+      if (count_ == paths_.size())
+        value = "../modules";
+      else
+#endif
       value = GGL_MODULE_DIR;
+    }
 
     EXPECT_STREQ(value.c_str(), path);
 

@@ -28,7 +28,14 @@ ELSE(WIN32)
       ${CMAKE_BINARY_DIR}/output/bin ${_target_name})
   ENDMACRO(OUTPUT_EXECUTABLE _target_name)
   MACRO(OUTPUT_LIBRARY _target_name)
+    SET_TARGET_PROPERTIES(${_target_name} PROPERTIES
+      VERSION ${GGL_LIB_VERSION}
+      SOVERSION ${GGL_MAJOR_VERSION})
     OUTPUT_TARGET(${_target_name} lib)
+    INSTALL(TARGETS ${_target_name}
+      RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR})
   ENDMACRO(OUTPUT_LIBRARY _target_name)
 ENDIF(WIN32)
 
@@ -40,12 +47,10 @@ ENDMACRO(ADD_MODULE _target_name)
 MACRO(OUTPUT_MODULE _target_name)
   OUTPUT_TARGET(${_target_name} modules)
   INSTALL(TARGETS ${_target_name}
-    LIBRARY DESTINATION "${LIB_INSTALL_DIR}/google-gadgets/modules/"
-    )
+    LIBRARY DESTINATION "${LIB_INSTALL_DIR}/google-gadgets/modules/")
 ENDMACRO(OUTPUT_MODULE _target_name)
 
 MACRO(INSTALL_GADGET _gadget_name)
-  INSTALL( FILES "${CMAKE_BINARY_DIR}/output/bin/${_gadget_name}"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/google-gadgets"
-  )
+  INSTALL(FILES "${CMAKE_BINARY_DIR}/output/bin/${_gadget_name}"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/google-gadgets")
 ENDMACRO(INSTALL_GADGET _gadget_name)

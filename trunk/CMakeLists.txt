@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 INCLUDE(Configure)
 

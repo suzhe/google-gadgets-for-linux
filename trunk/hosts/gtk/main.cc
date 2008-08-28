@@ -232,7 +232,8 @@ int main(int argc, char* argv[]) {
 
   std::string error;
   if (!ggadget::CheckRequiredExtensions(&error)) {
-    ggadget::gtk::ShowAlertDialog(GM_("GOOGLE_GADGETS"), error.c_str());
+    // Don't use _GM here because localized messages may be unavailable.
+    ggadget::gtk::ShowAlertDialog("Google Gadgets", error.c_str());
     return 1;
   }
 
