@@ -77,10 +77,14 @@ CLEANFILES = $(desktop_DATA)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
-	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \
+	fi
 
 uninstall-hook:
-	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \
+	fi
 endif
 
 endif

@@ -30,7 +30,7 @@ noinst_SCRIPTS=intl-desktop-file.sh
 .PHONY: intl-desktop-file.sh
 
 intl-desktop-file.sh: intl-desktop-file
-	(echo '#!/bin/sh' > $@; \
+	@echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
 	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \
 	 echo '  if test -d $$i; then' >> $@; \
@@ -39,7 +39,7 @@ intl-desktop-file.sh: intl-desktop-file
 	 echo 'done' >> $@; \
 	 echo 'export GGL_MODULE_PATH' >> $@; \
 	 echo '$(abs_builddir)/intl-desktop-file $$@' >> $@; \
-	 chmod 0755 $@)
+	 chmod 0755 $@
 
 # To make sure our mime type has higher priority.
 xml_files = 00-google-gadgets.xml
@@ -47,12 +47,57 @@ xml_files = 00-google-gadgets.xml
 mimedir = $(datadir)/mime/packages
 mime_DATA = $(xml_files)
 
-EXTRA_DIST = $(xml_files)
+ICONS = 32x32.png \
+	48x48.png \
+	64x64.png \
+	128x128.png \
+	192x192.png
+
+EXTRA_DIST = $(xml_files) $(ICONS)
+
+if ENABLE_XDG_ICON_RESOURCE
+update-icon-cache:
+	@if test -z "$(DESTDIR)"; then \
+		echo "Updating icon cache."; \
+		$(XDG_ICON_RESOURCE) forceupdate --theme hicolor; \
+	fi
+else
+update-icon-cache:
+	@echo "Updating icon cache is disabled."
+endif
+
+ICON_SIZES = 32x32 48x48 64x64 128x128 192x192
+
+install-icons:
+	@for icon in $(ICON_SIZES); do \
+	  mkdir -p $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps; \
+	  mkdir -p $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes; \
+	  $(INSTALL_DATA) $(srcdir)/$${icon}.png $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png; \
+	  $(LN_S) $(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png \
+	          $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes/application-x-google-gadgets.png; \
+	done; \
+	mkdir -p $(DESTDIR)$(datadir)/pixmaps; \
+	$(LN_S) $(datadir)/icons/hicolor/128x128/apps/google-gadgets.png $(DESTDIR)$(datadir)/pixmaps/
+
+uninstall-icons:
+	@for icon in $(ICON_SIZES); do \
+	  rm -f $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes/application-x-google-gadgets.png; \
+	  rm -f $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png; \
+	  rm -f $(DESTDIR)$(datadir)/pixmaps/google-gadgets.png; \
+	done
+
+install-data-local: install-icons update-icon-cache
+
+uninstall-local: uninstall-icons update-icon-cache
 
 if ENABLE_UPDATE_MIME_DATABASE
 install-data-hook:
-	$(UPDATE_MIME_DATABASE) "$(DESTDIR)$(datadir)/mime"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_MIME_DATABASE) "$(DESTDIR)$(datadir)/mime"; \
+	fi
 
 uninstall-hook:
-	$(UPDATE_MIME_DATABASE) "$(DESTDIR)$(datadir)/mime"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_MIME_DATABASE) "$(DESTDIR)$(datadir)/mime"; \
+	fi
 endif

@@ -82,10 +82,14 @@ EXTRA_DIST = $(desktop_in_files)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
-	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \
+	fi
 
 uninstall-hook:
-	$(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"
+	@if test -z "$(DESTDIR)"; then \
+	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \
+	fi
 endif
 
 CLEANFILES 		= $(desktop_DATA) $(MOC_FILES)
