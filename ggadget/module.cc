@@ -211,7 +211,8 @@ class Module::Impl {
   // If dir is an absolute path, then just returns dir, otherwise get all
   // searching paths from GGL_MODULE_PATH env and built-in GGL_MODULE_DIR
   // macro, and append dir to each path.
-  static size_t GetModulePaths(const char *dir, std::vector<std::string> *paths) {
+  static size_t GetModulePaths(const char *dir,
+                               std::vector<std::string> *paths) {
     if (dir && *dir == kDirSeparator) {
       paths->push_back(dir);
       return paths->size();
@@ -236,11 +237,16 @@ class Module::Impl {
       }
     }
 
+#ifdef _DEBUG
+    paths->push_back("../modules");
+#endif
+#ifdef GGL_MODULE_DIR
     if (dir && *dir) {
       paths->push_back(BuildFilePath(GGL_MODULE_DIR, dir, NULL));
     } else {
       paths->push_back(GGL_MODULE_DIR);
     }
+#endif
 
     return paths->size();
   }

@@ -22,18 +22,7 @@ ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
 
 ADD_LIBRARY(ggadget-js SHARED jscript_massager.cc js_utils.cc)
 TARGET_LINK_LIBRARIES(ggadget-js ggadget)
-
-SET_TARGET_PROPERTIES(ggadget-js PROPERTIES
-                              VERSION ${GGL_LIB_VERSION}
-                              SOVERSION ${GGL_MAJOR_VERSION})
-
 OUTPUT_LIBRARY(ggadget-js)
-
-INSTALL( TARGETS ggadget-js
-    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-)
 
 INSTALL(FILES
   jscript_massager.h

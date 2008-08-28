@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
       if (++i < argc) {
         if (strcmp(argv[i], "qt") == 0) {
           js_runtime = "qt-script-runtime";
-          printf("QtScript runtime is chosen. It's still incomplete\n"); 
+          printf("QtScript runtime is chosen. It's still incomplete\n");
         }
       }
 #endif
@@ -282,8 +282,8 @@ int main(int argc, char* argv[]) {
 
   std::string error;
   if (!ggadget::CheckRequiredExtensions(&error)) {
-    QMessageBox::information(NULL,
-                             QString::fromUtf8(GM_("GOOGLE_GADGETS")),
+    // Don't use _GM here because localized messages may be unavailable.
+    QMessageBox::information(NULL, "Google Gadgets",
                              QString::fromUtf8(error.c_str()));
 
     return 1;
