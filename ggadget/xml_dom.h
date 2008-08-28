@@ -28,7 +28,9 @@ class XMLParserInterface;
  * DOMDocumentInterface instances with the global XML parser, which is
  * provided by some extension module.
  */
-DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser);
+DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser,
+                                        bool allow_load_http,
+                                        bool allow_load_file);
 
 } // namespace ggadget
 

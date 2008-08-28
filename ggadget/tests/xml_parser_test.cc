@@ -123,14 +123,78 @@ TEST(XMLParser, ParseXMLIntoDOM) {
             sub_children->GetItem(0)->GetNodeType());
   EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
                sub_children->GetItem(0)->GetNodeValue());
+  EXPECT_STREQ("s1 content1 Test Entity testext",
+               sub_children->GetItem(0)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
             sub_children->GetItem(1)->GetNodeType());
   // Entities in comments should not be replaced.
   EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
+  EXPECT_STREQ(" &COMMENTS; ",
+               sub_children->GetItem(1)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
             sub_children->GetItem(3)->GetNodeType());
   // Entities in cdata should not be replaced.
   EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(3)->GetNodeValue());
+  EXPECT_STREQ(" cdata &cdata; ",
+               sub_children->GetItem(3)->GetTextContent().c_str());
+
+  DOMNodeInterface *pi_node = domdoc->GetFirstChild();
+  EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,
+            pi_node->GetNodeType());
+  EXPECT_STREQ("pi", pi_node->GetNodeName().c_str());
+  EXPECT_STREQ("value", pi_node->GetNodeValue());
+  children->Unref();
+  sub_children->Unref();
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
+}
+
+// This test case only tests if xml_utils can convert an XML string into DOM
+// correctly.  Test cases about DOM itself are in xml_dom_test.cc.
+TEST(XMLParser, ParseXMLIntoDOMPreservingWhiteSpace) {
+  XMLParserInterface *xml_parser = GetXMLParser();
+  DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
+  domdoc->Ref();
+  domdoc->SetPreserveWhiteSpace(true);
+  std::string encoding;
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, &g_strings, "TheFileName",
+                                              NULL, NULL, NULL,
+                                              domdoc, &encoding, NULL));
+  ASSERT_STREQ("iso8859-1", encoding.c_str());
+  DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
+  ASSERT_TRUE(doc_ele);
+  EXPECT_STREQ("root", doc_ele->GetTagName().c_str());
+  EXPECT_STREQ("<v>", doc_ele->GetAttribute("a").c_str());
+  EXPECT_STREQ("v1", doc_ele->GetAttribute("a1").c_str());
+  DOMNodeListInterface *children = doc_ele->GetChildNodes();
+  children->Ref();
+  EXPECT_EQ(13U, children->GetLength());
+
+  DOMNodeInterface *sub_node = children->GetItem(9);
+  ASSERT_TRUE(sub_node);
+  ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, sub_node->GetNodeType());
+  DOMElementInterface *sub_ele = down_cast<DOMElementInterface *>(sub_node);
+  DOMNodeListInterface *sub_children = sub_ele->GetChildNodes();
+  sub_children->Ref();
+  EXPECT_EQ(7U, sub_children->GetLength());
+  EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
+            sub_children->GetItem(0)->GetNodeType());
+  EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
+               sub_children->GetItem(0)->GetNodeValue());
+  EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
+               sub_children->GetItem(0)->GetTextContent().c_str());
+  EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
+            sub_children->GetItem(1)->GetNodeType());
+  // Entities in comments should not be replaced.
+  EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
+  EXPECT_STREQ(" &COMMENTS; ",
+               sub_children->GetItem(1)->GetTextContent().c_str());
+  EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
+            sub_children->GetItem(5)->GetNodeType());
+  // Entities in cdata should not be replaced.
+  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(5)->GetNodeValue());
+  EXPECT_STREQ(" cdata &cdata; ",
+               sub_children->GetItem(5)->GetTextContent().c_str());
 
   DOMNodeInterface *pi_node = domdoc->GetFirstChild();
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,

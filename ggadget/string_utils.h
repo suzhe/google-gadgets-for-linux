@@ -201,6 +201,12 @@ std::string GetHostFromURL(const char *url);
 std::string GetFileNameFromURL(const char *url);
 
 /**
+ * Returns the username:password part of a URL, or blank string if the url has
+ * no username:password part.
+ */
+std::string GetUsernamePasswordFromURL(const char *url);
+
+/**
  * Encode a string into a JavaScript string literal (without the begining and
  * ending quotes), by escaping special characters in the source string.
  */

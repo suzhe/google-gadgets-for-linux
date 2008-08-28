@@ -89,7 +89,11 @@ static bool IsValidHTTPToken(const char *s) {
 static bool IsValidHTTPHeaderValue(const char *s) {
   if (s == NULL) return true;
   while (*s) {
-    if ( ((*s > 0 && *s<=31) && *s != '\r' && *s != '\n' && *s != '\t') ||
+    if ( (*s > 0 && *s<=31
+#if 0 // Disallow \r \n \t in header values.
+         && *s != '\r' && *s != '\n' && *s != '\t'
+#endif
+         ) ||
          *s == 127)
       return false;
     ++s;
@@ -97,6 +101,7 @@ static bool IsValidHTTPHeaderValue(const char *s) {
   return true;
 }
 
+#if 0 // Don't support newlines in header values.
 // Process a user inputed header value, add a space after newline.
 static std::string ReformatHttpHeaderValue(const char *value) {
   std::string tmp;
@@ -120,6 +125,11 @@ static std::string ReformatHttpHeaderValue(const char *value) {
   }
   return tmp;
 }
+#else
+static const char *ReformatHttpHeaderValue(const char *value) {
+  return value;
+}
+#endif
 
 class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
@@ -247,6 +257,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       }
     }
 
+    if (!GetUsernamePasswordFromURL(url).empty()) {
+      // GDWin Compatibility.
+      DLOG("Username:password in URL is not allowed: %s", url);
+      return SYNTAX_ERR;
+    }
+
     url_ = url;
     host_ = GetHostFromURL(url);
     curl_ = curl_easy_init();
@@ -333,7 +349,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return SYNTAX_ERR;
     }
 
-    if (strncasecmp("Proxy-", header, 6) == 0) {
+    if (strncasecmp("Proxy-", header, 6) == 0 ||
+        strncasecmp("Sec-", header, 4) == 0) {
       DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
       return NO_ERR;
     }
@@ -836,7 +853,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                                           response_encoding_.c_str(),
                                           kEncodingFallback,
                                           response_dom_,
-                                          &encoding, &response_text_)) {
+                                          &encoding, &response_text_) ||
+        !response_dom_->GetDocumentElement()) {
       response_dom_->Unref();
       response_dom_ = NULL;
     }

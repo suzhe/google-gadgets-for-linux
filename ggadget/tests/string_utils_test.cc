@@ -154,6 +154,22 @@ TEST(StringUtils, GetFileNameFromURL) {
   EXPECT_STREQ("/dev fff", GetFileNameFromURL("file://abc/dev%20fff").c_str());
 }
 
+TEST(StringUtils, GetUsernamePasswordFromURL) {
+  EXPECT_STREQ("", GetUsernamePasswordFromURL(NULL).c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("").c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("mailto:a@b.com").c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("http://a.com").c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("http://a.com/").c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("http://a.com:1234/path/path?param=value").c_str());
+  EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com").c_str());
+  EXPECT_STREQ("user:", GetUsernamePasswordFromURL("http://user:@a.com/").c_str());
+  EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com?param=value").c_str());
+  EXPECT_STREQ("", GetUsernamePasswordFromURL("http://@a.com/path/path?param=value").c_str());
+  EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com:1234").c_str());
+  EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com?param=value").c_str());
+  EXPECT_STREQ("user:", GetUsernamePasswordFromURL("http://user:@a.com:1234/").c_str());
+}
+
 TEST(StringUtils, EncodeJavaScriptString) {
   UTF16Char src1[] = { '\"', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
   std::string dest = EncodeJavaScriptString(src1);

@@ -323,6 +323,27 @@ std::string GetFileNameFromURL(const char *url) {
   return result;
 }
 
+std::string GetUsernamePasswordFromURL(const char *url) {
+  if (!url || !*url)
+    return std::string();
+
+  const char *start = strstr(url, "://");
+  if (!start)
+    return std::string();
+
+  start += 3;
+  const char *end = strchr(start, '/');
+  // Get the part between :// and the first '/'.
+  std::string result(end ? std::string(start, end - start) :
+                           std::string(start));
+  size_t pos = result.find('@');
+  if (pos == result.npos)
+    return std::string();
+
+  result.erase(pos);
+  return result;
+}
+
 std::string EncodeJavaScriptString(const UTF16Char *source) {
   ASSERT(source);
 

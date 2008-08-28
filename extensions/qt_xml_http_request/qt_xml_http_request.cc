@@ -71,6 +71,46 @@ static Backoff::ResultType GetBackoffType(unsigned short status) {
          Backoff::EXPONENTIAL_BACKOFF;
 }
 
+// field-name     = token
+// token          = 1*<any CHAR except CTLs or separators>
+// separators     = "(" | ")" | "<" | ">" | "@"
+//                | "," | ";" | ":" | "\" | <">
+//                | "/" | "[" | "]" | "?" | "="
+//                | "{" | "}" | SP | HT
+static bool IsValidHTTPToken(const char *s) {
+  if (s == NULL) return false;
+  while (*s) {
+    if (*s > 32 && *s < 127 &&
+        (isalnum(*s) || strchr("!#$%&'*+ -.^_`~", *s) != NULL)) {
+      //valid case
+    } else {
+      return false;
+    }
+    ++s;
+  }
+  return true;
+}
+
+// field-value    = *( field-content | LWS )
+// field-content  = <the OCTETs making up the field-value
+//                  and consisting of either *TEXT or combinations
+//                  of token, separators, and quoted-string>
+// TEXT           = <any OCTET except CTLs, but including LWS>
+static bool IsValidHTTPHeaderValue(const char *s) {
+  if (s == NULL) return true;
+  while (*s) {
+    if ( (*s > 0 && *s<=31
+#if 0 // Disallow \r \n \t in header values.
+         && *s != '\r' && *s != '\n' && *s != '\t'
+#endif
+         ) ||
+         *s == 127)
+      return false;
+    ++s;
+  }
+  return true;
+}
+
 class Session {
  public:
 #if COOKIE_SUPPORT
@@ -220,6 +260,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     else
       return SYNTAX_ERR;
 
+    if (!qurl.userName().isEmpty() || !qurl.password().isEmpty()) {
+      // GDWin Compatibility.
+      DLOG("Username:password in URL is not allowed: %s", url);
+      return SYNTAX_ERR;
+    }
+
     url_ = url;
     host_ = qurl.host().toStdString();
     http_ = new QHttp(qurl.host(), mode);
@@ -283,7 +329,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return INVALID_STATE_ERR;
     }
 
-    if (strncasecmp("Proxy-", header, 6) == 0) {
+    if (!IsValidHTTPToken(header)) {
+      LOG("XMLHttpRequest::SetRequestHeader: Invalid header %s", header);
+      return SYNTAX_ERR;
+    }
+
+    if (!IsValidHTTPHeaderValue(value)) {
+      LOG("XMLHttpRequest::SetRequestHeader: Invalid value: %s", value);
+      return SYNTAX_ERR;
+    }
+
+    if (strncasecmp("Proxy-", header, 6) == 0 ||
+        strncasecmp("Sec-", header, 4) == 0) {
       DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
       return NO_ERR;
     }
@@ -465,7 +522,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                                           response_encoding_.c_str(),
                                           kEncodingFallback,
                                           response_dom_,
-                                          &encoding, &response_text_)) {
+                                          &encoding, &response_text_) ||
+        !response_dom_->GetDocumentElement()) {
       response_dom_->Unref();
       response_dom_ = NULL;
     }

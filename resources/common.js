@@ -314,7 +314,7 @@ function VBArray(array) {
 // "Msxml2.DOMDocument.3.0"
 // TODO: Is it necessary to emulate "ADODB.Stream"?
 function ActiveXObject(name) {
-  var openUrl = function(url) {
+  function openUrl(url) {
     debug.trace("Open URL by ActiveX object:" + url);
     // If the url doesn't have prefix, assume it's a file path.
     if (url.indexOf("://") < 0)
@@ -322,7 +322,7 @@ function ActiveXObject(name) {
     framework.openUrl(url);
   };
   name = name.toLowerCase();
-  debug.trace("new ActiveXObject: " + name);
+  debug.warning("new ActiveXObject: " + name);
   if (name == "shell.application") {
     this.open = openUrl;
     this.Open = openUrl;
@@ -333,7 +333,7 @@ function ActiveXObject(name) {
     this.Run = openUrl;
     this.run = openUrl;
   } else if (name == "internetexplorer.application") {
-    this.Navigate = openUrl; 
+    this.Navigate = openUrl;
     this.navigate = openUrl;
     // Only the first parameter of Navigate2() is supported.
     this.Navigate2 = openUrl;
@@ -344,6 +344,8 @@ function ActiveXObject(name) {
     return new XMLHttpRequest();
   } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmldom|domdocument)/)) {
     return new DOMDocument();
+  } else {
+    throw "Unsupported ActiveXObject: " + name;
   }
 }
 

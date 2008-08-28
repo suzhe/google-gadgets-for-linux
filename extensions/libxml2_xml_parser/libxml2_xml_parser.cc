@@ -370,15 +370,9 @@ static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
                                         xmlNode *xmlnode) {
   char *text = FromXmlCharPtr(xmlNodeGetContent(xmlnode));
   UTF16String utf16_text;
-  // Text containing all white spaces between markups (other than entity refs)
-  // will be removed. Though the XML spec requires non-validating parsers to
-  // return any white spaces, we still remove blank text node to save memory,
-  // improve performance and make some gadgets happy.
-  // Blanks will be preverved if the text node is the only child of
-  // parent, or the previous sibling or next sibling is text node.
   if (text) {
-    if (xmlnode->type != XML_TEXT_NODE ||
-        (xmlnode->prev == NULL && xmlnode->next == NULL) ||
+    if (domdoc->PreservesWhiteSpace() ||
+        xmlnode->type != XML_TEXT_NODE ||
         IsTextNode(xmlnode->prev) || IsTextNode(xmlnode->next) ||
         !IsBlankText(text)) {
       // Don't trim the text. The caller can trim based on their own
@@ -647,7 +641,7 @@ class XMLParser : public XMLParserInterface {
   }
 
   virtual DOMDocumentInterface *CreateDOMDocument() {
-    return ::ggadget::CreateDOMDocument(this);
+    return ::ggadget::CreateDOMDocument(this, false, false);
   }
 
   virtual bool ParseContentIntoDOM(const std::string &content,
