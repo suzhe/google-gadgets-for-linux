@@ -137,6 +137,3 @@ else
 nobase_resource_DATA = $(RESOURCE_FILES)
 resourcedir=$(GGL_RESOURCE_DIR)/resources
 endif
-
-appicondir = $(datadir)/pixmaps
-appicon_DATA = google-gadgets.png

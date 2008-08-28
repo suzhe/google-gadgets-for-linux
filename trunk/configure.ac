@@ -265,6 +265,12 @@ AC_ARG_ENABLE([update-desktop-database],
 	      [enable_update_desktop_database=$enableval],
 	      [enable_update_desktop_database=yes])
 
+AC_ARG_ENABLE([xdg-icon-resource],
+	      AC_HELP_STRING([--disable-xdg-icon-resource],
+			     [don't run xdg-icon-resource after install]),
+	      [enable_xdg_icon_resource=$enableval],
+	      [enable_xdg_icon_resource=yes])
+
 if test x$build_libggadget_gtk != xyes; then
   build_gtk_host=no
 fi
@@ -381,6 +387,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_LN_S
 
 # Checks for zip command.
 AC_PATH_PROG([ZIP], [zip])
@@ -638,6 +645,12 @@ if test x$UPDATE_DESKTOP_DATABASE = xno; then
 fi
 AM_CONDITIONAL(ENABLE_UPDATE_DESKTOP_DATABASE, test x$enable_update_desktop_database = xyes)
 
+# Check xdg-icon-resource
+AC_PATH_PROG(XDG_ICON_RESOURCE, xdg-icon-resource, no)
+if test x$XDG_ICON_RESOURCE = xno; then
+  enable_xdg_icon_resource=no
+fi
+AM_CONDITIONAL(ENABLE_XDG_ICON_RESOURCE, test x$enable_xdg_icon_resource = xyes)
 
 ###########################################################
 ##                  Process Config options.              ##
