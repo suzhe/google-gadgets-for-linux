@@ -33,7 +33,7 @@ DOMDocumentInterface* CreateDocument() {
   // Use CreateDOMDocument(parser) instead of parser->CreateDOMDocument()
   // to ensure the created document instance is the one we want to test,
   // not the one that the parser may override.
-  return CreateDOMDocument(g_xml_parser);
+  return CreateDOMDocument(g_xml_parser, false, false);
 }
 
 void TestBlankNode(DOMNodeInterface *node) {
@@ -951,6 +951,87 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
   std::string xml_out2 = doc->GetXML();
   ASSERT_STREQ(xml_out2.c_str(), xml_out.c_str());
   ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
+}
+
+void TestSelectNode(DOMNodeInterface *node, const char *xpath,
+                    size_t count, ...) {
+  LOG("XPATH: %s", xpath);
+  va_list ap;
+  va_start(ap, count);
+  DOMNodeInterface *single = node->SelectSingleNode(xpath);
+  DOMNodeListInterface *multi = node->SelectNodes(xpath);
+  ASSERT_EQ(count, multi->GetLength());
+  if (count == 0) {
+    ASSERT_TRUE(single == NULL);
+  } else {
+    ASSERT_TRUE(single != NULL);
+    ASSERT_TRUE(single == multi->GetItem(0));
+  }
+
+  for (size_t i = 0; i < count; i++) {
+    const char *id = va_arg(ap, const char *);
+    DOMNodeInterface *node = multi->GetItem(i);
+    if (strcmp(id, "#") == 0) {
+      ASSERT_EQ(node->GetNodeType(), DOMNodeInterface::DOCUMENT_NODE);
+    } else {
+      ASSERT_EQ(node->GetNodeType(), DOMNodeInterface::ELEMENT_NODE);
+      ASSERT_STREQ(id,
+          down_cast<DOMElementInterface *>(node)->GetAttribute("id").c_str());
+    }
+  }
+  delete multi;
+}
+
+TEST(XMLDOM, SelectNodes) {
+  const char *xml =
+    "<root id=\"0\">\n"
+    " <a id=\"1\">\n"
+    "  <a id=\"11\"><a id=\"111\"/><b id=\"112\"/></a>\n"
+    "  <b id=\"12\"><a id=\"121\"/><b id=\"122\"/></b>\n"
+    " </a>\n"
+    " <b id=\"2\">\n"
+    "  <a id=\"21\"><a id=\"211\"/><b id=\"212\"/></a>\n"
+    "  <b id=\"22\"><a id=\"221\"/><b id=\"222\"/></b>\n"
+    " </b>\n"
+    "</root>";
+
+  DOMDocumentInterface *doc = CreateDocument();
+  doc->Ref();
+  doc->LoadXML(xml);
+  TestSelectNode(doc, "", 0);
+  TestSelectNode(doc, NULL, 0);
+  TestSelectNode(doc, "/", 1, "#");
+  TestSelectNode(doc, "/root", 1, "0");
+  TestSelectNode(doc, "root", 1, "0");
+  TestSelectNode(doc, "root/b", 1, "2");
+  TestSelectNode(doc, "//b", 7, "112", "12", "122", "2", "212", "22", "222");
+  TestSelectNode(doc, ".//b", 7, "112", "12", "122", "2", "212", "22", "222");
+  TestSelectNode(doc, "//*", 15, "0",
+                 "1", "11", "111", "112", "12", "121", "122",
+                 "2", "21", "211", "212", "22", "221", "222");
+  TestSelectNode(doc, "//.", 16, "#", "0",
+                 "1", "11", "111", "112", "12", "121", "122",
+                 "2", "21", "211", "212", "22", "221", "222");
+  TestSelectNode(doc, "/*", 1, "0");
+  TestSelectNode(doc, "/*//a/b", 3, "112", "12", "212");
+  TestSelectNode(doc, "/*//././a/././b", 3, "12", "112", "212");
+  // FIXME: TestSelectNode(doc, "*//a//b", 4, "112", "12", "122", "212");
+  DOMNodeInterface *node = doc->SelectSingleNode("/root/a");
+  ASSERT_TRUE(node);
+  node->Ref();
+  TestSelectNode(node, "", 0);
+  TestSelectNode(node, NULL, 0);
+  TestSelectNode(node, "/", 1, "#");
+  TestSelectNode(node, "/root", 1, "0");
+  TestSelectNode(node, "root", 0);
+  TestSelectNode(node, "/root/b", 1, "2");
+  TestSelectNode(node, "//b", 7, "112", "12", "122", "2", "212", "22", "222");
+  TestSelectNode(node, ".//b", 3, "112", "12", "122");
+  TestSelectNode(node, ".//*", 6, "11", "111", "112", "12", "121", "122");
+  TestSelectNode(node, ".//.", 7, "1", "11", "111", "112", "12", "121", "122");
+  TestSelectNode(node, "*", 2, "11", "12");
+  node->Unref();
   doc->Unref();
 }
 

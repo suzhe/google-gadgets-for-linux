@@ -207,6 +207,15 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual DOMExceptionCode SetPrefix(const char *prefix) = 0;
   virtual std::string GetLocalName() const = 0;
 
+  /**
+   * Microsoft extension. The implementation may only support a very limited
+   * subset of xpath grammar, just to make some gadget run without error.
+   */
+  virtual DOMNodeInterface *SelectSingleNode(const char *xpath) = 0;
+  virtual const DOMNodeInterface *SelectSingleNode(const char *xpath) const = 0;
+  virtual DOMNodeListInterface *SelectNodes(const char *xpath) = 0;
+  virtual const DOMNodeListInterface *SelectNodes(const char *xpath) const = 0;
+
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
   virtual std::string GetNamespaceURI() const = 0;
@@ -427,6 +436,10 @@ class DOMDocumentInterface : public DOMNodeInterface {
   virtual DOMExceptionCode ImportNode(const DOMNodeInterface *imported_node,
                                       bool deep,
                                       DOMNodeInterface **result) = 0;
+
+  /** Microsoft extension: property preserveWhitespace. */
+  virtual bool PreservesWhiteSpace() const = 0;
+  virtual void SetPreserveWhiteSpace(bool preserve_whitespace) = 0;
 
   /* TODO: DOM2
   virtual DOMExceptionCode CreateElementNS(const char *namespace_uri,

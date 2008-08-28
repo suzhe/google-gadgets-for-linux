@@ -21,6 +21,8 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/signals.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/system_utils.h>
+#include <ggadget/xml_http_request_interface.h>
 #include <ggadget/xml_parser_interface.h>
 #include <ggadget/xml_dom_interface.h>
 
@@ -93,7 +95,8 @@ class DOMException : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x6486921444b44784, ScriptableInterface);
 
-  DOMException(DOMExceptionCode code) : code_(code) {
+  // Use 'int' instead of DOMExceptionCode to allow arbitrary code.
+  DOMException(int code) : code_(code) {
     SetInheritsFrom(GlobalException::Get());
   }
 
@@ -109,10 +112,10 @@ class DOMException : public ScriptableHelperDefault {
     return StringPrintf("DOMException: %d(%s)", code_, exception_name);
   }
 
-  DOMExceptionCode GetCode() const { return code_; }
+  int GetCode() const { return code_; }
 
  private:
-  DOMExceptionCode code_;
+  int code_;
 };
 
 // Used in the methods for script to throw an script exception on errors.
@@ -382,14 +385,21 @@ class DOMNodeImpl {
     }
   }
 
+  std::string GetTextContentPreserveWhiteSpace() {
+    const char *content = node_->GetNodeValue();
+    return content ? content : GetChildrenTextContent();
+  }
+
   std::string GetChildrenTextContent() {
     std::string result;
     for (Children::iterator it = children_.begin();
          it != children_.end(); ++it) {
       DOMNodeInterface::NodeType type = (*it)->GetNodeType();
       if (type != DOMNodeInterface::COMMENT_NODE &&
-          type != DOMNodeInterface::PROCESSING_INSTRUCTION_NODE)
-        result += (*it)->GetTextContent();
+          type != DOMNodeInterface::PROCESSING_INSTRUCTION_NODE) {
+        // White spaces in child nodes are preserved.
+        result += (*it)->GetImpl()->GetTextContentPreserveWhiteSpace();
+      }
     }
     return result;
   }
@@ -426,7 +436,38 @@ class DOMNodeImpl {
   }
 
   DOMNodeListInterface *GetElementsByTagName(const char *name) {
-    return new ElementsByTagName(this, name);
+    return new ElementsByTagName(node_, name);
+  }
+
+  DOMNodeInterface *SelectSingleNode(const char *xpath) {
+    if (!xpath || !*xpath)
+      return NULL;
+    DOMNodeInterface *context_node = node_;
+    if (*xpath == '/') {
+      // If owner_document_ is NULL, the node itself is a document.
+      context_node = owner_document_ ? owner_document_ : node_;
+      if (!xpath[1])
+        return context_node;
+      // xpath + 1 is "xpath_tail" as defined in SelectNodesResult.
+      xpath++;
+    }
+    SelectNodesResult nodes(context_node, xpath, true);
+    return nodes.GetItem(0);
+  }
+
+  DOMNodeListInterface *SelectNodes(const char *xpath) {
+    if (!xpath)
+      return new EmptyNodeList();
+    DOMNodeInterface *context_node = node_;
+    if (*xpath == '/') {
+      // If owner_document_ is NULL, the node itself is a document.
+      context_node = owner_document_ ? owner_document_ : node_;
+      if (!xpath[1])
+        return new SingleNodeList(context_node);
+      // xpath + 1 is "xpath_tail" as defined in SelectNodesResult.
+      xpath++;
+    }
+    return new SelectNodesResult(context_node, xpath, false);
   }
 
  public:
@@ -585,69 +626,198 @@ class DOMNodeImpl {
     const Children &children_;
   };
 
-  // The DOMNodeList used as the return value of GetElementsByTagName().
-  class ElementsByTagName : public DOMNodeListBase {
+  class EmptyNodeList : public DOMNodeListBase {
    public:
-    DEFINE_CLASS_ID(0x08b36d84ae044941, DOMNodeListInterface);
+    DEFINE_CLASS_ID(0xd59e03c958194bd8, DOMNodeListInterface);
+    virtual DOMNodeInterface *GetItem(size_t index) { return NULL; }
+    virtual const DOMNodeInterface *GetItem(size_t index) const { return NULL; }
+    virtual size_t GetLength() const { return 0; }
+  };
 
-    ElementsByTagName(DOMNodeImpl *node, const char *name)
-        : node_(node),
-          name_(name ? name : ""),
-          wildcard_(name && name[0] == '*' && name[1] == '\0'),
-          valid_(false) {
-      node->node_->Ref();
-      on_invalidate_connection_ = node->on_element_tree_changed_.Connect(
-          NewSlot(this, &ElementsByTagName::Invalidate));
+  class SingleNodeList : public DOMNodeListBase {
+   public:
+    DEFINE_CLASS_ID(0x73bbfa5e3ed64537, DOMNodeListInterface);
+    SingleNodeList(DOMNodeInterface *node) : node_(node) { node->Ref(); }
+    virtual ~SingleNodeList() {  node_->Unref(); }
+    virtual DOMNodeInterface *GetItem(size_t index) {
+      return index == 0 ? node_ : NULL;
     }
-    virtual ~ElementsByTagName() {
+    virtual const DOMNodeInterface *GetItem(size_t index) const {
+      return index == 0 ? node_ : NULL;
+    }
+    virtual size_t GetLength() const { return 1; }
+   private:
+    DOMNodeInterface *node_;
+  };
+
+  class CachedDOMNodeListBase : public DOMNodeListBase {
+   public:
+    CachedDOMNodeListBase(DOMNodeInterface *node)
+        : node_(node),
+          valid_(false) {
+      node_->Ref();
+      on_invalidate_connection_ =
+          node->GetImpl()->on_element_tree_changed_.Connect(
+              NewSlot(this, &SelectNodesResult::Invalidate));
+    }
+    virtual ~CachedDOMNodeListBase() {
       on_invalidate_connection_->Disconnect();
-      node_->node_->Unref();
+      node_->Unref();
     }
 
     virtual DOMNodeInterface *GetItem(size_t index) {
       EnsureValid();
-      return index >= elements_.size() ? NULL : elements_[index];
+      return index >= nodes_.size() ? NULL : nodes_[index];
     }
     virtual const DOMNodeInterface *GetItem(size_t index) const {
       EnsureValid();
-      return index >= elements_.size() ? NULL : elements_[index];
+      return index >= nodes_.size() ? NULL : nodes_[index];
     }
 
     virtual size_t GetLength() const {
       EnsureValid();
-      return elements_.size();
+      return nodes_.size();
     }
 
-   private:
+   protected:
+    virtual void Refresh() const = 0;
+
     void EnsureValid() const {
       if (!valid_) {
-        Refresh(node_->node_);
+        Refresh();
         valid_ = true;
       }
     }
 
     void Invalidate() {
       valid_ = false;
-      elements_.clear();
+      nodes_.clear();
     }
 
-    void Refresh(DOMNodeInterface *node) const {
+    DOMNodeInterface *node_;
+    mutable bool valid_;
+    mutable std::vector<DOMNodeInterface *> nodes_;
+    Connection *on_invalidate_connection_;
+  };
+
+  // The DOMNodeList used as the return value of GetElementsByTagName().
+  class ElementsByTagName : public CachedDOMNodeListBase {
+   public:
+    DEFINE_CLASS_ID(0x08b36d84ae044941, DOMNodeListInterface);
+
+    ElementsByTagName(DOMNodeInterface *node, const char *name)
+        : CachedDOMNodeListBase(node),
+          name_(name ? name : ""),
+          wildcard_(name && name[0] == '*' && name[1] == '\0') {
+    }
+
+   protected:
+    virtual void Refresh() const {
+      DoRefresh(node_);
+    }
+
+    void DoRefresh(DOMNodeInterface *node) const {
       for (DOMNodeInterface *item = node->GetFirstChild(); item;
            item = item->GetNextSibling()) {
         if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
           if (wildcard_ || name_ == item->GetNodeName())
-            elements_.push_back(down_cast<DOMElementInterface *>(item));
-          Refresh(item);
+            nodes_.push_back(item);
+          DoRefresh(item);
         }
       }
     }
 
-    DOMNodeImpl *node_;
     std::string name_;
     bool wildcard_;
-    mutable bool valid_;
-    mutable std::vector<DOMElementInterface *> elements_;
-    Connection *on_invalidate_connection_;
+  };
+
+  // The DOMNodeList used as the return value of SelectNodes().
+  class SelectNodesResult : public CachedDOMNodeListBase {
+   public:
+    DEFINE_CLASS_ID(0xefd4339aee1340dc, DOMNodeListInterface);
+
+    // xpath_tail is the xpath part after the leading "/" or "./".
+    // For example, if the input xpath is "/title", the caller must pass the
+    // document as context_node, and "title" as xpath_tail.
+    // If the input xpath is ".//title", the caller must pass the current node
+    // as context_node, and "/title" as xpath_tail (so a leading '/' doesn't
+    // mean the document context, but means recursive descent selection.
+    SelectNodesResult(DOMNodeInterface *context_node, const char *xpath_tail,
+                      bool first_only)
+        : CachedDOMNodeListBase(context_node),
+          xpath_tail_(xpath_tail),
+          first_only_(first_only) {
+    }
+
+   protected:
+    virtual void Refresh() const {
+      DoRefresh(xpath_tail_.c_str(), node_);
+    }
+
+    bool DoRefresh(const char *xpath_tail, DOMNodeInterface *node) const {
+      if (!*xpath_tail)
+        return true;
+      const char *name = xpath_tail;
+      const char *name_end = strchr(name, '/');
+      int recursive_descent = 0;
+      if (name_end == name) {
+        // Leading '/' means descent selection because the other '/' has been
+        // removed from xpath_tail.
+        name++;
+        if (*name == '/')
+          return false; // Invalid xpath.
+        name_end = strchr(name, '/');
+        recursive_descent = 1;
+      }
+      size_t name_length = name_end ? name_end - name : strlen(name);
+      if (name_length == 0)
+        return true;
+
+      if (*name == '.') {
+        if (!name[1]) {
+          nodes_.push_back(node);
+          if (first_only_)
+            return false;
+          if (recursive_descent == 0)
+            return true;
+          recursive_descent = 2; // Descent only.
+        } else if (name[1] != '/' || !name_end) {
+          // Unsupported xpath grammar.
+          return true;
+        } else if (!DoRefresh(name_end + 1, node)) {
+          return false;
+        }
+      }
+
+      // FIXME: for an xpath like "...a//b...", and document <a><a><b></a></a>,
+      // the following algorithm will return two instances of element b.
+      bool is_wildcard = *name == '*' && name_length == 1;
+      for (DOMNodeInterface *item = node->GetFirstChild(); item;
+           item = item->GetNextSibling()) {
+        if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
+          bool name_matched = false;
+          if (recursive_descent != 2 &&
+              (is_wildcard ||
+               strncmp(item->GetNodeName().c_str(), name, name_length) == 0)) {
+            if (!name_end) {
+              // A matching element found.
+              nodes_.push_back(item);
+              if (first_only_)
+                return false;
+            }
+            name_matched = true;
+          }
+          if (recursive_descent && !DoRefresh(xpath_tail, item))
+            return false;
+          if (name_matched && name_end && !DoRefresh(name_end + 1, item))
+            return false;
+        }
+      }
+      return true;
+    }
+
+    std::string xpath_tail_;
+    bool first_only_;
   };
 
   void OnElementTreeChanged() {
@@ -711,17 +881,20 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     RegisterProperty("parentNode",
                      NewSlot(&DOMNodeBase::GetParentNodeNotConst), NULL);
     RegisterProperty("childNodes",
-                     NewSlot(&DOMNodeImpl::GetChildNodes, StaticGetImpl), NULL);
+                     NewSlot(&DOMNodeImpl::GetChildNodes,
+                             &DOMNodeBase::impl_), NULL);
     RegisterProperty("firstChild",
-                     NewSlot(&DOMNodeImpl::GetFirstChild, StaticGetImpl), NULL);
+                     NewSlot(&DOMNodeImpl::GetFirstChild,
+                             &DOMNodeBase::impl_), NULL);
     RegisterProperty("lastChild",
-                     NewSlot(&DOMNodeImpl::GetLastChild, StaticGetImpl), NULL);
+                     NewSlot(&DOMNodeImpl::GetLastChild,
+                             &DOMNodeBase::impl_), NULL);
     RegisterProperty("previousSibling",
-                     NewSlot(&DOMNodeImpl::GetPreviousSibling, StaticGetImpl),
-                     NULL);
+                     NewSlot(&DOMNodeImpl::GetPreviousSibling,
+                             &DOMNodeBase::impl_), NULL);
     RegisterProperty("nextSibling",
-                     NewSlot(&DOMNodeImpl::GetNextSibling, StaticGetImpl),
-                     NULL);
+                     NewSlot(&DOMNodeImpl::GetNextSibling,
+                             &DOMNodeBase::impl_), NULL);
     RegisterProperty("attributes", NewSlot(&DOMNodeBase::GetAttributesNotConst),
                      NULL);
     // Don't register ownerDocument as a constant to prevent circular refs.
@@ -732,18 +905,25 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     RegisterProperty("text", NewSlot(&DOMNodeBase::GetTextContent),
                      NewSlot(&DOMNodeBase::SetTextContent));
     RegisterMethod("insertBefore",
-                   NewSlot(&DOMNodeImpl::ScriptInsertBefore, StaticGetImpl));
+                   NewSlot(&DOMNodeImpl::ScriptInsertBefore,
+                           &DOMNodeBase::impl_));
     RegisterMethod("replaceChild",
-                   NewSlot(&DOMNodeImpl::ScriptReplaceChild, StaticGetImpl));
+                   NewSlot(&DOMNodeImpl::ScriptReplaceChild,
+                           &DOMNodeBase::impl_));
     RegisterMethod("removeChild",
-                   NewSlot(&DOMNodeImpl::ScriptRemoveChild, StaticGetImpl));
+                   NewSlot(&DOMNodeImpl::ScriptRemoveChild,
+                           &DOMNodeBase::impl_));
     RegisterMethod("appendChild",
-                   NewSlot(&DOMNodeImpl::ScriptAppendChild, StaticGetImpl));
+                   NewSlot(&DOMNodeImpl::ScriptAppendChild,
+                           &DOMNodeBase::impl_));
     RegisterMethod("hasChildNodes",
                    NewSlot(&DOMNodeBase::HasChildNodes));
-    // Register slot of this class to allow subclasses to override.
     RegisterMethod("cloneNode", NewSlot(&DOMNodeBase::CloneNode));
     RegisterMethod("normalize", NewSlot(&DOMNodeBase::Normalize));
+    RegisterMethod("selectSingleNode", NewSlot(&DOMNodeImpl::SelectSingleNode,
+                                               &DOMNodeBase::impl_));
+    RegisterMethod("selectNodes", NewSlot(&DOMNodeImpl::SelectNodes,
+                                          &DOMNodeBase::impl_));
   }
 
   virtual ~DOMNodeBase() {
@@ -751,8 +931,6 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     impl_ = NULL;
   }
 
-  // Used in DoClassRegister().
-  static DOMNodeImpl *StaticGetImpl(DOMNodeBase *node) { return node->impl_; }
   // Returns the address of impl_, to make it possible to access implementation
   // specific things through DOMNodeInterface pointers.
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
@@ -885,9 +1063,11 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return GetElementsByTagName(name);
   }
 
+  // Default impl. Comment and CDataSection should override.
   virtual std::string GetTextContent() const {
-    const char *content = GetNodeValue();
-    return content ? content : impl_->GetChildrenTextContent();
+    std::string result = impl_->GetTextContentPreserveWhiteSpace();
+    return impl_->owner_document_->PreservesWhiteSpace() ?
+           result : TrimString(result);
   }
 
   virtual void SetTextContent(const char *text_content) {
@@ -931,6 +1111,22 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
 
   virtual std::string GetLocalName() const {
     return impl_->local_name_;
+  }
+
+  virtual DOMNodeInterface *SelectSingleNode(const char *xpath) {
+    return impl_->SelectSingleNode(xpath);
+  }
+
+  virtual const DOMNodeInterface *SelectSingleNode(const char *xpath) const {
+    return impl_->SelectSingleNode(xpath);
+  }
+
+  virtual DOMNodeListInterface *SelectNodes(const char *xpath) {
+    return impl_->SelectNodes(xpath);
+  }
+
+  virtual const DOMNodeListInterface *SelectNodes(const char *xpath) const {
+    return impl_->SelectNodes(xpath);
   }
 
   bool CheckXMLName(const char *name) const {
@@ -1571,6 +1767,10 @@ class DOMComment : public DOMCharacterData<DOMCommentInterface> {
 
   virtual NodeType GetNodeType() const { return COMMENT_NODE; }
 
+  virtual std::string GetTextContent() const {
+    return GetImpl()->GetTextContentPreserveWhiteSpace();
+  }
+
   virtual void AppendXML(size_t indent, std::string *xml) {
     // Omit the indent parameter, let the parent deal with it.
     AppendIndentNewLine(indent, xml);
@@ -1611,6 +1811,10 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
   }
 
   virtual NodeType GetNodeType() const { return CDATA_SECTION_NODE; }
+
+  virtual std::string GetTextContent() const {
+    return GetImpl()->GetTextContentPreserveWhiteSpace();
+  }
 
   virtual DOMExceptionCode SplitText(size_t offset,
                                      DOMTextInterface **new_text) {
@@ -1777,9 +1981,28 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   DEFINE_CLASS_ID(0x23dffa4b4f234226, DOMDocumentInterface);
   typedef DOMNodeBase<DOMDocumentInterface> Super;
 
-  DOMDocument(XMLParserInterface *xml_parser)
+  DOMDocument(XMLParserInterface *xml_parser,
+              bool allow_load_http, bool allow_load_file)
       : Super(NULL, kDOMDocumentName),
-        xml_parser_(xml_parser) {
+        xml_parser_(xml_parser),
+        allow_load_http_(allow_load_http),
+        allow_load_file_(allow_load_file),
+        preserve_whitespace_(false),
+        async_(true),
+        http_request_(NULL),
+        ready_state_(XMLHttpRequestInterface::UNSENT),
+        onreadystatechange_connection_(NULL) {
+  }
+
+  virtual ~DOMDocument() {
+    if (http_request_) {
+      if (onreadystatechange_connection_) {
+        onreadystatechange_connection_->Disconnect();
+        onreadystatechange_connection_ = NULL;
+      }
+      http_request_->Unref();
+      http_request_ = NULL;
+    }
   }
 
   virtual void DoClassRegister() {
@@ -1808,13 +2031,22 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
                    NewSlot(&Super::GetElementsByTagNameNotConst));
     RegisterMethod("importNode", NewSlot(&DOMDocument::ScriptImportNode));
     // Compatibility with Microsoft DOM.
-    RegisterProperty("async", NULL, NewSlot(&DummySetter));
     RegisterProperty("parsed", NewFixedGetterSlot(true), NULL);
     RegisterProperty("parseError", NewSlot(&DOMDocument::GetParseError), NULL);
     RegisterProperty("resolveExternals", NULL, NewSlot(&DummySetter));
     RegisterProperty("validateOnParse", NULL, NewSlot(&DummySetter));
+    RegisterProperty("preserveWhiteSpace",
+                     NewSlot(&DOMDocument::PreservesWhiteSpace),
+                     NewSlot(&DOMDocument::SetPreserveWhiteSpace));
     RegisterMethod("getProperty", NewSlot(DummyGetProperty));
     RegisterMethod("setProperty", NewSlot(DummySetProperty));
+    // Compatibility with Microsoft DOM: XMLHttpRequest functions.
+    RegisterProperty("async", NewSlot(&DOMDocument::IsAsync),
+                     NewSlot(&DOMDocument::SetAsync));
+    RegisterProperty("readyState", NewSlot(&DOMDocument::GetReadyState), NULL);
+    RegisterMethod("load", NewSlot(&DOMDocument::Load));
+    RegisterClassSignal("onreadystatechange",
+                        &DOMDocument::onreadystatechange_signal_);
   }
 
   ParseError *GetParseError() {
@@ -1936,6 +2168,14 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     return *result ? DOM_NO_ERR : DOM_NOT_SUPPORTED_ERR;
   }
 
+  virtual bool PreservesWhiteSpace() const {
+    return preserve_whitespace_;
+  }
+
+  virtual void SetPreserveWhiteSpace(bool preserve_whitespace) {
+    preserve_whitespace_ = preserve_whitespace;
+  }
+
  protected:
   virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
     return NULL;
@@ -2015,7 +2255,130 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   static void DummySetProperty(const char *name, const Variant &value) { }
   static Variant DummyGetProperty(const char *name) { return Variant(); }
 
+ private: // Microsoft DOM XMLHttp functions.
+  bool IsAsync() const {
+    return async_;
+  }
+  void SetAsync(bool async) {
+    async_ = async;
+  }
+
+  XMLHttpRequestInterface::State GetReadyState() {
+    return http_request_ ? http_request_->GetReadyState() : ready_state_;
+  }
+
+  void Load(const char *source) {
+    if (!source) {
+      SetPendingException(new DOMException(DOM_NULL_POINTER_ERR));
+      return;
+    }
+
+    ready_state_ = XMLHttpRequestInterface::UNSENT;
+    parse_error_.SetCode(0);
+
+    if (IsAbsolutePath(source)) {
+      if (!allow_load_file_) {
+        LOG("DOMDocument has no permission to loading from file");
+        SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
+        return;
+      }
+      std::string xml;
+      ready_state_ = XMLHttpRequestInterface::OPENED;
+      onreadystatechange_signal_();
+      ready_state_ = XMLHttpRequestInterface::HEADERS_RECEIVED;
+      onreadystatechange_signal_();
+      if (ReadFileContents(source, &xml)) {
+        ready_state_ = XMLHttpRequestInterface::LOADING;
+        onreadystatechange_signal_();
+        LoadXML(xml.c_str());
+      } else {
+        parse_error_.SetCode(1);
+      }
+      ready_state_ = XMLHttpRequestInterface::DONE;
+      onreadystatechange_signal_();
+      return;
+    }
+
+    if (!allow_load_http_) {
+      LOG("DOMDocument has no permission to loading from network");
+      SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
+      return;
+    }
+    GetImpl()->RemoveAllChildren();
+    if (!http_request_) {
+      XMLHttpRequestFactoryInterface *factory = GetXMLHttpRequestFactory();
+      if (factory)
+        http_request_ = factory->CreateXMLHttpRequest(0, xml_parser_);
+      if (!http_request_) {
+        SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
+        return;
+      }
+      http_request_->Ref();
+      onreadystatechange_connection_ = http_request_->ConnectOnReadyStateChange(
+          NewSlot(this, &DOMDocument::OnReadyStateChange));
+    }
+    XMLHttpRequestInterface::ExceptionCode code =
+        http_request_->Open("GET", source, async_, NULL, NULL);
+    if (code != XMLHttpRequestInterface::NO_ERR) {
+      SetPendingException(new DOMException(1000 + code));
+      return;
+    }
+    code = http_request_->Send(NULL);
+    if (code != XMLHttpRequestInterface::NO_ERR) {
+      SetPendingException(new DOMException(2000 + code));
+      return;
+    }
+  }
+
+  void OnReadyStateChange() {
+    ASSERT(http_request_);
+    if (http_request_->GetReadyState() == XMLHttpRequestInterface::DONE) {
+      unsigned short status = 0;
+      XMLHttpRequestInterface::ExceptionCode code =
+          http_request_->GetStatus(&status);
+      if (code != XMLHttpRequestInterface::NO_ERR || status != 200) {
+        parse_error_.SetCode(1);
+      } else {
+        DOMDocumentInterface *response_xml = NULL;
+        code = http_request_->GetResponseXML(&response_xml);
+        if (code != XMLHttpRequestInterface::NO_ERR || !response_xml) {
+          parse_error_.SetCode(1);
+        } else {
+          parse_error_.SetCode(0);
+          for (DOMNodeInterface *child = response_xml->GetFirstChild();
+               child; child = child->GetNextSibling()) {
+            DOMNodeInterface *imported_child;
+            if (!CheckException(ImportNode(child, true, &imported_child))) {
+              LOG("Failed to import node %s(%s) from XMLHttpRequest result",
+                  child->GetNodeName().c_str(), child->GetNodeValue());
+              GetImpl()->RemoveAllChildren();
+              parse_error_.SetCode(1);
+              break;
+            }
+            imported_child->Ref();
+            if (!CheckException(AppendChild(imported_child))) {
+              GetImpl()->RemoveAllChildren();
+              parse_error_.SetCode(1);
+              imported_child->Unref();
+              break;
+            }
+            imported_child->Unref();
+          }
+        }
+      }
+    }
+    onreadystatechange_signal_();
+  }
+
+ private:
   XMLParserInterface *xml_parser_;
+  bool allow_load_http_, allow_load_file_;
+  bool preserve_whitespace_;
+  bool async_;
+  XMLHttpRequestInterface *http_request_;
+  XMLHttpRequestInterface::State ready_state_; // Only used when load from file.
+  Connection *onreadystatechange_connection_;
+  Signal0<void> onreadystatechange_signal_;
   static DOMImplementation dom_implementation_;
   ParseError parse_error_;
 };
@@ -2024,9 +2387,12 @@ DOMImplementation DOMDocument::dom_implementation_;
 
 } // namespace internal
 
-DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser) {
+DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser,
+                                        bool allow_load_http,
+                                        bool allow_load_file) {
   ASSERT(xml_parser);
-  return new ::ggadget::internal::DOMDocument(xml_parser);
+  return new ::ggadget::internal::DOMDocument(xml_parser,
+                                              allow_load_http, allow_load_file);
 }
 
 } // namespace ggadget

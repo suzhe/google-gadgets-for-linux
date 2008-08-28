@@ -31,7 +31,7 @@
 #include "file_manager_factory.h"
 #include "script_context_interface.h"
 #include "unicode_utils.h"
-#include "xml_dom_interface.h"
+#include "xml_dom.h"
 #include "xml_parser_interface.h"
 #include "xml_http_request_interface.h"
 #include "xml_utils.h"
@@ -266,28 +266,11 @@ class ScriptableView::Impl {
   // Create a customized DOMDocument object with optional "load()" method,
   // for microsoft compatibility.
   DOMDocumentInterface *CreateDOMDocument() {
-    DOMDocumentInterface *dom = GetXMLParser()->CreateDOMDocument();
-    // Register "load" method if has required permission.
-    if (view_->GetGadget()->GetPermissions()->IsRequiredAndGranted(
-        Permissions::FILE_READ) && dom) {
-      RegisterableInterface *registerable = dom->GetRegisterable();
-      if (registerable) {
-        registerable->RegisterMethod("load", NewSlot(LoadXMLFromFile, dom));
-      } else {
-        DLOG("Can't register load() method to DOMDocument object.");
-      }
-    }
-    return dom;
-  }
-
-  // To emulate Microsoft XMLDOM's load() method.
-  // Only supports loading xml from local file.
-  // TODO: Is it necessary to support remote URL?
-  static bool LoadXMLFromFile(const char *file, DOMDocumentInterface *dom) {
-    std::string xml;
-    if (IsAbsolutePath(file) && ReadFileContents(file, &xml) && xml.length())
-      return dom->LoadXML(xml.c_str());
-    return false;
+    const Permissions *permissions = view_->GetGadget()->GetPermissions();
+    return ::ggadget::CreateDOMDocument(
+        GetXMLParser(),
+        permissions->IsRequiredAndGranted(Permissions::NETWORK),
+        permissions->IsRequiredAndGranted(Permissions::FILE_READ));
   }
 
   ScriptableView *owner_;
