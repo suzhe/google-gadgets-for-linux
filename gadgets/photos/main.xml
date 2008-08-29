@@ -79,7 +79,7 @@
 
   <div name="messagerWrap"  height="30" width="289" x="4" y="4"
     background="#afafaf">
-    <label name="messager" width="100%" height="100%"
+    <label size="9" name="messager" width="100%" height="100%"
       align="center" vAlign="middle" color="#ffff00"></label>
   </div>
 

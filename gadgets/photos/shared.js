@@ -21,7 +21,8 @@ function plainObject(obj) {
   }
   if (typeof obj == "string" || obj instanceof String) {
     return "\"" + obj.replace(/\\/g, "\\\\").replace(/\n/g, "\\n")
-                  .replace(/\r/g, "\\r") + "\"";
+      .replace(/\r/g, "\\r").replace(/\"/g, "\\\"")
+      + "\"";
   }
   if (obj instanceof Function) {
     return "" + obj;

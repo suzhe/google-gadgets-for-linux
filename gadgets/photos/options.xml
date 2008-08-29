@@ -16,11 +16,11 @@
   -->
 
 <view height="350" width="500" onopen="optionOpen()" onok="optionOk()">
-  <label width="500" height="50" wordWrap="true">&OPTIONS_MESSAGE_ADD;</label>
+  <label width="500" height="50" wordWrap="true" size="9">&OPTIONS_MESSAGE_ADD;</label>
   <button name="add_folder_button" width="100" height="22" x="400" y="55"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
           enabled="true"
-          onclick="onBrowseLocal()" caption="&OPTIONS_ADD_FOLDER;"/>
+          onclick="onBrowseLocal()" caption="&OPTIONS_ADD_FOLDER;" size="8" />
   <div background="#000000" x="0" y="80" width="350" height="20">
     <edit name="urleditor" width="348" x="1" y="1" height="18" enabled="true"
           onchange="urladdor.enabled = urleditor.value ? true: false;"
@@ -28,7 +28,7 @@
   </div>
   <button enabled="false" name="urladdor" x="400" y="80" width="100" height="22"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
-          onclick="onAddUrl()" caption="&OPTIONS_ADD_URL;"/>
+          onclick="onAddUrl()" caption="&OPTIONS_ADD_URL;" size="8" />
   <div background="#000000" x="0" y="110" width="100%" height="140">
     <listbox name="urlitems" x="1" y="1" width="498" height="138"
              enabled="true" multiSelect="true"
@@ -40,13 +40,13 @@
 
   <button enabled="false" name="urlremover" height="22"  width="100" x="400" y="255"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
-          onclick="onRemoveUrl()" caption="&OPTIONS_REMOVE;" />
+          onclick="onRemoveUrl()" caption="&OPTIONS_REMOVE;" size="8" />
 
   <div name="feedurls_wrap" width="500" height="200" y="50" background="#000000" visible="false">
     <edit name="feedurls" x="1" y="1" width="498" height="198" multiline="true" />
   </div>
 
-  <label y="320" name="msgSlideIntervalBefore">&OPTIONS_MESSAGE_SLIDEINTERVAL_BEFORE;</label>
+  <label y="320" name="msgSlideIntervalBefore" size="8">&OPTIONS_MESSAGE_SLIDEINTERVAL_BEFORE;</label>
   <div name="slideIntervalWrap"  width="51" height="20" x="200" y="320" background="#000000">
     <edit name="slideInterval" width="38" height="18" x="1" y="1"
           onchange="onChangeInterval(0, 0)"/>
@@ -59,7 +59,7 @@
             onclick="onChangeInterval(-1, 1)" />
     </div>
   </div>
-  <label name="msgSlideIntervalAfter" x="310" y="320">&OPTIONS_MESSAGE_SLIDEINTERVAL_AFTER;</label>
+  <label name="msgSlideIntervalAfter" x="310" y="320" size="8">&OPTIONS_MESSAGE_SLIDEINTERVAL_AFTER;</label>
   <script src="shared.js" />
   <script src="options.js" />
 </view>
