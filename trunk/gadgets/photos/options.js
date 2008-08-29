@@ -24,7 +24,7 @@ function listItemWrap(str) {
 
 function itemWrap(str) {
   var estr = escapeEntity(str).replace(/\'/g, "&apos;");
-  return "<label tooltip='" + estr + "'>" + estr + "</label>";
+  return "<label size='8' tooltip='" + estr + "'>" + estr + "</label>";
 }
 
 function optionOpen() {
@@ -163,8 +163,12 @@ function onRemoveUrl() {
 }
 
 function onBrowseLocal() {
-  var fn = BrowseForFile("Image Files|*.jpg;*.jpeg;*.png;*.gif;*.tif;*.tiff;*.JPG;*.JPEG;*.PNG;*.GIF;*.TIF;*.TIFF|"
-                         + "All Files|*");
+  var fn = BrowseForFile(
+    OPTIONS_BROWSE_IMAGE_FILES +
+      "|*.jpg;*.jpeg;*.png;*.gif;*.tif;*.tiff;" +
+      "*.JPG;*.JPEG;*.PNG;*.GIF;*.TIF;*.TIFF|" +
+      OPTIONS_BROWSE_ALL_FILES +
+      "|*");
   if (fn) {
     var dn = system.filesystem.getParentFolderName(fn);
     urlitems.removeString(dn);
