@@ -816,7 +816,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode GetAllResponseHeaders(const char **result) {
     ASSERT(result);
-    if (state_ == LOADING || state_ == DONE) {
+    if (state_ == HEADERS_RECEIVED || state_ == LOADING || state_ == DONE) {
       *result = response_headers_.c_str();
       return NO_ERR;
     }
@@ -833,7 +833,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NULL_POINTER_ERR;
 
     *result = NULL;
-    if (state_ == LOADING || state_ == DONE) {
+    if (state_ == HEADERS_RECEIVED || state_ == LOADING || state_ == DONE) {
       CaseInsensitiveStringMap::iterator it = response_headers_map_.find(
           header);
       if (it != response_headers_map_.end())
