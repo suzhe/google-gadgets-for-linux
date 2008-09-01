@@ -290,6 +290,7 @@ void QtEditElement::SetValue(const char *value) {
     doc_.setPlainText(QString::fromUtf8(value));
   }
   QueueDraw();
+  FireOnChangeEvent();
 }
 
 bool QtEditElement::IsWordWrap() const {
@@ -686,6 +687,7 @@ void QtEditElement::CutClipboard() {
     return;
   CopyClipboard();
   cursor_->deleteChar();
+  FireOnChangeEvent();
 }
 
 int QtEditElement::RealHeight() {
