@@ -26,6 +26,13 @@ SET(SRCS
 )
 ADD_LIBRARY(ggadget-dbus SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-dbus ${DBUS_LIBRARIES})
+
 OUTPUT_LIBRARY(ggadget-dbus)
+INSTALL(FILES
+  dbus_proxy.h
+  dbus_result_receiver.h
+  DESTINATION "${INCLUDE_INSTALL_DIR}/dbus" COMPONENT Devel
+)
+INSTALL_PKG_CONFIG(libggadget-dbus)
 
 ENDIF(GGL_BUILD_LIBGGADGET_DBUS)

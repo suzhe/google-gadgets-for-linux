@@ -28,3 +28,5 @@ INSTALL(FILES
   jscript_massager.h
   js_utils.h
   DESTINATION "${INCLUDE_INSTALL_DIR}/js" COMPONENT Devel)
+
+INSTALL_PKG_CONFIG(libggadget-js)

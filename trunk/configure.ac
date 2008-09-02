@@ -286,12 +286,29 @@ fi
 ###########################################################
 ##                      Default dirs.                    ##
 ###########################################################
+GGL_PREFIX=$prefix
+GGL_EXEC_PREFIX=$exec_prefix
+GGL_LIBDIR=$libdir
+GGL_INCLUDEDIR=$includedir
+GGL_DATAROOTDIR=$datarootdir
+GGL_DATADIR=$datadir
+GGL_SYSCONFDIR=$sysconfdir
+
+AC_SUBST(GGL_PREFIX)
+AC_SUBST(GGL_EXEC_PREFIX)
+AC_SUBST(GGL_LIBDIR)
+AC_SUBST(GGL_INCLUDEDIR)
+AC_SUBST(GGL_DATAROOTDIR)
+AC_SUBST(GGL_DATADIR)
+AC_SUBST(GGL_SYSCONFDIR)
+
 GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
 GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
 GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
 GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
 GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
 
+AC_SUBST(GGL_PREFIX)
 AC_SUBST(GGL_MODULE_DIR)
 AC_SUBST(GGL_INCLUDE_DIR)
 AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
