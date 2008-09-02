@@ -29,8 +29,8 @@
 
 namespace ggadget {
 
-static const char kErrorItemExpected[] =
-  "Incorrect element type: Item/ListItem expected.";
+// Change kErrorItemExpected from constant to macro so it can be used with LOG
+#define kErrorItemExpected "Incorrect element type: Item/ListItem expected."
 
 // Default values obtained from the Windows version.
 static const Color kDefaultItemOverColor(0xDE/255.0, 0xFB/255.0, 1.0);
