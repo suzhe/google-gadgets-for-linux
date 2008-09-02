@@ -54,3 +54,14 @@ MACRO(INSTALL_GADGET _gadget_name)
   INSTALL(FILES "${CMAKE_BINARY_DIR}/output/bin/${_gadget_name}"
     DESTINATION "${CMAKE_INSTALL_PREFIX}/share/google-gadgets")
 ENDMACRO(INSTALL_GADGET _gadget_name)
+
+MACRO(INSTALL_PKG_CONFIG _name)
+  IF(NOT WIN32)
+    CONFIGURE_FILE("${_name}${GGL_EPOCH}.pc.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/${_name}${GGL_EPOCH}.pc"
+      @ONLY)
+
+    INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${_name}${GGL_EPOCH}.pc
+      DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+  ENDIF(NOT WIN32)
+ENDMACRO(INSTALL_PKG_CONFIG _name)

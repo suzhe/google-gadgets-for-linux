@@ -14,13 +14,6 @@
 # limitations under the License.
 #
 
-IF(NOT WIN32)
-  CONFIGURE_FILE("libggadget-1.0.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/libggadget-1.0.pc"
-  @ONLY)
-
-ENDIF(NOT WIN32)
-
-
 ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(qt)
@@ -225,3 +218,4 @@ INSTALL(FILES
   ${CMAKE_BINARY_DIR}/ggadget/sysdeps.h
   DESTINATION ${INCLUDE_INSTALL_DIR} COMPONENT Devel)
 
+INSTALL_PKG_CONFIG(libggadget)
