@@ -292,7 +292,10 @@ SlideShower.prototype = {
       if (p == this.processingFeeds.length) -- p;
       debug.trace("processing p=" + p + " of #=" + this.processingFeeds.length);
       var ret = this.processingFeeds[p].sourceProcessing(50);
-      if (!ret) this.processingFeeds.splice(p, 1);
+      if (!ret) {
+        var item = this.processingFeeds.splice(p, 1)[0];
+        delete item.sourceProcessing;
+      }
     }
     if (this.processingFeeds.length >= this.options.processingFeedsMax) {
       return 1;
@@ -335,6 +338,7 @@ SlideShower.prototype = {
         this.sourceItemNum += oldFeedList[cp].sourceList.length;
         if (oldFeedList[cp].sourceProcessing)
           this.processingFeeds.push(oldFeedList[cp]);
+        ++ cp;
         debug.trace("add old feed {" + url + "}");
       } else {
         var feed = new FeedItem(url);
@@ -447,10 +451,11 @@ SlideShower.prototype = {
   },
 
   onOptionsChanged: function(nOptions) {
-    if (nOptions.feedurls) {
+    if (event.propertyName == "feedurls" && nOptions.feedurls) {
       this.replaceFeeds(nOptions.feedurls);
     }
-    if (nOptions.slideInterval != this.options.slideInterval &&
+    if (event.propertyName == "slideInterval" &&
+        nOptions.slideInterval != this.options.slideInterval &&
         this.states.slideShowToken) {
       this.options.slideInterval = nOptions.slideInterval;
       this.slideStop();
