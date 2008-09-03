@@ -26,8 +26,8 @@ SET(SRCS
 )
 ADD_MODULE(gtk-edit-element ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-edit-element
-  ggadget
-  ggadget-gtk
+  ggadget${GGL_EPOCH}
+  ggadget-gtk${GGL_EPOCH}
   ${CAIRO_LIBRARIES}
   ${PANGO_LIBRARIES}
   ${GTK2_LIBRARIES}

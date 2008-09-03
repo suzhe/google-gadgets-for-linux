@@ -15,7 +15,7 @@
 #
 
 ADD_MODULE(designer-script-utils designer_script_utils.cc)
-TARGET_LINK_LIBRARIES(designer-script-utils ggadget)
+TARGET_LINK_LIBRARIES(designer-script-utils ggadget${GGL_EPOCH})
 
 ADD_DIR_TO_ZIP(gadget ../../output/bin/designer.gg)
 ADD_TARGET_TO_ZIP(designer-script-utils ../../output/bin/designer.gg)

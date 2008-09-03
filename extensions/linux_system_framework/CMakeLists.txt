@@ -37,8 +37,8 @@ ADD_LIBRARY(ggadget-linux ${SRCS})
 
 ADD_MODULE(linux-system-framework linux_system_framework.cc)
 TARGET_LINK_LIBRARIES(linux-system-framework
-  ggadget
-  ggadget-dbus
+  ggadget${GGL_EPOCH}
+  ggadget-dbus${GGL_EPOCH}
   ggadget-linux
   ${X11_LIBRARIES}
 )

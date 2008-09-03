@@ -34,9 +34,9 @@ QT4_AUTOMOC(js_function_slot.cc)
 ADD_LIBRARY(ggadget-qtscript ${SRCS})
 ADD_MODULE(qt-script-runtime qt_script_runtime.cc)
 TARGET_LINK_LIBRARIES(qt-script-runtime
-  ggadget
+  ggadget${GGL_EPOCH}
   ggadget-qtscript
-  ggadget-js
+  ggadget-js${GGL_EPOCH}
   ${QT_LIBRARIES}
   )
 OUTPUT_MODULE(qt-script-runtime)

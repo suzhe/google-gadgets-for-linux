@@ -31,8 +31,8 @@ ADD_EXECUTABLE(ggl-gtk ${SRCS})
 OUTPUT_EXECUTABLE(ggl-gtk)
 
 TARGET_LINK_LIBRARIES(ggl-gtk
-  ggadget
-  ggadget-gtk
+  ggadget${GGL_EPOCH}
+  ggadget-gtk${GGL_EPOCH}
   ${CAIRO_LIBRARIES}
   ${GTK2_LIBRARIES}
 )

@@ -24,10 +24,11 @@ SET(SRCS
   dbus_utils.cc
   dbus_proxy.cc
 )
-ADD_LIBRARY(ggadget-dbus SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-dbus ${DBUS_LIBRARIES})
 
-OUTPUT_LIBRARY(ggadget-dbus)
+ADD_LIBRARY(ggadget-dbus${GGL_EPOCH} SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-dbus${GGL_EPOCH} ${DBUS_LIBRARIES})
+OUTPUT_LIBRARY(ggadget-dbus${GGL_EPOCH})
+
 INSTALL(FILES
   dbus_proxy.h
   dbus_result_receiver.h

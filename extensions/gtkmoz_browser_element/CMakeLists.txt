@@ -48,7 +48,7 @@ APPLY_CONFIG(GTKMOZEMBED)
 SET(LIB_SRCS browser_element.cc)
 
 ADD_MODULE(gtkmoz-browser-element ${LIB_SRCS})
-TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget ${GTK_LIBRARIES})
+TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget${GGL_EPOCH} ${GTK_LIBRARIES})
 OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
@@ -68,8 +68,8 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${SMJS_LIBRARIES}
   ${GTK2_LIBRARIES}
   ${GTHREAD_LIBRARIES}
-  ggadget-js
-  ggadget
+  ggadget-js${GGL_EPOCH}
+  ggadget${GGL_EPOCH}
 )
 OUTPUT_EXECUTABLE(gtkmoz-browser-child)
 INSTALL(TARGETS gtkmoz-browser-child

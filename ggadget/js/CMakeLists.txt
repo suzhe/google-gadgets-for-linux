@@ -20,9 +20,9 @@ ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
   COMMAND flex -o jscript_massager.cc ${CMAKE_CURRENT_SOURCE_DIR}/jscript_massager.l
   MAIN_DEPENDENCY jscript_massager.l )
 
-ADD_LIBRARY(ggadget-js SHARED jscript_massager.cc js_utils.cc)
-TARGET_LINK_LIBRARIES(ggadget-js ggadget)
-OUTPUT_LIBRARY(ggadget-js)
+ADD_LIBRARY(ggadget-js${GGL_EPOCH} SHARED jscript_massager.cc js_utils.cc)
+TARGET_LINK_LIBRARIES(ggadget-js${GGL_EPOCH} ggadget${GGL_EPOCH})
+OUTPUT_LIBRARY(ggadget-js${GGL_EPOCH})
 
 INSTALL(FILES
   jscript_massager.h

@@ -25,7 +25,7 @@ SET(SRCS
 )
 ADD_MODULE(gst-video-element ${SRCS})
 TARGET_LINK_LIBRARIES(gst-video-element
-  ${GSTREAMER_VIDEO_LIBRARIES} ggadget)
+  ${GSTREAMER_VIDEO_LIBRARIES} ggadget${GGL_EPOCH})
 
 OUTPUT_MODULE(gst-video-element)
 

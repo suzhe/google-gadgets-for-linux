@@ -23,7 +23,7 @@ SET(SRCS
   scriptable_dbus_object.cc
 )
 ADD_MODULE(dbus-script-class ${SRCS})
-TARGET_LINK_LIBRARIES(dbus-script-class ggadget-dbus ${DBUS_LIBRARIES} ggadget)
+TARGET_LINK_LIBRARIES(dbus-script-class ggadget-dbus${GGL_EPOCH} ${DBUS_LIBRARIES} ggadget${GGL_EPOCH})
 OUTPUT_MODULE(dbus-script-class)
 
 ENDIF(GGL_BUILD_LIBGGADGET_DBUS)

@@ -18,12 +18,11 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
 
 SET(LIBS
   gtest
-  ggadget
   editline
-  ggadget-js
+  ggadget-js${GGL_EPOCH}
   ggadget-qtscript
-  ggadget-qt
-  ggadget
+  ggadget-qt${GGL_EPOCH}
+  ggadget${GGL_EPOCH}
   ${QT_LIBRARIES}
 )
 

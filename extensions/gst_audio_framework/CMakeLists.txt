@@ -18,7 +18,7 @@ IF(GGL_BUILD_GST_AUDIO_FRAMEWORK)
 
 APPLY_CONFIG(GSTREAMER)
 ADD_MODULE(gst-audio-framework gst_audio_framework.cc)
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GSTREAMER_LIBRARIES} ggadget)
+TARGET_LINK_LIBRARIES(gst-audio-framework ${GSTREAMER_LIBRARIES} ggadget${GGL_EPOCH})
 OUTPUT_MODULE(gst-audio-framework)
 
 ENDIF(GGL_BUILD_GST_AUDIO_FRAMEWORK)

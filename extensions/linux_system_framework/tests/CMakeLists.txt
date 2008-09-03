@@ -27,7 +27,7 @@ MACRO(UNIT_TEST TEST_NAME)
     ADD_TEST_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
   ENDIF(${ARGC} GREATER 1)
   TARGET_LINK_LIBRARIES(${TEST_NAME}
-    gtest ggadget ggadget-linux ggadget-dbus
+    gtest ggadget${GGL_EPOCH} ggadget-linux ggadget-dbus${GGL_EPOCH}
     ${X11_LIBRARIES})
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)

@@ -19,8 +19,8 @@ IF(GGL_BUILD_LIBGGADGET_GTK)
 APPLY_CONFIG(GTK2)
 ADD_MODULE(gtk-system-framework gtk_system_framework.cc)
 TARGET_LINK_LIBRARIES(gtk-system-framework
-  ggadget-gtk
-  ggadget-xdg
+  ggadget-gtk${GGL_EPOCH}
+  ggadget-xdg${GGL_EPOCH}
   ${GTK_LIBRARIES}
 )
 OUTPUT_MODULE(gtk-system-framework)

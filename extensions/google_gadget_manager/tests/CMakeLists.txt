@@ -18,7 +18,7 @@ ADD_TEST_EXECUTABLE(gadgets_metadata_test
   gadgets_metadata_test.cc
   ../gadgets_metadata.cc
 )
-TARGET_LINK_LIBRARIES(gadgets_metadata_test ggadget gtest)
+TARGET_LINK_LIBRARIES(gadgets_metadata_test ggadget${GGL_EPOCH} gtest)
 TEST_WRAPPER(gadgets_metadata_test TRUE)
 
 ADD_TEST_EXECUTABLE(google_gadget_manager_test
@@ -26,5 +26,5 @@ ADD_TEST_EXECUTABLE(google_gadget_manager_test
   ../gadgets_metadata.cc
   ../google_gadget_manager.cc
 )
-TARGET_LINK_LIBRARIES(google_gadget_manager_test ggadget gtest)
+TARGET_LINK_LIBRARIES(google_gadget_manager_test ggadget${GGL_EPOCH} gtest)
 TEST_WRAPPER(google_gadget_manager_test TRUE)

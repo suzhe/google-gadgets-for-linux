@@ -39,8 +39,8 @@ ADD_LIBRARY(ggadget-smjs ${SRCS})
 ADD_MODULE(smjs-script-runtime smjs_script_runtime.cc)
 TARGET_LINK_LIBRARIES(smjs-script-runtime
   ${SMJS_LIBRARIES}
-  ggadget
-  ggadget-js
+  ggadget${GGL_EPOCH}
+  ggadget-js${GGL_EPOCH}
   ggadget-smjs)
 OUTPUT_MODULE(smjs-script-runtime)
 

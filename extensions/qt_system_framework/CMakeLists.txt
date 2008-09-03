@@ -19,8 +19,8 @@ IF(GGL_BUILD_LIBGGADGET_QT)
 APPLY_CONFIG(QT)
 ADD_MODULE(qt-system-framework qt_system_framework.cc)
 TARGET_LINK_LIBRARIES(qt-system-framework
-  ggadget
-  ggadget-qt
+  ggadget${GGL_EPOCH}
+  ggadget-qt${GGL_EPOCH}
   ${QT_LIBRARIES}
 )
 OUTPUT_MODULE(qt-system-framework)

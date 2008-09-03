@@ -18,5 +18,5 @@ SET(SRCS
   default_framework.cc
 )
 ADD_MODULE(default-framework ${SRCS})
-TARGET_LINK_LIBRARIES(default-framework ggadget)
+TARGET_LINK_LIBRARIES(default-framework ggadget${GGL_EPOCH})
 OUTPUT_MODULE(default-framework)

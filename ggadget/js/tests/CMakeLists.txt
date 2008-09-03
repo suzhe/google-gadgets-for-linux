@@ -1,6 +1,6 @@
 SET(LIBS
   gtest
-  ggadget
+  ggadget${GGL_EPOCH}
   editline
 )
 
