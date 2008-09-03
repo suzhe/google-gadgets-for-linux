@@ -21,7 +21,7 @@ ADD_MODULE(curl-xml-http-request curl_xml_http_request.cc)
 TARGET_LINK_LIBRARIES(curl-xml-http-request
   ${LIBCURL_LIBRARIES}
   ${PTHREAD_LIBRARIES}
-  ggadget)
+  ggadget${GGL_EPOCH})
 OUTPUT_MODULE(curl-xml-http-request)
 
 ENDIF(GGL_BUILD_CURL_XML_HTTP_REQUEST)

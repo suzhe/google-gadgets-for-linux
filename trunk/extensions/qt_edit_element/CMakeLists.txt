@@ -19,8 +19,8 @@ IF(GGL_BUILD_LIBGGADGET_QT)
 APPLY_CONFIG(QT)
 ADD_MODULE(qt-edit-element qt_edit_element.cc)
 TARGET_LINK_LIBRARIES(qt-edit-element
-  ggadget
-  ggadget-qt
+  ggadget${GGL_EPOCH}
+  ggadget-qt${GGL_EPOCH}
   ${QT_LIBRARIES}
 )
 OUTPUT_MODULE(qt-edit-element)

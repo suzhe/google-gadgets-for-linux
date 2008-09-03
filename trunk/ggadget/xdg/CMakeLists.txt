@@ -22,23 +22,13 @@ SET(SRCS
 ADD_SUBDIRECTORY(tests)
 
 ADD_DEFINITIONS(-DXDG_PREFIX=_ggl_xdg)
-ADD_LIBRARY(ggadget-xdg SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-xdg
-  ggadget
+ADD_LIBRARY(ggadget-xdg${GGL_EPOCH} SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-xdg${GGL_EPOCH}
+  ggadget${GGL_EPOCH}
   xdgmime
   )
 
-OUTPUT_LIBRARY(ggadget-xdg)
-
-SET_TARGET_PROPERTIES(ggadget-xdg PROPERTIES
-                              VERSION ${GGL_LIB_VERSION}
-                              SOVERSION ${GGL_MAJOR_VERSION})
-
-INSTALL( TARGETS ggadget-xdg
-    RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-)
+OUTPUT_LIBRARY(ggadget-xdg${GGL_EPOCH})
 
 INSTALL(FILES
   desktop_entry.h

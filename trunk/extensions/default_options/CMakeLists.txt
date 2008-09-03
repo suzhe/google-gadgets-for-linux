@@ -18,5 +18,5 @@ ADD_SUBDIRECTORY(tests)
 
 SET(SRCS default_options.cc)
 ADD_MODULE(default-options ${SRCS})
-TARGET_LINK_LIBRARIES(default-options ggadget)
+TARGET_LINK_LIBRARIES(default-options ggadget${GGL_EPOCH})
 OUTPUT_MODULE(default-options)

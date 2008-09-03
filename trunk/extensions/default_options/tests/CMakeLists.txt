@@ -15,5 +15,5 @@
 #
 
 ADD_EXECUTABLE(default_options_test EXCLUDE_FROM_ALL default_options_test.cc)
-TARGET_LINK_LIBRARIES(default_options_test ggadget gtest)
+TARGET_LINK_LIBRARIES(default_options_test ggadget${GGL_EPOCH} gtest)
 TEST_WRAPPER(default_options_test TRUE)

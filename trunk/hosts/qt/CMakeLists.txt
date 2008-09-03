@@ -33,8 +33,8 @@ ADD_EXECUTABLE(ggl-qt ${SRCS})
 OUTPUT_EXECUTABLE(ggl-qt)
 
 TARGET_LINK_LIBRARIES(ggl-qt
-  ggadget
-  ggadget-qt
+  ggadget${GGL_EPOCH}
+  ggadget-qt${GGL_EPOCH}
   ${QT_LIBRARIES}
 )
 

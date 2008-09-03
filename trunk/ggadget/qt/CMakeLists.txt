@@ -41,13 +41,13 @@ QT4_AUTOMOC(
 
 ADD_SUBDIRECTORY(tests)
 
-ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-qt
-  ggadget-xdg
+ADD_LIBRARY(ggadget-qt${GGL_EPOCH} SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-qt${GGL_EPOCH}
+  ggadget-xdg${GGL_EPOCH}
   ${QT_LIBRARIES}
   )
 
-OUTPUT_LIBRARY(ggadget-qt)
+OUTPUT_LIBRARY(ggadget-qt${GGL_EPOCH})
 
 INSTALL(FILES
   qt_view_widget.h

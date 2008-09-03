@@ -21,11 +21,11 @@ ADD_MODULE(google-gadget-manager
   google_gadget_manager.cc
   google_gadget_manager_init.cc
 )
-TARGET_LINK_LIBRARIES(google-gadget-manager ggadget)
+TARGET_LINK_LIBRARIES(google-gadget-manager ggadget${GGL_EPOCH})
 OUTPUT_MODULE(google-gadget-manager)
 
 ADD_MODULE(gadget-browser-script-utils gadget_browser_script_utils.cc)
-TARGET_LINK_LIBRARIES(gadget-browser-script-utils ggadget)
+TARGET_LINK_LIBRARIES(gadget-browser-script-utils ggadget${GGL_EPOCH})
 
 ADD_DIR_TO_ZIP(gadget_browser
   ../../output/bin/google-gadget-browser.gg)

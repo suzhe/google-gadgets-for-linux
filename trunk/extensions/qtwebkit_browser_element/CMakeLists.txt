@@ -23,7 +23,7 @@ SET(LIB_SRCS browser_element.cc)
 
 QT4_AUTOMOC(browser_element.cc)
 ADD_MODULE(qtwebkit-browser-element ${LIB_SRCS})
-TARGET_LINK_LIBRARIES(qtwebkit-browser-element ggadget ${QT_LIBRARIES})
+TARGET_LINK_LIBRARIES(qtwebkit-browser-element ggadget${GGL_EPOCH} ${QT_LIBRARIES})
 OUTPUT_MODULE(qtwebkit-browser-element)
 
 ENDIF(GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT)
