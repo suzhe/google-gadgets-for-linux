@@ -61,6 +61,8 @@ class ViewElement::Impl {
 
   void OnChildViewOpen() {
     UpdateScaleAndSize();
+    // Inform parent view to adjust its size.
+    // The parent view might be decorated view or sidebar.
     child_view_->GetViewHost()->QueueResize();
   }
 
@@ -250,6 +252,9 @@ void ViewElement::SetScale(double scale) {
     impl_->child_view_->GetGraphics()->SetZoom(new_zoom);
     impl_->child_view_->MarkRedraw();
     impl_->UpdateScaleAndSize();
+    // Inform parent view to adjust its size.
+    // The parent view might be decorated view or sidebar.
+    impl_->child_view_->GetViewHost()->QueueResize();
     QueueDraw();
   }
 }

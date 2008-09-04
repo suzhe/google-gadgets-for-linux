@@ -196,14 +196,20 @@ std::string GetDesktopEntryIcon(const char *file, int size) {
   ggadget::xdg::DesktopEntry entry(file);
   if (entry.IsValid()) {
     std::string icon = entry.GetIcon();
+
+    // Just return if the icon is an absolute path to the icon file.
+    if (IsAbsolutePath(icon.c_str()))
+      return icon;
+
     std::vector<std::string> icon_names;
+    icon_names.push_back(icon);
 
     // Remove suffix, icon theme don't like it.
+    // The suffix must be at least 3 characters long.
     size_t dot_pos = icon.find_last_of('.');
-    if (dot_pos != std::string::npos && dot_pos > 0)
+    if (dot_pos != std::string::npos && dot_pos > 0 &&
+        icon.length() - dot_pos > 3)
       icon_names.push_back(icon.substr(0, dot_pos));
-    else
-      icon_names.push_back(icon);
 
     // Try lookup the icon in icon theme.
     std::string icon_file = LookupIconInIconTheme(icon_names, size);

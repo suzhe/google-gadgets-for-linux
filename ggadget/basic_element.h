@@ -92,6 +92,9 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   const BasicElement *GetParentElement() const;
 
+  /** Sets the parent element. */
+  void SetParentElement(BasicElement *parent);
+
   /**
    * Enables or disables canvas cache of this element. It can make rendering
    * faster for complex elements but need more memory.
@@ -713,7 +716,7 @@ public: // Other overridable public methods.
    * all children.
    * @param canvas the canvas to draw the element on.
    */
-  virtual void DoDraw(CanvasInterface *canvas) = 0;
+  virtual void DoDraw(CanvasInterface *canvas);
 
   /**
    * To be overriden by a subclass if it need to handle mouse events.

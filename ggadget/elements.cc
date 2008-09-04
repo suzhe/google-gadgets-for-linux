@@ -67,26 +67,34 @@ class Elements::Impl {
   }
 
   bool InsertElement(BasicElement *element, const BasicElement *before) {
-    // firstly erase the element from children, then insert to proper position
-    Children::iterator first = std::find(children_.begin(), children_.end(),
+    BasicElement *parent = element->GetParentElement();
+    // Detach the element from its original parent.
+    Elements *elements = parent ? parent->GetChildren() : view_->GetChildren();
+    Children::iterator first = std::find(elements->impl_->children_.begin(),
+                                         elements->impl_->children_.end(),
                                          element);
+    if (first != elements->impl_->children_.end()) {
+      elements->impl_->children_.erase(first);
+      elements->impl_->element_removed_ = true;
+      view_->OnElementRemove(element);
+    }
+
+    // Reparent and insert the element.
+    element->SetParentElement(owner_);
     Children::iterator second = std::find(children_.begin(), children_.end(),
                                           before);
-    if (first != children_.end()) {
-      children_.erase(first);
-      second = std::find(children_.begin(), children_.end(), before);
-    }
     if (view_->OnElementAdd(element)) {
       element->QueueDraw();
       if (!before || second == children_.end()) {
         children_.push_back(element);
-        return true;
+      } else {
+        children_.insert(second, element);
       }
-      children_.insert(second, element);
+      return true;
     } else {
-      return false;
+      delete element;
     }
-    return true;
+    return false;
   }
 
   BasicElement *InsertElement(const char *tag_name,
@@ -445,6 +453,10 @@ BasicElement *Elements::InsertElement(const char *tag_name,
   return impl_->InsertElement(tag_name, before, name);
 }
 
+bool Elements::AppendElement(BasicElement *element) {
+  return InsertElement(element, NULL);
+}
+
 bool Elements::InsertElement(BasicElement *element,
                              const BasicElement *before) {
   return impl_->InsertElement(element, before);
@@ -484,6 +496,26 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
   }
   xmldoc->Unref();
   return result;
+}
+
+Variant Elements::AppendElementVariant(const Variant &element) {
+  return InsertElementVariant(element, NULL);
+}
+
+Variant Elements::InsertElementVariant(const Variant &element,
+                                       const BasicElement *before) {
+  if (element.type() == Variant::TYPE_STRING) {
+    BasicElement *result = InsertElementFromXML(
+        VariantValue<std::string>()(element), before);
+    return Variant(result);
+  } else if (element.type() == Variant::TYPE_SCRIPTABLE) {
+    BasicElement *elm = VariantValue<BasicElement *>()(element);
+    bool result = false;
+    if (elm)
+      result = InsertElement(elm, before);
+    return Variant(result);
+  }
+  return Variant();
 }
 
 bool Elements::RemoveElement(BasicElement *element) {

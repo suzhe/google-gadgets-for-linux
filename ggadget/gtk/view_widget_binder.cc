@@ -58,7 +58,7 @@ class ViewWidgetBinder::Impl {
       no_background_(no_background),
       enable_input_shape_mask_(true),
       focused_(false),
-      pointer_grabed_(false),
+      //pointer_grabed_(false),
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
@@ -215,10 +215,12 @@ class ViewWidgetBinder::Impl {
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
     impl->host_->SetTooltip(NULL);
+#if 0
     if (impl->pointer_grabed_) {
       gdk_pointer_ungrab(event->time);
       impl->pointer_grabed_ = false;
     }
+#endif
 
     int mod = ConvertGdkModifierToModifier(event->state);
     int button = event->button == 1 ? MouseEvent::BUTTON_LEFT :
@@ -377,7 +379,7 @@ class ViewWidgetBinder::Impl {
     MouseEvent e(Event::EVENT_MOUSE_MOVE,
                  event->x / impl->zoom_, event->y / impl->zoom_,
                  0, 0, button, mod);
-
+#if 0
     if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed() &&
         !impl->pointer_grabed_) {
       // Grab the cursor to prevent losing events.
@@ -389,6 +391,7 @@ class ViewWidgetBinder::Impl {
         impl->pointer_grabed_ = true;
       }
     }
+#endif
 
     EventResult result = impl->view_->OnMouseEvent(e);
 
@@ -420,11 +423,13 @@ class ViewWidgetBinder::Impl {
         resize_drag = true;
       }
 
+#if 0
       // ungrab the pointer before starting move/resize drag.
       if (impl->pointer_grabed_) {
         gdk_pointer_ungrab(gtk_get_current_event_time());
         impl->pointer_grabed_ = false;
       }
+#endif
 
       if (resize_drag) {
         impl->host_->BeginResizeDrag(button, hittest);
@@ -521,11 +526,13 @@ class ViewWidgetBinder::Impl {
     if (impl->focused_) {
       impl->focused_ = false;
       SimpleEvent e(Event::EVENT_FOCUS_OUT);
+#if 0
       // Ungrab the pointer if the focus is lost.
       if (impl->pointer_grabed_) {
         gdk_pointer_ungrab(gtk_get_current_event_time());
         impl->pointer_grabed_ = false;
       }
+#endif
       return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
     }
     return FALSE;
@@ -550,12 +557,14 @@ class ViewWidgetBinder::Impl {
                        Event::EVENT_DRAG_DROP, user_data);
   }
 
+#if 0
   static gboolean GrabBrokenHandler(GtkWidget *widget, GdkEvent *event,
                                     gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->pointer_grabed_ = false;
     return FALSE;
   }
+#endif
 
   static void DragDataReceivedHandler(GtkWidget *widget,
                                       GdkDragContext *context,
@@ -718,7 +727,7 @@ class ViewWidgetBinder::Impl {
   bool no_background_;
   bool enable_input_shape_mask_;
   bool focused_;
-  bool pointer_grabed_;
+  //bool pointer_grabed_;
   double zoom_;
   double mouse_down_x_;
   double mouse_down_y_;
@@ -754,7 +763,7 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
   { "motion-notify-event", G_CALLBACK(MotionNotifyHandler) },
   { "screen-changed", G_CALLBACK(ScreenChangedHandler) },
   { "scroll-event", G_CALLBACK(ScrollHandler) },
-  { "grab-broken-event", G_CALLBACK(GrabBrokenHandler) },
+  //{ "grab-broken-event", G_CALLBACK(GrabBrokenHandler) },
 };
 
 const size_t ViewWidgetBinder::Impl::kEventHandlersNum =

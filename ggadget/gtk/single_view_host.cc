@@ -560,6 +560,8 @@ class SingleViewHost::Impl {
     if (event)
       gdk_event_free(event);
 
+#if 0
+    // Grabbing mouse explicitly is not necessary.
 #ifdef _DEBUG
     GdkGrabStatus grab_status =
 #endif
@@ -571,13 +573,14 @@ class SingleViewHost::Impl {
 #ifdef _DEBUG
     DLOG("BeginResizeDrag: grab status: %d", grab_status);
 #endif
+#endif
   }
 
   void StopResizeDrag() {
     if (resize_width_mode_ || resize_height_mode_) {
       resize_width_mode_ = 0;
       resize_height_mode_ = 0;
-      gdk_pointer_ungrab(gtk_get_current_event_time());
+      //gdk_pointer_ungrab(gtk_get_current_event_time());
       QueueResize();
       on_end_resize_drag_signal_();
     }

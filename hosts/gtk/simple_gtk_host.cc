@@ -22,6 +22,10 @@
 
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
+#include <ggadget/floating_main_view_decorator.h>
+#include <ggadget/docked_main_view_decorator.h>
+#include <ggadget/popout_main_view_decorator.h>
+#include <ggadget/details_view_decorator.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
@@ -372,8 +376,9 @@ class SimpleGtkHost::Impl {
 
     DecoratedViewHost *dvh;
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
-      dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
-                                  transparent_);
+      FloatingMainViewDecorator *view_decorator =
+          new FloatingMainViewDecorator(svh, transparent_);
+      dvh = new DecoratedViewHost(view_decorator);
       ASSERT(!info->main);
       info->main = svh;
       info->main_decorator = dvh;
@@ -384,9 +389,15 @@ class SimpleGtkHost::Impl {
           NewSlot(this, &Impl::OnMainViewResizedHandler, gadget_id));
       svh->ConnectOnMoved(
           NewSlot(this, &Impl::OnMainViewMovedHandler, gadget_id));
+      view_decorator->ConnectOnClose(
+          NewSlot(this, &Impl::OnCloseHandler, dvh));
+      view_decorator->ConnectOnPopOut(
+          NewSlot(this, &Impl::OnPopOutHandler, dvh));
+      view_decorator->ConnectOnPopIn(
+          NewSlot(this, &Impl::OnPopInHandler, dvh));
     } else {
-      dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
-                                  transparent_);
+      DetailsViewDecorator *view_decorator = new DetailsViewDecorator(svh);
+      dvh = new DecoratedViewHost(view_decorator);
       ASSERT(info->main);
       ASSERT(!info->details);
       info->details = svh;
@@ -399,11 +410,8 @@ class SimpleGtkHost::Impl {
           NewSlot(this, &Impl::OnDetailsViewResizedHandler, gadget_id));
       svh->ConnectOnBeginMoveDrag(
           NewSlot(this, &Impl::OnDetailsViewBeginMoveHandler));
+      view_decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
     }
-
-    dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
-    dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
-    dvh->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, dvh));
 
     return dvh;
   }
@@ -540,21 +548,21 @@ class SimpleGtkHost::Impl {
     ASSERT(gadget);
     if (!gadget) return;
 
-    switch (decorated->GetDecoratorType()) {
-      case DecoratedViewHost::MAIN_STANDALONE:
-      case DecoratedViewHost::MAIN_DOCKED:
-        gadget->RemoveMe(true);
-        break;
-      case DecoratedViewHost::MAIN_EXPANDED:
-        if (expanded_original_ &&
-            expanded_popout_ == decorated)
+    GadgetInfo *info = &gadgets_[gadget->GetInstanceID()];
+
+    switch (decorated->GetType()) {
+      case ViewHostInterface::VIEW_HOST_MAIN:
+        if (decorated == info->main_decorator) {
+          gadget->RemoveMe(true);
+        } else if (expanded_original_ && expanded_popout_ == decorated) {
           OnPopInHandler(expanded_original_);
+        }
         break;
-      case DecoratedViewHost::DETAILS:
+      case ViewHostInterface::VIEW_HOST_DETAILS:
         gadget->CloseDetailsView();
         break;
       default:
-        ASSERT("Invalid decorator type.");
+        ASSERT_M(false, ("Invalid decorator type."));
     }
   }
 
@@ -570,11 +578,11 @@ class SimpleGtkHost::Impl {
       SingleViewHost *svh =
           new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
                              false, false, false, view_debug_mode_);
-      expanded_popout_ =
-          new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED,
-                                transparent_);
-      expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
-                                               expanded_popout_));
+      PopOutMainViewDecorator *view_decorator =
+          new PopOutMainViewDecorator(svh);
+      expanded_popout_ = new DecoratedViewHost(view_decorator);
+      view_decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
+                                             expanded_popout_));
 
       int gadget_id = child->GetGadget()->GetInstanceID();
 
@@ -594,7 +602,7 @@ class SimpleGtkHost::Impl {
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);
-      expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+      expanded_original_->GetViewDecorator()->OnOtherEvent(event);
 
       child->SwitchViewHost(expanded_popout_);
       expanded_popout_->ShowView(false, 0, NULL);
@@ -609,7 +617,7 @@ class SimpleGtkHost::Impl {
         expanded_popout_->CloseView();
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
-        expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+        expanded_original_->GetViewDecorator()->OnOtherEvent(event);
         // The old host must be destroyed after sending onpopin event.
         old_host->Destroy();
         expanded_original_ = NULL;
@@ -680,7 +688,13 @@ class SimpleGtkHost::Impl {
       }
     }
 
-    info->main_decorator->SetDockEdge(main_dock_right);
+    MainViewDecoratorBase *view_decorator = down_cast<MainViewDecoratorBase *>(
+        info->main_decorator->GetViewDecorator());
+    if (view_decorator) {
+      view_decorator->SetPopOutDirection(
+          main_dock_right ? MainViewDecoratorBase::POPOUT_TO_LEFT :
+          MainViewDecoratorBase::POPOUT_TO_RIGHT);
+    }
   }
 
   void OnMainViewShowHideHandler(bool show, int gadget_id) {
