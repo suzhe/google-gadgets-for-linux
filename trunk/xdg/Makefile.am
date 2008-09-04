@@ -73,18 +73,20 @@ install-icons:
 	  mkdir -p $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps; \
 	  mkdir -p $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes; \
 	  $(INSTALL_DATA) $(srcdir)/$${icon}.png $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png; \
+	  rm -f $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes/application-x-google-gadgets.png; \
 	  $(LN_S) $(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png \
 	          $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes/application-x-google-gadgets.png; \
 	done; \
 	mkdir -p $(DESTDIR)$(datadir)/pixmaps; \
+	rm -f $(DESTDIR)$(datadir)/pixmaps/google-gadgets.png; \
 	$(LN_S) $(datadir)/icons/hicolor/128x128/apps/google-gadgets.png $(DESTDIR)$(datadir)/pixmaps/
 
 uninstall-icons:
 	@for icon in $(ICON_SIZES); do \
 	  rm -f $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/mimetypes/application-x-google-gadgets.png; \
 	  rm -f $(DESTDIR)$(datadir)/icons/hicolor/$${icon}/apps/google-gadgets.png; \
-	  rm -f $(DESTDIR)$(datadir)/pixmaps/google-gadgets.png; \
-	done
+	done; \
+	rm -f $(DESTDIR)$(datadir)/pixmaps/google-gadgets.png
 
 install-data-local: install-icons update-icon-cache
 

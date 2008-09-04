@@ -113,8 +113,9 @@ class View::Impl {
         ret = false;
       }
 
-      if (fire && (duration_ == 0 ||
-                   current_time - last_finished_time_ > kMinInterval)) {
+      // If ret is false then fire, to make sure that the last event will
+      // always be fired.
+      if (fire && (!ret || current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
           // Because timer events are still fired during modal dialog opened
           // in key/mouse event handlers, switch off the user interaction
@@ -255,9 +256,9 @@ class View::Impl {
 
     obj->RegisterVariantConstant("children", Variant(&children_));
     obj->RegisterMethod("appendElement",
-                        NewSlot(&children_, &Elements::AppendElementFromXML));
+                        NewSlot(&children_, &Elements::AppendElementVariant));
     obj->RegisterMethod("insertElement",
-                        NewSlot(&children_, &Elements::InsertElementFromXML));
+                        NewSlot(&children_, &Elements::InsertElementVariant));
     obj->RegisterMethod("removeElement",
                         NewSlot(&children_, &Elements::RemoveElement));
     obj->RegisterMethod("removeAllElements",
@@ -1406,11 +1407,11 @@ ScriptableInterface *View::GetScriptable() const {
 }
 
 void View::SetWidth(double width) {
-  impl_->SetSize(width, impl_->height_);
+  SetSize(width, GetHeight());
 }
 
 void View::SetHeight(double height) {
-  impl_->SetSize(impl_->width_, height);
+  SetSize(GetWidth(), height);
 }
 
 void View::SetSize(double width, double height) {

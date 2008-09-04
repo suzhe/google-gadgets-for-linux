@@ -28,6 +28,10 @@
 #include <QtGui/QFontDatabase>
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
+#include <ggadget/floating_main_view_decorator.h>
+#include <ggadget/docked_main_view_decorator.h>
+#include <ggadget/popout_main_view_decorator.h>
+#include <ggadget/details_view_decorator.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/gadget.h>
 #include <ggadget/options_interface.h>
@@ -366,16 +370,24 @@ class QtHost::Impl {
 
     DecoratedViewHost *dvh;
 
-    if (type == ViewHostInterface::VIEW_HOST_MAIN)
-      dvh = new DecoratedViewHost(qvh, DecoratedViewHost::MAIN_STANDALONE,
-                                  composite_);
-    else
-      dvh = new DecoratedViewHost(qvh, DecoratedViewHost::DETAILS,
-                                  composite_);
-
-    dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
-    dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
-    // dvh->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, dvh));
+    if (type == ViewHostInterface::VIEW_HOST_MAIN) {
+      FloatingMainViewDecorator *view_decorator =
+          new FloatingMainViewDecorator(qvh, composite_);
+      dvh = new DecoratedViewHost(view_decorator);
+      view_decorator->ConnectOnClose(
+          NewSlot(this, &Impl::OnCloseMainViewHandler, dvh));
+      //view_decorator->ConnectOnPopOut(
+      //    NewSlot(this, &Impl::OnPopOutHandler, dvh));
+      //view_decorator->ConnectOnPopIn(
+      //    NewSlot(this, &Impl::OnPopInHandler, dvh));
+      view_decorator->SetButtonVisible(MainViewDecoratorBase::POP_IN_OUT_BUTTON,
+                                       false);
+    } else {
+      DetailsViewDecorator *view_decorator = new DetailsViewDecorator(qvh);
+      dvh = new DecoratedViewHost(view_decorator);
+      view_decorator->ConnectOnClose(
+          NewSlot(this, &Impl::OnCloseDetailsViewHandler, dvh));
+    }
 
     return dvh;
   }
@@ -407,35 +419,31 @@ class QtHost::Impl {
     }
   }
 
-  void OnCloseHandler(DecoratedViewHost *decorated) {
+  void OnCloseMainViewHandler(DecoratedViewHost *decorated) {
     // Closing a main view which has popout view causes the popout view close
     // first
-    if (expanded_original_ == decorated && expanded_popout_) {
+    if (expanded_original_ == decorated && expanded_popout_)
       OnPopInHandler(decorated);
-    }
 
     ViewInterface *child = decorated->GetView();
     Gadget *gadget = child ? child->GetGadget() : NULL;
 
-    if (!gadget) return;
-
-    switch (decorated->GetDecoratorType()) {
-      case DecoratedViewHost::MAIN_STANDALONE:
-      case DecoratedViewHost::MAIN_DOCKED:
-        gadget->CloseMainView();  // TODO: Save window state. A little hacky!
-        gadget->RemoveMe(true);
-        break;
-      case DecoratedViewHost::MAIN_EXPANDED:
-        if (expanded_original_ &&
-            expanded_popout_ == decorated)
-          OnPopInHandler(expanded_original_);
-        break;
-      case DecoratedViewHost::DETAILS:
-        gadget->CloseDetailsView();
-        break;
-      default:
-        ASSERT("Invalid decorator type.");
+    if (gadget) {
+      gadget->CloseMainView();  // TODO: Save window state. A little hacky!
+      gadget->RemoveMe(true);
     }
+  }
+
+  void OnClosePopOutViewHandler(DecoratedViewHost *decorated) {
+    if (expanded_original_ && expanded_popout_ == decorated)
+      OnPopInHandler(expanded_original_);
+  }
+
+  void OnCloseDetailsViewHandler(DecoratedViewHost *decorated) {
+    ViewInterface *child = decorated->GetView();
+    Gadget *gadget = child ? child->GetGadget() : NULL;
+    if (gadget)
+      gadget->CloseDetailsView();
   }
 
   void OnPopOutHandler(DecoratedViewHost *decorated) {
@@ -453,14 +461,15 @@ class QtHost::Impl {
           ViewHostInterface::VIEW_HOST_MAIN, 1.0, composite_, false, false,
           view_debug_mode_);
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
-      expanded_popout_ =
-          new DecoratedViewHost(qvh, DecoratedViewHost::MAIN_EXPANDED, true);
-      expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
-                                               expanded_popout_));
+      PopOutMainViewDecorator *view_decorator =
+          new PopOutMainViewDecorator(qvh);
+      expanded_popout_ = new DecoratedViewHost(view_decorator);
+      view_decorator->ConnectOnClose(
+          NewSlot(this, &Impl::OnClosePopOutViewHandler, expanded_popout_));
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);
-      expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+      expanded_original_->GetViewDecorator()->OnOtherEvent(event);
 
       child->SwitchViewHost(expanded_popout_);
       expanded_popout_->ShowView(false, 0, NULL);
@@ -474,7 +483,7 @@ class QtHost::Impl {
       if (child) {
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
-        expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+        expanded_original_->GetViewDecorator()->OnOtherEvent(event);
         // The old host must be destroyed after sending onpopin event.
         old_host->Destroy();
         expanded_original_ = NULL;

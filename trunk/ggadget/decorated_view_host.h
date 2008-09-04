@@ -20,118 +20,55 @@
 #include <ggadget/common.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
+#include <ggadget/view_decorator_base.h>
 
 namespace ggadget {
 
 /**
- * DecoratedViewHost shows a view with the appropiate decorations. Internally,
- * it creates another view that draws the decorations along with the given view.
- *
- * Only main and details view can have decorator.
+ * DecoratedViewHost shows a view with the appropiate decorations.
+ * It uses a special view derived from @c ViewDecoratorBase to hold the child
+ * view and draw the decorations.
  */
 class DecoratedViewHost : public ViewHostInterface {
  protected:
   virtual ~DecoratedViewHost();
 
  public:
-  enum DecoratorType {
-    MAIN_DOCKED,     /**< For main view in the Sidebar. */
-    MAIN_STANDALONE, /**< For main view in standalone window. */
-    MAIN_EXPANDED,   /**< For main view in expanded window. */
-    DETAILS,         /**< For details view. */
-  };
-
   /**
    * Constructor.
    *
-   * @param view_host The ViewHost to contain the decorator view.
-   * @param decorator_type Type of the decorator, must match the type of
-   *        outer view host.
-   * @param transparent If it's true then transparent background will be used.
+   * @param view_decorator A @c ViewDecoratorBase object to hold child view and
+   *        draw view decorations. It'll be deleted when the DecoratedViewHost
+   *        object is destroyed.
    */
-  DecoratedViewHost(ViewHostInterface *view_host,
-                    DecoratorType decorator_type,
-                    bool transparent);
-
-  /** Gets the decorator type. */
-  DecoratorType GetDecoratorType() const;
+  DecoratedViewHost(ViewDecoratorBase *view_decorator);
 
   /**
    * Gets the view which contains the decoration and the child view.
    * The caller shall not destroy the returned view.
    */
-  ViewInterface *GetDecoratedView() const;
+  ViewDecoratorBase *GetViewDecorator() const;
 
   /**
-   * Connects a handler to OnDock signal.
-   * This signal will be emitted when dock menu item is activated by user.
-   * Host shall connect to this signal and perform the real dock action.
+   * Lets the view decorator to load previously stored child view size.
    */
-  Connection *ConnectOnDock(Slot0<void> *slot);
+  void LoadChildViewSize();
 
   /**
-   * Connects a handler to OnUndock signal.
-   * This signal will be emitted when undock menu item is activated by user.
-   * Host shall connect to this signal and perform the real dock action.
-   */
-  Connection *ConnectOnUndock(Slot0<void> *slot);
-
-  /**
-   * Connects a handler to OnPopOut signal.
-   * This signal will be emitted when popout button is clicked by user.
-   * Host shall connect to this signal and perform the real popout action.
-   */
-  Connection *ConnectOnPopOut(Slot0<void> *slot);
-
-  /**
-   * Connects a handler to OnPopIn signal.
-   * This signal will be emitted when popin or close button is clicked by user.
-   * Host shall connect to this signal and perform the real popin action.
-   */
-  Connection *ConnectOnPopIn(Slot0<void> *slot);
-
-  /**
-   * Connects a handler to OnClose signal.
-   * This signal will be emitted when close button is clicked by user.
-   * Host shall connect to this signal and perform the real close action.
-   */
-  Connection *ConnectOnClose(Slot0<void> *slot);
-
-  /**
-   * Sets screen edge which is current snapping the docked decorator.
+   * Enables or disables auto load child view size.
    *
-   * It's only valid for DecoratedViewHost with MAIN_DOCKED type.
-   * Only left and right are supported.
-   *
-   * @param right true to select right edge, otherwise choose left edge.
-   */
-  void SetDockEdge(bool right);
-
-  /**
-   * Lets the view decorator to restore previously stored child view size.
-   */
-  void RestoreViewSize();
-
-  /**
-   * Enables or disables automatically restore child view size.
-   *
-   * If it's enabled, then the view decorator will restore previously stored
+   * If it's enabled, then the view decorator will load previously stored
    * child view size automatically when the child view is attached to the
    * decorator or it's shown the first time.
-   */
-  void EnableAutoRestoreViewSize(bool enable);
-
-  /**
-   * Gets or sets minimized state.
    *
-   * It's only applicable for MainView decorator. It should be called after
-   * attaching the view.
+   * It's enabled by default.
    */
-  bool IsMinimized() const;
-  void SetMinimized(bool minimized);
+  void SetAutoLoadChildViewSize(bool auto_load);
+
+  /** Gets the state of auto restore child view size. */
+  bool IsAutoLoadChildViewSize() const;
 
  public:
-
   /** Returns the ViewHost type. */
   virtual Type GetType() const;
   virtual void Destroy();

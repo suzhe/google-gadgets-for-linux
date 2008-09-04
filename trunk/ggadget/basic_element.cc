@@ -1115,9 +1115,9 @@ void BasicElement::DoClassRegister() {
                      // Select the non-const version.
                      NewSlot(static_cast<Elements *(BasicElement::*)()>(
                          &BasicElement::GetChildren)), NULL);
-    RegisterMethod("appendElement", NewSlot(&Elements::AppendElementFromXML,
+    RegisterMethod("appendElement", NewSlot(&Elements::AppendElementVariant,
                                             GetElementChildren));
-    RegisterMethod("insertElement", NewSlot(&Elements::InsertElementFromXML,
+    RegisterMethod("insertElement", NewSlot(&Elements::InsertElementVariant,
                                             GetElementChildren));
     RegisterMethod("removeElement", NewSlot(&Elements::RemoveElement,
                                             GetElementChildren));
@@ -1612,6 +1612,10 @@ const BasicElement *BasicElement::GetParentElement() const {
   return impl_->parent_;
 }
 
+void BasicElement::SetParentElement(BasicElement *parent) {
+  impl_->parent_ = parent;
+}
+
 void BasicElement::EnableCanvasCache(bool enable) {
   impl_->cache_enabled_ = enable;
   if (!enable && impl_->cache_) {
@@ -1664,6 +1668,10 @@ void BasicElement::Draw(CanvasInterface *canvas) {
 
 void BasicElement::DrawChildren(CanvasInterface *canvas) {
   impl_->DrawChildren(canvas);
+}
+
+void BasicElement::DoDraw(CanvasInterface * /* canvas */) {
+  // Do nothing.
 }
 
 void BasicElement::ClearPositionChanged() {

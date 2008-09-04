@@ -21,6 +21,7 @@
 #include <ggadget/event.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
@@ -102,8 +103,21 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                               const char *name);
 
   /**
-   * Inserts a BasicElement before the specified element.
-   * @param elem The element to insert.
+   * Appends an existing element to the end of the children list.
+   * The specified element can be owned by another parent element, in this
+   * case, it'll be reparented appropriately.
+   *
+   * @param element The element to insert.
+   * @return true on success, false on failure.
+   */
+  bool AppendElement(BasicElement *element);
+
+  /**
+   * Inserts an existing element before the specified element.
+   * The element to be inserted can be owned by another parent element, in this
+   * case, it'll be reparented appropriately.
+   *
+   * @param element The element to insert.
    * @param before the element will be inserted before the given element.
    *     If the specified element is not the direct child of the
    *     container or this parameter is @c NULL, this method will insert the
@@ -136,6 +150,41 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    */
   BasicElement *InsertElementFromXML(const std::string &xml,
                                      const BasicElement *before);
+
+  /**
+   * Appends an element holded in a variant to the end of the children list.
+   *
+   * The specified variant may hold a pointer to an existing element, or the
+   * XML definition of a new element.
+   *
+   * @param element A variant holding an existing element or the XML definition
+   *                of a new element.
+   * @return If element parameter holds an existing element, then returns
+   *         boolean value indicating success or failure. Otherwise returns
+   *         the pointer to the new element on success, or null on failure.
+   */
+  Variant AppendElementVariant(const Variant &element);
+
+  /**
+   * Inserts an element holded in a variant before the specified element.
+   * The element to be inserted can be owned by another parent element, in this
+   * case, it'll be reparented appropriately.
+   *
+   * The specified variant may hold a pointer to an existing element, or the
+   * XML definition of a new element.
+   *
+   * @param element A variant holding an existing element or the XML definition
+   *                of a new element.
+   * @param before The element specified in element parameter will be inserted
+   *     before this element. If the specified element is not the direct child
+   *     of the container or this parameter is @c NULL, this method will insert
+   *     the element at the end of the children list.
+   * @return If element parameter holds an existing element, then returns
+   *         boolean value indicating success or failure. Otherwise returns
+   *         the pointer to the new element on success, or null on failure.
+   */
+  Variant InsertElementVariant(const Variant &element,
+                               const BasicElement *before);
 
   /**
    * Remove the specified element from the container.

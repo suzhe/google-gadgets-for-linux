@@ -268,20 +268,20 @@ std::string FindIconFileInXDGDataDirs(const char *icon) {
       if (access(path.c_str(), R_OK) == 0)
         return path;
     }
-  } else {
-    // Try with standard extensions.
-    static const char *kStandardIconExtensions[] = {
-      ".png", ".PNG", ".svg", ".SVG", ".xpm", ".XPM", NULL
-    };
-    for (it = xdg_dirs.begin(); it != xdg_dirs.end(); ++it) {
-      for (size_t ext = 0; kStandardIconExtensions[ext]; ++ext) {
-        std::string path =
-            BuildFilePath(it->c_str(),
-                          (icon_str + kStandardIconExtensions[ext]).c_str(),
-                          NULL);
-        if (access(path.c_str(), R_OK) == 0)
-          return path;
-      }
+  }
+
+  // Try with standard extensions.
+  static const char *kStandardIconExtensions[] = {
+    ".png", ".PNG", ".svg", ".SVG", ".xpm", ".XPM", NULL
+  };
+  for (it = xdg_dirs.begin(); it != xdg_dirs.end(); ++it) {
+    for (size_t ext = 0; kStandardIconExtensions[ext]; ++ext) {
+      std::string path =
+          BuildFilePath(it->c_str(),
+                        (icon_str + kStandardIconExtensions[ext]).c_str(),
+                        NULL);
+      if (access(path.c_str(), R_OK) == 0)
+        return path;
     }
   }
   return "";

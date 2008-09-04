@@ -46,11 +46,14 @@ class ElementsTest : public testing::Test {
         new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
         NULL, factory_, NULL);
     muffin_ = new Muffin(NULL, view_, NULL);
-    elements_ = new ggadget::Elements(factory_, muffin_, view_);
+    elements_ = muffin_->GetChildren();
+
+    another_muffin_ = new Muffin(NULL, view_, NULL);
+    another_elements_ = another_muffin_->GetChildren();
   }
 
   virtual void TearDown() {
-    delete elements_;
+    delete another_muffin_;
     delete muffin_;
     delete factory_;
     delete view_;
@@ -61,6 +64,9 @@ class ElementsTest : public testing::Test {
   ggadget::View *view_;
   ggadget::Elements *elements_;
   Muffin *muffin_;
+
+  ggadget::Elements *another_elements_;
+  Muffin *another_muffin_;
 };
 
 TEST_F(ElementsTest, TestCreate) {
@@ -81,6 +87,41 @@ TEST_F(ElementsTest, TestOrder) {
   ASSERT_TRUE(e2 == elements_->GetItemByIndex(1));
   ASSERT_TRUE(e3 == elements_->GetItemByIndex(2));
   ASSERT_TRUE(NULL == elements_->GetItemByIndex(3));
+
+  ASSERT_TRUE(elements_->InsertElement(e1, NULL));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e1 == elements_->GetItemByIndex(2));
+
+  ASSERT_TRUE(elements_->InsertElement(e1, e3));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e1 == elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(2));
+}
+
+TEST_F(ElementsTest, TestReparent) {
+  ggadget::BasicElement *e1 = elements_->AppendElement("muffin", NULL);
+  ggadget::BasicElement *e2 = elements_->AppendElement("pie", NULL);
+  ggadget::BasicElement *e3 = elements_->AppendElement("pie", NULL);
+  ASSERT_EQ(3, elements_->GetCount());
+  ASSERT_TRUE(e1 == elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(2));
+  ASSERT_TRUE(NULL == elements_->GetItemByIndex(3));
+
+  ASSERT_TRUE(another_elements_->AppendElement(e1));
+  ASSERT_EQ(2, elements_->GetCount());
+  ASSERT_EQ(1, another_elements_->GetCount());
+  ASSERT_TRUE(e1 == another_elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(1));
+
+  ASSERT_TRUE(another_elements_->InsertElement(e2, e1));
+  ASSERT_EQ(1, elements_->GetCount());
+  ASSERT_EQ(2, another_elements_->GetCount());
+  ASSERT_TRUE(e2 == another_elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e1 == another_elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(0));
 }
 
 TEST_F(ElementsTest, TestGetByName) {

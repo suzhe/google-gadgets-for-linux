@@ -189,28 +189,21 @@ const char kVDButtonBackDown[] = "resource://vd_back_down.png";
 const char kVDButtonForwardNormal[] = "resource://vd_forward_normal.png";
 const char kVDButtonForwardOver[] = "resource://vd_forward_over.png";
 const char kVDButtonForwardDown[] = "resource://vd_forward_down.png";
-const char kVDButtonExpandNormal[] = "resource://vd_expand_normal.png";
-const char kVDButtonExpandOver[] = "resource://vd_expand_over.png";
-const char kVDButtonExpandDown[] = "resource://vd_expand_down.png";
-const char kVDButtonUnexpandNormal[] = "resource://vd_unexpand_normal.png";
-const char kVDButtonUnexpandOver[] = "resource://vd_unexpand_over.png";
-const char kVDButtonUnexpandDown[] = "resource://vd_unexpand_down.png";
+const char kVDButtonPopOutNormal[] = "resource://vd_popout_normal.png";
+const char kVDButtonPopOutOver[] = "resource://vd_popout_over.png";
+const char kVDButtonPopOutDown[] = "resource://vd_popout_down.png";
+const char kVDButtonPopInNormal[] = "resource://vd_popin_normal.png";
+const char kVDButtonPopInOver[] = "resource://vd_popin_over.png";
+const char kVDButtonPopInDown[] = "resource://vd_popin_down.png";
 
 const char kVDMainBackground[] = "resource://vd_main_background.png";
 const char kVDMainBackgroundMinimized[] =
     "resource://vd_main_background_minimized.png";
 const char kVDMainBackgroundTransparent[] =
     "resource://vd_main_background_transparent.png";
-const char kVDMainSidebarBottom[] = "resource://vd_main_sidebar_bottom.png";
-const char kVDPopOutBackground[] = "resource://vd_popout_background.png";
-const char kVDPopOutBackgroundTitle[] =
-    "resource://vd_popout_background_title.png";
-const char kVDPopOutCloseDown[] = "resource://vd_popout_close_down.png";
-const char kVDPopOutCloseNormal[] = "resource://vd_popout_close_normal.png";
-const char kVDPopOutCloseOver[] = "resource://vd_popout_close_over.png";
+const char kVDMainDockedBorderH[] = "resource://vd_main_docked_border_h.png";
+const char kVDMainDockedBorderV[] = "resource://vd_main_docked_border_v.png";
 
-const char kVDDetailsBackground[] = "resource://vd_details_background.png";
-const char kVDDetailsBottom[] = "resource://vd_details_bottom.png";
 const char kVDDetailsButtonBkgndClick[] =
     "resource://vd_details_button_bkgnd_click.png";
 const char kVDDetailsButtonBkgndNormal[] =
@@ -221,8 +214,14 @@ const char kVDDetailsButtonNegfbNormal[] =
     "resource://vd_details_button_negfb_normal.png";
 const char kVDDetailsButtonNegfbOver[] =
     "resource://vd_details_button_negfb_over.png";
-const char kVDDetailsMiddle[] = "resource://vd_details_middle.png";
-const char kVDDetailsTop[] = "resource://vd_details_top.png";
+
+const char kVDFramedBackground[] = "resource://vd_framed_background.png";
+const char kVDFramedBottom[] = "resource://vd_framed_bottom.png";
+const char kVDFramedMiddle[] = "resource://vd_framed_middle.png";
+const char kVDFramedTop[] = "resource://vd_framed_top.png";
+const char kVDFramedCloseDown[] = "resource://vd_framed_close_down.png";
+const char kVDFramedCloseNormal[] = "resource://vd_framed_close_normal.png";
+const char kVDFramedCloseOver[] = "resource://vd_framed_close_over.png";
 
 const char kVDBottomRightCorner[] = "resource://vd_bottom_right_corner.png";
 

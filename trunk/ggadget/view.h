@@ -418,13 +418,10 @@ class View : public ViewInterface {
   /**
    * Sets the current mouse cursor.
    *
-   * It's a virtual method, because View Decorator (derived from View) needs to
-   * override it.
-   *
    * @param type the cursor type, see @c ViewInterface::CursorType.
    *        -1 means the default type.
    */
-  virtual void SetCursor(int type);
+  void SetCursor(int type);
 
   /**
    * Shows the associated View by proper method according to type of the View.
@@ -450,9 +447,7 @@ class View : public ViewInterface {
    */
   bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler);
 
-  /**
-   * Closes the view if it's opened by calling ShowView().
-   */
+  /** Closes the view if it's opened by calling ShowView(). */
   void CloseView();
 
   /**

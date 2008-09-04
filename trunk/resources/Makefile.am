@@ -83,36 +83,35 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		vd_close_down.png \
 		vd_close_normal.png \
 		vd_close_over.png \
-		vd_details_background.png \
-		vd_details_bottom.png \
 		vd_details_button_bkgnd_click.png \
 		vd_details_button_bkgnd_normal.png \
 		vd_details_button_bkgnd_over.png \
 		vd_details_button_negfb_normal.png \
 		vd_details_button_negfb_over.png \
-		vd_details_middle.png \
-		vd_details_top.png \
-		vd_expand_down.png \
-		vd_expand_normal.png \
-		vd_expand_over.png \
 		vd_forward_down.png \
 		vd_forward_normal.png \
 		vd_forward_over.png \
+		vd_framed_background.png \
+		vd_framed_bottom.png \
+		vd_framed_close_down.png \
+		vd_framed_close_normal.png \
+		vd_framed_close_over.png \
+		vd_framed_middle.png \
+		vd_framed_top.png \
 		vd_main_background.png \
 		vd_main_background_minimized.png \
 		vd_main_background_transparent.png \
-		vd_main_sidebar_bottom.png \
+		vd_main_docked_border_h.png \
+		vd_main_docked_border_v.png \
 		vd_menu_down.png \
 		vd_menu_normal.png \
 		vd_menu_over.png \
-		vd_popout_background.png \
-		vd_popout_background_title.png \
-		vd_popout_close_down.png \
-		vd_popout_close_normal.png \
-		vd_popout_close_over.png \
-		vd_unexpand_down.png \
-		vd_unexpand_normal.png \
-		vd_unexpand_over.png \
+		vd_popin_down.png \
+		vd_popin_normal.png \
+		vd_popin_over.png \
+		vd_popout_down.png \
+		vd_popout_normal.png \
+		vd_popout_over.png \
 		analog_clock_sm.jpg \
 		designer_sm.jpg \
 		digital_alarm_clock_sm.jpg \

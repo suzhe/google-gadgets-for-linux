@@ -50,10 +50,12 @@ gglinclude_HEADERS	= anchor_element.h \
 			  copy_element.h \
 			  decorated_view_host.h \
 			  details_view_data.h \
+			  details_view_decorator.h \
 			  digest_utils.h \
 			  dir_file_manager.h \
 			  display_window.h \
 			  div_element.h \
+			  docked_main_view_decorator.h \
 			  edit_element_base.h \
 			  element_factory.h \
 			  elements.h \
@@ -64,7 +66,9 @@ gglinclude_HEADERS	= anchor_element.h \
 			  file_manager_interface.h \
 			  file_manager_wrapper.h \
 			  file_system_interface.h \
+			  floating_main_view_decorator.h \
 			  font_interface.h \
+			  framed_view_decorator_base.h \
 			  framework_interface.h \
 			  gadget.h \
 			  gadget_consts.h \
@@ -81,15 +85,17 @@ gglinclude_HEADERS	= anchor_element.h \
 			  localized_file_manager.h \
 			  logger.h \
 			  main_loop_interface.h \
-			  messages.h \
+			  main_view_decorator_base.h \
 			  math_utils.h \
 			  memory_options.h \
 			  menu_interface.h \
+			  messages.h \
 			  module.h \
 			  object_element.h \
 			  object_videoplayer.h \
 			  options_interface.h \
 			  permissions.h \
+			  popout_main_view_decorator.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
 			  run_once.h \
@@ -123,9 +129,10 @@ gglinclude_HEADERS	= anchor_element.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
-			  video_element_base.h \
 			  variant.h \
+			  video_element_base.h \
 			  view.h \
+			  view_decorator_base.h \
 			  view_element.h \
 			  view_host_interface.h \
 			  view_interface.h \
@@ -156,10 +163,12 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  copy_element.cc \
 			  decorated_view_host.cc \
 			  details_view_data.cc \
+			  details_view_decorator.cc \
 			  digest_utils.cc \
 			  dir_file_manager.cc \
 			  display_window.cc \
 			  div_element.cc \
+			  docked_main_view_decorator.cc \
 			  edit_element_base.cc \
 			  element_factory.cc \
 			  elements.cc \
@@ -167,6 +176,8 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  extension_manager.cc \
 			  file_manager_factory.cc \
 			  file_manager_wrapper.cc \
+			  floating_main_view_decorator.cc \
+			  framed_view_decorator_base.cc \
 			  gadget.cc \
 			  gadget_manager.cc \
 			  image_cache.cc \
@@ -178,6 +189,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  localized_file_manager.cc \
 			  logger.cc \
 			  main_loop.cc \
+			  main_view_decorator_base.cc \
 			  math_utils.cc \
 			  memory_options.cc \
 			  messages.cc \
@@ -186,6 +198,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  object_videoplayer.cc \
 			  options_factory.cc \
 			  permissions.cc \
+			  popout_main_view_decorator.cc \
 			  progressbar_element.cc \
 			  run_once.cc \
 			  script_runtime_manager.cc \
@@ -213,6 +226,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  variant.cc \
 			  video_element_base.cc \
 			  view.cc \
+			  view_decorator_base.cc \
 			  view_element.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \

@@ -625,6 +625,13 @@ fi
 #
 # Add more rules here if your distribution doesn't support above rules.
 has_gtkmozembed=no
+
+AC_ARG_WITH(gtkmozembed,
+  AC_HELP_STRING([--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
+                 [selects with gecko engine to build against]),
+  ,[with_gtkmozembed=auto])
+
+if test x$with_gtkmozembed = xauto; then
 PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
   [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
@@ -636,6 +643,34 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
 			   [has_gtkmozembed=firefox-gtkmozembed],
 	  [has_gtkmozembed=no])])])])])
+else
+  case $with_gtkmozembed in
+    libxul)
+      PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
+                        [has_gtkmozembed=mozilla-gtkmozembed-embedding],
+        [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
+                           [has_gtkmozembed=libxul-embedding-unstable],
+          [has_gtkmozembed=no])])
+      ;;
+    xulrunner)
+      PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
+                        [has_gtkmozembed=xulrunner-gtkmozembed],
+        [has_gtkmozembed=no])
+      ;;
+    firefox2)
+      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
+                        [has_gtkmozembed=firefox2-gtkmozembed],
+        [has_gtkmozembed=no])
+      ;;
+    firefox)
+      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
+                        [has_gtkmozembed=firefox-gtkmozembed],
+        [has_gtkmozembed=no])
+      ;;
+    *)
+      AC_MSG_ERROR([--with-gtkmozembed, invalid value])
+  esac
+fi
 
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
