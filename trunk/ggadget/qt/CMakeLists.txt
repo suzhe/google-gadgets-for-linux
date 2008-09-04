@@ -56,7 +56,7 @@ INSTALL(FILES
   qt_menu.h
   qt_view_host.h
   utilities.h
-  DESTINATION "${INCLUDE_INSTALL_DIR}/qt" COMPONENT Devel)
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/qt COMPONENT Devel)
 
 INSTALL_PKG_CONFIG(libggadget-qt)
 ENDIF(GGL_BUILD_LIBGGADGET_QT)

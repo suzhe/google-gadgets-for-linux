@@ -27,6 +27,6 @@ OUTPUT_LIBRARY(ggadget-js${GGL_EPOCH})
 INSTALL(FILES
   jscript_massager.h
   js_utils.h
-  DESTINATION "${INCLUDE_INSTALL_DIR}/js" COMPONENT Devel)
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/js COMPONENT Devel)
 
 INSTALL_PKG_CONFIG(libggadget-js)

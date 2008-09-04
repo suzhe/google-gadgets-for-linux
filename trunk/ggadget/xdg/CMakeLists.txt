@@ -33,5 +33,5 @@ OUTPUT_LIBRARY(ggadget-xdg${GGL_EPOCH})
 INSTALL(FILES
   desktop_entry.h
   utilities.h
-  DESTINATION "${INCLUDE_INSTALL_DIR}/xdg" COMPONENT Devel)
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/xdg COMPONENT Devel)
 INSTALL_PKG_CONFIG(libggadget-xdg)
