@@ -32,7 +32,7 @@ OUTPUT_LIBRARY(ggadget-dbus${GGL_EPOCH})
 INSTALL(FILES
   dbus_proxy.h
   dbus_result_receiver.h
-  DESTINATION "${INCLUDE_INSTALL_DIR}/dbus" COMPONENT Devel
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/dbus COMPONENT Devel
 )
 INSTALL_PKG_CONFIG(libggadget-dbus)
 

@@ -67,7 +67,7 @@ INSTALL(FILES
   tooltip.h
   utilities.h
   view_widget_binder.h
-  DESTINATION "${INCLUDE_INSTALL_DIR}/gtk" COMPONENT Devel)
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/gtk COMPONENT Devel)
 
 INSTALL_PKG_CONFIG(libggadget-gtk)
 

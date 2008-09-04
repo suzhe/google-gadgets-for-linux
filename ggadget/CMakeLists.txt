@@ -215,7 +215,11 @@ INSTALL(FILES
   xml_parser_interface.h
   xml_utils.h
   zip_file_manager.h
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget COMPONENT Devel)
+
+INSTALL(FILES
   ${CMAKE_BINARY_DIR}/ggadget/sysdeps.h
-  DESTINATION ${INCLUDE_INSTALL_DIR} COMPONENT Devel)
+  DESTINATION ${GGL_SYSDEPS_INCLUDE_DIR}/ggadget COMPONENT Devel)
+
 
 INSTALL_PKG_CONFIG(libggadget)
