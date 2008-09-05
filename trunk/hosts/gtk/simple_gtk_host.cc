@@ -153,15 +153,16 @@ class SimpleGtkHost::Impl {
     MenuBuilder menu_builder(GTK_MENU_SHELL(host_menu_));
 
     menu_builder.AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
+                         MenuInterface::MENU_ITEM_ICON_ADD,
                          NewSlot(this, &Impl::AddGadgetMenuCallback),
                          priority);
-    menu_builder.AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
+    menu_builder.AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0, 0,
                          NewSlot(this, &Impl::ShowAllMenuCallback),
                          priority);
-    menu_builder.AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0,
+    menu_builder.AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0, 0,
                          NewSlot(this, &Impl::HideAllMenuCallback),
                          priority);
-    menu_builder.AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
+    menu_builder.AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0, 0,
                          NewSlot(this, &Impl::ChangeHotKeyMenuCallback),
                          priority);
 
@@ -170,21 +171,24 @@ class SimpleGtkHost::Impl {
     sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGER"),
                  font_size_ >= kMaxFontSize ?
                  MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                 MenuInterface::MENU_ITEM_ICON_ZOOM_IN,
                  NewSlot(this, &Impl::FontSizeMenuHandler, 1), priority);
     sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
+                 MenuInterface::MENU_ITEM_ICON_ZOOM_100,
                  NewSlot(this, &Impl::FontSizeMenuHandler, 0), priority);
     sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALLER"),
                  font_size_ <= kMinFontSize ?
                  MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                 MenuInterface::MENU_ITEM_ICON_ZOOM_OUT,
                  NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
 
     // Separator
-    menu_builder.AddItem(NULL, 0, 0, MenuInterface::MENU_ITEM_PRI_HOST);
+    menu_builder.AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_HOST);
 
-    menu_builder.AddItem(
-        GM_("MENU_ITEM_EXIT"), 0,
-        NewSlot(this, &Impl::ExitMenuCallback),
-        MenuInterface::MENU_ITEM_PRI_HOST);
+    menu_builder.AddItem(GM_("MENU_ITEM_EXIT"), 0,
+                         MenuInterface::MENU_ITEM_ICON_QUIT,
+                         NewSlot(this, &Impl::ExitMenuCallback),
+                         MenuInterface::MENU_ITEM_PRI_HOST);
 
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     // FIXME:

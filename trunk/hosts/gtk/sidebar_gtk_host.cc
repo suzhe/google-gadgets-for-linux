@@ -319,44 +319,45 @@ class SideBarGtkHost::Impl {
   void OnSideBarMenu(MenuInterface *menu) {
     const int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
+                  MenuInterface::MENU_ITEM_ICON_ADD,
                   NewSlot(this, &Impl::AddGadgetMenuHandler), priority);
-    menu->AddItem(NULL, 0, NULL, priority);
+    menu->AddItem(NULL, 0, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_SIDEBAR"),
-                  (closed_ ? 0 : MenuInterface::MENU_ITEM_FLAG_CHECKED),
+                  (closed_ ? 0 : MenuInterface::MENU_ITEM_FLAG_CHECKED), 0,
                   NewSlot(this, &Impl::OpenCloseSidebarMenuHandler),
                   priority);
     if (!gadgets_shown_)
-      menu->AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
+      menu->AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0, 0,
                     NewSlot(this, &Impl::ShowAllMenuHandler), priority);
     else
-      menu->AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0,
+      menu->AddItem(GM_("MENU_ITEM_HIDE_ALL"), 0, 0,
                     NewSlot(this, &Impl::HideAllMenuHandler), priority);
 
     if (!closed_) {
       menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
-                    auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                    auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
                     NewSlot(this, &Impl::AutoHideMenuHandler), priority);
       menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), always_on_top_ ?
-                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
                     NewSlot(this, &Impl::AlwaysOnTopMenuHandler), priority);
 
       MenuInterface *dock_submenu =
           menu->AddPopup(GM_("MENU_ITEM_DOCK_SIDEBAR"), priority);
       dock_submenu->AddItem(GM_("MENU_ITEM_LEFT"),
                             sidebar_position_ == SIDEBAR_POSITION_LEFT ?
-                            MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                            MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
                             NewSlot(this, &Impl::SideBarPositionMenuHandler,
                                     static_cast<int>(SIDEBAR_POSITION_LEFT)),
                             priority);
       dock_submenu->AddItem(GM_("MENU_ITEM_RIGHT"),
                             sidebar_position_ == SIDEBAR_POSITION_RIGHT ?
-                            MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                            MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
                             NewSlot(this, &Impl::SideBarPositionMenuHandler,
                                     static_cast<int>(SIDEBAR_POSITION_RIGHT)),
                             priority);
     }
 
-    menu->AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0,
+    menu->AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0, 0,
                   NewSlot(this, &Impl::ChangeHotKeyMenuHandler), priority);
 
     {
@@ -365,16 +366,20 @@ class SideBarGtkHost::Impl {
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGER"),
                    font_size_ >= kMaxFontSize ?
                    MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                   MenuInterface::MENU_ITEM_ICON_ZOOM_IN,
                    NewSlot(this, &Impl::FontSizeMenuHandler, 1), priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
+                   MenuInterface::MENU_ITEM_ICON_ZOOM_100,
                    NewSlot(this, &Impl::FontSizeMenuHandler, 0), priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALLER"),
                    font_size_ <= kMinFontSize ?
                    MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                   MenuInterface::MENU_ITEM_ICON_ZOOM_OUT,
                    NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
     }
-    menu->AddItem(NULL, 0, NULL, priority);
+    menu->AddItem(NULL, 0, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_EXIT"), 0,
+                  MenuInterface::MENU_ITEM_ICON_QUIT,
                   NewSlot(this, &Impl::ExitMenuHandler), priority);
   }
 

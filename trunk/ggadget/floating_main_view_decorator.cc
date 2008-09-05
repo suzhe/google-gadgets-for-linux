@@ -317,11 +317,11 @@ void FloatingMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
 
   int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
   menu->AddItem(
-      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
+      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
       NewSlot(impl_, &Impl::CollapseExpandMenuCallback), priority);
 
   if (impl_->on_dock_signal_.HasActiveConnections()) {
-    menu->AddItem(GM_("MENU_ITEM_DOCK_TO_SIDEBAR"), 0,
+    menu->AddItem(GM_("MENU_ITEM_DOCK_TO_SIDEBAR"), 0, 0,
                   NewSlot(impl_, &Impl::DockMenuCallback), priority);
   }
 
@@ -345,7 +345,7 @@ void FloatingMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
 
     MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
     for (int i = 0; i < kNumZoomMenuItems; ++i) {
-      zoom->AddItem(GM_(kZoomMenuItems[i].label), flags[i],
+      zoom->AddItem(GM_(kZoomMenuItems[i].label), flags[i], 0,
                     NewSlot(impl_, &Impl::OnZoomMenuCallback,
                             kZoomMenuItems[i].zoom), priority);
     }

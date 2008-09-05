@@ -234,7 +234,7 @@ class QtViewHost::Impl {
         type_ == VIEW_HOST_MAIN) {
       qt_menu.AddItem(
           GM_("MENU_ITEM_ALWAYS_ON_TOP"),
-          keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+          keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
           NewSlot(this, &Impl::KeepAboveMenuCallback, !keep_above_),
           MenuInterface::MENU_ITEM_PRI_HOST);
     }

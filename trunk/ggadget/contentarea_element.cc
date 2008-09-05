@@ -704,24 +704,27 @@ class ContentAreaElement::Impl {
       if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
         if (mouse_over_item_->CanOpen()) {
           menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
-            NewFunctorSlot<void, const char *>(
-                MenuItemHandler(this, &Impl::OnItemOpen,
-                                mouse_over_item_)),
-            MenuInterface::MENU_ITEM_PRI_CLIENT);
+                        MenuInterface::MENU_ITEM_ICON_OPEN,
+                        NewFunctorSlot<void, const char *>(
+                            MenuItemHandler(this, &Impl::OnItemOpen,
+                                            mouse_over_item_)),
+                        MenuInterface::MENU_ITEM_PRI_CLIENT);
         }
         if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
           menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
-            NewFunctorSlot<void, const char *>(
-                MenuItemHandler(this, &Impl::OnItemRemove,
-                                mouse_over_item_)),
-            MenuInterface::MENU_ITEM_PRI_CLIENT);
+                        MenuInterface::MENU_ITEM_ICON_DELETE,
+                        NewFunctorSlot<void, const char *>(
+                            MenuItemHandler(this, &Impl::OnItemRemove,
+                                            mouse_over_item_)),
+                        MenuInterface::MENU_ITEM_PRI_CLIENT);
         }
         if (item_flags & ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
           menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
-            NewFunctorSlot<void, const char *>(
-                MenuItemHandler(this, &Impl::OnItemNegativeFeedback,
-                                mouse_over_item_)),
-            MenuInterface::MENU_ITEM_PRI_CLIENT);
+                        MenuInterface::MENU_ITEM_ICON_NO,
+                        NewFunctorSlot<void, const char *>(
+                            MenuItemHandler(this, &Impl::OnItemNegativeFeedback,
+                                            mouse_over_item_)),
+                        MenuInterface::MENU_ITEM_PRI_CLIENT);
         }
       }
     }

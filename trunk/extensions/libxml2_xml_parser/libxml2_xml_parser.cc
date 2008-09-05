@@ -549,6 +549,15 @@ std::string GetHTMLCharset(const char* html_content) {
       }
     }
   }
+  // UTF-16 and UTF-32 makes no sense here. Because if the content is in
+  // UTF-16 or UTF-32 encoding, then it's impossible to find the charset tag
+  // by parsing it as char string directly.
+  // In this case, assuming UTF-8 will be the best choice, and will fallback to
+  // ISO8859-1 if it's not UTF-8.
+  if (ToLower(charset).find("utf") == 0 &&
+      (charset.find("16") != std::string::npos ||
+       charset.find("32") != std::string::npos))
+    charset = "UTF-8";
   return charset.empty() ? "UTF-8" : charset;
 }
 

@@ -35,7 +35,7 @@ class QtMenu : public ggadget::MenuInterface {
   QtMenu(QMenu *qmenu);
   virtual ~QtMenu();
 
-  virtual void AddItem(const char *item_text, int style,
+  virtual void AddItem(const char *item_text, int style, int stock_icon,
                        ggadget::Slot1<void, const char *> *handler,
                        int priority);
   virtual void SetItemStyle(const char *item_text, int style);

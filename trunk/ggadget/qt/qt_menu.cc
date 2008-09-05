@@ -26,9 +26,10 @@ class QtMenu::Impl {
  public:
   Impl(QMenu *qmenu) : qt_menu_(qmenu) {}
 
-  void AddItem(const char *item_text, int style,
+  void AddItem(const char *item_text, int style, int stock_icon,
       ggadget::Slot1<void, const char *> *handler,
       int priority) {
+    // FIXME: support stock icons.
     QAction *action;
     if (!item_text || !*item_text) {
       action = new QAction(qt_menu_);
@@ -117,10 +118,10 @@ QtMenu::QtMenu(QMenu *qmenu)
 QtMenu::~QtMenu() {
 }
 
-void QtMenu::AddItem(const char *item_text, int style,
+void QtMenu::AddItem(const char *item_text, int style, int stock_icon,
                      ggadget::Slot1<void, const char *> *handler,
                      int priority) {
-  impl_->AddItem(item_text, style, handler, priority);
+  impl_->AddItem(item_text, style, stock_icon, handler, priority);
 }
 
 void QtMenu::SetItemStyle(const char *item_text, int style) {

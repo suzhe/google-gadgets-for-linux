@@ -535,22 +535,25 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     smenu->Unref();
     if (HasOptionsDialog()) {
       menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
+                    MenuInterface::MENU_ITEM_ICON_PREFERENCES,
                     NewSlot(this, &Impl::OptionsMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
-      menu->AddItem(NULL, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
+      menu->AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
     }
     bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
                          !oncommand_signal_.HasActiveConnections();
     if (debug_console_config_ != DEBUG_CONSOLE_DISABLED) {
-      menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0,
+      menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0, 0,
                     NewSlot(this, &Impl::DebugConsoleMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
     }
     menu->AddItem(GM_("MENU_ITEM_ABOUT"),
                   disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                  MenuInterface::MENU_ITEM_ICON_ABOUT,
                   NewSlot(this, &Impl::AboutMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
     menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
+                  MenuInterface::MENU_ITEM_ICON_DELETE,
                   NewSlot(this, &Impl::RemoveMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
   }
