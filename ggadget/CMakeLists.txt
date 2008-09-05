@@ -30,6 +30,7 @@ SET(SRCS
   content_item.cc
   decorated_view_host.cc
   details_view_data.cc
+  details_view_decorator.cc
   digest_utils.cc
   display_window.cc
   element_factory.cc
@@ -101,6 +102,13 @@ SET(SRCS
   file_manager_wrapper.cc
   localized_file_manager.cc
   zip_file_manager.cc
+
+  docked_main_view_decorator.cc
+  floating_main_view_decorator.cc
+  framed_view_decorator_base.cc
+  main_view_decorator_base.cc
+  popout_main_view_decorator.cc
+  view_decorator_base.cc
 )
 
 SET(LIBS
@@ -130,10 +138,12 @@ INSTALL(FILES
   copy_element.h
   decorated_view_host.h
   details_view_data.h
+  details_view_decorator.h
   digest_utils.h
   dir_file_manager.h
   display_window.h
   div_element.h
+  docked_main_view_decorator.h
   edit_element_base.h
   element_factory.h
   elements.h
@@ -144,7 +154,9 @@ INSTALL(FILES
   file_manager_interface.h
   file_manager_wrapper.h
   file_system_interface.h
+  floating_main_view_decorator.h
   font_interface.h
+  framed_view_decorator_base.h
   framework_interface.h
   gadget.h
   gadget_consts.h
@@ -161,6 +173,7 @@ INSTALL(FILES
   localized_file_manager.h
   logger.h
   main_loop_interface.h
+  main_view_decorator_base.h
   messages.h
   math_utils.h
   memory_options.h
@@ -170,6 +183,7 @@ INSTALL(FILES
   object_videoplayer.h
   options_interface.h
   permissions.h
+  popout_main_view_decorator.h
   progressbar_element.h
   registerable_interface.h
   run_once.h
@@ -206,6 +220,7 @@ INSTALL(FILES
   video_element_base.h
   variant.h
   view.h
+  view_decorator_base.h
   view_element.h
   view_host_interface.h
   view_interface.h

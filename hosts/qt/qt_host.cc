@@ -43,7 +43,6 @@
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/decorated_view_host.h>
 #include <ggadget/gadget.h>
 #include <ggadget/view.h>
 #include <ggadget/permissions.h>
