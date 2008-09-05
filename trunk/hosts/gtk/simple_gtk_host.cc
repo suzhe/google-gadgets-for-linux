@@ -918,10 +918,6 @@ bool SimpleGtkHost::LoadFont(const char *filename) {
   return ggadget::gtk::LoadFont(filename);
 }
 
-void SimpleGtkHost::Run() {
-  gtk_main();
-}
-
 void SimpleGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
   ggadget::gtk::ShowGadgetAboutDialog(gadget);
 }

@@ -40,7 +40,6 @@ class SimpleGtkHost : public ggadget::HostInterface {
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
   virtual bool LoadFont(const char *filename);
-  virtual void Run();
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();

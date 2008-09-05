@@ -37,7 +37,8 @@ class ViewDecoratorBase : public View {
    * Constructor.
    *
    * @param host The real view host which will be used by this view decorator.
-   * @param option_prefix A prefix for options related to this view decorator.
+   * @param option_prefix A prefix for storing options related to this view
+   *        decorator. NULL means don't save any states.
    * @param allow_x_margin If it's true then horizontal blank margin is allowed
    *        between child view and view decorator border.
    * @param allow_y_margin If it's true then vertical blank margin is allowed

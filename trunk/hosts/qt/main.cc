@@ -18,6 +18,7 @@
 #include <time.h>
 #include <cstdlib>
 #include <locale.h>
+#include <signal.h>
 #include <QtGui/QApplication>
 #include <QtGui/QCursor>
 #include <QtGui/QMenu>
@@ -153,6 +154,11 @@ static bool CheckCompositingManager(Display *dpy) {
 
 static void OnClientMessage(const std::string &data) {
   ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
+}
+
+static void DefaultSignalHandler(int sig) {
+  DLOG("Signal caught: %d, exit.", sig);
+  g_main_loop->Quit();
 }
 
 int main(int argc, char* argv[]) {
@@ -301,6 +307,14 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < gadget_paths.size(); ++i)
       manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
   }
+
+  // Hook popular signals to exit gracefully.
+  signal(SIGHUP, DefaultSignalHandler);
+  signal(SIGINT, DefaultSignalHandler);
+  signal(SIGTERM, DefaultSignalHandler);
+  signal(SIGUSR1, DefaultSignalHandler);
+  signal(SIGUSR2, DefaultSignalHandler);
+
   g_main_loop->Run();
 
   return 0;

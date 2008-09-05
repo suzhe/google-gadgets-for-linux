@@ -115,6 +115,14 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /** Checks if it's in minimized mode. */
   bool IsMinimized() const;
 
+  /**
+   * Pops out/in the view.
+   *
+   * This method just emits OnPopOut/OnPopIn signals,
+   * Host shall connect to these signals and perform the real action.
+   */
+  void SetPoppedOut(bool popout);
+
   /** Checks if the main view is popped out. */
   bool IsPoppedOut() const;
 
@@ -167,8 +175,11 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /**
    * This method will be called when displaying context menu.
    *
+   * The default implementation adds only one "Remove" menu item
+   * for removing the gadget.
+   *
    * Derived class shall override this method to add decorator specific menu
-   * items.
+   * items, and call through parent's OnAddDecoratorMenuItems().
    */
   virtual void OnAddDecoratorMenuItems(MenuInterface *menu);
 

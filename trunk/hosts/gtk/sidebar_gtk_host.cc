@@ -194,6 +194,8 @@ class SideBarGtkHost::Impl {
   }
 
   ~Impl() {
+    SaveGlobalOptions();
+
     if (auto_hide_source_)
       g_source_remove(auto_hide_source_);
     if (auto_show_source_)
@@ -1624,7 +1626,6 @@ class SideBarGtkHost::Impl {
 
   void ExitMenuHandler(const char *str) {
     gtk_main_quit();
-    SaveGlobalOptions();
   }
 
   void LoadGadgets() {
@@ -1866,10 +1867,6 @@ void SideBarGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
 
 bool SideBarGtkHost::LoadFont(const char *filename) {
   return ggadget::gtk::LoadFont(filename);
-}
-
-void SideBarGtkHost::Run() {
-  gtk_main();
 }
 
 void SideBarGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {

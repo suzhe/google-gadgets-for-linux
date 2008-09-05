@@ -111,6 +111,11 @@ static void OnClientMessage(const std::string &data) {
   ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
 }
 
+static void DefaultSignalHandler(int sig) {
+  DLOG("Signal caught: %d, exit.", sig);
+  gtk_main_quit();
+}
+
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
@@ -261,8 +266,15 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  // Hook popular signals to exit gracefully.
+  signal(SIGHUP, DefaultSignalHandler);
+  signal(SIGINT, DefaultSignalHandler);
+  signal(SIGTERM, DefaultSignalHandler);
+  signal(SIGUSR1, DefaultSignalHandler);
+  signal(SIGUSR2, DefaultSignalHandler);
+
   gdk_notify_startup_complete();
-  host->Run();
+  gtk_main();
 
   delete host;
   delete options;
