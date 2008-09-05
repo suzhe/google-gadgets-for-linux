@@ -350,6 +350,8 @@ void FloatingMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
                             kZoomMenuItems[i].zoom), priority);
     }
   }
+
+  MainViewDecoratorBase::OnAddDecoratorMenuItems(menu);
 }
 
 void FloatingMainViewDecorator::OnShowDecorator() {

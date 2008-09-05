@@ -66,9 +66,6 @@ class HostInterface {
   /** Temporarily install a given font on the system. */
   virtual bool LoadFont(const char *filename) = 0;
 
-  /** Runs the host, start the main loop, etc. */
-  virtual void Run() = 0;
-
   /**
    * Shows an about dialog for a specified gadget.
    */

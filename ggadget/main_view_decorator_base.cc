@@ -80,8 +80,8 @@ class  MainViewDecoratorBase::Impl {
       minimized_icon_(new ImgElement(NULL, owner, NULL)),
       minimized_caption_(new LabelElement(NULL, owner, NULL)),
       original_child_view_(NULL),
-      plugin_flags_connection_(NULL) {
-    ASSERT(option_prefix && *option_prefix);
+      plugin_flags_connection_(NULL),
+      option_prefix_(option_prefix) {
   }
 
   void InitDecorator() {
@@ -278,11 +278,9 @@ class  MainViewDecoratorBase::Impl {
   }
 
   void SaveMinimizedState() {
-    // Don't use GetGadget(), which might return the gadget for popout view.
-    // It's not what we want.
-    View *child = owner_->GetChildView();
-    Gadget *gadget = child ? child->GetGadget() : NULL;
-    if (gadget) {
+    Gadget *gadget = owner_->GetGadget();
+    // If option prefix is NULL, then means host don't want to save the state.
+    if (gadget && option_prefix_ && *option_prefix_) {
       OptionsInterface *opt = gadget->GetOptions();
       opt->PutInternalValue("main_view_minimized", Variant(minimized_));
       DLOG("Save main view minimized state for gadget %d: %s",
@@ -291,11 +289,8 @@ class  MainViewDecoratorBase::Impl {
   }
 
   void LoadMinimizedState() {
-    // Don't use GetGadget(), which might return the gadget for popout view.
-    // It's not what we want.
-    View *child = owner_->GetChildView();
-    Gadget *gadget = child ? child->GetGadget() : NULL;
-    if (gadget) {
+    Gadget *gadget = owner_->GetGadget();
+    if (gadget && option_prefix_ && *option_prefix_) {
       OptionsInterface *opt = gadget->GetOptions();
       Variant var = opt->GetInternalValue("main_view_minimized");
       if (var.type() == Variant::TYPE_BOOL &&
@@ -303,6 +298,12 @@ class  MainViewDecoratorBase::Impl {
         owner_->SetMinimized(!minimized_);
       }
     }
+  }
+
+  void RemoveMenuCallback(const char *) {
+    Gadget *gadget = owner_->GetGadget();
+    if (gadget)
+      gadget->RemoveMe(true);
   }
 
  public:
@@ -326,6 +327,8 @@ class  MainViewDecoratorBase::Impl {
 
   View *original_child_view_;
   Connection *plugin_flags_connection_;
+
+  const char *option_prefix_;
 
   Signal0<void> on_popin_signal_;;
   Signal0<void> on_popout_signal_;;
@@ -404,7 +407,16 @@ bool MainViewDecoratorBase::IsButtonVisible(ButtonId button_id) const {
 }
 
 void MainViewDecoratorBase::SetButtonBoxVisible(bool visible) {
-  impl_->buttons_div_->SetVisible(visible);
+  const Elements *elements = impl_->buttons_div_->GetChildren();
+  int count = elements->GetCount();
+  for (int i = 0; i < count; ++i) {
+    const BasicElement *elm = elements->GetItemByIndex(i);
+    if (elm && elm->IsVisible()) {
+      // Only show button box when there is at least one visible button.
+      impl_->buttons_div_->SetVisible(visible);
+      return;
+    }
+  }
 }
 
 bool MainViewDecoratorBase::IsButtonBoxVisible() const {
@@ -473,6 +485,9 @@ void MainViewDecoratorBase::SetPopOutDirection(PopOutDirection direction) {
 void MainViewDecoratorBase::SetMinimized(bool minimized) {
   if (impl_->minimized_ != minimized) {
     impl_->minimized_ = minimized;
+    // Pop in the view before restoring, if the pop in button is not visible.
+    if (!minimized && impl_->popped_out_ && !IsButtonVisible(POP_IN_OUT_BUTTON))
+      impl_->on_popin_signal_();
     SetChildViewVisible(!minimized);
     impl_->OnMinimizedChanged();
   }
@@ -480,6 +495,15 @@ void MainViewDecoratorBase::SetMinimized(bool minimized) {
 
 bool MainViewDecoratorBase::IsMinimized() const {
   return impl_->minimized_;
+}
+
+void MainViewDecoratorBase::SetPoppedOut(bool popout) {
+  if (impl_->popped_out_ != popout) {
+    if (popout)
+      impl_->on_popout_signal_();
+    else
+      impl_->on_popin_signal_();
+  }
 }
 
 bool MainViewDecoratorBase::IsPoppedOut() const {
@@ -679,7 +703,13 @@ bool MainViewDecoratorBase::OnClientSizing(double *width, double *height) {
 }
 
 void MainViewDecoratorBase::OnAddDecoratorMenuItems(MenuInterface *menu) {
-  // Do nothing.
+  if (GetGadget()) {
+    // Use MENU_ITEM_PRI_GADGET to make sure that it's the last menu item.
+    menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
+                  MenuInterface::MENU_ITEM_ICON_DELETE,
+                  NewSlot(impl_, &Impl::RemoveMenuCallback),
+                  MenuInterface::MENU_ITEM_PRI_GADGET);
+  }
 }
 
 void MainViewDecoratorBase::OnShowDecorator() {

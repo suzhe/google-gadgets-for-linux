@@ -180,6 +180,8 @@ void DockedMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
     menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0, 0,
                   NewSlot(impl_, &Impl::UndockMenuCallback), priority);
   }
+
+  MainViewDecoratorBase::OnAddDecoratorMenuItems(menu);
 }
 
 void DockedMainViewDecorator::OnShowDecorator() {

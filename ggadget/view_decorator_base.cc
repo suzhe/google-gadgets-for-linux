@@ -60,8 +60,6 @@ class ViewDecoratorBase::Impl {
       owner_(owner),
       view_element_(new ViewElement(NULL, owner, NULL, false)),
       snapshot_(new CopyElement(NULL, owner, NULL)) {
-    ASSERT(option_prefix && *option_prefix);
-
     view_element_->SetVisible(true);
     snapshot_->SetVisible(false);
     owner->GetChildren()->InsertElement(view_element_, NULL);
@@ -273,7 +271,7 @@ void ViewDecoratorBase::UpdateViewSize() {
 
 bool ViewDecoratorBase::LoadChildViewSize() {
   Gadget *gadget = GetGadget();
-  if (gadget) {
+  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
     std::string option_prefix(impl_->option_prefix_);
     OptionsInterface *opt = gadget->GetOptions();
     Variant vw =
@@ -315,7 +313,7 @@ bool ViewDecoratorBase::LoadChildViewSize() {
 
 bool ViewDecoratorBase::SaveChildViewSize() const {
   Gadget *gadget = GetGadget();
-  if (gadget) {
+  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
     std::string option_prefix(impl_->option_prefix_);
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue((option_prefix + "_width").c_str(),
@@ -371,18 +369,12 @@ double ViewDecoratorBase::GetChildViewScale() const {
 }
 
 void ViewDecoratorBase::SetChildViewOpacity(double opacity) {
-  if (impl_->view_element_->IsVisible())
-    impl_->view_element_->SetOpacity(opacity);
-  else if (impl_->snapshot_->IsVisible())
-    impl_->snapshot_->SetOpacity(opacity);
+  impl_->view_element_->SetOpacity(opacity);
+  impl_->snapshot_->SetOpacity(opacity);
 }
 
 double ViewDecoratorBase::GetChildViewOpacity() const {
-  if (impl_->view_element_->IsVisible())
-    return impl_->view_element_->GetOpacity();
-  else if (impl_->snapshot_->IsVisible())
-    return impl_->snapshot_->GetOpacity();
-  return 1.0;
+  return impl_->view_element_->GetOpacity();
 }
 
 void ViewDecoratorBase::SetChildViewCursor(ViewInterface::CursorType type) {

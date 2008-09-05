@@ -519,10 +519,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ShowOptionsDialog();
   }
 
-  void RemoveMenuCallback(const char *) {
-    RemoveMe(true);
-  }
-
   void DebugConsoleMenuCallback(const char *) {
     host_->ShowGadgetDebugConsole(owner_);
   }
@@ -552,10 +548,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                   MenuInterface::MENU_ITEM_ICON_ABOUT,
                   NewSlot(this, &Impl::AboutMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
-    menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
-                  MenuInterface::MENU_ITEM_ICON_DELETE,
-                  NewSlot(this, &Impl::RemoveMenuCallback),
-                  MenuInterface::MENU_ITEM_PRI_GADGET);
+    // Remove item is added in view decorator.
   }
 
   void SetDisplayTarget(DisplayTarget target) {
