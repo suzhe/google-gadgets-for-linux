@@ -478,7 +478,7 @@ class SingleViewHost::Impl {
         type_ == ViewHostInterface::VIEW_HOST_MAIN) {
       menu_builder.AddItem(
           GM_("MENU_ITEM_ALWAYS_ON_TOP"),
-          is_keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+          is_keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0, 0,
           NewSlot(this, &Impl::KeepAboveMenuCallback, !is_keep_above_),
           MenuInterface::MENU_ITEM_PRI_HOST);
     }

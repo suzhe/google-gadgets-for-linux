@@ -33,6 +33,39 @@ class MenuInterface {
     MENU_ITEM_FLAG_CHECKED = 8
   };
 
+  /**
+   * Stock icons that can be used for a menu item.
+   *
+   * It's for C++ code only.
+   */
+  enum MenuItemStockIcon {
+    MENU_ITEM_ICON_NONE = 0,
+    MENU_ITEM_ICON_ABOUT,
+    MENU_ITEM_ICON_ADD,
+    MENU_ITEM_ICON_APPLY,
+    MENU_ITEM_ICON_CANCEL,
+    MENU_ITEM_ICON_CLOSE,
+    MENU_ITEM_ICON_COPY,
+    MENU_ITEM_ICON_CUT,
+    MENU_ITEM_ICON_DELETE,
+    MENU_ITEM_ICON_HELP,
+    MENU_ITEM_ICON_NEW,
+    MENU_ITEM_ICON_NO,
+    MENU_ITEM_ICON_OK,
+    MENU_ITEM_ICON_OPEN,
+    MENU_ITEM_ICON_PASTE,
+    MENU_ITEM_ICON_PREFERENCES,
+    MENU_ITEM_ICON_QUIT,
+    MENU_ITEM_ICON_REFRESH,
+    MENU_ITEM_ICON_REMOVE,
+    MENU_ITEM_ICON_STOP,
+    MENU_ITEM_ICON_YES,
+    MENU_ITEM_ICON_ZOOM_100,
+    MENU_ITEM_ICON_ZOOM_FIT,
+    MENU_ITEM_ICON_ZOOM_IN,
+    MENU_ITEM_ICON_ZOOM_OUT
+  };
+
   enum MenuItemPriority {
     /** For menu items added by client code, like elements or javascript. */
     MENU_ITEM_PRI_CLIENT = 0,
@@ -52,6 +85,8 @@ class MenuInterface {
    *     indicator. If it's blank or NULL, style is automatically treated as
    *     @c MENU_ITEM_FLAG_SEPARATOR.
    * @param style combination of <code>MenuItemFlag</code>s.
+   * @param stock_icon Optional stock icon for this menu item, if
+   *        MENU_ITEM_FLAG_CHECKED is used, then the icon will be ignored.
    * @param handler handles menu command.
    * @param priority Priority of the menu item, item with smaller priority will
    *      be placed to higher position in the menu. Must be >= 0.
@@ -60,7 +95,7 @@ class MenuInterface {
    *      20-29 is reserved for menu items added by host.
    *      30-39 is reserved for menu items added by Gadget.
    */
-  virtual void AddItem(const char *item_text, int style,
+  virtual void AddItem(const char *item_text, int style, int stock_icon,
                        Slot1<void, const char *> *handler, int priority) = 0;
 
   /**

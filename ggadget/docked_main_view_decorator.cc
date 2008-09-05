@@ -173,11 +173,11 @@ void DockedMainViewDecorator::GetMargins(double *top, double *left,
 void DockedMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
   int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
   menu->AddItem(
-      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
+      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
       NewSlot(impl_, &Impl::CollapseExpandMenuCallback), priority);
 
   if (impl_->on_undock_signal_.HasActiveConnections()) {
-    menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0,
+    menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0, 0,
                   NewSlot(impl_, &Impl::UndockMenuCallback), priority);
   }
 }

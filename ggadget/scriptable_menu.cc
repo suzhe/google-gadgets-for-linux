@@ -72,7 +72,8 @@ class ScriptableMenu::Impl {
   }
 
   void AddItem(const char *item_text, int style, Slot *handler) {
-    menu_->AddItem(item_text, style,
+    // TODO: support stock icon.
+    menu_->AddItem(item_text, style, 0,
                    handler ? new MenuItemSlot(owner_, gadget_, handler) : NULL,
                    MenuInterface::MENU_ITEM_PRI_CLIENT);
   }

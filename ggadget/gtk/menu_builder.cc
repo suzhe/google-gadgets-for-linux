@@ -15,6 +15,7 @@
 */
 
 #include <ggadget/logger.h>
+#include <ggadget/common.h>
 #include <ggadget/slot.h>
 #include "menu_builder.h"
 
@@ -27,6 +28,37 @@ static const char *kMenuItemPriorityTag = "menu-item-priority";
 static const char *kMenuItemCallbackTag = "menu-item-callback";
 static const char *kMenuItemBuilderTag = "menu-item-builder";
 static const char *kMenuItemNoCallbackTag = "menu-item-no-callback";
+
+// Must keep the same order as MenuInterface::MenuItemStockIcon
+static const char *kStockIcons[] = {
+  NULL,
+  GTK_STOCK_ABOUT,
+  GTK_STOCK_ADD,
+  GTK_STOCK_APPLY,
+  GTK_STOCK_CANCEL,
+  GTK_STOCK_CLOSE,
+  GTK_STOCK_COPY,
+  GTK_STOCK_CUT,
+  GTK_STOCK_DELETE,
+  GTK_STOCK_HELP,
+  GTK_STOCK_NEW,
+  GTK_STOCK_NO,
+  GTK_STOCK_OK,
+  GTK_STOCK_OPEN,
+  GTK_STOCK_PASTE,
+  GTK_STOCK_PREFERENCES,
+  GTK_STOCK_QUIT,
+  GTK_STOCK_REFRESH,
+  GTK_STOCK_REMOVE,
+  GTK_STOCK_STOP,
+  GTK_STOCK_YES,
+  GTK_STOCK_ZOOM_100,
+  GTK_STOCK_ZOOM_FIT,
+  GTK_STOCK_ZOOM_IN,
+  GTK_STOCK_ZOOM_OUT
+};
+
+static const int kNumberOfStockIcons = static_cast<int>(arraysize(kStockIcons));
 
 class MenuBuilder::Impl {
  public:
@@ -95,7 +127,7 @@ class MenuBuilder::Impl {
     if (handler) (*handler)(text);
   }
 
-  static GtkMenuItem *NewMenuItem(const char *text, int style,
+  static GtkMenuItem *NewMenuItem(const char *text, int style, int stock_icon,
                                   Slot1<void, const char *> *handler,
                                   int priority) {
     GtkMenuItem *item = NULL;
@@ -105,6 +137,13 @@ class MenuBuilder::Impl {
     } else if (style & MENU_ITEM_FLAG_CHECKED) {
       item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_mnemonic(
         ConvertWindowsStyleMnemonics(text).c_str()));
+    } else if (stock_icon > 0 && stock_icon < kNumberOfStockIcons) {
+      item = GTK_MENU_ITEM(gtk_image_menu_item_new_with_mnemonic(
+        ConvertWindowsStyleMnemonics(text).c_str()));
+      GtkWidget *icon = gtk_image_new_from_stock(kStockIcons[stock_icon],
+                                                 GTK_ICON_SIZE_MENU);
+      if (icon)
+        gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), icon);
     } else {
       item = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic(
         ConvertWindowsStyleMnemonics(text).c_str()));
@@ -194,11 +233,11 @@ class MenuBuilder::Impl {
     return data.item_;
   }
 
-  GtkMenuItem *AddMenuItem(const char *text, int style,
+  GtkMenuItem *AddMenuItem(const char *text, int style, int stock_icon,
                            ggadget::Slot1<void, const char *> *handler,
                            int priority) {
     ASSERT(priority >= 0);
-    GtkMenuItem *item = NewMenuItem(text, style, handler, priority);
+    GtkMenuItem *item = NewMenuItem(text, style, stock_icon, handler, priority);
     if (item) {
       int last_index = 0;
       int count = 0;
@@ -220,7 +259,7 @@ class MenuBuilder::Impl {
 
           if (last_priority != priority &&
               !GTK_IS_SEPARATOR_MENU_ITEM(last_item)) {
-            GtkMenuItem *sep = NewMenuItem(NULL, 0, NULL, priority);
+            GtkMenuItem *sep = NewMenuItem(NULL, 0, 0, NULL, priority);
             gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(sep), last_index + 1);
           }
         }
@@ -234,7 +273,7 @@ class MenuBuilder::Impl {
               !GTK_IS_SEPARATOR_MENU_ITEM(next_item)) {
             int next_priority = GPOINTER_TO_INT(
                 g_object_get_data(G_OBJECT(next_item), kMenuItemPriorityTag));
-            GtkMenuItem *sep = NewMenuItem(NULL, 0, NULL, next_priority);
+            GtkMenuItem *sep = NewMenuItem(NULL, 0, 0, NULL, next_priority);
             gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(sep), next_index);
           }
         }
@@ -270,7 +309,7 @@ class MenuBuilder::Impl {
                                                          kMenuItemPriorityTag));
 
         gtk_widget_destroy(GTK_WIDGET(item));
-        item = NewMenuItem(text, style, handler, priority);
+        item = NewMenuItem(text, style, 0, handler, priority);
         if (item)
           gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(item), index);
       } else {
@@ -285,7 +324,7 @@ class MenuBuilder::Impl {
 
   MenuInterface *AddPopup(const char *text, int priority) {
     MenuBuilder *submenu = NULL;
-    GtkMenuItem *item = AddMenuItem(text, 0, NULL, priority);
+    GtkMenuItem *item = AddMenuItem(text, 0, 0, NULL, priority);
     if (item) {
       GtkMenu *popup = GTK_MENU(gtk_menu_new());
       gtk_widget_show(GTK_WIDGET(popup));
@@ -314,9 +353,9 @@ MenuBuilder::~MenuBuilder() {
   impl_ = NULL;
 }
 
-void MenuBuilder::AddItem(const char *item_text, int style,
+void MenuBuilder::AddItem(const char *item_text, int style, int stock_icon,
                           Slot1<void, const char *> *handler, int priority) {
-  impl_->AddMenuItem(item_text, style, handler, priority);
+  impl_->AddMenuItem(item_text, style, stock_icon, handler, priority);
 }
 
 void MenuBuilder::SetItemStyle(const char *item_text, int style) {
