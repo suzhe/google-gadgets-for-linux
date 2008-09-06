@@ -32,6 +32,11 @@
 #include "key_convert.h"
 #include "utilities.h"
 
+// It might not be necessary, because X server will grab the pointer
+// implicitly when button is pressed.
+// But using explicit mouse grabbing may avoid some issues by preventing some
+// events from sending to client window when mouse is grabbed.
+#define GRAB_POINTER_EXPLICITLY
 namespace ggadget {
 namespace gtk {
 
@@ -40,7 +45,7 @@ static const char kPlainTextTarget[] = "text/plain";
 
 // A small motion threshold to prevent a click with tiny mouse move from being
 // treated as window move or resize.
-static const double kDragThreshold = 2;
+static const double kDragThreshold = 3;
 
 class ViewWidgetBinder::Impl {
  public:
@@ -58,7 +63,10 @@ class ViewWidgetBinder::Impl {
       no_background_(no_background),
       enable_input_shape_mask_(true),
       focused_(false),
-      //pointer_grabed_(false),
+      button_pressed_(false),
+#ifdef GRAB_POINTER_EXPLICITLY
+      pointer_grabbed_(false),
+#endif
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
@@ -151,9 +159,11 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonPressHandler(GtkWidget *widget, GdkEventButton *event,
                                      gpointer user_data) {
+    DLOG("ButtonPressHandler.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
 
+    impl->button_pressed_ = true;
     impl->host_->SetTooltip(NULL);
 
     if (!impl->focused_) {
@@ -210,15 +220,17 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
                                        gpointer user_data) {
+    DLOG("ButtonReleaseHandler.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
+    impl->button_pressed_ = false;
     impl->host_->SetTooltip(NULL);
-#if 0
-    if (impl->pointer_grabed_) {
+#ifdef GRAB_POINTER_EXPLICITLY
+    if (impl->pointer_grabbed_) {
       gdk_pointer_ungrab(event->time);
-      impl->pointer_grabed_ = false;
+      impl->pointer_grabbed_ = false;
     }
 #endif
 
@@ -379,16 +391,17 @@ class ViewWidgetBinder::Impl {
     MouseEvent e(Event::EVENT_MOUSE_MOVE,
                  event->x / impl->zoom_, event->y / impl->zoom_,
                  0, 0, button, mod);
-#if 0
+#ifdef GRAB_POINTER_EXPLICITLY
     if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed() &&
-        !impl->pointer_grabed_) {
+        !impl->pointer_grabbed_) {
       // Grab the cursor to prevent losing events.
       if (gdk_pointer_grab(widget->window, FALSE,
                            (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                          GDK_BUTTON_MOTION_MASK |
                                           GDK_POINTER_MOTION_MASK |
                                           GDK_POINTER_MOTION_HINT_MASK),
                            NULL, NULL, event->time) == GDK_GRAB_SUCCESS) {
-        impl->pointer_grabed_ = true;
+        impl->pointer_grabbed_ = true;
       }
     }
 #endif
@@ -398,7 +411,9 @@ class ViewWidgetBinder::Impl {
     if (result == EVENT_RESULT_UNHANDLED && button != MouseEvent::BUTTON_NONE &&
         impl->mouse_down_x_ >= 0 && impl->mouse_down_y_ >= 0 &&
         (std::abs(event->x_root - impl->mouse_down_x_) > kDragThreshold ||
-         std::abs(event->y_root - impl->mouse_down_y_) > kDragThreshold)) {
+         std::abs(event->y_root - impl->mouse_down_y_) > kDragThreshold ||
+         impl->mouse_down_hittest_ != ViewInterface::HT_CLIENT)) {
+      impl->button_pressed_ = false;
       // Send fake mouse up event to the view so that we can start to drag
       // the window. Note: no mouse click event is sent in this case, to prevent
       // unwanted action after window move.
@@ -423,11 +438,11 @@ class ViewWidgetBinder::Impl {
         resize_drag = true;
       }
 
-#if 0
+#ifdef GRAB_POINTER_EXPLICITLY
       // ungrab the pointer before starting move/resize drag.
-      if (impl->pointer_grabed_) {
+      if (impl->pointer_grabbed_) {
         gdk_pointer_ungrab(gtk_get_current_event_time());
-        impl->pointer_grabed_ = false;
+        impl->pointer_grabbed_ = false;
       }
 #endif
 
@@ -444,7 +459,6 @@ class ViewWidgetBinder::Impl {
 
     // Since motion hint is enabled, we must notify GTK that we're ready to
     // receive the next motion event.
-    // FIXME: Seems that this code has no effect.
 #if GTK_CHECK_VERSION(2,12,0)
     gdk_event_request_motions(event); // requires version 2.12
 #else
@@ -484,6 +498,11 @@ class ViewWidgetBinder::Impl {
       return FALSE;
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+
+    // Don't send mouse out event if the mouse is grabbed.
+    if (impl->button_pressed_)
+      return FALSE;
+
     impl->host_->SetTooltip(NULL);
 
     MouseEvent e(Event::EVENT_MOUSE_OUT,
@@ -526,11 +545,11 @@ class ViewWidgetBinder::Impl {
     if (impl->focused_) {
       impl->focused_ = false;
       SimpleEvent e(Event::EVENT_FOCUS_OUT);
-#if 0
+#ifdef GRAB_POINTER_EXPLICITLY
       // Ungrab the pointer if the focus is lost.
-      if (impl->pointer_grabed_) {
+      if (impl->pointer_grabbed_) {
         gdk_pointer_ungrab(gtk_get_current_event_time());
-        impl->pointer_grabed_ = false;
+        impl->pointer_grabbed_ = false;
       }
 #endif
       return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
@@ -557,11 +576,11 @@ class ViewWidgetBinder::Impl {
                        Event::EVENT_DRAG_DROP, user_data);
   }
 
-#if 0
+#ifdef GRAB_POINTER_EXPLICITLY
   static gboolean GrabBrokenHandler(GtkWidget *widget, GdkEvent *event,
                                     gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->pointer_grabed_ = false;
+    impl->pointer_grabbed_ = false;
     return FALSE;
   }
 #endif
@@ -727,7 +746,10 @@ class ViewWidgetBinder::Impl {
   bool no_background_;
   bool enable_input_shape_mask_;
   bool focused_;
-  //bool pointer_grabed_;
+  bool button_pressed_;
+#ifdef GRAB_POINTER_EXPLICITLY
+  bool pointer_grabbed_;
+#endif
   double zoom_;
   double mouse_down_x_;
   double mouse_down_y_;
@@ -763,7 +785,9 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
   { "motion-notify-event", G_CALLBACK(MotionNotifyHandler) },
   { "screen-changed", G_CALLBACK(ScreenChangedHandler) },
   { "scroll-event", G_CALLBACK(ScrollHandler) },
-  //{ "grab-broken-event", G_CALLBACK(GrabBrokenHandler) },
+#ifdef GRAB_POINTER_EXPLICITLY
+  { "grab-broken-event", G_CALLBACK(GrabBrokenHandler) },
+#endif
 };
 
 const size_t ViewWidgetBinder::Impl::kEventHandlersNum =
