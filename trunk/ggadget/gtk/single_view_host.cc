@@ -33,6 +33,11 @@
 #include "utilities.h"
 #include "key_convert.h"
 
+// It might not be necessary, because X server will grab the pointer
+// implicitly when button is pressed.
+// But using explicit mouse grabbing may avoid some issues by preventing some
+// events from sending to client window when mouse is grabbed.
+#define GRAB_POINTER_EXPLICITLY
 namespace ggadget {
 namespace gtk {
 
@@ -300,6 +305,9 @@ class SingleViewHost::Impl {
   }
 
   void SetCursor(int type) {
+    // Don't change cursor if it's in resize dragging mode.
+    if (resize_width_mode_ || resize_height_mode_)
+      return;
     GdkCursor *cursor = CreateCursor(type, view_->GetHitTest());
     if (widget_->window)
       gdk_window_set_cursor(widget_->window, cursor);
@@ -560,13 +568,14 @@ class SingleViewHost::Impl {
     if (event)
       gdk_event_free(event);
 
-#if 0
+#ifdef GRAB_POINTER_EXPLICITLY
     // Grabbing mouse explicitly is not necessary.
 #ifdef _DEBUG
     GdkGrabStatus grab_status =
 #endif
     gdk_pointer_grab(window_->window, FALSE,
                      (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                    GDK_BUTTON_MOTION_MASK |
                                     GDK_POINTER_MOTION_MASK |
                                     GDK_POINTER_MOTION_HINT_MASK),
                      NULL, NULL, gtk_get_current_event_time());
@@ -580,7 +589,9 @@ class SingleViewHost::Impl {
     if (resize_width_mode_ || resize_height_mode_) {
       resize_width_mode_ = 0;
       resize_height_mode_ = 0;
-      //gdk_pointer_ungrab(gtk_get_current_event_time());
+#ifdef GRAB_POINTER_EXPLICITLY
+      gdk_pointer_ungrab(gtk_get_current_event_time());
+#endif
       QueueResize();
       on_end_resize_drag_signal_();
     }
@@ -766,6 +777,14 @@ class SingleViewHost::Impl {
           DLOG("Move resize window: x:%d, y:%d, w:%d, h:%d", x, y,
                win_width, win_height);
         }
+        // Since motion hint is enabled, we must notify GTK that we're ready to
+        // receive the next motion event.
+#if GTK_CHECK_VERSION(2,12,0)
+        gdk_event_request_motions(event); // requires version 2.12
+#else
+        int x, y;
+        gdk_window_get_pointer(widget->window, &x, &y, NULL);
+#endif
         return TRUE;
       } else {
         impl->StopResizeDrag();
