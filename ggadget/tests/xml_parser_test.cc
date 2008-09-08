@@ -233,11 +233,14 @@ TEST(XMLParser, LaughsAttack) {
   XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(laughs_attack, &g_strings,
-                                              "attack", NULL, NULL, NULL,
-                                              domdoc, NULL, NULL));
-  DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
-  ASSERT_STREQ("Ha ! ", doc_ele->GetTextContent().substr(0, 5).c_str());
+  // The parser can either simply treat the document not well-formed,
+  // or truncate the entity and return a well-formed document.
+  if (xml_parser->ParseContentIntoDOM(laughs_attack, &g_strings,
+                                      "attack", NULL, NULL, NULL,
+                                      domdoc, NULL, NULL)) {
+    DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
+    ASSERT_STREQ("Ha ! ", doc_ele->GetTextContent().substr(0, 5).c_str());
+  }
   domdoc->Unref();
 }
 
