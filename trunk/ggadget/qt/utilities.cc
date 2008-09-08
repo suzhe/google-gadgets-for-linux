@@ -21,12 +21,14 @@
 #include <string>
 #include <QtGui/QMessageBox>
 #include <QtGui/QPixmap>
+
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/file_manager_interface.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/xdg/utilities.h>
 #include "utilities.h"
@@ -361,6 +363,29 @@ QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget** widget) {
 bool OpenURL(const Gadget *gadget, const char *url) {
   // FIXME: Support launching desktop file.
   return ggadget::xdg::OpenURL(gadget, url);
+}
+
+QPixmap GetGadgetIcon(const Gadget *gadget) {
+  std::string data;
+  QPixmap pixmap;
+  if (gadget) {
+    std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+    gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data);
+  }
+  if (data.empty()) {
+    FileManagerInterface *file_manager = GetGlobalFileManager();
+    if (file_manager)
+      file_manager->ReadFile(kGadgetsIcon, &data);
+  }
+  if (!data.empty()) {
+    pixmap.loadFromData(reinterpret_cast<const uchar *>(data.c_str()),
+                        static_cast<int>(data.length()));
+  }
+  return pixmap;
+}
+
+void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget) {
+  widget->setWindowIcon(GetGadgetIcon(gadget));
 }
 
 } // namespace qt

@@ -77,7 +77,8 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   int int_height = D2I(view_->GetHeight() * zoom_);
 
   if (width() != int_width || height() != int_height) {
-    DLOG("QtViewWidget: Adjust size to (%d,%d)", int_width, int_height);
+    DLOG("QtViewWidget: Adjust size from (%d, %d) to (%d,%d)",
+         width(), height(), int_width, int_height);
     SetSize(int_width, int_height);
   }
 

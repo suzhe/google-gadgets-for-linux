@@ -132,10 +132,6 @@ ggadget::MenuInterface *QtMenu::AddPopup(const char *popup_text, int priority) {
   return impl_->AddPopup(popup_text, priority);
 }
 
-QMenu *QtMenu::GetNativeMenu() {
-  return impl_->GetNativeMenu();
-}
-
 } // namespace qt
 } // namespace ggadget
 #include "qt_menu_internal.moc"
