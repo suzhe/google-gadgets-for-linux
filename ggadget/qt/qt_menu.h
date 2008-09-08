@@ -41,8 +41,6 @@ class QtMenu : public ggadget::MenuInterface {
   virtual void SetItemStyle(const char *item_text, int style);
   virtual MenuInterface *AddPopup(const char *popup_text, int priority);
 
-  QMenu *GetNativeMenu();
-
  private:
   DISALLOW_EVIL_CONSTRUCTORS(QtMenu);
 

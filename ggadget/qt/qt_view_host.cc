@@ -194,6 +194,7 @@ class QtViewHost::Impl {
 
       dialog_->setLayout(layout);
       dialog_->setWindowTitle(caption_);
+      SetGadgetWindowIcon(dialog_, view_->GetGadget());
 
       if (modal) {
         dialog_->exec();
@@ -202,8 +203,9 @@ class QtViewHost::Impl {
       }
     } else {
       window_ = widget_;
-
+      SetGadgetWindowIcon(window_, view_->GetGadget());
       window_->setWindowTitle(caption_);
+
       if (record_states_) LoadWindowStates();
       window_->setAttribute(Qt::WA_DeleteOnClose, true);
 

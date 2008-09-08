@@ -44,6 +44,9 @@ QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget **widget);
 
 bool OpenURL(const Gadget *gadget, const char *url);
 
+QPixmap GetGadgetIcon(const Gadget *gadget);
+
+void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
 } // namespace qt
 } // namespace ggadget
 

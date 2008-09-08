@@ -375,10 +375,10 @@ class QtHost::Impl {
       dvh = new DecoratedViewHost(view_decorator);
       view_decorator->ConnectOnClose(
           NewSlot(this, &Impl::OnCloseMainViewHandler, dvh));
-      //view_decorator->ConnectOnPopOut(
-      //    NewSlot(this, &Impl::OnPopOutHandler, dvh));
-      //view_decorator->ConnectOnPopIn(
-      //    NewSlot(this, &Impl::OnPopInHandler, dvh));
+      view_decorator->ConnectOnPopOut(
+          NewSlot(this, &Impl::OnPopOutHandler, dvh));
+      view_decorator->ConnectOnPopIn(
+          NewSlot(this, &Impl::OnPopInHandler, dvh));
       view_decorator->SetButtonVisible(MainViewDecoratorBase::POP_IN_OUT_BUTTON,
                                        false);
     } else {

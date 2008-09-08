@@ -66,7 +66,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
    *
    * @sa ViewDecoratorBase
    *
-   * @param show_minimized_background If it's true than a background will be
+   * @param show_minimized_background If it's true then a background will be
    *        shown in minimized mode.
    */
   MainViewDecoratorBase(ViewHostInterface *host, const char *option_prefix,
