@@ -24,6 +24,28 @@ IF(COMMAND CMAKE_POLICY)
   CMAKE_POLICY(SET CMP0005 OLD)
 ENDIF(COMMAND CMAKE_POLICY)
 
+SET(LIB_SUFFIX ""
+  CACHE STRING "Define suffix of directory name (32/64)"
+  FORCE)
+SET(EXEC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}
+  CACHE PATH  "Base directory for executables and libraries"
+  FORCE)
+
+# The following are directories where stuff will be installed to.
+SET(BIN_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/bin"
+  CACHE PATH "The binary install dir (default prefix/bin)"
+  FORCE)
+SET(LIB_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX}"
+  CACHE PATH "The subdirectory relative to the install prefix where libraries will be installed (default is /lib${LIB_SUFFIX})"
+  FORCE)
+SET(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/ggadget"
+  CACHE PATH "The subdirectory to the header prefix"
+  FORCE)
+
+SET(GGL_OEM_BRAND ""
+  CACHE STRING "The OEM brand code"
+  FORCE)
+
 SET(LIBGGADGET_BINARY_VERSION \"1.0.0\")
 SET(GGL_MAJOR_VERSION 0)
 SET(GGL_MINOR_VERSION 10)
@@ -97,6 +119,10 @@ ADD_DEFINITIONS(
   -DGGL_MODULE_DIR=\\\"${GGL_MODULE_DIR}\\\"
   -DGGL_RESOURCE_DIR=\\\"${GGL_RESOURCE_DIR}\\\"
   -DGGL_LIBEXEC_DIR=\\\"${GGL_LIBEXEC_DIR}\\\")
+
+IF(GGL_OEM_BRAND)
+  ADD_DEFINITIONS(-DGGL_OEM_BRAND=\\\"${GGL_OEM_BRAND}\\\")
+ENDIF(GGL_OEM_BRAND)
 
 IF(UNIX)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror")
@@ -280,6 +306,7 @@ MESSAGE("
 Build options:
   Version                          ${GGL_VERSION}
   Build type                       ${CMAKE_BUILD_TYPE}
+  OEM brand                        ${GGL_OEM_BRAND}
 
  Libraries:
   GTK SVG Support                  ${RSVG_FOUND}

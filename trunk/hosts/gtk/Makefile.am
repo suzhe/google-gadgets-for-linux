@@ -25,13 +25,14 @@ noinst_HEADERS		= gadget_browser_host.h \
 
 bin_PROGRAMS		= ggl-gtk
 
-ggl_gtk_SOURCES	= main.cc \
+ggl_gtk_SOURCES		= main.cc \
 			  sidebar_gtk_host.cc \
 			  simple_gtk_host.cc
 
 
 ggl_gtk_CPPFLAGS 	= @GTK2_CFLAGS@ \
-			  $(PREDEFINED_MACROS)
+			  $(PREDEFINED_MACROS) \
+			  -DGGL_APP_NAME=\"ggl-gtk\"
 
 ggl_gtk_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 

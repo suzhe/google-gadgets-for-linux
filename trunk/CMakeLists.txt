@@ -19,14 +19,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 INCLUDE(Configure)
 
-SET(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)" )
-SET(EXEC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH  "Base directory for executables and libraries" FORCE)
-
-## the following are directories where stuff will be installed to
-SET(BIN_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/bin" CACHE PATH "The binary install dir (default prefix/bin)" FORCE)
-SET(LIB_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX}" CACHE PATH "The subdirectory relative to the install prefix where libraries will be installed (default is /lib${LIB_SUFFIX})" FORCE)
-SET(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/ggadget" CACHE PATH "The subdirectory to the header prefix" FORCE)
-
 ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)
 ADD_SUBDIRECTORY(hosts)

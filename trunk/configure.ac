@@ -145,9 +145,15 @@ AC_ARG_ENABLE([werror],
 	      [use_werror=$withval],
 	      [use_werror=yes])
 
+AC_ARG_WITH([oem-brand],
+	    AC_HELP_STRING([--with-oem-brand=code],
+	    [Specify the OEM brand code.]),
+	    [ggl_oem_brand=$withval],
+	    [ggl_oem_brand=""])
+
 AC_ARG_WITH([memcheck-command],
 	    AS_HELP_STRING([--with-memcheck-command=CMD],
-		[specify a memory check command for running unit tests.]),
+		[Specify a memory check command for running unit tests.]),
 	    [memcheck_command=$withval],
 	    [memcheck_command=""])
 
@@ -337,6 +343,13 @@ PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
 		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
 		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
 		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
+
+# Check OEM brand code.
+if test x$ggl_oem_brand != x; then
+  GGL_OEM_BRAND=$ggl_oem_brand
+  AC_SUBST(GGL_OEM_BRAND)
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_OEM_BRAND=\\\"$GGL_OEM_BRAND\\\""
+fi
 
 case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
@@ -1018,6 +1031,7 @@ Build options:
   Build static libs             $enable_static
   Enable debug                  $enable_debug
   Host type                     $ggl_host_type
+  OEM brand                     $ggl_oem_brand
 
  Libraries:
   GTK SVG Support               $has_librsvg

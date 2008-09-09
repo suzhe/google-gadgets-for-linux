@@ -302,6 +302,23 @@ function VBArray(array) {
   this.toArray = function() { return array; };
 }
 
+function _ActiveXObject_OpenUrl_(url) {
+  debug.trace("Open URL by ActiveX object:" + url);
+  // If the url doesn't have prefix, assume it's a file path.
+  if (url.indexOf("://") < 0)
+    url = encodeURI("file://" + url);
+  framework.openUrl(url);
+}
+
+// Emulates the WebBrowser class, only with very limited functionalities.
+function WebBrowser() {
+  this.Navigate = _ActiveXObject_OpenUrl_;
+  this.navigate = _ActiveXObject_OpenUrl_;
+  // Only the first parameter of Navigate2() is supported.
+  this.Navigate2 = _ActiveXObject_OpenUrl_;
+  this.navigate2 = _ActiveXObject_OpenUrl_;
+}
+
 // Emulates some popular ActiveX objects
 // "Microsoft.XMLHTTP"
 // "Microsoft.XMLDOM"
@@ -314,30 +331,19 @@ function VBArray(array) {
 // "Msxml2.DOMDocument.3.0"
 // TODO: Is it necessary to emulate "ADODB.Stream"?
 function ActiveXObject(name) {
-  function openUrl(url) {
-    debug.trace("Open URL by ActiveX object:" + url);
-    // If the url doesn't have prefix, assume it's a file path.
-    if (url.indexOf("://") < 0)
-      url = encodeURI("file://" + url);
-    framework.openUrl(url);
-  };
   name = name.toLowerCase();
   debug.warning("new ActiveXObject: " + name);
   if (name == "shell.application") {
-    this.open = openUrl;
-    this.Open = openUrl;
-    this.ShellExecute = openUrl;
-    this.shellExecute = openUrl;
-    this.shellexecute = openUrl;
+    this.open = _ActiveXObject_OpenUrl_;
+    this.Open = _ActiveXObject_OpenUrl_;
+    this.ShellExecute = _ActiveXObject_OpenUrl_;
+    this.shellExecute = _ActiveXObject_OpenUrl_;
+    this.shellexecute = _ActiveXObject_OpenUrl_;
   } else if (name == "wscript.shell") {
-    this.Run = openUrl;
-    this.run = openUrl;
+    this.Run = _ActiveXObject_OpenUrl_;
+    this.run = _ActiveXObject_OpenUrl_;
   } else if (name == "internetexplorer.application") {
-    this.Navigate = openUrl;
-    this.navigate = openUrl;
-    // Only the first parameter of Navigate2() is supported.
-    this.Navigate2 = openUrl;
-    this.navigate2 = openUrl;
+    return new WebBrowser();
   } else if (name == "scripting.filesystemobject") {
     return framework.system.filesystem;
   } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmlhttp|serverxmlhttp)/)) {

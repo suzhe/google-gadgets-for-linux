@@ -21,6 +21,8 @@ APPLY_CONFIG(GTK2)
 
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
 
+ADD_DEFINITIONS(-DGGL_APP_NAME=\\\"ggl-gtk\\\")
+
 SET(SRCS
   main.cc
   sidebar_gtk_host.cc

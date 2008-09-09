@@ -57,12 +57,12 @@ class DefaultMachine : public MachineInterface {
 
 class DefaultMemory : public MemoryInterface {
  public:
-  virtual int64_t GetTotal() { return 1024*1024*1024; }
-  virtual int64_t GetFree() { return 1024*1024*512; }
-  virtual int64_t GetUsed() { return 1024*1024*512; }
-  virtual int64_t GetFreePhysical() { return 1024*1024*512; }
-  virtual int64_t GetTotalPhysical() { return 1024*1024*1024; }
-  virtual int64_t GetUsedPhysical() { return 1024*1024*512; }
+  virtual int64_t GetTotal() { return 0; }
+  virtual int64_t GetFree() { return 0; }
+  virtual int64_t GetUsed() { return 0; }
+  virtual int64_t GetFreePhysical() { return 0; }
+  virtual int64_t GetTotalPhysical() { return 0; }
+  virtual int64_t GetUsedPhysical() { return 0; }
 };
 
 class DefaultPerfmon : public PerfmonInterface {
@@ -79,59 +79,25 @@ class DefaultPower : public PowerInterface {
  public:
   virtual bool IsCharging() { return false; }
   virtual bool IsPluggedIn() { return true; }
-  virtual int GetPercentRemaining() { return 100; }
-  virtual int GetTimeRemaining() { return 3600; }
-  virtual int GetTimeTotal() { return 7200; }
-};
-
-class DefaultProcessInfo : public ProcessInfoInterface {
- public:
-  virtual void Destroy() { }
-  virtual int GetProcessId() const { return 1234; }
-  virtual std::string GetExecutablePath() const { return "/usr/bin/default"; }
+  virtual int GetPercentRemaining() { return 0; }
+  virtual int GetTimeRemaining() { return 0; }
+  virtual int GetTimeTotal() { return 0; }
 };
 
 class DefaultProcesses : public ProcessesInterface {
  public:
   virtual void Destroy() { }
-  virtual int GetCount() const { return 100; }
-  virtual ProcessInfoInterface *GetItem(int index) { return &default_info_; }
-
- private:
-  DefaultProcessInfo default_info_;
+  virtual int GetCount() const { return 0; }
+  virtual ProcessInfoInterface *GetItem(int index) { return NULL; }
 };
 
 class DefaultProcess : public ProcessInterface {
  public:
   virtual ProcessesInterface *EnumerateProcesses() { return &default_processes_; }
-  virtual ProcessInfoInterface *GetForeground() { return &default_foreground_; }
-  virtual ProcessInfoInterface *GetInfo(int pid) { return &default_info_; }
+  virtual ProcessInfoInterface *GetForeground() { return NULL; }
+  virtual ProcessInfoInterface *GetInfo(int pid) { return NULL; }
  private:
   DefaultProcesses default_processes_;
-  DefaultProcessInfo default_foreground_;
-  DefaultProcessInfo default_info_;
-};
-
-class DefaultWirelessAccessPoint : public WirelessAccessPointInterface {
- public:
-  virtual void Destroy() { }
-  virtual std::string GetName() const { return "Unknown"; }
-  virtual Type GetType() const {
-    return WirelessAccessPointInterface::WIRELESS_TYPE_ANY;
-  }
-  virtual int GetSignalStrength() const { return 0; }
-  virtual void Connect(Slot1<void, bool> *callback) {
-    if (callback) {
-      (*callback)(true);
-      delete callback;
-    }
-  }
-  virtual void Disconnect(Slot1<void, bool> *callback) {
-    if (callback) {
-      (*callback)(true);
-      delete callback;
-    }
-  }
 };
 
 class DefaultWireless : public WirelessInterface {
@@ -152,7 +118,7 @@ class DefaultNetwork : public NetworkInterface {
  public:
   virtual bool IsOnline() { return true; }
   virtual ConnectionType GetConnectionType() {
-    return NetworkInterface::CONNECTION_TYPE_802_3;
+    return NetworkInterface::CONNECTION_TYPE_UNKNOWN;
   }
   virtual PhysicalMediaType GetPhysicalMediaType() {
     return NetworkInterface::PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
@@ -164,170 +130,27 @@ class DefaultNetwork : public NetworkInterface {
   DefaultWireless wireless_;
 };
 
-
-class DefaultDrives : public DrivesInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual int GetCount() const { return 0; }
-  virtual bool AtEnd() { return true; }
-  virtual DriveInterface *GetItem() { return NULL; }
-  virtual void MoveFirst() { }
-  virtual void MoveNext() { }
-};
-
-class DefaultDrive : public DriveInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual std::string GetPath() { return ""; }
-  virtual std::string GetDriveLetter() { return ""; }
-  virtual std::string GetShareName() { return ""; }
-  virtual DriveType GetDriveType() { return DRIVE_TYPE_UNKNOWN; }
-  virtual FolderInterface *GetRootFolder() { return NULL; }
-  virtual int64_t GetAvailableSpace() { return 0; }
-  virtual int64_t GetFreeSpace() { return 0; }
-  virtual int64_t GetTotalSize() { return 0; }
-  virtual std::string GetVolumnName() { return ""; }
-  virtual bool SetVolumnName(const char *name) { return false; }
-  virtual std::string GetFileSystem() { return ""; }
-  virtual int64_t GetSerialNumber() { return 0; }
-  virtual bool IsReady() { return false; }
-};
-
-/** IFolderCollection. */
-class DefaultFolders : public FoldersInterface {
- public:
-  virtual void Destroy() { }
-  virtual int GetCount() const { return 0; }
-  virtual bool AtEnd() { return true; }
-  virtual FolderInterface *GetItem() { return NULL; }
-  virtual void MoveFirst() { }
-  virtual void MoveNext() { }
-};
-
-class DefaultFolder : public FolderInterface {
- public:
-  virtual void Destroy() { }
-  virtual std::string GetPath() { return ""; }
-  virtual std::string GetName() { return ""; }
-  virtual bool SetName(const char *) { return false; }
-  virtual std::string GetShortPath() { return ""; }
-  virtual std::string GetShortName() { return ""; }
-  virtual DriveInterface *GetDrive() { return NULL; }
-  virtual FolderInterface *GetParentFolder() { return NULL; }
-  virtual FileAttribute GetAttributes() { return FILE_ATTR_NORMAL; }
-  virtual bool SetAttributes(FileAttribute attributes) { return false; }
-  virtual Date GetDateCreated() { return Date(0); }
-  virtual Date GetDateLastModified() { return Date(0); }
-  virtual Date GetDateLastAccessed() { return Date(0); }
-  virtual std::string GetType() { return ""; }
-  virtual bool Delete(bool force) { return false; }
-  virtual bool Copy(const char *dest, bool overwrite) { return false; }
-  virtual bool Move(const char *dest) { return false; }
-  virtual bool IsRootFolder() { return false; }
-  virtual int64_t GetSize() { return 0; }
-  virtual FoldersInterface *GetSubFolders() { return NULL; }
-  virtual FilesInterface *GetFiles() { return NULL; }
-  virtual TextStreamInterface *CreateTextFile(const char *filename,
-                                              bool overwrite, bool unicode) {
-    return NULL;
-  }
-};
-
-class DefaultFiles : public FilesInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual int GetCount() const { return 0; }
-  virtual bool AtEnd() { return true; }
-  virtual FileInterface *GetItem() { return NULL; }
-  virtual void MoveFirst() { }
-  virtual void MoveNext() { }
-};
-
-class DefaultFile : public FileInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual std::string GetPath() { return ""; }
-  virtual std::string GetName() { return ""; }
-  virtual bool SetName(const char *name) { return false; }
-  virtual std::string GetShortPath() { return ""; }
-  virtual std::string GetShortName() { return ""; }
-  virtual DriveInterface *GetDrive() { return NULL; }
-  virtual FolderInterface *GetParentFolder() { return NULL; }
-  virtual FileAttribute GetAttributes() { return FILE_ATTR_NORMAL; }
-  virtual bool SetAttributes(FileAttribute attributes) { return false; }
-  virtual Date GetDateCreated() { return Date(0); }
-  virtual Date GetDateLastModified() { return Date(0); }
-  virtual Date GetDateLastAccessed() { return Date(0); }
-  virtual int64_t GetSize() { return 0; }
-  virtual std::string GetType() { return ""; }
-  virtual bool Delete(bool force) { return false; }
-  virtual bool Copy(const char *dest, bool overwrite) { return false; }
-  virtual bool Move(const char *dest) { return false; }
-  virtual TextStreamInterface *OpenAsTextStream(IOMode IOMode,
-                                                Tristate Format) {
-    return NULL;
-  }
-};
-
-class DefaultTextStream : public TextStreamInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual int GetLine() { return 0; }
-  virtual int GetColumn() { return 0; }
-  virtual bool IsAtEndOfStream() { return true; }
-  virtual bool IsAtEndOfLine() { return true; }
-  virtual std::string Read(int characters) { return ""; }
-  virtual std::string ReadLine() { return ""; }
-  virtual std::string ReadAll() { return ""; }
-  virtual void Write(const char *text) { }
-  virtual void WriteLine(const char *text) { }
-  virtual void WriteBlankLines(int lines) { }
-  virtual void Skip(int characters) { }
-  virtual void SkipLine() { }
-  virtual void Close() { }
-};
-
 class DefaultFileSystem : public FileSystemInterface {
  public:
-  virtual DrivesInterface *GetDrives() { return new DefaultDrives(); }
+  virtual DrivesInterface *GetDrives() { return NULL; }
   virtual std::string BuildPath(const char *path, const char *name) {
-    return std::string(path ? path : "") +
-           std::string(kDirSeparatorStr) +
-           std::string(name);
+    return "";
   }
-  virtual std::string GetDriveName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetParentFolderName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetFileName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetBaseName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetExtensionName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetAbsolutePathName(const char *path) {
-    return path ? path : "";
-  }
-  virtual std::string GetTempName() { return "/tmp/tmptmp"; }
+  virtual std::string GetDriveName(const char *path) { return ""; }
+  virtual std::string GetParentFolderName(const char *path) { return ""; }
+  virtual std::string GetFileName(const char *path) { return ""; }
+  virtual std::string GetBaseName(const char *path) { return ""; }
+  virtual std::string GetExtensionName(const char *path) { return ""; }
+  virtual std::string GetAbsolutePathName(const char *path) { return ""; }
+  virtual std::string GetTempName() { return ""; }
   virtual bool DriveExists(const char *drive_spec) { return false; }
   virtual bool FileExists(const char *file_spec) { return false; }
   virtual bool FolderExists(const char *folder_spec) { return false; }
-  virtual DriveInterface *GetDrive(const char *drive_spec) {
-    return new DefaultDrive();
-  }
-  virtual FileInterface *GetFile(const char *file_path) {
-    return new DefaultFile();
-  }
-  virtual FolderInterface *GetFolder(const char *folder_path) {
-    return new DefaultFolder();
-  }
+  virtual DriveInterface *GetDrive(const char *drive_spec) { return NULL; }
+  virtual FileInterface *GetFile(const char *file_path) { return NULL; }
+  virtual FolderInterface *GetFolder(const char *folder_path) { return NULL; }
   virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder) {
-    return new DefaultFolder();
+    return NULL;
   }
   virtual bool DeleteFile(const char *file_spec, bool force) { return false; }
   virtual bool DeleteFolder(const char *folder_spec, bool force) {
@@ -347,56 +170,31 @@ class DefaultFileSystem : public FileSystemInterface {
   }
 
   virtual FolderInterface *CreateFolder(const char *path) {
-    return new DefaultFolder();
+    return NULL;
   }
   virtual TextStreamInterface *CreateTextFile(const char *filename,
                                               bool overwrite,
                                               bool unicode) {
-    return new DefaultTextStream();
+    return NULL;
   }
   virtual TextStreamInterface *OpenTextFile(const char *filename,
                                             IOMode mode,
                                             bool create,
                                             Tristate format) {
-    return new DefaultTextStream();
+    return NULL;
   }
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode) {
-    return new DefaultTextStream();
+    return NULL;
   }
   virtual std::string GetFileVersion(const char *filename) {
     return "";
   }
 };
 
-class DefaultAudioclip : public AudioclipInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual int GetBalance() const { return 0; }
-  virtual void SetBalance(int balance) { }
-  virtual int GetCurrentPosition() const { return 0; }
-  virtual void SetCurrentPosition(int position) { }
-  virtual int GetDuration() const { return 100; }
-  virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
-  virtual std::string GetSrc() const { return ""; }
-  virtual void SetSrc(const char *src) { }
-  virtual State GetState() const { return SOUND_STATE_PLAYING; }
-  virtual int GetVolume() const { return 100; }
-  virtual void SetVolume(int volume) { }
-  virtual void Play() { }
-  virtual void Pause() { }
-  virtual void Stop() { }
-  virtual Connection *ConnectOnStateChange(OnStateChangeHandler *handler) {
-    delete handler;
-    return NULL;
-  }
-};
-
 class DefaultAudio : public AudioInterface {
  public:
-  virtual AudioclipInterface * CreateAudioclip(const char *src)  {
-    return new DefaultAudioclip();
-  }
+  virtual AudioclipInterface * CreateAudioclip(const char *src) { return NULL; }
 };
 
 class DefaultRuntime : public RuntimeInterface {
@@ -426,8 +224,8 @@ class DefaultCursor : public CursorInterface {
 class DefaultScreen : public ScreenInterface {
  public:
   virtual void GetSize(int *width, int *height) {
-    if (width) *width = 1024;
-    if (height) *height = 768;
+    if (width) *width = 0;
+    if (height) *height = 0;
   }
 };
 

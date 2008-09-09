@@ -71,10 +71,12 @@ TEST(StringUtils, StringPrintf) {
 
 TEST(StringUtils, EncodeDecodeURL) {
   // Valid url chars, no conversion
-  char src1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=;',./~!@#$^&*()_+|:?";
+  char src1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-=;',./~!@#$&*()_+:?";
+  char src1_comp[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-'.~!*()_";
 
   // Invalid url chars, will be converted
-  char src2[] = " []{}<>\"%";
+  char src2[] = "|^` []{}<>\"%";
+  char src2_comp[] = "|^` []{}<>\"%\\#;/?:@#&=+$,";
 
   // Back slash, will be converted to '/'
   char src3[] = "\\";
@@ -88,32 +90,54 @@ TEST(StringUtils, EncodeDecodeURL) {
   // Invalid encoded URL.
   char src6[] = "%25%3X%5babc%5";
 
-  std::string dest;
+  std::string dest, dest_comp;
 
   dest = EncodeURL(src1);
   EXPECT_STREQ(src1, dest.c_str());
   dest = DecodeURL(dest);
   EXPECT_STREQ(src1, dest.c_str());
 
+  dest_comp = EncodeURLComponent(src1_comp);
+  EXPECT_STREQ(src1_comp, dest_comp.c_str());
+  dest = DecodeURL(dest_comp);
+  EXPECT_STREQ(src1_comp, dest.c_str());
+
   dest = EncodeURL(src2);
-  EXPECT_STREQ("%20%5b%5d%7b%7d%3c%3e%22%25", dest.c_str());
+  EXPECT_STREQ("%7c%5e%60%20%5b%5d%7b%7d%3c%3e%22%25", dest.c_str());
   dest = DecodeURL(dest);
   EXPECT_STREQ(src2, dest.c_str());
+
+  dest_comp = EncodeURLComponent(src2_comp);
+  EXPECT_STREQ("%7c%5e%60%20%5b%5d%7b%7d%3c%3e%22%25"
+               "%5c%23%3b%2f%3f%3a%40%23%26%3d%2b%24%2c", dest_comp.c_str());
+  dest_comp = DecodeURL(dest_comp);
+  EXPECT_STREQ(src2_comp, dest_comp.c_str());
 
   dest = EncodeURL(src3);
   EXPECT_STREQ("/", dest.c_str());
   dest = DecodeURL(dest);
   EXPECT_STREQ("/", dest.c_str());
 
+  dest_comp = EncodeURLComponent(src3);
+  EXPECT_STREQ("%5c", dest_comp.c_str());
+  dest_comp = DecodeURL(dest_comp);
+  EXPECT_STREQ("\\", dest_comp.c_str());
+
   dest = EncodeURL(src4);
   EXPECT_STREQ("%07%08%0c%0a%0d%09%0b%07%0b%0b%07", dest.c_str());
   dest = DecodeURL(dest);
   EXPECT_STREQ(src4, dest.c_str());
 
+  dest_comp = EncodeURLComponent(src4);
+  EXPECT_STREQ("%07%08%0c%0a%0d%09%0b%07%0b%0b%07", dest_comp.c_str());
+
   dest = EncodeURL(src5);
   EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest.c_str());
   dest = DecodeURL(dest);
   EXPECT_STREQ(src5, dest.c_str());
+
+  dest_comp = EncodeURLComponent(src5);
+  EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest_comp.c_str());
 
   dest = DecodeURL(src6);
   EXPECT_STREQ("%%3X[abc%5", dest.c_str());
@@ -332,8 +356,13 @@ TEST(StringUtils, StartEndWith) {
 }
 
 TEST(StringUtils, ValidURL) {
-  EXPECT_TRUE(IsValidURLComponent("abc%20def"));
-  EXPECT_FALSE(IsValidURLComponent("abc def"));
+  EXPECT_TRUE(IsValidURLString("abc%20def"));
+  EXPECT_FALSE(IsValidURLString("abc def"));
+  EXPECT_FALSE(IsValidURLString("\r"));
+  EXPECT_FALSE(IsValidURLComponent("\r"));
+  EXPECT_TRUE(IsValidURLString("http://"));
+  EXPECT_FALSE(IsValidURLComponent("http://"));
+  EXPECT_TRUE(IsValidURLComponent("http%3A%2F%2F"));
   EXPECT_TRUE(HasValidURLPrefix("http://"));
   EXPECT_TRUE(HasValidURLPrefix("http://def"));
   EXPECT_TRUE(HasValidURLPrefix("https://"));

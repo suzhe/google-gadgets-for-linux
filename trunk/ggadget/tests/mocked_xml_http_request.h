@@ -118,6 +118,7 @@ class MockedXMLHttpRequestFactory
     return new MockedXMLHttpRequest(g_mocked_xml_http_request_return_status,
                                     g_mocked_xml_http_request_return_data);
   }
+  virtual void SetDefaultUserAgent(const char *user_agent) { }
 };
 
 #endif // GGADGET_TESTS_MOCKED_XML_HTTP_REQUEST_H__

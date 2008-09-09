@@ -140,11 +140,18 @@ void StringAppendVPrintf(std::string *dst, const char *format, va_list ap);
  */
 std::string EncodeURL(const std::string &source);
 
+/**
+ * URI-encode the source string as a URI component.
+ * Note: don't encode a valid uri twice, which will give wrong result.
+ */
+std::string EncodeURLComponent(const std::string &source);
+
 /** URI-decode the source string. */
 std::string DecodeURL(const std::string &source);
 
 /** Returns whether the given character is valid in a URI. See RFC2396. */
-bool IsValidURLChar(unsigned char c);
+bool IsValidURLChar(char c);
+bool IsValidURLComponentChar(char c);
 
 /**
  * Returns whether the given string has a valid url prefix.
@@ -165,9 +172,14 @@ bool HasValidURLPrefix(const char *url);
 bool IsValidURLComponent(const char *url);
 
 /**
+ * Returns whether the given string only contains valid url chars.
+ */
+bool IsValidURLString(const char *url);
+
+/**
  * Returns whether the given string is a valid URL.
  *
- * Equals to HasValidURLPrefix(url) && IsValidURLComponent(url)
+ * Equals to HasValidURLPrefix(url) && IsValidURLString(url)
  */
 bool IsValidURL(const char *url);
 

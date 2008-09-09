@@ -18,7 +18,13 @@ ADD_DEFINITIONS(-DUNIT_TEST)
 
 APPLY_CONFIG(PTHREAD)
 
-SET(LIBS gtest ggadget ggadget-dbus ${DBUS_LIBRARIES} ${PTHREAD_LIBRARIES})
+SET(LIBS
+  ${DBUS_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
+  gtest
+  ggadget${GGL_EPOCH}
+  ggadget-dbus${GGL_EPOCH}
+)
 
 ADD_TEST_EXECUTABLE(dbus_test dbus_test.cc ../../tests/native_main_loop.cc)
 TARGET_LINK_LIBRARIES(dbus_test ${LIBS})

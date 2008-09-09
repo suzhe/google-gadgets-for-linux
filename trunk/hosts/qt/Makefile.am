@@ -33,7 +33,8 @@ ggl_qt_SOURCES		= main.cc \
 nodist_ggl_qt_SOURCES	= $(MOC_FILES)
 
 ggl_qt_CPPFLAGS 	= @QT4_CFLAGS@ \
-			  $(PREDEFINED_MACROS)
+			  $(PREDEFINED_MACROS) \
+			  -DGGL_APP_NAME=\"ggl-qt\"
 
 ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 

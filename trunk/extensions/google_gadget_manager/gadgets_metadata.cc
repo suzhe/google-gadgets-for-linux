@@ -248,7 +248,7 @@ class GadgetsMetadata::Impl {
         // Finished parsing data of the current gadget.
         break;
       }
-  
+
       char next_char = key[plugin_key.size()];
       if (next_char == '@') {
         info->attributes[key.substr(plugin_key.size() + 1)] = it->second;

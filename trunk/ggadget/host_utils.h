@@ -21,9 +21,37 @@
 
 namespace ggadget {
 
-bool SetupGlobalFileManager(const std::string &profile_dir);
+template <typename R> class Slot0;
+class OptionsInterface;
+
+/**
+ * Setup the global file manager.
+ * @param profile_dir path name of the user profile directory.
+ * @return @c true if succeeds.
+ */
+bool SetupGlobalFileManager(const char *profile_dir);
+
+/**
+ * Setup the logger.
+ * @param log_level the minimum @c LogLevel.
+ * @param long_log whether to output logs using long format.
+ */
 void SetupLogger(int log_level, bool long_log);
-bool CheckRequiredExtensions(std::string *message);
+
+/**
+ * Checks if the required extensions are properly loaded.
+ * @param[out] message the error message that should be displayed to the user
+ *     if any required extension is not property loaded.
+ * @return @c true if all the required extensions are property loaded.
+ */
+bool CheckRequiredExtensions(std::string *error_message);
+
+/**
+ * Initialize the default user agent for XMLHttpRequest class.
+ * @param app_name the name of the main application.
+ */
+void InitXHRUserAgent(const char *app_name);
 
 } // namespace ggadget
+
 #endif // GGADGET_HOST_UTILS_H__

@@ -116,6 +116,12 @@ class XMLHttpRequestFactoryInterface {
    */
   virtual XMLHttpRequestInterface *CreateXMLHttpRequest(
       int session_id, XMLParserInterface *parser) = 0;
+
+  /**
+   * Sets the default User-Agent value. It will be sent if no User-Agent
+   * header is set for a @c XMLHttpRequest instance.
+   */
+  virtual void SetDefaultUserAgent(const char *user_agent) = 0;
 };
 
 /**
