@@ -45,7 +45,7 @@ ADD_LIBRARY(ggadget-qt${GGL_EPOCH} SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-qt${GGL_EPOCH}
   ggadget-xdg${GGL_EPOCH}
   ${QT_LIBRARIES}
-  )
+)
 
 OUTPUT_LIBRARY(ggadget-qt${GGL_EPOCH})
 

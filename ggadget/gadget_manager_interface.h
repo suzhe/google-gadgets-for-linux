@@ -35,6 +35,12 @@ class GadgetManagerInterface {
   virtual ~GadgetManagerInterface() { }
 
  public:
+  /**
+   * Initialize the gadget manager.
+   * Should be called after the main program has loaded all extension modules,
+   * and before starting the main loop.
+   */
+  virtual void Init() = 0;
 
   /**
    * Returns impl-specific data. Because a @c GadgetManagerInterface impl can

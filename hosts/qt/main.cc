@@ -16,6 +16,7 @@
 
 #include <sys/time.h>
 #include <time.h>
+#include <ctype.h>
 #include <cstdlib>
 #include <locale.h>
 #include <signal.h>
@@ -32,6 +33,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/host_interface.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/messages.h>
 #include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_view_host.h>
@@ -41,7 +43,8 @@
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/host_utils.h>
+#include <ggadget/xml_http_request_interface.h>
+
 #include "qt_host.h"
 #if defined(Q_WS_X11) && defined(HAVE_X11)
 #include <X11/Xlib.h>
@@ -73,7 +76,7 @@ static const char *kGlobalExtensions[] = {
 
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
-  "Usage: %s [Options] [Gadgets]\n"
+  "Usage: " GGL_APP_NAME " [Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
   "  -d mode, --debug mode\n"
@@ -214,7 +217,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> gadget_paths;
   for (int i = 1; i < argc; i++) {
     if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
-      printf(g_help_string, argv[0]);
+      printf("%s", g_help_string);
       return 0;
 #ifdef _DEBUG
     } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
@@ -269,7 +272,7 @@ int main(int argc, char* argv[]) {
   ggadget::SetupLogger(log_level, long_log);
 
   // Set global file manager.
-  ggadget::SetupGlobalFileManager(profile_dir);
+  ggadget::SetupGlobalFileManager(profile_dir.c_str());
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
@@ -296,14 +299,16 @@ int main(int argc, char* argv[]) {
   }
 
   ext_manager->SetReadonly();
+  ggadget::InitXHRUserAgent(GGL_APP_NAME);
+  // Initialize the gadget manager before creating the host.
+  ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
+  manager->Init();
 
   hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode,
                                              debug_console, with_plasma);
 
   // Load gadget files.
   if (gadget_paths.size()) {
-    ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
-
     for (size_t i = 0; i < gadget_paths.size(); ++i)
       manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
   }

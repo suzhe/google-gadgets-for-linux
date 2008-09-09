@@ -171,6 +171,7 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   virtual ~GoogleGadgetManager();
 
  public: // interface methods.
+  virtual void Init();
   virtual const char *GetImplTag();
   virtual int NewGadgetInstanceFromFile(const char *file);
   virtual bool RemoveGadgetInstance(int instance_id);
@@ -204,10 +205,9 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   /**
    * Creates an instance of a gadget.
    * @param gadget_id gadget id or location of a gadget file.
-   * @param fire_signal If it's true then fire OnNewGadgetInstance signal.
    * @return the gadget instance id (>=0) of the new instance, or -1 on error.
    */
-  int NewGadgetInstance(const char *gadget_id, bool fire_signal);
+  int NewGadgetInstance(const char *gadget_id);
 
   /**
    * Updates a running gadget instances by reloading the gadget file.
@@ -286,10 +286,6 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
    * @return the full path of the file for a gadget.
    */
   std::string GetGadgetPath(const char *gadget_id);
-
- public:
-  /** Initialize this object. Mainly for unittest. */
-  void Init();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(GoogleGadgetManager);

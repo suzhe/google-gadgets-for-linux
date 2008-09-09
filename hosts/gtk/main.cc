@@ -19,10 +19,12 @@
 #include <locale.h>
 #include <signal.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <map>
 #include <cstdlib>
 
 #include <ggadget/extension_manager.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
@@ -30,7 +32,7 @@
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
 #include <ggadget/host_interface.h>
-#include <ggadget/file_manager_factory.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
 #include <ggadget/run_once.h>
@@ -39,7 +41,7 @@
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/host_utils.h>
+#include <ggadget/xml_http_request_interface.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
 
@@ -71,7 +73,7 @@ static const char *kGlobalExtensions[] = {
 
 static const char *g_help_string =
   "Google Gadgets for Linux " GGL_VERSION "\n"
-  "Usage: %s [Options] [Gadgets]\n"
+  "Usage: " GGL_APP_NAME "[Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
   "  -d mode, --debug mode\n"
@@ -152,7 +154,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> gadget_paths;
   for (int i = 1; i < argc; i++) {
     if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
-      printf(g_help_string, argv[0]);
+      printf("%s", g_help_string);
       return 0;
     } else if (strcmp("-b", argv[i]) == 0 ||
                strcmp("--border", argv[i]) == 0) {
@@ -219,7 +221,7 @@ int main(int argc, char* argv[]) {
     ggadget::Daemonize();
 
   // Set global file manager.
-  ggadget::SetupGlobalFileManager(profile_dir);
+  ggadget::SetupGlobalFileManager(profile_dir.c_str());
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
@@ -231,8 +233,10 @@ int main(int argc, char* argv[]) {
     ext_manager->LoadExtension(kGlobalExtensions[i], false);
 
   // Register JavaScript runtime.
-  ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
-  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
+  ggadget::ScriptRuntimeManager *script_runtime_manager =
+      ggadget::ScriptRuntimeManager::get();
+  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(
+      script_runtime_manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   std::string error;
@@ -246,6 +250,10 @@ int main(int argc, char* argv[]) {
   // danger that a bad gadget register local extensions into the global
   // extension manager.
   ext_manager->SetReadonly();
+  ggadget::InitXHRUserAgent(GGL_APP_NAME);
+  // Initialize the gadget manager before creating the host.
+  ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
+  manager->Init();
 
   ggadget::HostInterface *host;
   ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);
@@ -260,7 +268,6 @@ int main(int argc, char* argv[]) {
 
   // Load gadget files.
   if (gadget_paths.size()) {
-    ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
     for (size_t i = 0; i < gadget_paths.size(); ++i) {
       manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
     }

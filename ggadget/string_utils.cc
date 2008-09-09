@@ -165,50 +165,61 @@ void StringAppendPrintf(std::string *string, const char *format, ...) {
   va_end(ap);
 }
 
-bool IsValidURLChar(unsigned char c) {
+static const char kInvalidURLChars[] = "<>\"{}|^`\\[]";
+static const char kInvalidURLComponentChars[] = "<>\"{}|^`\\[]#;/?:@&=+$,";
+
+bool IsValidURLChar(char c) {
   // See RFC 2396 for information: http://www.ietf.org/rfc/rfc2396.txt
   // check for INVALID character (in US-ASCII: 0-127) and consider all
   // others valid
-  return !(c <= ' ' || '<' == c || '>' == c || '\"' == c ||
-           '{' == c || '}' == c ||
-          // '|'==c || // Technically | is unadvised, but it is valid,
-                       // and some URLs use it
-          // '^'==c || // Also technically invalid but Yahoo news use it...
-                       // others too
-          // '`'==c || // Yahoo uses this
-          kBackSlash==c || '['==c || ']'==c || '\n' == c || '\r' == c
-          // Comparison below is always false for char:
-          || c >= 128);  // Enable converting non-ascii chars
+  return c > ' ' &&
+         // always true: c <= 127 &&
+         strchr(kInvalidURLChars, c) == NULL;
 }
 
-std::string EncodeURL(const std::string &source) {
-  std::string dest;
-  for (std::string::const_iterator i = source.begin(); i != source.end(); ++i) {
-    unsigned char src = *i;
+bool IsValidURLComponentChar(char c) {
+  return c > ' ' &&
+         // always true: c <= 127 &&
+         strchr(kInvalidURLComponentChars, c) == NULL;
+}
 
-    if (src == kBackSlash) {
+static std::string EncodeURLInternal(const std::string &source,
+                                     bool component) {
+  std::string dest;
+  bool (*valid_check_func)(char) = component ?
+                                   IsValidURLComponentChar : IsValidURLChar;
+  for (std::string::const_iterator i = source.begin(); i != source.end(); ++i) {
+    char src = *i;
+
+    if (!component && src == kBackSlash) {
       dest.append(1, kSlash);
       continue;
     }
 
-    // %-encode disallowed URL chars (b/w 0-127)
-    // (chars >=128 are considered valid... although technically they're not)
-    // encode '%' as well.
-    if (!IsValidURLChar(src) || '%' == src) {
-      // output the percent, followed by the hex value of the character
-      // Note: we know it's a char in US-ASCII (0-127)
-      //
+    // %-encode disallowed URL chars (b/w 0-127).
+    // Encode '%' as well.
+    if (!valid_check_func(src) || '%' == src) {
+      // Output the percent, followed by the hex value of the character.
+      // Note: we know it's a char in US-ASCII (0-127).
       dest.append(1, '%');
 
       static const char kHexChars[] = "0123456789abcdef";
-      dest.append(1, kHexChars[src >> 4]);
-      dest.append(1, kHexChars[src & 0xF]);
+      dest.append(1, kHexChars[static_cast<unsigned char>(src) >> 4]);
+      dest.append(1, kHexChars[static_cast<unsigned char>(src) & 0xF]);
     } else {
-      // not a special char: just copy
+      // Not a special char: just copy.
       dest.append(1, src);
     }
   }
   return dest;
+}
+
+std::string EncodeURL(const std::string &source) {
+  return EncodeURLInternal(source, false);
+}
+
+std::string EncodeURLComponent(const std::string &source) {
+  return EncodeURLInternal(source, true);
 }
 
 std::string DecodeURL(const std::string &source) {
@@ -251,35 +262,45 @@ bool HasValidURLPrefix(const char *url) {
   return false;
 }
 
+bool IsValidURLString(const char *url) {
+  if (!url) return false;
+
+  for (const char *p = url; *p; ++p) {
+    if (!IsValidURLChar(*p))
+      return false;
+  }
+  return true;
+}
+
 bool IsValidURLComponent(const char *url) {
   if (!url) return false;
 
-  for (const char *p = url; *p; ++p)
-    if (!IsValidURLChar(*p))
+  for (const char *p = url; *p; ++p) {
+    if (!IsValidURLComponentChar(*p))
       return false;
-
+  }
   return true;
 }
 
 bool IsValidURL(const char* url) {
-  return HasValidURLPrefix(url) && IsValidURLComponent(url);
+  return HasValidURLPrefix(url) && IsValidURLString(url);
 }
 
 bool IsValidRSSURL(const char* url) {
   return (StartWithNoCase(url, kHttpUrlPrefix) ||
           StartWithNoCase(url, kHttpsUrlPrefix) ||
-          StartWithNoCase(url, kFeedUrlPrefix)) && IsValidURLComponent(url);
+          StartWithNoCase(url, kFeedUrlPrefix)) && IsValidURLString(url);
 }
 
 bool IsValidWebURL(const char* url) {
   // Don't allow ftp://
   return (StartWithNoCase(url, kHttpUrlPrefix) ||
-          StartWithNoCase(url, kHttpsUrlPrefix)) && IsValidURLComponent(url);
+          StartWithNoCase(url, kHttpsUrlPrefix)) && IsValidURLString(url);
 }
 
 bool IsValidFileURL(const char* url) {
   // Don't allow ftp://.
-  return StartWithNoCase(url, kFileUrlPrefix) && IsValidURLComponent(url);
+  return StartWithNoCase(url, kFileUrlPrefix) && IsValidURLString(url);
 }
 
 std::string GetHostFromURL(const char *url) {

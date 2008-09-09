@@ -136,7 +136,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
   XMLHttpRequest(CURLSH *share, MainLoopInterface *main_loop,
-                 XMLParserInterface *xml_parser)
+                 XMLParserInterface *xml_parser,
+                 const std::string &default_user_agent)
       : curl_(NULL),
         share_(share),
         main_loop_(main_loop),
@@ -146,7 +147,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         send_flag_(false),
         request_headers_(NULL),
         status_(0),
-        response_dom_(NULL) {
+        response_dom_(NULL),
+        default_user_agent_(default_user_agent) {
     VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
              ("Required options module have not been loaded"));
     pthread_attr_init(&thread_attr_);
@@ -275,7 +277,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (is_https) {
       curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 1);
       curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 2);
+      // Older versions of libcurl's ca bundle file is also very old, so add
+      // OpenSSL's cert directory. Only for Linux and libcurl-openssl config.
+      curl_easy_setopt(curl_, CURLOPT_CAPATH, "/etc/ssl/certs");
     }
+
+    if (!default_user_agent_.empty())
+      curl_easy_setopt(curl_, CURLOPT_USERAGENT, default_user_agent_.c_str());
 
     // Disable curl using signals because we use curl in multiple threads.
     curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
@@ -1078,6 +1086,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
   pthread_attr_t thread_attr_;
+  std::string default_user_agent_;
   static Backoff backoff_;
   static OptionsInterface *backoff_options_;
 };
@@ -1131,16 +1140,25 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
 
   virtual XMLHttpRequestInterface *CreateXMLHttpRequest(
       int session_id, XMLParserInterface *parser) {
-    if (session_id == 0)
-      return new XMLHttpRequest(NULL, GetGlobalMainLoop(), parser);
+    if (session_id == 0) {
+      return new XMLHttpRequest(NULL, GetGlobalMainLoop(), parser,
+                                default_user_agent_);
+    }
 
     Sessions::iterator it = sessions_.find(session_id);
-    if (it != sessions_.end())
-      return new XMLHttpRequest(it->second.share, GetGlobalMainLoop(), parser);
+    if (it != sessions_.end()) {
+      return new XMLHttpRequest(it->second.share, GetGlobalMainLoop(), parser,
+                                default_user_agent_);
+    }
 
     DLOG("XMLHttpRequestFactory::CreateXMLHttpRequest: "
          "Invalid session: %d", session_id);
     return NULL;
+  }
+
+  virtual void SetDefaultUserAgent(const char *user_agent) {
+    if (user_agent)
+      default_user_agent_ = user_agent;
   }
 
   static void Lock(CURL *handle, curl_lock_data data,
@@ -1162,6 +1180,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   typedef std::map<int, Session> Sessions;
   Sessions sessions_;
   int next_session_id_;
+  std::string default_user_agent_;
   static pthread_mutex_t mutex_;
 };
 
@@ -1172,7 +1191,6 @@ pthread_mutex_t XMLHttpRequestFactory::mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
 #define Initialize curl_xml_http_request_LTX_Initialize
 #define Finalize curl_xml_http_request_LTX_Finalize
-#define CreateXMLHttpRequest curl_xml_http_request_LTX_CreateXMLHttpRequest
 
 static ggadget::curl::XMLHttpRequestFactory gFactory;
 

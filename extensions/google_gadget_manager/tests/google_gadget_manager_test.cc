@@ -70,6 +70,7 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
   g_mocked_fm.data_.clear();
   GoogleGadgetManager *manager =
       static_cast<GoogleGadgetManager *>(GetGadgetManager());
+  manager->Init();
   OptionsInterface *global_options = GetGlobalOptions();
   g_mocked_xml_http_request_return_data = plugins_xml_network_full;
 
@@ -241,18 +242,18 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
   manager->ConnectOnRemoveGadgetInstance(NewSlot(OnRemoveInstance));
   manager->ConnectOnUpdateGadgetInstance(NewSlot(OnUpdateInstance));
 
-  ASSERT_EQ(0, manager->NewGadgetInstance(GADGET_ID1, true));
+  ASSERT_EQ(0, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 0);
-  ASSERT_EQ(1, manager->NewGadgetInstance(GADGET_ID1, true));
+  ASSERT_EQ(1, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 1);
   g_accept_add_instance = false;
-  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2, true));
+  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
   CheckInstanceId(&g_removed_instances, 2);
   g_accept_add_instance = true;
-  ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2, true));
+  ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
-  ASSERT_EQ(-1, manager->NewGadgetInstance("Non-exists", true));
+  ASSERT_EQ(-1, manager->NewGadgetInstance("Non-exists"));
   ASSERT_TRUE(g_added_instances.empty());
 
   ASSERT_EQ(std::string(GADGET_ID1), manager->GetInstanceGadgetId(0));
@@ -298,16 +299,16 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
 
   // New instances of gadget1 should not use the id of last removed instance
   // of gadget2.
-  ASSERT_EQ(3, manager->NewGadgetInstance(GADGET_ID1, true));
+  ASSERT_EQ(3, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 3);
 
   g_accept_add_instance = false;
-  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2, true));
+  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
   CheckInstanceId(&g_removed_instances, 2);
   g_accept_add_instance = true;
   // New instance of gadget2 reuse the inactive instance.
-  ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2, true));
+  ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
   options2 = CreateOptions(manager->GetGadgetInstanceOptionsName(2).c_str());
   ASSERT_EQ(Variant("VVVVV"), options2->GetValue("NNNNN"));
@@ -323,7 +324,7 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
   CheckInstanceId(&g_removed_instances, 0);
 
   // Though the id number reused, the options should not be reused.
-  ASSERT_EQ(0, manager->NewGadgetInstance(GADGET_ID1, true));
+  ASSERT_EQ(0, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 0);
   options0 = CreateOptions(manager->GetGadgetInstanceOptionsName(0).c_str());
   ASSERT_EQ(Variant(), options0->GetValue("XXXXX"));

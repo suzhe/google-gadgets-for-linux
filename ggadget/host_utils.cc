@@ -13,23 +13,28 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
+#include "host_utils.h"
+
 #include <sys/time.h>
 #include <ctime>
 
-#include <ggadget/logger.h>
-#include <ggadget/slot.h>
-#include <ggadget/gadget_consts.h>
-#include <ggadget/dir_file_manager.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/file_manager_wrapper.h>
-#include <ggadget/localized_file_manager.h>
-#include <ggadget/xml_parser_interface.h>
-#include <ggadget/script_runtime_interface.h>
-#include <ggadget/script_runtime_manager.h>
-#include <ggadget/xml_http_request_interface.h>
-#include <ggadget/gadget_manager_interface.h>
-#include <ggadget/messages.h>
-#include "host_utils.h"
+#include "dir_file_manager.h"
+#include "file_manager_factory.h"
+#include "file_manager_wrapper.h"
+#include "gadget_consts.h"
+#include "gadget_manager_interface.h"
+#include "locales.h"
+#include "localized_file_manager.h"
+#include "logger.h"
+#include "main_loop_interface.h"
+#include "messages.h"
+#include "options_interface.h"
+#include "script_runtime_interface.h"
+#include "script_runtime_manager.h"
+#include "slot.h"
+#include "xml_http_request_interface.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 
@@ -45,7 +50,7 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
-bool SetupGlobalFileManager(const std::string &profile_dir) {
+bool SetupGlobalFileManager(const char *profile_dir) {
   FileManagerWrapper *fm_wrapper = new FileManagerWrapper();
   FileManagerInterface *fm;
 
@@ -68,7 +73,7 @@ bool SetupGlobalFileManager(const std::string &profile_dir) {
   }
 #endif
 
-  fm = DirFileManager::Create(profile_dir.c_str(), true);
+  fm = DirFileManager::Create(profile_dir, true);
   if (fm != NULL) {
     fm_wrapper->RegisterFileManager(kProfilePrefix, fm);
   } else {
@@ -141,6 +146,22 @@ bool CheckRequiredExtensions(std::string *message) {
     return false;
   }
   return true;
+}
+
+void InitXHRUserAgent(const char *app_name) {
+  XMLHttpRequestFactoryInterface *xhr_factory = GetXMLHttpRequestFactory();
+  ASSERT(xhr_factory);
+  std::string user_agent = StringPrintf(
+      "%s/" GGL_VERSION " (%c%s; %s; ts:" GGL_VERSION_TIMESTAMP
+      "; api:" GGL_API_VERSION
+  #ifdef GGL_OEM_BRAND
+      "; oem:" GGL_OEM_BRAND ")",
+  #else
+      ")",
+  #endif
+      app_name, toupper(GGL_PLATFORM[0]), GGL_PLATFORM + 1,
+      GetSystemLocaleName().c_str());
+  xhr_factory->SetDefaultUserAgent(user_agent.c_str());
 }
 
 } // namespace ggadget

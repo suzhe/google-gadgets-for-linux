@@ -26,7 +26,7 @@ ADD_LIBRARY(ggadget-xdg${GGL_EPOCH} SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-xdg${GGL_EPOCH}
   ggadget${GGL_EPOCH}
   xdgmime
-  )
+)
 
 OUTPUT_LIBRARY(ggadget-xdg${GGL_EPOCH})
 

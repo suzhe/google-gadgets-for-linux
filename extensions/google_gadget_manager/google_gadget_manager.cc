@@ -62,13 +62,13 @@ static int Randomize(int input) {
   return input + (rand() % (variant * 2)) - variant;
 }
 
-// TODO: Add blacklisting of gadgets and whitelisting of gadget features. 
+// TODO: Add blacklisting of gadgets and whitelisting of gadget features.
 GoogleGadgetManager::GoogleGadgetManager()
     : main_loop_(GetGlobalMainLoop()),
       global_options_(GetGlobalOptions()),
       file_manager_(GetGlobalFileManager()),
       last_update_time_(0), last_try_time_(0), retry_timeout_(0),
-      update_timer_(0),
+      update_timer_(0), free_metadata_timer_(0),
       full_download_(false),
       updating_metadata_(false),
       browser_gadget_(NULL),
@@ -76,7 +76,6 @@ GoogleGadgetManager::GoogleGadgetManager()
   ASSERT(main_loop_);
   ASSERT(global_options_);
   ASSERT(file_manager_);
-  Init();
 }
 
 GoogleGadgetManager::~GoogleGadgetManager() {
@@ -129,9 +128,8 @@ void GoogleGadgetManager::Init() {
 
   if (first_run_) {
     // Add some default built-in gadgets.
-    // Don't fire NewGadgetInstance signal at this point.
-    NewGadgetInstance("analog_clock", false);
-    NewGadgetInstance("rss", false);
+    NewGadgetInstance("analog_clock");
+    NewGadgetInstance("rss");
     // Schedule an immediate update if it is first run.
     ScheduleUpdate(0);
   } else {
@@ -421,8 +419,7 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
   return true;
 }
 
-int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id,
-                                           bool fire_signal) {
+int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   DLOG("Adding gadget %s", gadget_id);
   if (!gadget_id || !*gadget_id)
     return -1;
@@ -442,7 +439,8 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id,
       active_gadgets_.insert(gadget_id);
       if (!InitInstanceOptions(gadget_id, i))
         return -1;
-      if (!fire_signal || new_instance_signal_(i)) {
+      if (!new_instance_signal_.HasActiveConnections() ||
+          new_instance_signal_(i)) {
         return i;
       } else {
         RemoveGadgetInstance(i);
@@ -464,9 +462,9 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id,
   SetInstanceStatus(instance_id, kInstanceStatusActive);
   SaveInstanceGadgetId(instance_id, gadget_id);
   active_gadgets_.insert(gadget_id);
-  if (!fire_signal || new_instance_signal_(instance_id)) {
+  if (!new_instance_signal_.HasActiveConnections() ||
+      new_instance_signal_(instance_id))
     return instance_id;
-  }
 
   RemoveGadgetInstance(instance_id);
   TrimInstanceStatuses();
@@ -474,7 +472,7 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id,
 }
 
 int GoogleGadgetManager::NewGadgetInstanceFromFile(const char *file) {
-  return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file, true) : -1;
+  return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file) : -1;
 }
 
 bool GoogleGadgetManager::RemoveGadgetInstance(int instance_id) {
@@ -590,17 +588,16 @@ const GadgetInfo *GoogleGadgetManager::GetGadgetInfo(const char *gadget_id) {
   if (!gadget_id || !*gadget_id)
     return NULL;
 
-  if (GadgetIdIsFileLocation(gadget_id)) {
-    // Ensure metadata of the local gadget file is loaded.
-    return metadata_.AddLocalGadgetInfo(
-        file_manager_->GetFullPath(gadget_id).c_str());
-  }
-
   GadgetInfoMap *map = metadata_.GetAllGadgetInfo();
   GadgetInfoMap::const_iterator it = map->find(gadget_id);
   if (it != map->end())
     return &it->second;
 
+  if (GadgetIdIsFileLocation(gadget_id)) {
+    // Ensure metadata of the local gadget file is loaded.
+    return metadata_.AddLocalGadgetInfo(
+        file_manager_->GetFullPath(gadget_id).c_str());
+  }
   return NULL;
 }
 
@@ -915,8 +912,7 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
     RegisterMethod("saveGadget",
         NewSlot(this, &GadgetBrowserScriptUtils::SaveGadget));
     RegisterMethod("addGadget",
-        NewSlot(gadget_manager_, &GoogleGadgetManager::NewGadgetInstance,
-                true));
+        NewSlot(gadget_manager_, &GoogleGadgetManager::NewGadgetInstance));
     RegisterMethod("updateMetadata",
         NewSlot(gadget_manager_, &GoogleGadgetManager::UpdateGadgetsMetadata));
     RegisterSignal("onMetadataUpdated",
