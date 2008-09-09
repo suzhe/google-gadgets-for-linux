@@ -58,7 +58,7 @@
 <!-- Decorated View toolbar forward button tooltip. -->
 <VD_FORWARD_BUTTON_TOOLTIP>下一页</VD_FORWARD_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar toggle expanded view button tooltip. -->
-<VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>切换扩展视图</VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>
+<VD_POP_IN_OUT_BUTTON_TOOLTIP>切换扩展视图</VD_POP_IN_OUT_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar menu button tooltip. -->
 <VD_MENU_BUTTON_TOOLTIP>菜单</VD_MENU_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar remove gadget button tooltip. -->

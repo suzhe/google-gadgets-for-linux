@@ -58,7 +58,7 @@
 <!-- Decorated View toolbar forward button tooltip. -->
 <VD_FORWARD_BUTTON_TOOLTIP>Next</VD_FORWARD_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar toggle expanded view button tooltip. -->
-<VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>Toggle Expanded View</VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>
+<VD_POP_IN_OUT_BUTTON_TOOLTIP>Toggle Expanded View</VD_POP_IN_OUT_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar menu button tooltip. -->
 <VD_MENU_BUTTON_TOOLTIP>Menu</VD_MENU_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar remove gadget button tooltip. -->
