@@ -605,7 +605,7 @@ class File : public FileInterface {
     if (!strcmp(name, name_.c_str()))
       return true;
     if (linux_system::SetName(path_.c_str(), base_.c_str(), name)) {
-      path_ = ggadget::BuildFilePath(base_.c_str(), name);
+      path_ = ggadget::BuildFilePath(base_.c_str(), name, NULL);
       InitFilePath(path_.c_str(), &base_, &name_, &path_);
       return true;
     }
@@ -937,7 +937,7 @@ class Folder : public FolderInterface {
     if (strcmp(name, name_.c_str()) == 0)
       return true;
     if (linux_system::SetName(path_.c_str(), base_.c_str(), name)) {
-      path_ = ggadget::BuildFilePath(base_.c_str(), name);
+      path_ = ggadget::BuildFilePath(base_.c_str(), name, NULL);
       InitFilePath(path_.c_str(), &base_, &name_, &path_);
       return true;
     }

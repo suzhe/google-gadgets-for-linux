@@ -28,8 +28,6 @@ using namespace ggadget;
 using namespace ggadget::framework;
 using namespace ggadget::framework::linux_system;
 
-//static const char *kTestDir = "/tmp/GGL_FileSystem_Test";
-
 TEST(FileSystem, GetDrives) {
   FileSystem filesystem;
   DrivesInterface *drives = filesystem.GetDrives();
