@@ -40,7 +40,7 @@ class ViewInterface {
     RESIZABLE_FALSE,
     RESIZABLE_TRUE,
     /** The user can resize the view while keeping the original aspect ratio. */
-    RESIZABLE_ZOOM,
+    RESIZABLE_ZOOM
   };
 
   /** Flags used in detail view. */
@@ -53,7 +53,7 @@ class ViewInterface {
     /** Adds a "Remove" button in the details view. */
     DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
     /** Adds a button to display the friends list. */
-    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
+    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8
   };
 
   /** Flags used in options view. */
@@ -62,7 +62,7 @@ class ViewInterface {
     /** Adds an OK button in the options view. */
     OPTIONS_VIEW_FLAG_OK = 1,
     /** Adds an Cancel button in the options view. */
-    OPTIONS_VIEW_FLAG_CANCEL = 2,
+    OPTIONS_VIEW_FLAG_CANCEL = 2
   };
 
   /** Cursor types that can be used by elements. */
@@ -82,7 +82,7 @@ class ViewInterface {
     CURSOR_NO,
     CURSOR_HAND,
     CURSOR_BUSY,
-    CURSOR_HELP,
+    CURSOR_HELP
   };
 
   /**
@@ -94,7 +94,7 @@ class ViewInterface {
     DEBUG_DISABLED = 0,    // No debug at all.
     DEBUG_CONTAINER = 1,   // Draw bounding boxes around container elements.
     DEBUG_ALL = 2,         // Draw bounding boxes around all elements.
-    DEBUG_CLIP_REGION = 4, // Draw bounding boxes around clip region.
+    DEBUG_CLIP_REGION = 4 // Draw bounding boxes around clip region.
   };
 
   /** Hit test enumerates for both View and BasicElement */

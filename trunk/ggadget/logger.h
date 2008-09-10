@@ -41,7 +41,7 @@ enum LogLevel {
   /** For non-fatal errors. */
   LOG_WARNING = 2,
   /** For errors. */
-  LOG_ERROR = 3,
+  LOG_ERROR = 3
 };
 
 struct LogHelper {

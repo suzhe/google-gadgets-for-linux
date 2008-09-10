@@ -121,7 +121,7 @@ class ScriptableInterface {
      */
     PROPERTY_DYNAMIC,
     /** The property is a method which always exists. */
-    PROPERTY_METHOD,
+    PROPERTY_METHOD
   };
 
   /**

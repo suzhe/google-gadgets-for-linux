@@ -31,7 +31,7 @@ enum EventResult {
   /** The event is handled normally by the handler. */
   EVENT_RESULT_HANDLED,
   /** The handler wants the default action to be canceled. */
-  EVENT_RESULT_CANCELED,
+  EVENT_RESULT_CANCELED
 };
 
 /**
@@ -91,7 +91,7 @@ class Event {
     EVENT_OPTION_CHANGED,
     EVENT_TIMER,
     EVENT_PERFMON,
-    EVENT_CONTEXT_MENU,
+    EVENT_CONTEXT_MENU
   };
 
   enum Modifier {
@@ -153,7 +153,7 @@ class MouseEvent : public PositionEvent {
     BUTTON_LEFT = 1,
     BUTTON_MIDDLE = 4,
     BUTTON_RIGHT = 2,
-    BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT,
+    BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT
   };
 
   MouseEvent(Type t, double x, double y,
@@ -286,7 +286,7 @@ class KeyboardEvent : public Event {
     KEY_BRACKET_LEFT   = 0xDB,  // VK_OEM_4 in winuser.h, [{ in the keyboard.
     KEY_BACK_SLASH     = 0xDC,  // VK_OEM_5 in winuser.h, \| in the keyboard.
     KEY_BRACKET_RIGHT  = 0xDD,  // VK_OEM_6 in winuser.h, ]} in the keyboard.
-    KEY_QUOTE          = 0xDE,  // VK_OEM_7 in winuser.h, '" in the keyboard.
+    KEY_QUOTE          = 0xDE  // VK_OEM_7 in winuser.h, '" in the keyboard.
   };
 
   KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)

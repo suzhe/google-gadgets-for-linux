@@ -101,7 +101,7 @@ class Variant {
      * can accept any above type.  A @c Variant with this type can only act
      * as a prototype, not a real value.
      */
-    TYPE_VARIANT,
+    TYPE_VARIANT
   };
 
   /**
@@ -763,7 +763,7 @@ struct VariantValue<const T *> {                                \
            v.type_ == Variant::TYPE_CONST_ANY);                 \
     return reinterpret_cast<value_type>(v.v_.const_any_value_); \
   }                                                             \
-};
+}
 
 /**
  * Used to return a variant value from a function. If it holds a

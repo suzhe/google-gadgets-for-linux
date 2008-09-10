@@ -42,7 +42,7 @@ class ViewHostInterface {
   enum Type {
     VIEW_HOST_MAIN = 0, /**< ViewHost to hold a main view. */
     VIEW_HOST_OPTIONS,  /**< ViewHost to hold an options view. */
-    VIEW_HOST_DETAILS,  /**< ViewHost to hold a details view. */
+    VIEW_HOST_DETAILS  /**< ViewHost to hold a details view. */
   };
 
   /** Gets the type of the Viewhost. */
