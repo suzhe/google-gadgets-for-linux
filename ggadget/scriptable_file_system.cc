@@ -142,6 +142,8 @@ class ScriptableFileSystem::Impl {
         : drive_(drive), impl_(impl) {
       ASSERT(drive);
       if (impl->CanRead()) {
+        RegisterMethod("toString",
+                       NewSlot(drive, &DriveInterface::GetPath));
         RegisterProperty("Path",
                          NewSlot(drive, &DriveInterface::GetPath),
                          NULL);
@@ -210,6 +212,8 @@ class ScriptableFileSystem::Impl {
         : folder_(folder), impl_(impl) {
       ASSERT(folder);
       if (impl->CanRead()) {
+        RegisterMethod("toString",
+                       NewSlot(folder, &FolderInterface::GetPath));
         RegisterProperty("Path",
                          NewSlot(folder, &FolderInterface::GetPath),
                          NULL);
@@ -377,6 +381,8 @@ class ScriptableFileSystem::Impl {
         : file_(file), impl_(impl) {
       ASSERT(file);
       if (impl->CanRead()) {
+        RegisterMethod("toString",
+                       NewSlot(file, &FileInterface::GetPath));
         RegisterProperty("Path",
                          NewSlot(file, &FileInterface::GetPath),
                          NULL);

@@ -23,14 +23,18 @@
 #include <vector>
 #include <iterator>
 #include <errno.h>
+#include <glob.h>
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/xdg/utilities.h"
+#include "ggadget/scoped_ptr.h"
 #include "file_system.h"
 
 namespace ggadget {
 namespace framework {
 namespace linux_system {
+
+static const size_t kBlockSize = 8192;
 
 // utility function for replace all char1 to char2
 static void ReplaceAll(std::string *str_ptr,
@@ -46,73 +50,447 @@ static void InitFilePath(const char *filename,
                          std::string *base_ptr,
                          std::string *name_ptr,
                          std::string *path_ptr) {
-  if (!filename || !strlen(filename)) {
-    *base_ptr = *name_ptr = *path_ptr = "";
+  ASSERT(filename);
+  ASSERT(*filename);
+  ASSERT(base_ptr);
+  ASSERT(name_ptr);
+  ASSERT(path_ptr);
+
+  std::string str_path(filename);
+  ReplaceAll(&str_path, '\\', '/');
+  str_path = ggadget::GetAbsolutePath(str_path.c_str());
+
+  while (str_path.size() > 0 && str_path[str_path.size() - 1] == '/')
+    str_path.resize(str_path.size() - 1);
+
+  if (str_path.empty()) {
+    *name_ptr = "/";
+    *base_ptr = "/";
+    *path_ptr = "/";
     return;
   }
 
-  std::string base, name, path;
-  std::string str_path(filename);
-  ReplaceAll(&str_path, '\\', '/');
-
   size_t last_index = str_path.find_last_of('/');
 
-  if (last_index == std::string::npos) {
-    // if filename uses relative path, then use current working directory
-    // as base path
-
-    char current_dir[PATH_MAX + 1];
-
-    // get current working directory
-    if (!getcwd(current_dir, PATH_MAX)) {
-      path = base = name = "";
-    } else {
-      path = base = name = "";
-      name = str_path;
-      base = std::string(current_dir);
-      if (base.size() && base[base.size() - 1] == '/')
-        path = base + name;
-      else
-        path = base + "/" + name;
-    }
-  } else {
-    // filename is in absolute path
-    name = str_path.substr(last_index + 1,
-                           str_path.size() - last_index - 1);
-    base = str_path.substr(0, last_index + 1);
-    path = str_path;
-  }
-
-  *name_ptr = name;
-  *base_ptr = base;
-  *path_ptr = path;
+  // filename is in absolute path
+  *name_ptr = str_path.substr(last_index + 1,
+                              str_path.size() - last_index - 1);
+  *base_ptr = str_path.substr(0, last_index + 1);
+  *path_ptr = str_path;
 }
 
-class Drives : public DrivesInterface {
- public:
-  virtual void Destroy() { }
+static bool CopyFile(const char *source, const char *dest, bool overwrite) {
+  ASSERT(source);
+  ASSERT(*source);
+  ASSERT(dest);
+  ASSERT(*dest);
 
- public:
-  virtual int GetCount() const { return 0; }
-  // TODO: finish these methods later.
-  virtual bool AtEnd() { return true; }
-  virtual DriveInterface *GetItem() { return NULL; }
-  virtual void MoveFirst() { }
-  virtual void MoveNext() { }
-};
+  struct stat stat_value;
+  std::string sourcefile = ggadget::NormalizeFilePath(source);
+  std::string destfile;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        // Destination exists.
+        if (!overwrite)
+          return false;
+        // Destination is a directory.
+        if (S_ISDIR(stat_value.st_mode))
+          return false;
+      }
+    } else {
+      // Destination is a file.
+      destfile = dest;
+      if (!overwrite)
+        return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
+  }
+
+  destfile = ggadget::NormalizeFilePath(destfile.c_str());
+  if (sourcefile == destfile)
+    return false;
+
+  FILE *in = fopen(sourcefile.c_str(), "rb");
+  if (in == NULL)
+    return false;
+  FILE *out = fopen(destfile.c_str(), "wb");
+  if (out == NULL) {
+    fclose(in);
+    return false;
+  }
+
+  ggadget::scoped_ptr<char> p(new char[kBlockSize]);
+  size_t size = 0;
+  while ((size = fread(p.get(), 1, kBlockSize, in)) > 0) {
+    if (fwrite(p.get(), 1, size, out) != size) {
+      fclose(in);
+      fclose(out);
+      return false;
+    }
+  }
+
+  fclose(in);
+  fclose(out);
+  return true;
+}
+
+static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
+  ASSERT(source);
+  ASSERT(*source);
+  ASSERT(dest);
+  ASSERT(*dest);
+
+  struct stat stat_value;
+  std::string sourcefile = ggadget::NormalizeFilePath(source);
+  std::string destfile;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        // Destination exists.
+        if (!overwrite)
+          return false;
+        // Destination is a directory.
+        if (S_ISDIR(stat_value.st_mode)) {
+          if (!overwrite)
+            return false;
+        }
+      }
+    } else {
+      // Destination is a file.
+      destfile = dest;
+      if (!overwrite)
+        return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
+  }
+
+  destfile = ggadget::NormalizeFilePath(destfile.c_str());
+  if (destfile.size() > sourcefile.size() &&
+      destfile[sourcefile.size()] == '/' &&
+      strncmp(sourcefile.c_str(), destfile.c_str(), sourcefile.size()) == 0)
+    return false;
+  if (sourcefile == destfile)
+    return false;
+
+  mkdir(destfile.c_str(), 0755);
+
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+
+  dir = opendir(source);
+  if (dir == NULL)
+    return false;
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+      continue;
+
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    std::string file =
+        ggadget::BuildFilePath(source, entry->d_name, NULL);
+    if (stat(file.c_str(), &stat_value) == 0) {
+      if (S_ISDIR(stat_value.st_mode)) {
+        if (!CopyFolder(file.c_str(), destfile.c_str(), overwrite)) {
+          closedir(dir);
+          return false;
+        }
+      } else {
+        if (!CopyFile(file.c_str(), destfile.c_str(), overwrite)) {
+          closedir(dir);
+          return false;
+        }
+      }
+    }
+  }
+
+  closedir(dir);
+  return true;
+}
+
+static bool Move(const char *source, const char *dest) {
+  ASSERT(source);
+  ASSERT(*source);
+  ASSERT(dest);
+  ASSERT(*dest);
+
+  struct stat stat_value;
+  std::string destfile;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        return false;
+      }
+    } else {
+      // Destination is a file.
+      return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
+  }
+
+  return rename(source, destfile.c_str()) == 0;
+}
+
+static bool DeleteFile(const char *filename, bool force) {
+  ASSERT(filename);
+  ASSERT(*filename);
+
+  if (unlink(filename) == 0) {
+    return true;
+  }
+  return false;
+}
+
+static bool DeleteFolder(const char *filename, bool force) {
+  ASSERT(filename);
+  ASSERT(*filename);
+
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+
+  dir = opendir(filename);
+  if (dir == NULL)
+    return 0;
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+      continue;
+
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    std::string file =
+        ggadget::BuildFilePath(filename, entry->d_name, NULL);
+    if (stat(file.c_str(), &stat_value) == 0) {
+      if (S_ISDIR(stat_value.st_mode)) {
+        if (!DeleteFolder(file.c_str(), force)) {
+          closedir(dir);
+          return false;
+        }
+      } else {
+        if (!DeleteFile(file.c_str(), force)) {
+          closedir(dir);
+          return false;
+        }
+      }
+    }
+  }
+
+  closedir(dir);
+  return rmdir(filename) == 0;
+}
+
+static bool SetName(const char *path, const char *dir, const char *name) {
+  ASSERT(path);
+  ASSERT(*path);
+  ASSERT(name);
+  ASSERT(*name);
+
+  std::string n(name);
+  if (n.find('/') != std::string::npos
+      || n.find('\\') != std::string::npos)
+    return false;
+  std::string newpath = ggadget::BuildFilePath(dir, name, NULL);
+  return rename(path, newpath.c_str()) == 0;
+}
+
+static int64_t GetFileSize(const char *filename) {
+  ASSERT(filename);
+  ASSERT(*filename);
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  stat(filename, &stat_value);
+  return stat_value.st_size;
+}
+
+static int64_t GetFolderSize(const char *filename) {
+  // Gets the init-size of folder.
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(filename, &stat_value))
+    return 0;
+  int64_t size = stat_value.st_size;
+
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+
+  dir = opendir(filename);
+  if (dir == NULL)
+    return 0;
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+      continue;
+
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    std::string file =
+        ggadget::BuildFilePath(filename, entry->d_name, NULL);
+    if (stat(file.c_str(), &stat_value) == 0) {
+      if (S_ISDIR(stat_value.st_mode)) {
+        // sum up the folder's size
+        size += GetFolderSize(file.c_str());
+      } else {
+        // sum up the file's size
+        size += GetFileSize(file.c_str());
+      }
+    }
+  }
+
+  closedir(dir);
+
+  return size;
+}
+
+static TextStreamInterface *OpenTextFile(const char *filename,
+                                         IOMode mode,
+                                         bool create,
+                                         bool overwrite,
+                                         Tristate format) {
+  ASSERT(filename);
+  ASSERT(*filename);
+
+  // XXX:
+  return NULL;
+}
+
+/**
+ * Gets the attributes of a given file or directory.
+ * @param path the full path of the file or directory.
+ * @param base the base name of the file or directory, that is, the last part
+ *     of the full path.  For example, the base of "/path/to/file" is "file".
+ */
+static FileAttribute GetAttributes(const char *path, const char *base) {
+  ASSERT(path);
+  ASSERT(*path);
+  ASSERT(base);
+  ASSERT(*base);
+
+  // FIXME: Check whether path specifies a file or a folder.
+
+  FileAttribute attribute = FILE_ATTR_NORMAL;
+
+  if (base[0] == '.') {
+    attribute = static_cast<FileAttribute>(attribute | FILE_ATTR_HIDDEN);
+  }
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(path, &stat_value) == -1) {
+    return attribute;
+  }
+
+  mode_t mode = stat_value.st_mode;
+
+  if (S_ISLNK(mode)) {
+    // it is a symbolic link
+    attribute = static_cast<FileAttribute>(attribute | FILE_ATTR_ALIAS);
+  }
+
+  if (!(mode & S_IWUSR) && (mode & S_IRUSR)) {
+    // it is read only by owner
+    attribute = static_cast<FileAttribute>(attribute | FILE_ATTR_READONLY);
+  }
+
+  return attribute;
+}
+
+static bool SetAttributes(const char *filename,
+                          FileAttribute attributes) {
+  ASSERT(filename);
+  ASSERT(*filename);
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(filename, &stat_value) == -1) {
+    return false;
+  }
+
+  mode_t mode = stat_value.st_mode;
+  bool should_change = false;
+
+  // only accept FILE_ATTR_READONLY.
+  if ((attributes & FILE_ATTR_READONLY) != 0 &&
+      (mode & FILE_ATTR_READONLY) == 0) {
+    // modify all the attributes to read only
+    mode = static_cast<FileAttribute>((mode | S_IRUSR) & ~S_IWUSR);
+    mode = static_cast<FileAttribute>((mode | S_IRGRP) & ~S_IWGRP);
+    mode = static_cast<FileAttribute>((mode | S_IROTH) & ~S_IWOTH);
+    should_change = true;
+  } else if ((attributes & FILE_ATTR_READONLY) == 0 &&
+             (mode & FILE_ATTR_READONLY) != 0) {
+    mode = static_cast<FileAttribute>(mode | S_IRUSR | S_IWUSR);
+    should_change = true;
+  }
+
+  if (should_change)
+    return chmod(filename, mode) == 0;
+
+  return true;
+}
+
+static Date GetDateLastModified(const char *path) {
+  ASSERT(path);
+  ASSERT(*path);
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(path, &stat_value))
+    return Date(0);
+
+  return Date(stat_value.st_mtim.tv_sec * 1000
+              + stat_value.st_mtim.tv_nsec / 1000000);
+}
+
+static Date GetDateLastAccessed(const char *path) {
+  ASSERT(path);
+  ASSERT(*path);
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(path, &stat_value))
+    return Date(0);
+
+  return Date(stat_value.st_atim.tv_sec * 1000
+              + stat_value.st_atim.tv_nsec / 1000000);
+}
 
 class Drive : public DriveInterface {
  public:
-  Drive(const char *drive_spec) {
-  }
-
-  virtual void Destroy() {
-    delete this;
-  }
+  Drive() { }
 
  public:
+  virtual void Destroy() {
+    // Deliberately does nothing.
+  }
+
   virtual std::string GetPath() {
-    return "";
+    return "/";
   }
 
   virtual std::string GetDriveLetter() {
@@ -120,54 +498,90 @@ class Drive : public DriveInterface {
   }
 
   virtual std::string GetShareName() {
+    // TODO: implement this.
     return "";
   }
 
   virtual DriveType GetDriveType() {
+    // TODO: implement this.
     return DRIVE_TYPE_UNKNOWN;
   }
 
-  virtual FolderInterface *GetRootFolder() {
-    return NULL;
-  }
+  virtual FolderInterface *GetRootFolder();
 
   virtual int64_t GetAvailableSpace() {
+    // TODO: implement this.
     return 0;
   }
 
   virtual int64_t GetFreeSpace() {
+    // TODO: implement this.
     return 0;
   }
 
   virtual int64_t GetTotalSize() {
+    // TODO: implement this.
     return 0;
   }
 
   virtual std::string GetVolumnName() {
+    // TODO: implement this.
     return "";
   }
 
   virtual bool SetVolumnName(const char *name) {
+    // TODO: implement this.
     return false;
   }
 
   virtual std::string GetFileSystem() {
+    // TODO: implement this.
     return "";
   }
 
   virtual int64_t GetSerialNumber() {
+    // TODO: implement this.
     return 0;
   }
 
   virtual bool IsReady() {
-    return false;
+    return true;
   }
+};
+
+static Drive root_drive;
+
+// Drives object simulates a collection contains only one "root" drive.
+class Drives : public DrivesInterface {
+ public:
+  Drives() : at_end_(false) { }
+  virtual void Destroy() { }
+
+ public:
+  virtual int GetCount() const { return 1; }
+  virtual bool AtEnd() { return at_end_; }
+  virtual DriveInterface *GetItem() { return at_end_ ? NULL : &root_drive; }
+  virtual void MoveFirst() { at_end_ = false; }
+  virtual void MoveNext() { at_end_ = true; }
+
+ private:
+  bool at_end_;
 };
 
 class File : public FileInterface {
  public:
   explicit File(const char *filename) {
+    ASSERT(filename);
+    ASSERT(*filename);
+
     InitFilePath(filename, &base_, &name_, &path_);
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    if (stat(path_.c_str(), &stat_value))
+      path_.clear();
+    if (S_ISDIR(stat_value.st_mode))
+      // it is not a directory
+      path_.clear();
   }
 
   virtual void Destroy() {
@@ -184,109 +598,44 @@ class File : public FileInterface {
   }
 
   virtual bool SetName(const char *name) {
-    if (!name || !strlen(name))
+    if (!name || !*name)
       return false;
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
     if (!strcmp(name, name_.c_str()))
       return true;
-
-    std::string oldpath = path_;
-    name_ = std::string(name);
-    path_ = base_ + name_;
-    return !rename(oldpath.c_str(), path_.c_str());
+    if (linux_system::SetName(path_.c_str(), base_.c_str(), name)) {
+      path_ = ggadget::BuildFilePath(base_.c_str(), name);
+      InitFilePath(path_.c_str(), &base_, &name_, &path_);
+      return true;
+    }
+    return false;
   }
 
   virtual std::string GetShortPath() {
-    if (base_ == "/")
-      return path_;
-    if (name_ == "" || base_ == "" || path_ == "")
-      return "";
-
-    return filesystem_.BuildPath(base_.c_str(), GetShortName().c_str());
+    return GetPath();
   }
 
   virtual std::string GetShortName() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return "";
-
-    std::string extension = ToUpper(filesystem_.GetExtensionName(
-                                                   name_.c_str()).substr(0, 3));
-
-    std::string name = name_.size() > 8
-                     ? ToUpper(name_.substr(0, 6)) + "~1"
-                     : ToUpper(name_);
-
-    if (extension == "")
-      return name;
-    else
-      return name + "." + extension;
+    return GetName();
   }
 
   virtual DriveInterface *GetDrive() {
-    return NULL;
+    return &root_drive;
   }
 
   virtual FolderInterface *GetParentFolder();
 
   virtual FileAttribute GetAttributes() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return FILE_ATTR_NORMAL;
-
-    FileAttribute attribute = FILE_ATTR_NORMAL;
-
-    if (name_.size() && name_[0] == '.') {
-      attribute = (FileAttribute) (attribute | FILE_ATTR_HIDDEN);
-    }
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf) == -1) {
-      return attribute;
-    }
-
-    int mode = statbuf.st_mode;
-
-    if (S_ISLNK(mode)) {
-      // it is a symbolic link
-      attribute = (FileAttribute) (attribute | FILE_ATTR_ALIAS);
-    }
-
-    if (!(mode & S_IWUSR) && mode & S_IRUSR) {
-      // it is read only by owner
-      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY);
-    }
-
-    return attribute;
+    return linux_system::GetAttributes(path_.c_str(), name_.c_str());
   }
 
   virtual bool SetAttributes(FileAttribute attributes) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
-    // only accept FILE_ATTR_READONLY and FILE_ATTR_HIDDEN
-
-    if (attributes & FILE_ATTR_READONLY) {
-      struct stat statbuf;
-      if (stat(path_.c_str(), &statbuf) == -1) {
-        return false;
-      }
-      int mode = statbuf.st_mode;
-
-      // modify all the attributes to read only
-      mode = (FileAttribute) ((mode | S_IRUSR) & ~S_IWUSR);
-      mode = (FileAttribute) ((mode | S_IRGRP) & ~S_IWGRP);
-      mode = (FileAttribute) ((mode | S_IROTH) & ~S_IWOTH);
-
-      chmod(path_.c_str(), mode);
-    }
-
-    if (attributes & FILE_ATTR_HIDDEN) {
-      if (!SetName(("." + name_).c_str()))
-        return false;
-    }
-
-    return true;
+    return linux_system::SetAttributes(path_.c_str(), attributes);
   }
 
   virtual Date GetDateCreated() {
@@ -295,85 +644,74 @@ class File : public FileInterface {
   }
 
   virtual Date GetDateLastModified() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return Date(0);
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf))
-      return Date(0);
-
-    return Date(statbuf.st_mtim.tv_sec * 1000
-                + statbuf.st_mtim.tv_nsec / 1000000);
+    return linux_system::GetDateLastModified(path_.c_str());
   }
 
   virtual Date GetDateLastAccessed() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return Date(0);
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf))
-      return Date(0);
-
-    return Date(statbuf.st_atim.tv_sec * 1000
-                + statbuf.st_atim.tv_nsec / 1000000);
+    return linux_system::GetDateLastAccessed(path_.c_str());
   }
 
   virtual int64_t GetSize() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return 0;
-
-    FILE * pFile = fopen (path_.c_str(), "rb");
-
-    if (!pFile)
-      return 0;
-
-    fseek(pFile, 0, SEEK_END);
-    int64_t count = ftell(pFile);
-
-    fclose (pFile);
-    return count;
+    return linux_system::GetFileSize(path_.c_str());
   }
 
   virtual std::string GetType() {
+    if (path_.empty())
+      return "";
     return ggadget::xdg::GetFileMimeType(path_.c_str());
   }
 
   virtual bool Delete(bool force) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
-    FileSystem filesystem;
-    return filesystem_.DeleteFile(path_.c_str(), force);
+    bool result = linux_system::DeleteFile(path_.c_str(), force);
+    if (result)
+      path_.clear();
+    return result;
   }
 
   virtual bool Copy(const char *dest, bool overwrite) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
-    return filesystem_.CopyFile(path_.c_str(), dest, overwrite);
+    if (!dest || !*dest)
+      return false;
+    return linux_system::CopyFile(path_.c_str(), dest, overwrite);
   }
 
   virtual bool Move(const char *dest) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
-    return filesystem_.MoveFile(path_.c_str(), dest);
+    if (!dest || !*dest)
+      return false;
+    bool result = linux_system::Move(path_.c_str(), dest);
+    if (result) {
+      std::string path = ggadget::GetAbsolutePath(dest);
+      InitFilePath(path.c_str(), &base_, &name_, &path_);
+    }
+    return result;
   }
 
-  virtual TextStreamInterface *OpenAsTextStream(IOMode IOMode,
-                                                Tristate Format) {
-    if (name_ == "" || base_ == "" || path_ == "")
+  virtual TextStreamInterface *OpenAsTextStream(IOMode mode,
+                                                Tristate format) {
+    if (path_.empty())
       return NULL;
-
-    return filesystem_.CreateTextFile(path_.c_str(), true, true);
+    return linux_system::OpenTextFile(path_.c_str(),
+                                      mode,
+                                      false,
+                                      true,
+                                      format);
   }
 
  private:
   std::string path_;
   std::string base_;
   std::string name_;
-
-  FileSystem filesystem_;
 };
 
 class Files : public FilesInterface {
@@ -417,10 +755,9 @@ class Files : public FilesInterface {
         continue;
       struct stat stat_value;
       memset(&stat_value, 0, sizeof(stat_value));
-      std::string filename = ggadget::BuildFilePath(path_.c_str(),
-                                                    entry->d_name,
-                                                    NULL);
-      if (::stat(filename.c_str(), &stat_value) == 0) {
+      std::string filename =
+          ggadget::BuildFilePath(path_.c_str(), entry->d_name, NULL);
+      if (stat(filename.c_str(), &stat_value) == 0) {
         if (!S_ISDIR(stat_value.st_mode))
           ++count;
       }
@@ -452,10 +789,9 @@ class Files : public FilesInterface {
         continue;
       struct stat stat_value;
       memset(&stat_value, 0, sizeof(stat_value));
-      std::string filename = ggadget::BuildFilePath(path_.c_str(),
-                                                    entry->d_name,
-                                                    NULL);
-      if (::stat(filename.c_str(), &stat_value) == 0) {
+      std::string filename =
+          ggadget::BuildFilePath(path_.c_str(), entry->d_name, NULL);
+      if (stat(filename.c_str(), &stat_value) == 0) {
         if (!S_ISDIR(stat_value.st_mode)) {
           current_file_ = filename;
           return;
@@ -472,32 +808,6 @@ class Files : public FilesInterface {
   bool at_end_;
   std::string current_file_;
 };
-
-static void InitFolder(const char *filename,
-                       std::string *base,
-                       std::string *name,
-                       std::string *path) {
-  if (!filename || !strlen(filename))
-    return;
-
-  std::string str_path(filename);
-  ReplaceAll(&str_path, '\\', '/');
-
-  FileSystem filesystem;
-
-  if (filesystem.FileExists(str_path.c_str())) {
-    // it is a file
-    *base = *name = *path = "";
-    return;
-  }
-
-  if (!filesystem.FolderExists(str_path.c_str())) {
-    // if not exist, create this folder with permission "drwxrwxr-x"
-    if (mkdir(str_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
-      // if error, just return
-      return;
-  }
-}
 
 class Folders : public FoldersInterface {
  public:
@@ -540,10 +850,9 @@ class Folders : public FoldersInterface {
         continue;
       struct stat stat_value;
       memset(&stat_value, 0, sizeof(stat_value));
-      std::string filename = ggadget::BuildFilePath(path_.c_str(),
-                                                    entry->d_name,
-                                                    NULL);
-      if (::stat(filename.c_str(), &stat_value) == 0) {
+      std::string filename =
+          ggadget::BuildFilePath(path_.c_str(), entry->d_name, NULL);
+      if (stat(filename.c_str(), &stat_value) == 0) {
         if (S_ISDIR(stat_value.st_mode))
           ++count;
       }
@@ -571,10 +880,9 @@ class Folders : public FoldersInterface {
         continue;
       struct stat stat_value;
       memset(&stat_value, 0, sizeof(stat_value));
-      std::string filename = ggadget::BuildFilePath(path_.c_str(),
-                                                    entry->d_name,
-                                                    NULL);
-      if (::stat(filename.c_str(), &stat_value) == 0) {
+      std::string filename =
+          ggadget::BuildFilePath(path_.c_str(), entry->d_name, NULL);
+      if (stat(filename.c_str(), &stat_value) == 0) {
         if (S_ISDIR(stat_value.st_mode)) {
           current_file_ = filename;
           return;
@@ -595,8 +903,17 @@ class Folders : public FoldersInterface {
 class Folder : public FolderInterface {
  public:
   explicit Folder(const char *filename) {
+    ASSERT(filename);
+    ASSERT(*filename);
+
     InitFilePath(filename, &base_, &name_, &path_);
-    InitFolder(filename, &base_, &name_, &path_);
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    if (stat(path_.c_str(), &stat_value))
+      path_.clear();
+    if (!S_ISDIR(stat_value.st_mode))
+      // it is not a directory
+      path_.clear();
   }
 
   virtual void Destroy() {
@@ -613,36 +930,26 @@ class Folder : public FolderInterface {
   }
 
   virtual bool SetName(const char *name) {
-    if (!name || !strlen(name))
+    if (!name || !*name)
       return false;
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-    if (!strcmp(name, name_.c_str()))
+    if (strcmp(name, name_.c_str()) == 0)
       return true;
-
-    std::string oldpath = path_;
-    name_ = std::string(name);
-    ReplaceAll(&name_, '\\', '/');
-    path_ = base_ + name_;
-    return !rename(oldpath.c_str(), path_.c_str());
+    if (linux_system::SetName(path_.c_str(), base_.c_str(), name)) {
+      path_ = ggadget::BuildFilePath(base_.c_str(), name);
+      InitFilePath(path_.c_str(), &base_, &name_, &path_);
+      return true;
+    }
+    return false;
   }
 
   virtual std::string GetShortPath() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return "";
-    if (base_ == "/")
-      return path_;
-
-    return filesystem_.BuildPath(base_.c_str(), GetShortName().c_str());
+    return GetPath();
   }
 
   virtual std::string GetShortName() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return "";
-
-    if (name_.size() > 8)
-      return ToUpper(name_.substr(0, 6)) + "~1";
-    return ToUpper(name_);
+    return GetName();
   }
 
   virtual DriveInterface *GetDrive() {
@@ -650,71 +957,21 @@ class Folder : public FolderInterface {
   }
 
   virtual FolderInterface *GetParentFolder() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return NULL;
-
-    size_t length = base_.find_last_of('/');
-    if (length == std::string::npos)
-      return NULL;
-
-    if (!length)
-      return new Folder("/");
-
-    return new Folder(base_.substr(0, length).c_str());
+    return new Folder(base_.c_str());
   }
 
   virtual FileAttribute GetAttributes() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return FILE_ATTR_DIRECTORY;
-
-    FileAttribute attribute = FILE_ATTR_DIRECTORY;
-
-    if (name_.size() && name_[0] == '.') {
-      attribute = (FileAttribute) (attribute | FILE_ATTR_HIDDEN);
-    }
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf) == -1) {
-      return attribute;
-    }
-
-    int mode = statbuf.st_mode;
-
-    if (!(mode & S_IWUSR) && mode & S_IRUSR) {
-      // it is read only by owner
-      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY);
-    }
-
-    return attribute;
+    return linux_system::GetAttributes(path_.c_str(), name_.c_str());
   }
 
   virtual bool SetAttributes(FileAttribute attributes) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-
-    // only accept FILE_ATTR_READONLY and FILE_ATTR_HIDDEN
-
-    if (attributes & FILE_ATTR_READONLY) {
-      struct stat statbuf;
-      if (stat(path_.c_str(), &statbuf) == -1) {
-        return false;
-      }
-      int mode = statbuf.st_mode;
-
-      // modify all the attributes to read only
-      mode = (FileAttribute) ((mode | S_IRUSR) & ~S_IWUSR);
-      mode = (FileAttribute) ((mode | S_IRGRP) & ~S_IWGRP);
-      mode = (FileAttribute) ((mode | S_IROTH) & ~S_IWOTH);
-
-      chmod(path_.c_str(), mode);
-    }
-
-    if (attributes & FILE_ATTR_HIDDEN) {
-      if (!SetName(("." + name_).c_str()))
-        return false;
-    }
-
-    return true;
+    return linux_system::SetAttributes(path_.c_str(), attributes);
   }
 
   virtual Date GetDateCreated() {
@@ -723,110 +980,63 @@ class Folder : public FolderInterface {
   }
 
   virtual Date GetDateLastModified() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return Date(0);
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf))
-      return Date(0);
-
-    return Date(statbuf.st_mtim.tv_sec * 1000
-                + statbuf.st_mtim.tv_nsec / 1000000);
+    return linux_system::GetDateLastModified(path_.c_str());
   }
 
   virtual Date GetDateLastAccessed() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return Date(0);
-
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf))
-      return Date(0);
-
-    return Date(statbuf.st_atim.tv_sec * 1000
-                + statbuf.st_atim.tv_nsec / 1000000);
+    return linux_system::GetDateLastAccessed(path_.c_str());
   }
 
   virtual std::string GetType() {
+    if (path_.empty())
+      return "";
     return ggadget::xdg::GetFileMimeType(path_.c_str());
   }
 
   virtual bool Delete(bool force) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-    return filesystem_.DeleteFolder(path_.c_str(), force);
+    return linux_system::DeleteFolder(path_.c_str(), force);
   }
 
   virtual bool Copy(const char *dest, bool overwrite) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-    return filesystem_.CopyFile(path_.c_str(), dest, overwrite);
+    if (!dest || !*dest)
+      return false;
+    return linux_system::CopyFolder(path_.c_str(), dest, overwrite);
   }
 
   virtual bool Move(const char *dest) {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return false;
-    return filesystem_.MoveFile(path_.c_str(), dest);
+    if (!dest || !*dest)
+      return false;
+    bool result = linux_system::Move(path_.c_str(), dest);
+    if (result) {
+      std::string path = ggadget::GetAbsolutePath(dest);
+      InitFilePath(path.c_str(), &base_, &name_, &path_);
+    }
+    return result;
   }
 
   virtual bool IsRootFolder() {
-    return path_ == "/" ? true : false;
+    return path_ == "/";
   }
 
   /** Sum of files and subfolders. */
   virtual int64_t GetSize() {
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return 0;
-
-    if (!filesystem_.FolderExists(path_.c_str()))
-      return 0;
-
-    // get the init-size of folder.  In Goobuntu, it is 4096
-    struct stat statbuf;
-    if (stat(path_.c_str(), &statbuf))
-      return 0;
-    int64_t size = statbuf.st_size;
-
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-
-    dir = opendir(path_.c_str());
-    if (dir == NULL)
-      return 0;
-
-    while ((entry = readdir(dir)) != NULL) {
-      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-        continue;
-
-      struct stat stat_value;
-      memset(&stat_value, 0, sizeof(stat_value));
-      std::string filename = ggadget::BuildFilePath(path_.c_str(),
-                                                    entry->d_name,
-                                                    NULL);
-      if (::stat(filename.c_str(), &stat_value) == 0) {
-        if (S_ISDIR(stat_value.st_mode)) {
-          // sum up the folder's size
-          FolderInterface *folder = filesystem_.GetFolder(filename.c_str());
-          size += folder->GetSize();
-          folder->Destroy();
-        } else {
-          // sum up the file's size
-          FileInterface *file = filesystem_.GetFile(filename.c_str());
-          size += file->GetSize();
-          file->Destroy();
-        }
-      }
-    }
-
-    closedir(dir);
-
-    return size;
+    return linux_system::GetFolderSize(path_.c_str());
   }
 
   virtual FoldersInterface *GetSubFolders() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return NULL;
-
-    if (!filesystem_.FolderExists(path_.c_str()))
+    if (path_.empty())
       return NULL;
 
     // creates the Folders instance
@@ -838,10 +1048,7 @@ class Folder : public FolderInterface {
   }
 
   virtual FilesInterface *GetFiles() {
-    if (name_ == "" || base_ == "" || path_ == "")
-      return NULL;
-
-    if (!filesystem_.FolderExists(path_.c_str()))
+    if (path_.empty())
       return NULL;
 
     // Creates the Files instance.
@@ -854,32 +1061,39 @@ class Folder : public FolderInterface {
 
   virtual TextStreamInterface *CreateTextFile(const char *filename,
                                               bool overwrite, bool unicode) {
-    if (!filename ||!strlen(filename))
+    if (!filename || !*filename)
       return NULL;
-    if (name_ == "" || base_ == "" || path_ == "")
+    if (path_.empty())
       return NULL;
 
     std::string str_path(filename);
     ReplaceAll(&str_path, '\\', '/');
+    std::string file;
 
-    if (str_path[0] == '/') {
+    if (ggadget::IsAbsolutePath(str_path.c_str())) {
       // indicates filename is already the absolute path
-      return filesystem_.CreateTextFile(str_path.c_str(), overwrite, unicode);
+      file = str_path;
     } else {
       // if not, generate the absolute path
-      std::string fullpath =
-        filesystem_.BuildPath(path_.c_str(), str_path.c_str());
-      return filesystem_.CreateTextFile(fullpath.c_str(), overwrite, unicode);
+      file = ggadget::BuildFilePath(path_.c_str(), str_path.c_str(), NULL);
     }
+    return linux_system::OpenTextFile(
+        file.c_str(),
+        IO_MODE_WRITING,
+        true,
+        overwrite,
+        unicode ? TRISTATE_TRUE : TRISTATE_FALSE);
   }
 
  private:
   std::string path_;
   std::string base_;
   std::string name_;
-
-  FileSystem filesystem_;
 };
+
+FolderInterface *Drive::GetRootFolder() {
+  return new Folder("/");
+}
 
 FolderInterface *Folders::GetItem() {
   if (current_file_.empty())
@@ -1011,7 +1225,7 @@ class TextStream : public TextStreamInterface {
   }
 
   virtual void Write(const char *text) {
-    if (!fp_ || !text || !strlen(text))
+    if (!fp_ || !text || !*text)
       return;
 
     fputs(text, fp_);
@@ -1021,7 +1235,7 @@ class TextStream : public TextStreamInterface {
   }
 
   virtual void WriteLine(const char *text) {
-    if (!fp_ || !text || !strlen(text))
+    if (!fp_ || !text || !*text)
       return;
 
     Write(text);
@@ -1061,10 +1275,12 @@ class TextStream : public TextStreamInterface {
 
  private:
   void UpdateLineAndColumn(const char *str) {
-    if (!str || !strlen(str))
+    if (!str)
       return;
 
     size_t length = strlen(str);
+    if (!length)
+      return;
 
     // update member variable line_ and column_
     bool col_flag = false;
@@ -1095,22 +1311,14 @@ FileSystem::~FileSystem() {
 }
 
 DrivesInterface *FileSystem::GetDrives() {
-  return NULL;
+  return new Drives();
 }
 
 std::string FileSystem::BuildPath(const char *path, const char *name) {
-  // both path and name are required according to MSDN
-  if (!path || !name || !strlen(path) || !strlen(name))
+  if (!path || !*path)
     return "";
-
-  std::string str_path(path);
-  std::string str_name(name);
-  ReplaceAll(&str_path, '\\', '/');
-  ReplaceAll(&str_name, '\\', '/');
-
-  if (str_path[str_path.size() - 1] == '/')
-    return str_path + str_name;
-  return str_path + "/" + str_name;
+  // Don't need to check name for NULL or empty string.
+  return ggadget::BuildFilePath(path, name, NULL);
 }
 
 std::string FileSystem::GetDriveName(const char *path) {
@@ -1118,90 +1326,56 @@ std::string FileSystem::GetDriveName(const char *path) {
 }
 
 std::string FileSystem::GetParentFolderName(const char *path) {
-  if (!path || !strlen(path))
+  if (!path || !*path)
     return "";
-
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
-
-  if (str_path == "/")
+  std::string base, name, realpath;
+  InitFilePath(path, &base, &name, &realpath);
+  // Returns "" for root directory.
+  if (realpath == "/")
     return "";
-
-  size_t length = str_path.find_last_of('/');
-  // if no '/' exist, just return empty string
-  if (length == std::string::npos)
-    return "";
-
-  if (!length)
-    return "/";
-
-  return str_path.substr(0, length);
+  // Removes the trailing slash from the path.
+  if (base.size() > 1 && base[base.size() - 1] == '/')
+    base.resize(base.size() - 1);
+  return base;
 }
 
 std::string FileSystem::GetFileName(const char *path) {
-  if (!path || !strlen(path))
+  if (!path || !*path)
     return "";
-
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
-
-  size_t start_index = str_path.find_last_of('/');
-  // works correctly even if no '/' exists in input path
-  return str_path.substr(start_index + 1, str_path.size() - start_index - 1);
+  std::string base, name, realpath;
+  InitFilePath(path, &base, &name, &realpath);
+  // Returns "" for root directory.
+  if (realpath == "/")
+    return "";
+  return name;
 }
 
 std::string FileSystem::GetBaseName(const char *path) {
-  if (!path)
+  if (!path || !*path)
     return "";
-
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
-  size_t start_index = str_path.find_last_of('/');
-  size_t end_index = str_path.find_last_of('.');
+  std::string base, name, realpath;
+  InitFilePath(path, &base, &name, &realpath);
+  size_t end_index = name.find_last_of('.');
   if (end_index == std::string::npos)
-    end_index = str_path.size();
-
-  if (start_index >= end_index)
-    return "";
-
-  return str_path.substr(start_index + 1, end_index - start_index - 1);
+    return name;
+  return name.substr(0, end_index);
 }
 
 std::string FileSystem::GetExtensionName(const char *path) {
-  if (!path || !strlen(path))
+  if (!path || !*path)
     return "";
-
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
-  size_t start_index = str_path.find_last_of('/');
-  size_t end_index = str_path.find_last_of('.');
-
-  if (end_index == std::string::npos ||
-      (start_index != std::string::npos && start_index >= end_index))
+  std::string base, name, realpath;
+  InitFilePath(path, &base, &name, &realpath);
+  size_t end_index = name.find_last_of('.');
+  if (end_index == std::string::npos)
     return "";
-
-  return str_path.substr(end_index + 1, str_path.size() - end_index - 1);
-}
-
-std::string FileSystem::GetAbsolutePathName(const char *path) {
-  if (!path || !strlen(path))
-    return "";
-
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
-  if (str_path[0] == '/')
-    return str_path;
-
-  char current_dir[PATH_MAX + 1];
-  getcwd(current_dir, PATH_MAX); // get current working directory
-
-  return BuildPath(current_dir, str_path.c_str());
+  return name.substr(end_index + 1);
 }
 
 // creates the character for filename
 static char GetFileChar() {
   while (1) {
-    char ch = (char) (random() % 123);
+    char ch = static_cast<char>(random() % 123);
     if (ch == '_' ||
         ch == '.' ||
         ch == '-' ||
@@ -1211,6 +1385,11 @@ static char GetFileChar() {
   }
 }
 
+std::string FileSystem::GetAbsolutePathName(const char *path) {
+  return ggadget::GetAbsolutePath(path);
+}
+
+// FIXME: Use system timer to generate a more unique filename.
 std::string FileSystem::GetTempName() {
   // Typically, however, file names only use alphanumeric characters(mostly
   // lower case), underscores, hyphens and periods. Other characters, such as
@@ -1231,7 +1410,7 @@ bool FileSystem::DriveExists(const char *drive_spec) {
 }
 
 bool FileSystem::FileExists(const char *file_spec) {
-  if (!file_spec || !strlen(file_spec))
+  if (!file_spec || !*file_spec)
     return false;
 
   std::string str_path(file_spec);
@@ -1240,11 +1419,12 @@ bool FileSystem::FileExists(const char *file_spec) {
   if (access(str_path.c_str(), F_OK))
     return false;
 
-  struct stat statbuf;
-  if (stat(str_path.c_str(), &statbuf))
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(str_path.c_str(), &stat_value))
     return false;
 
-  if (statbuf.st_mode & S_IFDIR)
+  if (S_ISDIR(stat_value.st_mode))
     // it is a directory
     return false;
 
@@ -1252,7 +1432,7 @@ bool FileSystem::FileExists(const char *file_spec) {
 }
 
 bool FileSystem::FolderExists(const char *folder_spec) {
-  if (!folder_spec || !strlen(folder_spec))
+  if (!folder_spec || !*folder_spec)
     return false;
 
   std::string str_path(folder_spec);
@@ -1261,11 +1441,11 @@ bool FileSystem::FolderExists(const char *folder_spec) {
   if (access(str_path.c_str(), F_OK))
     return false;
 
-  struct stat statbuf;
-  if (stat(str_path.c_str(), &statbuf))
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(str_path.c_str(), &stat_value))
     return false;
-
-  if (!(statbuf.st_mode & S_IFDIR))
+  if (!S_ISDIR(stat_value.st_mode))
     // it is not a directory
     return false;
 
@@ -1290,205 +1470,276 @@ FolderInterface *FileSystem::GetFolder(const char *folder_path) {
 }
 
 FolderInterface *FileSystem::GetSpecialFolder(SpecialFolder special_folder) {
-  // FIXME
-  // Returns a folder to make the gadgets relying this feature happy.
+  switch (special_folder) {
+  case SPECIAL_FOLDER_WINDOWS:
+    return new Folder("/");
+  case SPECIAL_FOLDER_SYSTEM:
+    return new Folder("/");
+  case SPECIAL_FOLDER_TEMPORARY:
+    return new Folder("/tmp");
+  default:
+    break;
+  }
   return new Folder("/tmp");
 }
 
 bool FileSystem::DeleteFile(const char *file_spec, bool force) {
-  if (!FileExists(file_spec))
+  if (!file_spec || !*file_spec)
     return false;
 
-  std::string str_path(file_spec);
-  ReplaceAll(&str_path, '\\', '/');
+  glob_t globbuf;
+  if (glob(file_spec,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
 
-  return !std::remove(str_path.c_str());
+  if (globbuf.gl_pathc == 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  size_t count = 0;
+  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+    if (FileExists(globbuf.gl_pathv[i])) {
+      ++count;
+      if (!linux_system::DeleteFile(globbuf.gl_pathv[i], force)) {
+        globfree(&globbuf);
+        return false;
+      }
+    }
+  }
+
+  globfree(&globbuf);
+  return count > 0;
 }
 
 bool FileSystem::DeleteFolder(const char *folder_spec, bool force) {
-  if (!FolderExists(folder_spec))
+  if (!folder_spec || !*folder_spec)
     return false;
 
-  std::string str_path(folder_spec);
-  ReplaceAll(&str_path, '\\', '/');
+  glob_t globbuf;
+  if (glob(folder_spec,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
 
-  return !std::remove(str_path.c_str());
+  if (globbuf.gl_pathc == 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  size_t count = 0;
+  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+    if (FolderExists(globbuf.gl_pathv[i])) {
+      ++count;
+      if (!linux_system::DeleteFolder(globbuf.gl_pathv[i], force)) {
+        globfree(&globbuf);
+        return false;
+      }
+    }
+  }
+
+  globfree(&globbuf);
+  return count > 0;
 }
 
 bool FileSystem::MoveFile(const char *source, const char *dest) {
-  if (!source || !dest || !strlen(source) || !strlen(dest))
+  if (!source || !*source || !dest || !*dest)
     return false;
 
-  std::string source_path(source);
-  ReplaceAll(&source_path, '\\', '/');
-
-  if (!FileExists(source_path.c_str()))
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
     return false;
+  }
 
-  std::string dest_input(dest);
-  ReplaceAll(&dest_input, '\\', '/');
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
 
-  std::string dest_path = BuildPath(dest_input.c_str(),
-                            GetFileName(source_path.c_str()).c_str());
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FileExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::Move(source, dest);
+  }
 
-  if (dest_path == source_path)
-    return true;
-
-  return !std::rename(source_path.c_str(), dest_path.c_str());
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::MoveFolder(const char *source, const char *dest) {
-  if (!source || !dest || !strlen(source) || !strlen(dest))
+  if (!source || !dest || !*source || !*dest)
+    return false;
+  if (!source || !*source || !dest || !*dest)
     return false;
 
-  std::string source_path(source);
-  ReplaceAll(&source_path, '\\', '/');
-
-  if (!FolderExists(source_path.c_str()))
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
     return false;
+  }
 
-  std::string dest_input(dest);
-  ReplaceAll(&dest_input, '\\', '/');
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
 
-  std::string dest_path = BuildPath(dest_input.c_str(),
-                            GetFileName(source_path.c_str()).c_str());
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FolderExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::Move(source, dest);
+  }
 
-  if (dest_path == source_path)
-    return true;
-
-  return !std::rename(source_path.c_str(), dest_path.c_str());
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::CopyFile(const char *source, const char *dest,
-                               bool overwrite) {
-  if (!source || !dest || !strlen(source) || !strlen(dest))
+                          bool overwrite) {
+  if (!source || !*source || !dest || !*dest)
     return false;
 
-  std::string source_path(source);
-  ReplaceAll(&source_path, '\\', '/');
-
-  if (!FileExists(source_path.c_str()))
-    return false;
-
-  std::string dest_input(dest);
-  ReplaceAll(&dest_input, '\\', '/');
-
-  std::string dest_path = BuildPath(dest_input.c_str(),
-                            GetFileName(source_path.c_str()).c_str());
-
-  if (source_path == dest_path)
-    return false;
-
-  // if dest-file exists and overwrite is false, just return
-  if (FileExists(dest_path.c_str()) && !overwrite) {
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
     return false;
   }
 
-  if (FolderExists(dest_path.c_str()))
-    return false;
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
 
-  std::string exe_command = "cp " + source_path + " " + dest_path;
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FileExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::CopyFile(globbuf.gl_pathv[i], dest, overwrite)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::CopyFile(source, dest, overwrite);
+  }
 
-  system(exe_command.c_str());
-
-  return true;
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::CopyFolder(const char *source, const char *dest,
-                                 bool overwrite) {
-  if (!source || !dest || !strlen(source) || !strlen(dest))
+                            bool overwrite) {
+  if (!source || !*source || !dest || !*dest)
     return false;
 
-  std::string source_path(source);
-  ReplaceAll(&source_path, '\\', '/');
-
-  if (!FolderExists(source_path.c_str()))
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
     return false;
-
-  std::string dest_input(dest);
-  ReplaceAll(&dest_input, '\\', '/');
-
-  std::string dest_path = BuildPath(dest_input.c_str(),
-                            GetFileName(source_path.c_str()).c_str());
-
-  if (FileExists(dest_path.c_str()))
-    return false;
-
-  if (FolderExists(dest_path.c_str())) {
-    if (!overwrite)
-      // if dest-folder exists and overwrite is false, just return
-      return false;
-
-    // if overwrite is true, delete the existing folder
-    system(("rm -R " + dest_path).c_str());
   }
 
-  std::string exe_command = "cp -R " + source_path + " " + dest_path;
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
 
-  system(exe_command.c_str());
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FolderExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::CopyFolder(globbuf.gl_pathv[i], dest, overwrite)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::CopyFolder(source, dest, overwrite);
+  }
 
-  return true;
+  globfree(&globbuf);
+  return false;
 }
 
 FolderInterface *FileSystem::CreateFolder(const char *path) {
-  if (!path || !strlen(path))
+  if (!path || !*path)
     return NULL;
-
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
-
-  if (FileExists(str_path.c_str()))
-    return NULL;
-
-  return new Folder(str_path.c_str());
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(str_path.c_str(), &stat_value) == 0)
+    return NULL; // File or directory existed.
+  if (mkdir(str_path.c_str(), 0755) == 0)
+    return new Folder(str_path.c_str());
+  return NULL;
 }
 
 TextStreamInterface *FileSystem::CreateTextFile(const char *filename,
-                                                     bool overwrite,
-                                                     bool unicode) {
-  if (!filename || !strlen(filename))
+                                                bool overwrite,
+                                                bool unicode) {
+  if (filename == NULL || !*filename)
     return NULL;
-
-  std::string str_path(filename);
-  ReplaceAll(&str_path, '\\', '/');
-
-  if (FolderExists(str_path.c_str()))
-    return NULL;
-
-  if (!FileExists(str_path.c_str())) {
-    FILE *fp = fopen(str_path.c_str(), "wb");
-    if (!fp)
-      return NULL;
-    fclose(fp);
-  }
-
-  return new TextStream(str_path.c_str());
+  return linux_system::OpenTextFile(filename,
+                                    IO_MODE_WRITING,
+                                    true,
+                                    overwrite,
+                                    unicode ? TRISTATE_TRUE : TRISTATE_FALSE);
 }
 
 TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
-                                                   IOMode mode,
-                                                   bool create,
-                                                   Tristate format) {
-  if (!filename || !strlen(filename))
+                                              IOMode mode,
+                                              bool create,
+                                              Tristate format) {
+  if (filename == NULL || !*filename)
     return NULL;
-
-  std::string str_path(filename);
-  ReplaceAll(&str_path, '\\', '/');
-
-  if (FolderExists(str_path.c_str()))
-    return NULL;
-
-  if (!FileExists(str_path.c_str())) {
-    if (!create)
-      return NULL;
-
-    FILE *fp = fopen(str_path.c_str(), "wb");
-    if (!fp)
-      return NULL;
-    fclose(fp);
-  }
-
-  return new TextStream(str_path.c_str());
+  return linux_system::OpenTextFile(filename, mode, create, true, format);
 }
 
 TextStreamInterface *
@@ -1497,7 +1748,6 @@ FileSystem::GetStandardStream(StandardStreamType type, bool unicode) {
       type != STD_STREAM_OUT &&
       type != STD_STREAM_ERR)
     return NULL;
-
   return new TextStream(type);
 }
 
@@ -1506,13 +1756,9 @@ std::string FileSystem::GetFileVersion(const char *filename) {
 }
 
 FolderInterface *File::GetParentFolder() {
-  if (name_ == "" || base_ == "" || path_ == "")
+  if (path_.empty())
     return NULL;
-
-  size_t length = base_.find_last_of('/');
-  if (!length || length == std::string::npos)
-    return NULL;
-  return new Folder(base_.substr(0, length).c_str());
+  return new Folder(base_.c_str());
 }
 
 } // namespace linux_system
