@@ -217,7 +217,6 @@ INSTALL(FILES
   text_frame.h
   texture.h
   unicode_utils.h
-  usage_collector_interface.h
   video_element_base.h
   variant.h
   view.h
