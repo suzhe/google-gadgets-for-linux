@@ -167,6 +167,10 @@ SlideShower.prototype = {
       this.states.showingIndex = -1;
       return 0;
     }
+    if (noEffect && this.states.slideShowToken) {
+      this.slideStop();
+      this.slideStart();
+    }
     var next_index;
     if (direction > 0) {
       next_index = this.states.showingIndex + 1;
