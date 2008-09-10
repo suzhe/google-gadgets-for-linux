@@ -285,8 +285,10 @@ int main(int argc, char* argv[]) {
   ext_manager->LoadExtension(js_runtime, false);
 
   // Register JavaScript runtime.
-  ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
-  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
+  ggadget::ScriptRuntimeManager *script_runtime_manager =
+      ggadget::ScriptRuntimeManager::get();
+  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(
+      script_runtime_manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   std::string error;
@@ -301,8 +303,8 @@ int main(int argc, char* argv[]) {
   ext_manager->SetReadonly();
   ggadget::InitXHRUserAgent(GGL_APP_NAME);
   // Initialize the gadget manager before creating the host.
-  ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
-  manager->Init();
+  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
+  gadget_manager->Init();
 
   hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode,
                                              debug_console, with_plasma);
@@ -310,7 +312,7 @@ int main(int argc, char* argv[]) {
   // Load gadget files.
   if (gadget_paths.size()) {
     for (size_t i = 0; i < gadget_paths.size(); ++i)
-      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+      gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
   }
 
   // Hook popular signals to exit gracefully.

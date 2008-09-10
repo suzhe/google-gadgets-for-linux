@@ -252,8 +252,8 @@ int main(int argc, char* argv[]) {
   ext_manager->SetReadonly();
   ggadget::InitXHRUserAgent(GGL_APP_NAME);
   // Initialize the gadget manager before creating the host.
-  ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
-  manager->Init();
+  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
+  gadget_manager->Init();
 
   ggadget::HostInterface *host;
   ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);
@@ -269,7 +269,7 @@ int main(int argc, char* argv[]) {
   // Load gadget files.
   if (gadget_paths.size()) {
     for (size_t i = 0; i < gadget_paths.size(); ++i) {
-      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+      gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
     }
   }
 

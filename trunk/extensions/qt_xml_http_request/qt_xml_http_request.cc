@@ -950,6 +950,10 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
     return NULL;
   }
 
+  virtual void SetDefaultUserAgent(const char *user_agent) {
+    // FIXME
+  }
+
  private:
   typedef std::map<int, Session*> Sessions;
   Sessions sessions_;
