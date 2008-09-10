@@ -55,6 +55,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
       resize_drag_(false) {
   setMouseTracking(true);
   SetSize(2, 2);
+  setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
   setAcceptDrops(true);
   if (!decorated) {
     setWindowFlags(Qt::FramelessWindowHint);
