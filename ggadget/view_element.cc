@@ -200,7 +200,14 @@ bool ViewElement::OnSizing(double *width, double *height) {
 
     // Don't allow scale to too small.
     double new_scale = *width / child_width;
-    ret = (new_scale >= kMinimumScale && new_scale <= kMaximumScale);
+    if (new_scale < kMinimumScale || new_scale > kMaximumScale) {
+      new_scale = Clamp(new_scale, kMinimumScale, kMaximumScale);
+      *width = child_width * new_scale;
+      *height = child_height * new_scale;
+    }
+
+    // Always returns true when zooming to get smooth zoom effect.
+    ret = true;
   }
 
   impl_->onsizing_width_result_ = *width;

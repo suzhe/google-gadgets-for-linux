@@ -263,6 +263,8 @@ void FloatingMainViewDecorator::DoLayout() {
     impl_->resize_border_->SetPixelWidth(width - left - right + margin * 2);
     impl_->resize_border_->SetPixelHeight(height - top - bottom + margin * 2);
   }
+
+  impl_->UpdateDecoratorVisibility();
 }
 
 void FloatingMainViewDecorator::GetMargins(double *top, double *left,
