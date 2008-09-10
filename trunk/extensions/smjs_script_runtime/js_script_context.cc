@@ -232,7 +232,7 @@ void JSScriptContext::GetCurrentFileAndLine(std::string *filename,
   JSErrorReporter old_reporter = JS_SetErrorReporter(context_,
                                                      RecordFileAndLine);
   // Let the JavaScript engine call RecordFileAndLine.
-  JS_ReportError(context_, "");
+  JS_ReportWarning(context_, "FAKE");
   JS_SetErrorReporter(context_, old_reporter);
   if (has_old_exception)
     JS_SetPendingException(context_, old_exception);
