@@ -99,7 +99,7 @@ class Permissions {
     DEVICE_STATUS,
     NETWORK,
     PERSONAL_DATA,
-    ALL_ACCESS,
+    ALL_ACCESS
   };
 
   Permissions();

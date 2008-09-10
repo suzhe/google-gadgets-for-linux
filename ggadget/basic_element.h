@@ -60,7 +60,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
     FLIP_NONE = 0,
     FLIP_HORIZONTAL = 1,
     FLIP_VERTICAL = 2,
-    FLIP_BOTH = FLIP_HORIZONTAL | FLIP_VERTICAL,
+    FLIP_BOTH = FLIP_HORIZONTAL | FLIP_VERTICAL
   };
 
  public:
@@ -643,7 +643,7 @@ public: // Other overridable public methods.
     PR_PIXEL,
     PR_RELATIVE,
     PR_UNSPECIFIED,
-    PR_INVALID = -1,
+    PR_INVALID = -1
   };
 
   /**

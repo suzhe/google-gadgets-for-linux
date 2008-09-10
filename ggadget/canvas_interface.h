@@ -97,7 +97,7 @@ class CanvasInterface {
    */
   enum RawImageFormat {
     RAWIMAGE_FORMAT_ARGB32,
-    RAWIMAGE_FORMAT_RGB24,
+    RAWIMAGE_FORMAT_RGB24
   };
 
   /**

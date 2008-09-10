@@ -50,7 +50,7 @@ class Gadget {
     /** User clicked the 'back' button. */
     CMD_TOOLBAR_BACK = 2,
     /** User clicked the 'forward' button. */
-    CMD_TOOLBAR_FORWARD = 3,
+    CMD_TOOLBAR_FORWARD = 3
   };
 
   /** Display states of the gadget's main view. */
@@ -64,7 +64,7 @@ class Gadget {
     /** Tile is 'popped-out' of the sidebar in a separate window. */
     TILE_DISPLAY_STATE_POPPED_OUT = 3,
     /** Tile is resized. */
-    TILE_DISPLAY_STATE_RESIZED = 4,
+    TILE_DISPLAY_STATE_RESIZED = 4
   };
 
   /** Display targets of the gadget's main view. */
@@ -75,7 +75,7 @@ class Gadget {
     TARGET_NOTIFIER = 1,
     /** Item is being displayed in its own window floating on the desktop */
     TARGET_FLOATING_VIEW = 2,
-    TARGET_INVALID,
+    TARGET_INVALID
   };
 
   /**
@@ -88,7 +88,7 @@ class Gadget {
     /** Adds a "back" button in the plugin toolbar. */
     PLUGIN_FLAG_TOOLBAR_BACK = 1,
     /** Adds a "forward" button in the plugin toolbar. */
-    PLUGIN_FLAG_TOOLBAR_FORWARD = 2,
+    PLUGIN_FLAG_TOOLBAR_FORWARD = 2
   };
 
   enum DebugConsoleConfig {
@@ -97,7 +97,7 @@ class Gadget {
     /** Display a "Debug Console" menu item. */
     DEBUG_CONSOLE_ON_DEMMAND,
     /** Show the debug console during gadget initialization. */
-    DEBUG_CONSOLE_INITIAL,
+    DEBUG_CONSOLE_INITIAL
   };
 
  public:
