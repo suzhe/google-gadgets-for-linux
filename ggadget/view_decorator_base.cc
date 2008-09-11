@@ -383,6 +383,8 @@ void ViewDecoratorBase::SetChildViewCursor(ViewInterface::CursorType type) {
 
 void ViewDecoratorBase::SetChildViewTooltip(const char *tooltip) {
   impl_->view_element_->SetTooltip(tooltip);
+  // Make sure the tooltip is updated immediately.
+  SetTooltip(tooltip);
 }
 
 void ViewDecoratorBase::GetChildViewSize(double *width, double *height) const {
