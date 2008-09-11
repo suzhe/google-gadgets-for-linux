@@ -378,7 +378,8 @@ void QtViewHost::QueueDraw() {
 }
 
 void QtViewHost::QueueResize() {
-  // TODO
+  if (impl_->widget_)
+    impl_->widget_->AdjustToViewSize();
 }
 
 void QtViewHost::EnableInputShapeMask(bool enable) {

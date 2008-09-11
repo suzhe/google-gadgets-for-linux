@@ -54,9 +54,8 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
       resize_drag_(false) {
   setMouseTracking(true);
-  SetSize(2, 2);
-  setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
   setAcceptDrops(true);
+  AdjustToViewSize();
   if (!decorated) {
     setWindowFlags(Qt::FramelessWindowHint);
     SkipTaskBar();
@@ -73,16 +72,6 @@ QtViewWidget::~QtViewWidget() {
 }
 
 void QtViewWidget::paintEvent(QPaintEvent *event) {
-  zoom_ = view_->GetGraphics()->GetZoom();
-  int int_width = D2I(view_->GetWidth() * zoom_);
-  int int_height = D2I(view_->GetHeight() * zoom_);
-
-  if (width() != int_width || height() != int_height) {
-    DLOG("QtViewWidget: Adjust size from (%d, %d) to (%d,%d)",
-         width(), height(), int_width, int_height);
-    SetSize(int_width, int_height);
-  }
-
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
   p.setClipRect(event->rect());
@@ -95,31 +84,25 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   }
 
   if (enable_input_mask_) {
-    if (!offscreen_pixmap_ || offscreen_pixmap_->width() != int_width
-        || offscreen_pixmap_->height() != int_height) {
+    if (!offscreen_pixmap_
+        || offscreen_pixmap_->width() != width()
+        || offscreen_pixmap_->height() != height()) {
       if (offscreen_pixmap_) delete offscreen_pixmap_;
-      offscreen_pixmap_ = new QPixmap(int_width, int_height);
+      offscreen_pixmap_ = new QPixmap(width(), height());
     }
     // Draw view on offscreen pixmap
     QPainter poff(offscreen_pixmap_);
     poff.scale(zoom_, zoom_);
     poff.setCompositionMode(QPainter::CompositionMode_Source);
     poff.fillRect(offscreen_pixmap_->rect(), Qt::transparent);
-    QtCanvas canvas(int_width, int_height, &poff);
+    QtCanvas canvas(width(), height(), &poff);
     view_->Draw(&canvas);
-  } else {
-    // Draw directly on widget
-    QtCanvas canvas(int_width, int_height, &p);
-    view_->Draw(&canvas);
-  }
-  // view_'s size may be changed after Draw
-  int_width = D2I(view_->GetWidth() * zoom_);
-  int_height = D2I(view_->GetHeight() * zoom_);
-  if (width() != int_width || height() != int_height) {
-    update();
-  } else if (enable_input_mask_) {
     SetInputMask(offscreen_pixmap_);
     p.drawPixmap(0, 0, *offscreen_pixmap_);
+ } else {
+    // Draw directly on widget
+    QtCanvas canvas(width(), height(), &p);
+    view_->Draw(&canvas);
   }
 }
 
@@ -188,15 +171,8 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
       double w = rect.width();
       double h = rect.height();
       if (w != view_->GetWidth() || h != view_->GetHeight()) {
-        if (view_->OnSizing(&w, &h)) {
+        if (view_->OnSizing(&w, &h))
           view_->SetSize(w, h);
-          window()->setGeometry(rect);
-          if (offscreen_pixmap_) {
-            delete offscreen_pixmap_;
-            offscreen_pixmap_ = NULL;
-          }
-          update();
-        }
       }
     }  else {
       QPoint offset = QCursor::pos() - mouse_pos_;
@@ -378,6 +354,10 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   }
 }
 
+void QtViewWidget::resizeEvent(QResizeEvent *event) {
+  
+}
+
 QSize QtViewWidget::sizeHint() const {
   return minimumSizeHint();
 }
@@ -423,6 +403,36 @@ void QtViewWidget::SetInputMask(QPixmap *pixmap) {
 #endif
 }
 
+void QtViewWidget::AdjustToViewSize() {
+  int w = D2I(view_->GetWidth() * zoom_);
+  int h = D2I(view_->GetHeight() * zoom_);
+  if (resize_drag_) {
+    int dtop, dleft, dw, dh;
+    dw = w - origi_geometry_.width();
+    dh = h - origi_geometry_.height();
+    dtop = dleft = 0;
+    if (top_) {
+      dtop = -dh;
+      dh = 0;
+    }
+    if (left_) {
+      dleft = -dw;
+      dw = 0;
+    }
+
+    DLOG("offset: (%d, %d, %d, %d)", dleft, dtop, dw, dh);
+    origi_geometry_.adjust(dleft, dtop, dw, dh);
+    mouse_pos_ = QCursor::pos();
+    if (movable_) {
+      window()->setGeometry(origi_geometry_);  //.adjusted(dleft, dtop, dw, dh));
+    } else {
+      emit geometryChanged(dleft, dtop, dw, dh);
+    }
+    return;
+  }
+  resize(w, h);
+}
+
 void QtViewWidget::SetKeepAbove(bool above) {
   Qt::WindowFlags f = windowFlags();
   if (above)
@@ -443,12 +453,6 @@ void QtViewWidget::SkipTaskBar() {
                   XA_ATOM, 32, PropModeAppend,
                   (unsigned char *)&net_wm_state_skip_taskbar, 1);
 #endif
-}
-
-void QtViewWidget::SetSize(int width, int height) {
-  setFixedSize(width, height);
-  setMinimumSize(0, 0);
-  setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 }
 
 // Move the widget to the center of the screen inaccurately.

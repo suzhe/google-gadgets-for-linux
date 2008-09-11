@@ -39,6 +39,7 @@ class QtViewWidget : public QWidget {
   void SetChild(QWidget *widget);
   void SkipTaskBar();
   void Center();
+  void AdjustToViewSize();
   void SetKeepAbove(bool above);
   virtual QSize sizeHint () const;
   virtual QSize minimumSizeHint () const;
@@ -58,8 +59,8 @@ class QtViewWidget : public QWidget {
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
+  virtual void resizeEvent(QResizeEvent *event);
   void SetInputMask(QPixmap *pixmap);
-  void SetSize(int width, int height);
   ViewInterface *view_;
   const char **drag_files_;
   std::vector<std::string> drag_urls_;
@@ -79,6 +80,7 @@ class QtViewWidget : public QWidget {
   int top_, bottom_, left_, right_;
  signals:
   void moved(int x, int y);
+  void geometryChanged(int dleft, int dtop, int dw, int dh);
 };
 
 
