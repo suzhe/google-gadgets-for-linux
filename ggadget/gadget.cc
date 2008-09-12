@@ -152,7 +152,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         scriptable_options_(new ScriptableOptions(options_, false)),
         main_view_(NULL),
         details_view_(NULL),
-        old_details_view_(NULL),
         permissions_(global_permissions),
         base_path_(base_path),
         instance_id_(instance_id),
@@ -162,7 +161,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         in_user_interaction_(false),
-        remove_me_timer_(0),
+        remove_me_timer_(0), destroy_details_view_timer_(0),
         debug_console_config_(debug_console_config),
         last_user_interaction_time_(0) {
     // Checks if necessary objects are created successfully.
@@ -175,8 +174,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   ~Impl() {
-    delete old_details_view_;
-    old_details_view_ = NULL;
+    if (remove_me_timer_)
+      GetGlobalMainLoop()->RemoveWatch(remove_me_timer_);
+    if (destroy_details_view_timer_)
+      GetGlobalMainLoop()->RemoveWatch(destroy_details_view_timer_);
+
     delete details_view_;
     details_view_ = NULL;
     delete main_view_;
@@ -492,6 +494,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       : host_(host), owner_(owner), save_data_(save_data) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      owner_->impl_->remove_me_timer_ = 0;
       host_->RemoveGadget(owner_, save_data_);
       return false;
     }
@@ -851,13 +854,36 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return true;
   }
 
-  void CloseDetailsView() {
-    delete old_details_view_;
+  class DestroyDetailsViewWatchCallback : public WatchCallbackInterface {
+   public:
+    DestroyDetailsViewWatchCallback(ViewBundle *details_view)
+        : details_view_(details_view) { }
+    virtual ~DestroyDetailsViewWatchCallback() {
+      delete details_view_;
+    }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      // Let the destructor do the actual thing, because this callback may
+      // be removed before it is fired if it is scheduled just before the
+      // gadget is to be destroyed.
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+   private:
+    ViewBundle *details_view_;
+  };
 
+  void CloseDetailsView() {
     if (details_view_)
       details_view_->view()->CloseView();
 
-    old_details_view_ = details_view_;
+    // The details view can't be destroyed now, because this function may be
+    // called from the view's script and must return to it.
+    if (destroy_details_view_timer_)
+      GetGlobalMainLoop()->RemoveWatch(destroy_details_view_timer_);
+    destroy_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
+        0, new DestroyDetailsViewWatchCallback(details_view_));
     details_view_ = NULL;
   }
 
@@ -963,7 +989,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   ViewBundle *main_view_;
   ViewBundle *details_view_;
-  ViewBundle *old_details_view_;
 
   Permissions permissions_;
 
@@ -975,7 +1000,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   DisplayTarget display_target_;
   int xml_http_request_session_;
   bool in_user_interaction_;
-  int remove_me_timer_;
+  int remove_me_timer_, destroy_details_view_timer_;
   int debug_console_config_;
   uint64_t last_user_interaction_time_;
 };

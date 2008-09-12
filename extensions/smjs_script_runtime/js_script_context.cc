@@ -204,8 +204,7 @@ JSScriptContext::~JSScriptContext() {
     }
 #endif
     native_js_wrapper_map_.erase(it);
-    // Inform the wrapper to detach from JavaScript so that it can be GC'ed.
-    wrapper->DetachJS(false);
+    wrapper->OnContextDestroy();
   }
 
   JS_DestroyContext(context_);

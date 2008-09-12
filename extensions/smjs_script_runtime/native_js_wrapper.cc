@@ -193,6 +193,7 @@ JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
   // In this case, the real self object being called is at argv[-2].
   JSObject *self_object = JSVAL_TO_OBJECT(argv[-2]);
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, self_object);
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
           wrapper->CallSelf(argc, argv, rval));
@@ -203,6 +204,7 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           jsval *rval) {
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
@@ -212,6 +214,7 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
   // Don't check exception here to let exception handling succeed.
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyDefault(id, vp));
@@ -221,6 +224,7 @@ JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
   // Don't check exception here to let exception handling succeed.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyDefault(id, *vp));
 }
@@ -229,6 +233,7 @@ JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyByName(id, vp));
@@ -238,6 +243,7 @@ JSBool NativeJSWrapper::SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByName(id, *vp));
@@ -248,6 +254,7 @@ JSBool NativeJSWrapper::EnumerateWrapper(JSContext *cx, JSObject *obj,
                                          jsval *statep, jsid *idp) {
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          // Don't CheckNotDeleted() when enum_op == JSENUMERATE_DESTROY
@@ -260,6 +267,7 @@ JSBool NativeJSWrapper::EnumerateWrapper(JSContext *cx, JSObject *obj,
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
                                                jsval id, uintN flags,
                                                JSObject **objp) {
+  ScopedLogContext log_context(GetJSScriptContext(cx));
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
@@ -314,6 +322,15 @@ void NativeJSWrapper::DetachJS(bool caused_by_native) {
   DebugRoot(js_context_);
 }
 
+void NativeJSWrapper::OnContextDestroy() {
+  DetachJS(false);
+  while (!js_function_slots_.empty()) {
+    JSFunctionSlots::iterator it = js_function_slots_.begin();
+    js_function_slots_.erase(it);
+    (*it)->Finalize();
+  }
+}
+
 void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
   DLOG("OnReferenceChange(%d,%d): cx=%p jsobj=%p wrapper=%p scriptable=%s",
@@ -362,7 +379,6 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 
 JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
 
   Variant prototype;
   // Get the default method for this object.
@@ -381,8 +397,6 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
 
 JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   // According to JS stack structure, argv[-2] is the current function object.
   jsval func_val = argv[-2];
   // Get the method slot from the reserved slot.
@@ -400,8 +414,6 @@ JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
 JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                                        uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   AutoLocalRootScope local_root_scope(js_context_);
   if (!local_root_scope.good())
     return JS_FALSE;
@@ -428,7 +440,6 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
 }
 
 JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   if (JSVAL_IS_INT(id))
     // The script wants to get the property by an array index.
     return GetPropertyByIndex(id, vp);
@@ -439,8 +450,6 @@ JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   if (JSVAL_IS_INT(id))
     // The script wants to set the property by an array index.
     return SetPropertyByIndex(id, js_val);
@@ -459,8 +468,6 @@ JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
 
 JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   if (!JSVAL_IS_INT(id))
     // Should not occur.
     return JS_FALSE;
@@ -483,8 +490,6 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   if (!JSVAL_IS_INT(id))
     // Should not occur.
     return JS_FALSE;
@@ -535,8 +540,6 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
 
 JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   if (!JSVAL_IS_STRING(id))
     // Should not occur
     return JS_FALSE;
@@ -553,7 +556,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   ResultVariant return_value = scriptable_->GetProperty(name);
   if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
-  
+
   if (return_value.v().type() == Variant::TYPE_VOID) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
@@ -572,8 +575,6 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
 
 JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   ASSERT(scriptable_);
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
-
   if (!JSVAL_IS_STRING(id))
     // Should not occur
     return JS_FALSE;
@@ -674,7 +675,6 @@ JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
 
 JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
                                         JSObject **objp) {
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   ASSERT(scriptable_);
   ASSERT(objp);
   *objp = NULL;

@@ -37,7 +37,7 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
 
   int lineno;
   JSScriptContext::GetCurrentFileAndLine(context, &function_info_, &lineno);
-  function_info_ += StringPrintf(":%d", lineno);
+  StringAppendPrintf(&function_info_, ":%d", lineno);
 
   // Because the function may have a indirect reference to the owner through
   // the closure, we can't simply add the function to root, otherwise there
@@ -110,10 +110,12 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
 }
 
 void JSFunctionSlot::Mark() {
-  JS_MarkGCThing(context_, function_, "JSFunctionSlot", NULL);
+  if (function_)
+    JS_MarkGCThing(context_, function_, "JSFunctionSlot", NULL);
 }
 
 void JSFunctionSlot::Finalize() {
+  context_ = NULL;
   function_ = NULL;
   owner_ = NULL;
 }
