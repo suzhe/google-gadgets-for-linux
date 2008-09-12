@@ -32,27 +32,42 @@ GoogleISFeedItem.prototype =
 //set it for pass FeedItem check
 GoogleISFeedItem.prototype.httpContentTypeMaps = [{pattern: ".",
                                                    type: ":html"}];
-
-GoogleISFeedItem.prototype._htmlFilImgRegExp =
-  new RegExp("[a-zA-Z]+\\.Img\\(\"(http://[^\"]+)\","//1 orignal page
-             + "\"[^\"]*\","// target = blank
-             + "\"([^\"]+)\","//2 googleimage token
-             + "\"(http://[^\"]+)\","//3 original image
-             + "\"[0-9]+\",\"[0-9]+\"," // width x height
-             + "\"([^\"]*)\"," // 4 title
-             + "(?:\"[^\"]*\",){7}"
-             + "\"(http://[^\"]+\\.google\\.com[^\"]*)\","//5 google image prefix
-             + "\"1\",\\[\\]\\);"
-            );//TODO: check this with more result and get title...
-
-GoogleISFeedItem.prototype._htmlNewSourceItemFromRegExpMatch = function(mmr) {
-  return new SourceItem(mmr[5] + "?q=tbn:" + mmr[2] + mmr[3], this,
-                        mmr[4].replace(/\\x3c/g, '<').replace(/\\x3e/g, '>').replace(/<[^>]*>/g, ""),
-                        mmr[3],
-                        "",
-                        "http");
+// the count is unused
+GoogleISFeedItem.prototype._htmlItemsProcessing =  function(co, count) {
+  var sitems = [], match_result;
+  if (co.text.match("dyn\\.Img\\(")) {
+    var jsRegExp  = new RegExp(
+      "dyn\\.Img\\(\"(http://[^\"]+)\","// 1 original relative page
+        + "\"[^\"]*\","// target = blank
+        + "\"([^\"]+)\","// 2 googleimage token
+        + "\"(http://[^\"]+)\","//3 original image
+        + "\"[0-9]+\",\"[0-9]+\"," // width x height
+        + "\"([^\"]*)\"," // 4 title
+        + "(?:\"[^\"]*\",){7}"
+        + "\"(http://[^\"]+\\.google\\.com[^\"]*)\","//5 image prefix
+        + "\"1\",\\[\\]\\);", "g"
+    );
+    while ((match_result = jsRegExp.exec(co.text)) != null) {
+      var url = match_result[5] + "?q=tbn:" + match_result[2] + match_result[3];
+      var title = match_result[4].replace(/\\x3c/g, '<').replace(/\\x3e/g, '>')
+        .replace(/<[^>]*>/g, "");
+      var link = match_result[3];
+      var source = new SourceItem(url, this, title, link);
+      sitems.push(source);
+    }
+  } else {
+    var plainRegExp = new RegExp(
+      "<img +src=(http://[^.]+\\.google\\.com/images[^ >]+) ", "g");
+    while ((match_result = plainRegExp.exec(co.text)) != null) {
+      var url = match_result[1];
+      var link = (url.match(":(http://.*)") || ["", ""]) [1];
+      var source = new SourceItem(url, this, link, link);
+      sitems.push(source);
+    }
+  }
+  this.addSourceItem(sitems);
+  return 0;
 };
-
 
 function FlickrISFeedItem(url, type) {
   if (url.match(FlickrISFeedItem.prototype.url)) {

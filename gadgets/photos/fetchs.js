@@ -305,12 +305,29 @@ FeedItem.prototype = {
     }
     var expires = req.getResponseHeader("expires") || "";
     if (expires)
-      return new Date(expires.replace(/-/g, " ")).getTime();
+      return new Date(expires.replace(/-/g, " ")).getTime() || 0;
     return 0;//no cache relative stuff find...
   },
 
   //Caution: function called with this=FeedItem
   fetchHttpReadyHandler: function(req) {
+    if (req.readyState == 4 && req.status == 304) {
+      debug.trace("not modified feed " + this.url);
+      this.onFetched(this, 2);
+    }
+    if (req.readyState == 4 && (req.status == 200 || req.status == 304)) {
+      this.httpETag = req.getResponseHeader("etag");
+      this.lastFetchedUTC = new Date().getTime();
+      this.expiredUTC = this.parseHttpRequestExpires(req);
+      if (this.expiredUTC - this.lastFetchedUTC <= 60 * 1000) {
+        this.expiredUTC = 0;//use default if it too samll
+      }
+    } else if (req.readyState == 4) {
+      debug.trace("got status " + req.status + " in fetch feed " + this.url);
+      this.error = 1;
+      this.expiredUTC = 0;//use default cache time to retry
+      this.onFetched(this, -1);
+    }
     if (req.readyState == 4 && req.status == 200) {
       var contentType = req.getResponseHeader("content-type") || "";
       var type = "";
@@ -340,23 +357,6 @@ FeedItem.prototype = {
       var ed = new Date();
       //debug.trace("PROCESS CONTENT TIME = " + (ed.getTime() - bd.getTime()));
       this.onFetched(this, ret);
-    }
-    if (req.readyState == 4 && req.status == 304) {
-      debug.trace("not modified feed " + this.url);
-      this.onFetched(this, 2);
-    }
-    if (req.readyState == 4 && (req.status == 200 || req.status == 304)) {
-      this.httpETag = req.getResponseHeader("etag");
-      this.lastFetchedUTC = new Date().getTime();
-      this.expiredUTC = this.parseHttpRequestExpires(req);
-      if (this.expiredUTC - this.lastFetchedUTC <= 60 * 1000) {
-        this.expiredUTC = 0;//use default if it too samll
-      }
-    } else if (req.readyState == 4) {
-      debug.trace("got status " + req.status + " in fetch feed " + this.url);
-      this.error = 1;
-      this.expiredUTC = 0;//use default cache time to retry
-      this.onFetched(this, -1);
     }
   },
 
