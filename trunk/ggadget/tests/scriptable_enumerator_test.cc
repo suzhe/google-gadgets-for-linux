@@ -33,6 +33,8 @@ class MyItem {
 
 class MyEnumeratable {
  public:
+  typedef MyItem ItemType;
+
   MyEnumeratable(const char *str,
                  bool *flag) : start_(str), str_(str), flag_(flag) {
     ASSERT(str);
