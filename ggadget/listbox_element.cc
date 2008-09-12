@@ -43,9 +43,9 @@ class ListBoxElement::Impl {
  public:
   Impl(ListBoxElement *owner, View *view) :
     owner_(owner),
-    item_width_(0), item_height_(0),
+    item_width_(1.0), item_height_(0),
     item_width_specified_(false), item_height_specified_(false),
-    item_width_relative_(false), item_height_relative_(false),
+    item_width_relative_(true), item_height_relative_(false),
     multiselect_(false), item_separator_(false),
     selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
@@ -225,7 +225,7 @@ class ListBoxElement::Impl {
 
   // 0: no pending scroll;
   // 1: scroll the selected item to top;
-  // 2: minimal scroll to make the selected item into view. 
+  // 2: minimal scroll to make the selected item into view.
   // The actual scrolling action will be taken in Layout(). This is important
   // for correct scrolling if some items are added and then SetSelectedItem(),
   // SetSelectedIndex() or ScrollToSelectedItem() is called.
@@ -329,7 +329,7 @@ void ListBoxElement::SetItemWidth(const Variant &width) {
       break;
     case BasicElement::PR_UNSPECIFIED:
       impl_->item_width_specified_ = false;
-      impl_->SetPixelItemWidth(0);
+      impl_->SetRelativeItemWidth(1.0);
       break;
     default:
       break;

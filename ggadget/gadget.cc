@@ -277,10 +277,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
       host_->ShowGadgetDebugConsole(owner_);
 
-    // Register scriptable properties.
-    RegisterProperties();
+    // Register strings names as global variables at first, so they have the
+    // lowest priority.
     RegisterStrings(&strings_map_, &global_);
     RegisterStrings(&strings_map_, &strings_);
+    // Register scriptable properties.
+    RegisterProperties();
 
     // load fonts and objects and check platform
     for (StringMap::const_iterator i = manifest_info_map_.begin();

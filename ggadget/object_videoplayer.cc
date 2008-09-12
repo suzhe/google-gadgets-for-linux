@@ -190,6 +190,10 @@ class ObjectVideoPlayer::Impl {
     controls_.RegisterMethod("next", NewSlot(this, &Impl::PlayNext));
 
     settings_.RegisterMethod("isAvailable", NewSlot(this, &Impl::IsAvailable));
+    settings_.RegisterMethod("getMode", NewSlot(this, &Impl::GetMode));
+    settings_.RegisterMethod("setMode", NewSlot(this, &Impl::SetMode));
+    settings_.RegisterMethod("requestMediaAccessRights",
+                             NewSlot(this, &Impl::RequestMediaAccessRights));
     settings_.RegisterProperty(
         "autoStart",
         NewSlot(video_element_, &VideoElementBase::GetAutoPlay),
@@ -449,7 +453,18 @@ class ObjectVideoPlayer::Impl {
     return "full";
   }
 
-  void SetUIMode(const std::string& uimode) {
+  void SetUIMode(const std::string &uimode) {
+  }
+
+  bool GetMode(const std::string &mode) {
+    return false;
+  }
+
+  void SetMode(const std::string &mode, bool state) {
+  }
+
+  bool RequestMediaAccessRights(const std::string &access) {
+    return true;
   }
 
   ObjectVideoPlayer *owner_;

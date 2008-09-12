@@ -154,6 +154,8 @@ class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
   virtual void DoClassRegister() {
     RegisterProperty("length", NewSlot(&DOMNodeListInterface::GetLength), NULL);
     RegisterMethod("item", NewSlot(&DOMNodeListBase::GetItemNotConst));
+    // Microsoft compatibility.
+    RegisterMethod("", NewSlot(&DOMNodeListBase::GetItemNotConst));
   }
  private:
   DOMNodeInterface *GetItemNotConst(size_t index) { return GetItem(index); }
@@ -1549,6 +1551,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       RegisterMethod("removeNamedItem",
                      NewSlot(&AttrsNamedMap::ScriptRemoveNamedItem));
       RegisterMethod("item", NewSlot(&AttrsNamedMap::GetItemNotConst));
+      // Microsoft compatibility.
+      RegisterMethod("", NewSlot(&AttrsNamedMap::GetItemNotConst));
     }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {

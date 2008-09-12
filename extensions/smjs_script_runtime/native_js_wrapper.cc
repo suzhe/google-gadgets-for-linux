@@ -112,8 +112,16 @@ static void DebugRoot(JSContext *cx) {
 void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   ASSERT(scriptable && !scriptable_);
   scriptable_ = scriptable;
-  name_ = StringPrintf("%p(CLASS_ID=%jx)",
-                       scriptable, scriptable->GetClassId());
+
+  JSClass *cls = JS_GET_CLASS(js_context_, js_object_);
+  ASSERT(cls);
+#ifdef _DEBUG
+  name_ = StringPrintf("[object %s %p CLASS_ID=%jx]",
+                       cls->name, scriptable, scriptable->GetClassId());
+#else
+  name_ = StringPrintf("[object %s CLASS_ID=%jx]",
+                       cls->name, scriptable->GetClassId());
+#endif
 
   if (scriptable->GetRefCount() > 0) {
     // There must be at least one native reference, let JavaScript know it
@@ -209,6 +217,18 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
           wrapper->CallMethod(argc, argv, rval));
+}
+
+JSBool NativeJSWrapper::WrapperDefaultToString(JSContext *cx, JSObject *obj,
+                                               uintN argc, jsval *argv,
+                                               jsval *rval) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  ScopedLogContext log_context(GetJSScriptContext(cx));
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() &&
+          wrapper->DefaultToString(rval));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
@@ -437,6 +457,10 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                    "Failed to convert native function result(%s) to jsval",
                    return_value.v().Print().c_str());
   return result;
+}
+
+JSBool NativeJSWrapper::DefaultToString(jsval *rval) {
+  return ConvertNativeToJS(js_context_, Variant(name_), rval);
 }
 
 JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
@@ -700,6 +724,23 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   ScriptableInterface::PropertyType type =
       scriptable_->GetPropertyInfo(name, &prototype);
   if (type == ScriptableInterface::PROPERTY_NOT_EXIST) {
+    if (strcmp("toString", name) == 0) {
+      // Define a default toString() operator to ease debugging.
+      JS_DefineFunction(js_context_, js_object_, name,
+                        WrapperDefaultToString, 0, 0);
+      *objp = js_object_;
+    } else if (strcmp("__NATIVE_CLASS_ID__", name) == 0) {
+      // Register __NATIVE_CLASS_ID__ property for JS debugging.
+      jsval js_val;
+      ConvertNativeToJS(js_context_,
+                        Variant(StringPrintf("%jx", scriptable_->GetClassId())),
+                        &js_val);
+      JS_DefineProperty(js_context_, js_object_, name, js_val,
+                        JS_PropertyStub, JS_PropertyStub,
+                        JSPROP_READONLY | JSPROP_PERMANENT);
+      *objp = js_object_;
+    }
+
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
   }
