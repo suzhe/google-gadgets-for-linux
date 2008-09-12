@@ -90,6 +90,9 @@ private:
   static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv, jsval *rval);
 
+  static JSBool WrapperDefaultToString(JSContext *cx, JSObject *obj,
+                                       uintN argc, jsval *argv, jsval *rval);
+
   // This pair of methods handle all GetProperty and SetProperty callbacks
   // for system built-in properties, unknown properties or array indexes.
   static JSBool GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
@@ -116,6 +119,7 @@ private:
   JSBool CallMethod(uintN argc, jsval *argv, jsval *rval);
   JSBool CallNativeSlot(const char *name, Slot *slot,
                         uintN argc, jsval *argv, jsval *rval);
+  JSBool DefaultToString(jsval *rval);
   JSBool GetPropertyDefault(jsval id, jsval *vp);
   JSBool SetPropertyDefault(jsval id, jsval vp);
   JSBool GetPropertyByIndex(jsval id, jsval *vp);

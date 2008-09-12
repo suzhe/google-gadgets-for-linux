@@ -25,6 +25,8 @@ var gddDetailsViewFlagToolbarOpen = 1;
 var gddDetailsViewFlagNegativeFeedback = 2;
 var gddDetailsViewFlagRemoveButton = 4;
 var gddDetailsViewFlagShareWithButton = 8;
+var gddDetailsViewFlagDisableAutoClose = 16;
+var gddDetailsViewFlagNoFrame = 32;
 
 // Plugin flags
 var gddPluginFlagNone = 0;
@@ -350,6 +352,9 @@ function ActiveXObject(name) {
     return new XMLHttpRequest();
   } else if (name.match(/^(microsoft|msxml2|msxml)\.(xmldom|domdocument)/)) {
     return new DOMDocument();
+  } else if (name.match(/^wmplayer.ocx/)) {
+    return view.appendElement('<object classId="progid:WMPlayer.OCX.7"/>')
+        .object;
   } else {
     throw "Unsupported ActiveXObject: " + name;
   }

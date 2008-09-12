@@ -965,13 +965,24 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
 
     XMLHttpRequestException(ExceptionCode code) : code_(code) {
+      ASSERT(code != NO_ERR);
       RegisterSimpleProperty("code", &code_);
       RegisterMethod("toString",
                      NewSlot(this, &XMLHttpRequestException::ToString));
     }
 
     std::string ToString() const {
-      return StringPrintf("XMLHttpRequestException: %d", code_);
+      const char *name;
+      switch (code_) {
+        case INVALID_STATE_ERR: name = "Invalid State"; break;
+        case SYNTAX_ERR: name = "Syntax Error"; break;
+        case SECURITY_ERR: name = "Security Error"; break;
+        case NETWORK_ERR: name = "Network Error"; break;
+        case ABORT_ERR: name = "Aborted"; break;
+        case NULL_POINTER_ERR: name = "Null Pointer"; break;
+        default: name = "Other Error"; break;
+      }
+      return StringPrintf("XMLHttpRequestException: %d %s", code_, name);
     }
 
    private:

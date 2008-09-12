@@ -66,6 +66,9 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
                                    const Variant argv[]) const {
+  if (context_)
+    JSScriptContext::MaybeGC(context_);
+
   Variant return_value(GetReturnType());
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.
@@ -73,8 +76,6 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
         function_info_.c_str());
     return ResultVariant(return_value);
   }
-
-  JSScriptContext::MaybeGC(context_);
 
   ScopedLogContext log_context(GetJSScriptContext(context_));
   if (JS_IsExceptionPending(context_))
