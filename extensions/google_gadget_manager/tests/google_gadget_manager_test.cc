@@ -103,7 +103,7 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
   // An incremental update is expected.
   ASSERT_EQ(kTimeBase + kGadgetsMetadataUpdateInterval,
             g_mocked_main_loop.current_time_);
-  ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=11172005",
+  ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=11162005",
             g_mocked_xml_http_request_requested_url);
   ASSERT_EQ(2U, manager->GetAllGadgetInfo().size());
   g_mocked_xml_http_request_requested_url.clear();
@@ -123,7 +123,7 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
   int retry_timeout = kGadgetsMetadataRetryInterval;
   while (retry_timeout < kGadgetsMetadataRetryMaxInterval) {
     ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) +
-              "&diff_from_date=12182007",
+              "&diff_from_date=12172007",
               g_mocked_xml_http_request_requested_url);
     ASSERT_EQ(Variant(save_time),
               global_options->GetValue(kLastUpdateTimeOption));
@@ -147,7 +147,7 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
 
   retry_timeout = kGadgetsMetadataRetryMaxInterval;
   ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) +
-            "&diff_from_date=12182007",
+            "&diff_from_date=12172007",
             g_mocked_xml_http_request_requested_url);
   ASSERT_EQ(Variant(save_time),
             global_options->GetValue(kLastUpdateTimeOption));
@@ -163,7 +163,7 @@ TEST(GoogleGadgetsManager, MetadataUpdate) {
   g_mocked_fm.requested_file_.clear();
   g_mocked_xml_http_request_requested_url.clear();
   g_mocked_main_loop.AdvanceTime(retry_timeout);
-  ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=12182007",
+  ASSERT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=12172007",
             g_mocked_xml_http_request_requested_url);
   ASSERT_EQ(Variant(static_cast<int64_t>(g_mocked_main_loop.current_time_)),
             global_options->GetValue(kLastUpdateTimeOption));

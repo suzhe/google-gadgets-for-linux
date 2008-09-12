@@ -385,8 +385,12 @@ class GadgetsMetadata::Impl {
   }
 
   std::string GetQueryDate() {
-    if (!full_download_ && latest_plugin_time_ > 0) {
-      time_t time0 = static_cast<time_t>(latest_plugin_time_ / 1000);
+    static const uint64_t kOneDay = 86400U * 1000U;
+    if (!full_download_ && latest_plugin_time_ > kOneDay) {
+      // Let the time base one day earlier, to ensure there is no gap between
+      // the current data and the returned incremental data.
+      time_t time0 =
+          static_cast<time_t>((latest_plugin_time_ - kOneDay) / 1000);
       struct tm *time = gmtime(&time0);
       char buf[9];
       strftime(buf, sizeof(buf), kQueryDateFormat, time);
@@ -415,13 +419,15 @@ class GadgetsMetadata::Impl {
         }
       }
 
-      if (on_update_done_) {
-        (*on_update_done_)(request_success, parsing_success);
-        delete on_update_done_;
-        on_update_done_ = NULL;
-      }
       // Release the reference.
       request_.Reset(NULL);
+      if (on_update_done_) {
+        // Save the slot because the callback may start a new request.
+        Slot2<void, bool, bool> *on_done = on_update_done_;
+        on_update_done_ = NULL;
+        (*on_done)(request_success, parsing_success);
+        delete on_done;
+      }
     }
   }
 

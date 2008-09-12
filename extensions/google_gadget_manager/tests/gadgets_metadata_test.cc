@@ -170,7 +170,7 @@ TEST(GadgetsMetadata, IncrementalUpdateNULLCallback) {
   g_mocked_fm.requested_file_.clear();
   EXPECT_EQ(std::string(expected_xml_file_merge_network),
             g_mocked_fm.data_[kPluginsXMLLocation]);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
 }
 
@@ -196,7 +196,7 @@ TEST(GadgetsMetadata, IncrementalUpdateWithCallback) {
   EXPECT_TRUE(g_parsing_success);
   EXPECT_EQ(std::string(expected_xml_file_merge_network),
             g_mocked_fm.data_[kPluginsXMLLocation]);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
 }
 
@@ -214,7 +214,7 @@ TEST(GadgetsMetadata, IncrementalUpdateWithCallbackAfterFreeMemory) {
   EXPECT_TRUE(g_parsing_success);
   EXPECT_EQ(std::string(expected_xml_file_merge_network),
             g_mocked_fm.data_[kPluginsXMLLocation]);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
 }
 
@@ -230,7 +230,7 @@ TEST(GadgetsMetadata, IncrementalUpdateRequestFail) {
   EXPECT_TRUE(g_callback_called);
   EXPECT_FALSE(g_request_success);
   EXPECT_FALSE(g_parsing_success);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
   // data should remain unchanged.
   ExpectFileData(data);
@@ -248,7 +248,7 @@ TEST(GadgetsMetadata, IncrementalUpdateParsingFail1) {
   EXPECT_TRUE(g_callback_called);
   EXPECT_TRUE(g_request_success);
   EXPECT_FALSE(g_parsing_success);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
   // data should remain unchanged.
   ExpectFileData(data);
@@ -266,7 +266,7 @@ TEST(GadgetsMetadata, IncrementalUpdateParsingFail2) {
   EXPECT_TRUE(g_callback_called);
   EXPECT_TRUE(g_request_success);
   EXPECT_FALSE(g_parsing_success);
-  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
+  EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05092007",
             request.requested_url_);
   // data should remain unchanged.
   ExpectFileData(data);
