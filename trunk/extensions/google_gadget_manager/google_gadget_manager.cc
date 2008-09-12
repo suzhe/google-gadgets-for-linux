@@ -183,12 +183,14 @@ void GoogleGadgetManager::ScheduleUpdate(int64_t time) {
 
   int64_t current_time = static_cast<int64_t>(main_loop_->GetCurrentTime());
   int time_diff = static_cast<int>(std::max(INT64_C(0), time - current_time));
+  (LOG("Update timer scheduled after %d seconds", time_diff / 1000));
   update_timer_ = main_loop_->AddTimeoutWatch(time_diff,
       new WatchCallbackSlot(
           NewSlot(this, &GoogleGadgetManager::OnUpdateTimer)));
 }
 
 bool GoogleGadgetManager::OnUpdateTimer(int timer) {
+  (LOG("****************** OnUpdateTimer DO UPDATEGADGETMETADATA"));
   UpdateGadgetsMetadata(false);
   return false;
 }
