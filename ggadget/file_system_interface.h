@@ -170,6 +170,8 @@ class DrivesInterface {
   virtual DriveInterface *GetItem() = 0;
   virtual void MoveFirst() = 0;
   virtual void MoveNext() = 0;
+
+  typedef DriveInterface ItemType;
 };
 
 /** IDrive. */
@@ -210,6 +212,8 @@ class FoldersInterface {
   virtual FolderInterface *GetItem() = 0;
   virtual void MoveFirst() = 0;
   virtual void MoveNext() = 0;
+
+  typedef FolderInterface ItemType;
 };
 
 /** IFolder. */
@@ -260,6 +264,8 @@ class FilesInterface {
   virtual FileInterface *GetItem() = 0;
   virtual void MoveFirst() = 0;
   virtual void MoveNext() = 0;
+
+  typedef FileInterface ItemType;
 };
 
 /** IFile. */

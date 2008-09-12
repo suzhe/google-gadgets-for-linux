@@ -192,7 +192,7 @@ FeedItem.prototype = {
   fetch: function() {
     var utc = new Date().getTime();
     if (!this.checkExpired(utc)) {
-      Trace("unexpired, not fetch....");
+      debug.trace("unexpired, not fetch....");
       return;
     }
     if (this.type == "http") {
@@ -209,19 +209,24 @@ FeedItem.prototype = {
     var i = 0;
     while (co.fileset == undefined || co.fileset.atEnd()) {
       if (i > count) {
-        Trace("directory too deep without image once");
+        debug.trace("directory too deep without image once");
         return 1;
       }
       while (co.folderset == undefined || co.folderset.atEnd()) {
         if (co.folderss.length == 0) return 0;// end
-        co.folderset = co.folderss.pop();
+        co.folderset = co.folderss.shift();
       }
       var fd = co.folderset.item();
-      var folderset = new Enumerator(fd.subFolders || []);// FIXME: not needed
-      if (!folderset.atEnd()) {
-        co.folderss.push(folderset);
+      try {
+        debug.trace("Fetch folder: " + fd);
+        var folderset = new Enumerator(fd.SubFolders);
+        if (!folderset.atEnd()) {
+          co.folderss.push(folderset);
+        }
+        co.fileset = new Enumerator(fd.Files);
+      } catch(e) {
+        debug.trace("Failed to process folder: " + fd + " error: " + e);
       }
-      co.fileset = new Enumerator(fd.files || []);
       co.folderset.moveNext();
       ++i;
     }
@@ -245,8 +250,9 @@ FeedItem.prototype = {
       try {
         var sitems = [];
         var fd = system.filesystem.GetFolder(this.url);
-        var fileset = new Enumerator(fd.files);
-        var folderset = new Enumerator(fd.subFolders);
+        debug.trace("Fetch folder: " + fd);
+        var fileset = new Enumerator(fd.Files);
+        var folderset = new Enumerator(fd.SubFolders);
         this.clearSourceList();
         this.sourceProcessing = bindFunction(this._directoryProcessing,
                                              this,
