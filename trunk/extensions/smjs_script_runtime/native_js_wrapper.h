@@ -67,6 +67,8 @@ class NativeJSWrapper {
 
   /** Detach the wrapper object from JavaScript so that the engine can GC it. */
   void DetachJS(bool caused_by_native);
+  /** Called when the context is to be destroyed. */
+  void OnContextDestroy();
 
   /**
    * Registers an owned @c JSFunctionSlot.

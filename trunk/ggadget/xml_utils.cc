@@ -133,39 +133,22 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
                                ScriptContextInterface *script_context,
                                const DOMElementInterface *xml_element,
                                const char *filename) {
+  bool is_object = false;
   std::string tag_name = xml_element->GetTagName();
-  const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
-  size_t length = attributes->GetLength();
-
   if (scriptable->IsInstanceOf(ObjectElement::CLASS_ID)) {
-    // Special process for the "classId" attribute if it's an object element.
-    // ClassId must be set before all other properties, because the existence
-    // of other properties depends on classId.
-    bool has_classid = false;
-    // Must use a loop because the classid property may be in different cases,
-    // such as "classid" and "classId", etc.
-    for (size_t i = 0; i < length; i++) {
-      const DOMAttrInterface *attr =
-          down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
-      std::string name = attr->GetName();
-      std::string value = attr->GetValue();
-      if (GadgetStrCmp(kClassIdAttr, name.c_str()) == 0) {
-        has_classid = true;
-        down_cast<ObjectElement *>(scriptable)->SetObjectClassId(value);
-        // Remove this attribute from list since it has been handled, otherwise
-        // it'll be handled at least twice and cause problem.
-        const_cast<DOMNamedNodeMapInterface*>(attributes)->
-            RemoveNamedItem(name.c_str());
-        length--;
-        break;
-      }
-    }
-    if (!has_classid) {
+    is_object = true;
+    // The classId attribute must be set before any other attributes.
+    std::string class_id = GetAttributeGadgetCase(xml_element, kClassIdAttr);
+    if (class_id.size()) {
+      down_cast<ObjectElement *>(scriptable)->SetObjectClassId(class_id);
+    } else {
       LOG("%s:%d:%d: No classid is specified for the object element",
           filename, xml_element->GetRow(), xml_element->GetColumn());
     }
   }
 
+  const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
+  size_t length = attributes->GetLength();
   for (size_t i = 0; i < length; i++) {
     const DOMAttrInterface *attr =
         down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
@@ -177,14 +160,13 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
       continue;
     }
 
-    if (GadgetStrCmp(kNameAttr, name.c_str()) != 0) {
+    if (GadgetStrCmp(kNameAttr, name.c_str()) != 0 &&
+        (!is_object || GadgetStrCmp(kClassIdAttr, name.c_str()) != 0)) {
       SetScriptableProperty(scriptable, script_context, filename,
                             attr->GetRow(), attr->GetColumn(),
                             name.c_str(), value.c_str(), tag_name.c_str());
     }
   }
-
-  delete attributes;
   // "innerText" property is set in InsertElementFromDOM().
 }
 
@@ -197,9 +179,7 @@ BasicElement *InsertElementFromDOM(Elements *elements,
   if (GadgetStrCmp(tag_name.c_str(), kScriptTag) == 0)
     return NULL;
 
-  // Here doesn't comform to gadget case-sensitivity, but we believe nobody
-  // will use "name" as other lower/upper char combinations.
-  std::string name = xml_element->GetAttribute(kNameAttr);
+  std::string name = GetAttributeGadgetCase(xml_element, kNameAttr);
   BasicElement *element = elements->InsertElement(tag_name.c_str(), before,
                                                   name.c_str());
   if (!element) {
@@ -227,11 +207,10 @@ BasicElement *InsertElementFromDOM(Elements *elements,
           GadgetStrCmp(child_tag.c_str(), kParamTag) == 0) {
         BasicElement *object = down_cast<ObjectElement*>(element)->GetObject();
         if (object) {
-          // Here doesn't comform to gadget case-sensitivity, but we believe
-          // nobody will use "name" or "value" as other lower/upper char
-          // combinations.
-          std::string param_name = child_element->GetAttribute(kNameAttr);
-          std::string param_value = child_element->GetAttribute(kValueAttr);
+          std::string param_name = GetAttributeGadgetCase(child_element,
+                                                          kNameAttr);
+          std::string param_value = GetAttributeGadgetCase(child_element,
+                                                           kValueAttr);
           if (param_name.empty() || param_value.empty()) {
             LOG("%s:%d:%d: No name or value specified for param",
                 filename, child_element->GetRow(), child_element->GetColumn());
@@ -267,6 +246,30 @@ BasicElement *InsertElementFromDOM(Elements *elements,
                           kInnerTextProperty, text.c_str(), tag_name.c_str());
   }
   return element;
+}
+
+std::string GetAttributeGadgetCase(const DOMElementInterface *element,
+                                   const char *name) {
+  ASSERT(element);
+  ASSERT(name);
+  if (!element || !name || !*name)
+    return std::string();
+
+#ifdef GADGET_CASE_SENSITIVE
+  return element->GetAttribute(name);
+#else
+  const DOMNamedNodeMapInterface *attrs = element->GetAttributes();
+  if (attrs) {
+    size_t size = attrs->GetLength();
+    for (size_t i = 0; i < size; i++) {
+      const DOMAttrInterface *attr =
+          down_cast<const DOMAttrInterface *>(attrs->GetItem(i));
+      if (GadgetStrCmp(attr->GetName().c_str(), name) == 0)
+        return attr->GetValue();
+    }
+  }
+  return std::string();
+#endif
 }
 
 } // namespace ggadget

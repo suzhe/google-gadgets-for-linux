@@ -209,7 +209,7 @@ class ScriptableView::Impl {
                            const char *filename) {
     int lineno = xml_element->GetRow();
     std::string script;
-    std::string src = xml_element->GetAttribute(kSrcAttr);
+    std::string src = GetAttributeGadgetCase(xml_element, kSrcAttr);
 
     if (!src.empty()) {
       if (view_->GetFileManager()->ReadFile(src.c_str(), &script)) {

@@ -2267,27 +2267,36 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     return http_request_ ? http_request_->GetReadyState() : ready_state_;
   }
 
-  void Load(const char *source) {
-    if (!source) {
-      SetPendingException(new DOMException(DOM_NULL_POINTER_ERR));
-      return;
+  // For Microsoft compatibility.
+  bool Load(const Variant &source) {
+    GetImpl()->RemoveAllChildren();
+    if (source.type() == Variant::TYPE_SCRIPTABLE) {
+      DOMDocumentInterface *doc =
+          VariantValue<DOMDocumentInterface *>()(source);
+      return doc && doc != this && ImportDocument(doc);
     }
+
+    if (source.type() != Variant::TYPE_STRING)
+      return false;
+
+    std::string source_str = VariantValue<std::string>()(source);
+    if (source_str.empty())
+      return false;
 
     ready_state_ = XMLHttpRequestInterface::UNSENT;
     parse_error_.SetCode(0);
 
-    if (IsAbsolutePath(source)) {
+    if (IsAbsolutePath(source_str.c_str())) {
       if (!allow_load_file_) {
         LOG("DOMDocument has no permission to loading from file");
-        SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
-        return;
+        return false;
       }
       std::string xml;
       ready_state_ = XMLHttpRequestInterface::OPENED;
       onreadystatechange_signal_();
       ready_state_ = XMLHttpRequestInterface::HEADERS_RECEIVED;
       onreadystatechange_signal_();
-      if (ReadFileContents(source, &xml)) {
+      if (ReadFileContents(source_str.c_str(), &xml)) {
         ready_state_ = XMLHttpRequestInterface::LOADING;
         onreadystatechange_signal_();
         LoadXML(xml.c_str());
@@ -2296,38 +2305,38 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
       }
       ready_state_ = XMLHttpRequestInterface::DONE;
       onreadystatechange_signal_();
-      return;
+      return parse_error_.GetCode() == 0;
     }
 
     if (!allow_load_http_) {
       LOG("DOMDocument has no permission to loading from network");
-      SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
-      return;
+      return false;
     }
-    GetImpl()->RemoveAllChildren();
     if (!http_request_) {
       XMLHttpRequestFactoryInterface *factory = GetXMLHttpRequestFactory();
       if (factory)
         http_request_ = factory->CreateXMLHttpRequest(0, xml_parser_);
-      if (!http_request_) {
-        SetPendingException(new DOMException(DOM_NOT_SUPPORTED_ERR));
-        return;
-      }
+      if (!http_request_)
+        return false;
+
       http_request_->Ref();
       onreadystatechange_connection_ = http_request_->ConnectOnReadyStateChange(
           NewSlot(this, &DOMDocument::OnReadyStateChange));
     }
+
     XMLHttpRequestInterface::ExceptionCode code =
-        http_request_->Open("GET", source, async_, NULL, NULL);
+        http_request_->Open("GET", source_str.c_str(), async_, NULL, NULL);
     if (code != XMLHttpRequestInterface::NO_ERR) {
-      SetPendingException(new DOMException(1000 + code));
-      return;
+      LOG("DOMDOcument.load XMLHttpRequest exception: %d", code);
+      return false;
     }
+
     code = http_request_->Send(NULL);
     if (code != XMLHttpRequestInterface::NO_ERR) {
-      SetPendingException(new DOMException(2000 + code));
-      return;
+      LOG("DOMDOcument.load XMLHttpRequest exception: %d", code);
+      return false;
     }
+    return parse_error_.GetCode() == 0;
   }
 
   void OnReadyStateChange() {
@@ -2341,33 +2350,34 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
       } else {
         DOMDocumentInterface *response_xml = NULL;
         code = http_request_->GetResponseXML(&response_xml);
-        if (code != XMLHttpRequestInterface::NO_ERR || !response_xml) {
-          parse_error_.SetCode(1);
-        } else {
-          parse_error_.SetCode(0);
-          for (DOMNodeInterface *child = response_xml->GetFirstChild();
-               child; child = child->GetNextSibling()) {
-            DOMNodeInterface *imported_child;
-            if (!CheckException(ImportNode(child, true, &imported_child))) {
-              LOG("Failed to import node %s(%s) from XMLHttpRequest result",
-                  child->GetNodeName().c_str(), child->GetNodeValue());
-              GetImpl()->RemoveAllChildren();
-              parse_error_.SetCode(1);
-              break;
-            }
-            imported_child->Ref();
-            if (!CheckException(AppendChild(imported_child))) {
-              GetImpl()->RemoveAllChildren();
-              parse_error_.SetCode(1);
-              imported_child->Unref();
-              break;
-            }
-            imported_child->Unref();
-          }
-        }
+        parse_error_.SetCode(code == XMLHttpRequestInterface::NO_ERR &&
+                             response_xml && ImportDocument(response_xml) ?
+                             0 : 1);
       }
     }
     onreadystatechange_signal_();
+  }
+
+  // Copy all contents of another document to this document.
+  bool ImportDocument(DOMDocumentInterface *doc) {
+    for (DOMNodeInterface *child = doc->GetFirstChild();
+         child; child = child->GetNextSibling()) {
+      DOMNodeInterface *imported_child;
+      if (ImportNode(child, true, &imported_child) != DOM_NO_ERR) {
+        LOG("Failed to import node %s(%s) from document",
+            child->GetNodeName().c_str(), child->GetNodeValue());
+        GetImpl()->RemoveAllChildren();
+        return false;
+      }
+      imported_child->Ref();
+      if (AppendChild(imported_child) != DOM_NO_ERR) {
+        GetImpl()->RemoveAllChildren();
+        imported_child->Unref();
+        return false;
+      }
+      imported_child->Unref();
+    }
+    return true;
   }
 
  private:

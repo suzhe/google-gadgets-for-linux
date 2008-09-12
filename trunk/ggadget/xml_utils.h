@@ -23,6 +23,7 @@ namespace ggadget {
 
 class BasicElement;
 class Elements;
+class DOMAttrInterface;
 class DOMDocumentInterface;
 class DOMElementInterface;
 class ScriptableInterface;
@@ -62,6 +63,15 @@ BasicElement *InsertElementFromDOM(Elements *elements,
                                    const DOMElementInterface *xml_element,
                                    const BasicElement *before,
                                    const char *filename);
+
+/**
+ * Gets the value of an attribute in an element.
+ * The name is case-sensitve or case-insensitive according to what
+ * @c GadgetStrCmp() does.
+ * It sequentially traverses all attributes until one met.
+ */
+std::string GetAttributeGadgetCase(const DOMElementInterface *element,
+                                   const char *name);
 
 } // namespace ggadget
 
