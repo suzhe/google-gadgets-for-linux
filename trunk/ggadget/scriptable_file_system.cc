@@ -353,7 +353,7 @@ class ScriptableFileSystem::Impl {
       return new ScriptableEnumerator<FilesInterface,
                                       ScriptableFile,
                                       Impl *,
-                                      UINT64_C(0x6d148a105ed311dd)>(this,
+                                      UINT64_C(0x86c5e4581be444a3)>(this,
                                                                     files,
                                                                     impl_);
     }
