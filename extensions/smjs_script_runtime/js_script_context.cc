@@ -207,6 +207,12 @@ JSScriptContext::~JSScriptContext() {
     wrapper->OnContextDestroy();
   }
 
+  while (!js_native_wrapper_map_.empty()) {
+    JSNativeWrapperMap::iterator it = js_native_wrapper_map_.begin();
+    it->second->OnContextDestroy();
+    js_native_wrapper_map_.erase(it);
+  }
+
   JS_DestroyContext(context_);
   context_ = NULL;
 }

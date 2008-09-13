@@ -858,12 +858,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   class DestroyDetailsViewWatchCallback : public WatchCallbackInterface {
    public:
-    DestroyDetailsViewWatchCallback(ViewBundle *details_view)
-        : details_view_(details_view) { }
+    DestroyDetailsViewWatchCallback(Impl *impl, ViewBundle *details_view)
+        : impl_(impl), details_view_(details_view) { }
     virtual ~DestroyDetailsViewWatchCallback() {
       delete details_view_;
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      impl_->destroy_details_view_timer_ = 0;
       // Let the destructor do the actual thing, because this callback may
       // be removed before it is fired if it is scheduled just before the
       // gadget is to be destroyed.
@@ -873,20 +874,22 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       delete this;
     }
    private:
+    Impl *impl_;
     ViewBundle *details_view_;
   };
 
   void CloseDetailsView() {
-    if (details_view_)
+    if (details_view_) {
       details_view_->view()->CloseView();
 
-    // The details view can't be destroyed now, because this function may be
-    // called from the view's script and must return to it.
-    if (destroy_details_view_timer_)
-      GetGlobalMainLoop()->RemoveWatch(destroy_details_view_timer_);
-    destroy_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
-        0, new DestroyDetailsViewWatchCallback(details_view_));
-    details_view_ = NULL;
+      // The details view can't be destroyed now, because this function may be
+      // called from the view's script and must return to it.
+      if (destroy_details_view_timer_)
+        GetGlobalMainLoop()->RemoveWatch(destroy_details_view_timer_);
+      destroy_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
+          0, new DestroyDetailsViewWatchCallback(this, details_view_));
+      details_view_ = NULL;
+    }
   }
 
   bool SetInUserInteraction(bool in_user_interaction) {
