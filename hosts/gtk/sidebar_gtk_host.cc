@@ -1204,7 +1204,7 @@ class SideBarGtkHost::Impl {
 
   bool IsOverlapWithSideBar(int gadget_id, int *height) {
     GadgetInfo *info = &gadgets_[gadget_id];
-    if (info->floating) {
+    if (info->floating && !closed_) {
       int w, h, x, y;
       info->floating->GetWindowSize(&w, &h);
       info->floating->GetWindowPosition(&x, &y);
