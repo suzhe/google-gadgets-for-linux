@@ -1,3 +1,15 @@
+* 0.10.2 - Sept 13th 2008
+  o Lots of bugs have been fixed, including: 138, 146, 191, 203, 209, 211, 172
+    200, 207, 208, 187, 202, and more.
+  o Desktop Gadgets compatibility has been improved a lot. Many gadgets for
+    GDWin can run on GGL now.
+  o framework.system.getFileIcon() has been implemented.
+  o framework.openUrl() now supports opening local file and launch desktop
+    file.
+  o Photos gadget can handle multiple level directory now.
+  o Ability to adjust default font size has been added to gtk host.
+  o Many code cleanup, refactory and optimization.
+
 * 0.10.1 - Aug 8th 2008
   o To celebrate the opening of the Beijing 2008 Olympic Games.
   o A prototype of Gadget Designer gadget has been added. Just add it from

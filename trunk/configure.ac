@@ -21,7 +21,7 @@
 #  Version
 #  Bug report address
 AC_INIT([google-gadgets-for-linux],
-	[0.10.1],
+	[0.10.2],
 	[google-gadgets-for-linux-dev@googlegroups.com])
 
 # Requires autoconf version >= 2.50
@@ -49,7 +49,7 @@ ggl_save_LDFLAGS=$LDFLAGS
 # Version numbers of Google Gadgets for Linux package.
 GGL_MAJOR_VERSION=0
 GGL_MINOR_VERSION=10
-GGL_MICRO_VERSION=1
+GGL_MICRO_VERSION=2
 
 GGL_VERSION=\"$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION\"
 
@@ -88,7 +88,7 @@ AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-GGL_VERSION_TIMESTAMP=\"080808-000000\"
+GGL_VERSION_TIMESTAMP=\"080914-000000\"
 AC_SUBST(GGL_VERSION_TIMESTAMP)
 
 # Define the version of Google Desktop Gadget API that this release supports.

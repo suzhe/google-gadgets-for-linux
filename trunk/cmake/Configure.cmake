@@ -49,14 +49,14 @@ SET(GGL_OEM_BRAND ""
 SET(LIBGGADGET_BINARY_VERSION \"1.0.0\")
 SET(GGL_MAJOR_VERSION 0)
 SET(GGL_MINOR_VERSION 10)
-SET(GGL_MICRO_VERSION 1)
+SET(GGL_MICRO_VERSION 2)
 SET(GGL_LIB_VERSION "${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}")
 SET(GGL_VERSION \"${GGL_LIB_VERSION}\")
 SET(GGL_EPOCH "-1.0")
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-SET(GGL_VERSION_TIMESTAMP \"080808-000000\")
+SET(GGL_VERSION_TIMESTAMP \"080914-000000\")
 
 # Define the version of Google Desktop Gadget API that this release supports.
 SET(GGL_API_MAJOR_VERSION 5)

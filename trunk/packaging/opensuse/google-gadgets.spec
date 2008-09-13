@@ -19,7 +19,7 @@
 # norootforbuild
 
 Name:           google-gadgets
-Version:        0.10.1
+Version:        0.10.2
 Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
@@ -407,5 +407,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
-* Thu Sep 11 2008 james.su@gmail.com
-- Initial release
+* Thu Sep 14 2008 james.su@gmail.com
+- Initial release.
