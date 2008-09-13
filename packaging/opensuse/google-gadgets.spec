@@ -337,7 +337,13 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-, root, root)
 %dir %{_includedir}/google-gadgets/
 %dir %{_includedir}/google-gadgets/ggadget
+%dir %{_includedir}/google-gadgets/ggadget/dbus
+%dir %{_includedir}/google-gadgets/ggadget/js
+%dir %{_includedir}/google-gadgets/ggadget/xdg
 %{_includedir}/google-gadgets/ggadget/*.h
+%{_includedir}/google-gadgets/ggadget/dbus/*.h
+%{_includedir}/google-gadgets/ggadget/js/*.h
+%{_includedir}/google-gadgets/ggadget/xdg/*.h
 %dir %{_libdir}/google-gadgets/include/
 %dir %{_libdir}/google-gadgets/include/ggadget/
 %{_libdir}/google-gadgets/include/ggadget/sysdeps.h
