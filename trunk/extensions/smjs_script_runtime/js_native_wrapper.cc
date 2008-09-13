@@ -53,12 +53,21 @@ JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
 }
 
 JSNativeWrapper::~JSNativeWrapper() {
-  JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
+  if (CheckContext())
+    JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
+}
+
+bool JSNativeWrapper::CheckContext() const {
+  if (!js_context_) {
+    LOG("The context of a native wrapped JS object has already been destroyed.");
+    return false;
+  }
+  return true;
 }
 
 void JSNativeWrapper::Ref() const {
   ScriptableHelperDefault::Ref();
-  if (GetRefCount() == 2) {
+  if (CheckContext() && GetRefCount() == 2) {
     // There must be a new native reference, let JavaScript know it by adding
     // the object to root.
     JS_AddNamedRootRT(JS_GetRuntime(js_context_),
@@ -67,7 +76,7 @@ void JSNativeWrapper::Ref() const {
 }
 
 void JSNativeWrapper::Unref(bool transient) const {
-  if (GetRefCount() == 2) {
+  if (CheckContext() && GetRefCount() == 2) {
     // The last native reference is about to be released, let JavaScript know
     // it by removing the root reference.
     JS_RemoveRootRT(JS_GetRuntime(js_context_),
@@ -83,8 +92,12 @@ ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
 
 bool JSNativeWrapper::EnumerateProperties(
     EnumeratePropertiesCallback *callback) {
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   ASSERT(callback);
+  if (!CheckContext()) {
+    delete callback;
+    return false;
+  }
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   bool result = true;
   JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
   if (id_array) {
@@ -111,6 +124,10 @@ bool JSNativeWrapper::EnumerateProperties(
 
 bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
   ASSERT(callback);
+  if (!CheckContext()) {
+    delete callback;
+    return false;
+  }
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   bool result = true;
   JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
@@ -135,8 +152,11 @@ bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
 }
 
 ResultVariant JSNativeWrapper::GetProperty(const char *name) {
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   Variant result;
+  if (!CheckContext())
+    return ResultVariant(result);
+
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
       !ConvertJSToNativeVariant(js_context_, rval, &result)) {
@@ -148,6 +168,9 @@ ResultVariant JSNativeWrapper::GetProperty(const char *name) {
 }
 
 bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
+  if (!CheckContext())
+    return false;
+
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
@@ -160,8 +183,11 @@ bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
 }
 
 ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
-  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   Variant result;
+  if (!CheckContext())
+    return ResultVariant(result);
+
+  ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
       !ConvertJSToNativeVariant(js_context_, rval, &result)) {
@@ -173,6 +199,9 @@ ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
 }
 
 bool JSNativeWrapper::SetPropertyByIndex(int index, const Variant &value) {
+  if (!CheckContext())
+    return false;
+
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
@@ -194,6 +223,12 @@ void JSNativeWrapper::FinalizeTracker(JSContext *cx, JSObject *obj) {
         wrapper->Unref();
     }
   }
+}
+
+void JSNativeWrapper::OnContextDestroy() {
+  JS_RemoveRootRT(JS_GetRuntime(js_context_),
+                  const_cast<JSObject **>(&js_object_));
+  js_context_ = NULL;
 }
 
 } // namespace smjs

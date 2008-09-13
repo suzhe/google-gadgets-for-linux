@@ -522,10 +522,11 @@ SlideShower.prototype = {
   },
 
   detailsOnClose: function(dv, flag) {
-    var detailsSize = dv.detailsViewData.getValue("detailsSize");
-    if (detailsSize) {
-      optionsPut("detailsSize", {width: detailsSize.width,
-                                 height: detailsSize.height});
+    var detailsWidth = dv.detailsViewData.getValue("detailsWidth");
+    var detailsHeight = dv.detailsViewData.getValue("detailsHeight");
+    if (detailsWidth && detailsHeight) {
+      optionsPut("detailsSize", {width: detailsWidth,
+                                 height: detailsHeight});
     }
     if (flag == gddDetailsViewFlagRemoveButton) {
       this.addToBlack(this.states.detailsShowing);

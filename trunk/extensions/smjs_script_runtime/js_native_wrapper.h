@@ -51,9 +51,12 @@ class JSNativeWrapper : public ScriptableHelperDefault {
   JSContext *js_context() { return js_context_; }
   JSObject *js_object() { return js_object_; }
 
+  void OnContextDestroy();
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSNativeWrapper);
   static void FinalizeTracker(JSContext *cx, JSObject *obj);
+  bool CheckContext() const;
 
   static JSClass js_reference_tracker_class_;
   JSContext *js_context_;

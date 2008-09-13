@@ -54,6 +54,7 @@ function resizingDetails() {
 }
 
 function resizedDetails() {
-  detailsViewData.putValue("detailsSize", {width: view.width, height: view.height});
+  detailsViewData.putValue("detailsWidth", view.width);
+  detailsViewData.putValue("detailsHeight", view.height);
   resizedImage(detimg, view, "whole");
 }
