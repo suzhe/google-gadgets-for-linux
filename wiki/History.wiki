@@ -4,25 +4,20 @@ This page is dedicated for recording notable changes of each release.
 
 = History =
 
-  * 0.9.0 -- May 30th 2008
-    * The first public release.
+  * 0.10.2 - Sept 13th 2008
+    * Lots of bugs have been fixed, including: 138, 146, 191, 203, 209, 211, 172, 200, 207, 208, 187, 202, and more.
+    * Desktop Gadgets compatibility has been improved a lot. Many gadgets for GDWin can run on GGL now.
+    * framework.system.getFileIcon() has been implemented.
+    * framework.openUrl() now supports opening local file and launch desktop file.
+    * Photos gadget can handle multiple level directory now.
+    * Ability to adjust default font size has been added to gtk host.
+    * Many code cleanup, refactory and optimization.
 
-  * 0.9.1 -- May 30th 2008
-    * Fixed a serious bug in build script, which may cause the project unable to build.
-
-  * 0.9.2 -- Jun 6th 2008
-    * Fixed most compilation issues on modern Linux distributions.
-    * Fixed compatibility issues with xulrunner 1.9, though still has some bugs.
-    * Fixed compatibility issues with curl, which doesn't have openssl support.
-    * Fixed many issues in sidebar mode of gtk host.
-    * Fixed some issues in qt host.
-    * Added Simplified Chinese translation of most messages.
-    * Various other bug fixes.
-    * Made sidebar mode the default in gtk host. Use `-ns` switch to disable sidebar mode.
-
-  * 0.9.3 -- Jun 13th 2008
-    * Fixed many issues, such as: 96, 122, 128, 133, 135, 137, 139, 142, 143, 145, 149, 152, 156, 157
-    * And now gadgets will show in all virtual desktops.
+  * 0.10.1 - Aug 8th 2008
+    * To celebrate the opening of the Beijing 2008 Olympic Games.
+    * A prototype of Gadget Designer gadget has been added. Just add it from add gadget dialog and drag it out of sidebar (it's too large to fit in sidebar). Currently it only supports editing existing gadget. It's also a demo to show the power of Google Desktop Gadgets API, because itself is a gadget.
+    * A new Photos gadget has been added, which can display your favorite photos from web or local directory as a slideshow.
+    * Lots of bugs have been fixed, and some popular gadgets can run without problem, such as facebook and Google Calendar gadgets.
 
   * 0.10.0 - July 12th 2008
     * Memory consumption and performance have been improved by introducing class based property registration.
@@ -36,8 +31,22 @@ This page is dedicated for recording notable changes of each release.
     * qt_script_runtime has been added, though there are still some bugs.
     * Many other bugfixes.
 
-  * 0.10.1 - Aug 8th 2008
-    * To celebrate the opening of the Beijing 2008 Olympic Games.
-    * A prototype of Gadget Designer gadget has been added. Just add it from add gadget dialog and drag it out of sidebar (it's too large to fit in sidebar). Currently it only supports editing existing gadget. It's also a demo to show the power of Google Desktop Gadgets API, because itself is a gadget.
-    * A new Photos gadget has been added, which can display your favorite photos from web or local directory as a slideshow.
-    * Lots of bugs have been fixed, and some popular gadgets can run without problem, such as facebook and Google Calendar gadgets.
+  * 0.9.3 -- Jun 13th 2008
+    * Fixed many issues, such as: 96, 122, 128, 133, 135, 137, 139, 142, 143, 145, 149, 152, 156, 157
+    * And now gadgets will show in all virtual desktops.
+
+  * 0.9.2 -- Jun 6th 2008
+    * Fixed most compilation issues on modern Linux distributions.
+    * Fixed compatibility issues with xulrunner 1.9, though still has some bugs.
+    * Fixed compatibility issues with curl, which doesn't have openssl support.
+    * Fixed many issues in sidebar mode of gtk host.
+    * Fixed some issues in qt host.
+    * Added Simplified Chinese translation of most messages.
+    * Various other bug fixes.
+    * Made sidebar mode the default in gtk host. Use `-ns` switch to disable sidebar mode.
+
+  * 0.9.1 -- May 30th 2008
+    * Fixed a serious bug in build script, which may cause the project unable to build.
+
+  * 0.9.0 -- May 30th 2008
+    * The first public release.
