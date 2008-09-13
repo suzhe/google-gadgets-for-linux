@@ -1,0 +1,11 @@
+google-gadgets (0.10.2-1) unstable; urgency=low
+
+  * Upgraded to 0.10.2
+
+ -- James Su <james.su@gmail.com>  Sat, 13 Sep 2008 23:33:00 +1000
+
+google-gadgets (0.10.1-1) unstable; urgency=low
+
+  * Initial release (Closes: #484867)
+
+ -- Jack Coulter <jscinoz@gmail.com>  Sat, 14 Jun 2008 17:53:53 +1000
