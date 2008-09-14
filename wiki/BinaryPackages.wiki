@@ -1,0 +1,30 @@
+#summary Where to download the binary packages of this project.
+#labels Featured,Phase-Deploy
+
+= Introduction =
+
+This page collects the information of binary packages of this project built by community. If you built and are maintaining binary package for a specific operating system which is not listed here, feel free to contact us to add the link here, so that other users can find and download your package easily.
+
+== openSUSE ==
+
+=== Choice one ===
+YaST repositories:
+ * openSUSE 11.0: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.0/
+ * openSUSE 10.3: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_10.3/
+
+Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
+
+=== Choice two ===
+YaST repositories:
+ * openSUSE 11.0: http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_11.0/
+ * openSUSE 10.3: http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_10.3/
+
+Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
+
+Either of above two choices is ok, you can choose one of them.
+
+== Ubuntu 8.04 ==
+You can find binary package for xUbuntu 8.04 at: http://www.getdeb.net/app/Google+Gadgets
+
+== Debian sid ==
+We are woking on the binary package for Debian, stay tuned.
