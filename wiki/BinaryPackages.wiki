@@ -28,3 +28,10 @@ You can find binary package for xUbuntu 8.04 at: http://www.getdeb.net/app/Googl
 
 == Debian sid ==
 We are woking on the binary package for Debian, stay tuned.
+
+== Mandriva ==
+You can use command:
+{{{
+urpmi google-gadgets
+}}}
+to install Google Gadgets for Linux. It supports Mandriva 2008.1 and cooker. 
