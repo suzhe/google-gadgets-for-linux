@@ -69,6 +69,7 @@ QtViewWidget::~QtViewWidget() {
     child_->setParent(NULL);
   }
   if (offscreen_pixmap_) delete offscreen_pixmap_;
+  if (drag_files_) delete [] drag_files_;
 }
 
 void QtViewWidget::paintEvent(QPaintEvent *event) {
@@ -319,7 +320,7 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
     if (!drag_files_) return;
 
     for (int i = 0; i < urls.size(); i++) {
-      drag_urls_.push_back(urls[i].toString().toStdString());
+      drag_urls_.push_back(urls[i].toString().toUtf8().data());
       drag_files_[i] = drag_urls_[i].c_str();
     }
     drag_files_[urls.size()] = NULL;

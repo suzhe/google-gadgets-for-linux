@@ -277,10 +277,11 @@ class QtHost::Impl {
       return false;
     }
     {
-      QFile file(root.path() + "/config");
+      QFile file(root.path() + "/config.txt");
       file.open(QIODevice::WriteOnly);
-      QDataStream out(&file);
-      out << QString(path.c_str()) << QString(options.c_str());
+      QTextStream out(&file);
+      out << QString::fromUtf8(path.c_str())  << "\n";
+      out << QString::fromUtf8(options.c_str()) << "\n";
     }
 
     // Create desktop file
