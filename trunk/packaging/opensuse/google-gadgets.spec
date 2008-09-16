@@ -24,6 +24,7 @@ Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        Google Gadgets for Linux
+Packager:       James Su <james.su@gmail.com>
 Url:            http://code.google.com/p/google-gadgets-for-linux/
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  gcc-c++ zip autoconf update-desktop-files flex libtool
@@ -32,15 +33,21 @@ BuildRequires:  cairo-devel >= 1.2.0
 BuildRequires:  libcurl-devel >= 7.15.0
 BuildRequires:  libxml2-devel >= 2.6.0
 BuildRequires:  zlib-devel >= 1.2.0
-BuildRequires:  mozilla-xulrunner190-devel
-BuildRequires:  gstreamer-0_10-devel
+BuildRequires:  librsvg-devel >= 2.18.0
+%if %suse_version > 1100
+BuildRequires:  mozilla-xulrunner190-devel >= 1.9.0
+%else
+BuildRequires:  mozilla-xulrunner181-devel
+%endif
+%if %suse_version > 1030
 BuildRequires:  gstreamer-0_10-plugins-base-devel
 BuildRequires:  libQtWebKit-devel >= 4.4.0
+%else
+BuildRequires:  gstreamer010-plugins-base-devel
+%endif
 BuildRequires:  dbus-1-devel >= 1.0.2
-BuildRequires:  libqt4-devel >= 4.4.0
+BuildRequires:  libqt4-devel >= 4.3
 Source0:        http://google-gadgets-for-linux.googlecode.com/files/google-gadgets-for-linux-%{version}.tar.bz2
-
-%debug_package
 
 %description
 Google Gadgets for Linux provides a platform for running desktop gadgets under
@@ -74,6 +81,7 @@ Authors:
 License:        Apache License Version 2.0
 Group:          Development/Libraries/C and C++
 Summary:        Google Gadgets main development files
+Requires:       dbus-1-devel >= 1.0.2
 
 %description -n libggadget-devel
 This package contains the development files assoicated with libggadget, it is
@@ -91,6 +99,7 @@ Summary:        Google Gadgets GTK+ library
 Requires:       libggadget-1_0-0 = %{version}
 Requires:       gtk2 >= 2.10.0
 Requires:       cairo >= 1.2.0
+Requires:       librsvg >= 2.18.0
 
 %description -n libggadget-gtk-1_0-0
 This package contains the GTK+ Google Gadgets library, it is required to run
@@ -123,8 +132,10 @@ License:        Apache License Version 2.0
 Group:          System/Libraries
 Summary:        Google Gadgets QT library
 Requires:       libggadget-1_0-0 = %{version}
-Requires:       libqt4 >= 4.4.0
+Requires:       libqt4 >= 4.3
+%if %suse_version > 1030
 Requires:       libQtWebKit4 >= 4.4.0
+%endif
 
 %description -n libggadget-qt-1_0-0
 This package contains the QT Google Gadgets library, it is required to run
@@ -140,8 +151,10 @@ License:        Apache License Version 2.0
 Group:          Development/Libraries/C and C++
 Summary:        Google Gadgets QT development files
 Requires:       libggadget-devel = %{version}
-Requires:       libqt4-devel >= 4.4.0
+Requires:       libqt4-devel >= 4.3
+%if %suse_version > 1030
 Requires:       libQtWebKit4-devel >= 4.4.0
+%endif
 
 %description -n libggadget-qt-devel
 This package contains the development files assoicated with libggadget-qt,
@@ -221,7 +234,11 @@ License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        GStreamer modules for Google Gadgets
 Requires:       libggadget-1_0-0 = %{version}
+%if %suse_version > 1030
 Requires:       gstreamer-0_10-plugins-base
+%else
+Requires:       gstreamer010-plugins-base
+%endif
 
 %description gst
 Google Gadgets for Linux provides a platform for running desktop gadgets under
@@ -242,7 +259,11 @@ License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        XULRunner modules for Google Gadgets
 Requires:       libggadget-1_0-0 = %{version}
+%if %suse_version > 1100
 Requires:       mozilla-xulrunner190
+%else
+Requires:       mozilla-xulrunner181
+%endif
 
 %description xul
 Google Gadgets for Linux provides a platform for running desktop gadgets under
