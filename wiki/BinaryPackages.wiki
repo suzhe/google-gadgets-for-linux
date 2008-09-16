@@ -23,8 +23,10 @@ Add the repository for your system, and install either google-gadgets-gtk or goo
 
 Either of above two choices is ok, you can choose one of them.
 
-== Ubuntu 8.04 ==
-You can find binary package for xUbuntu 8.04 at: http://www.getdeb.net/app/Google+Gadgets
+== Ubuntu ==
+You can find binary package for xUbuntu 8.04 at:
+ * http://download.opensuse.org/repositories/home:/suzhe/xUbuntu_8.04/
+ * http://www.getdeb.net/app/Google+Gadgets
 
 == Debian sid ==
 We are woking on the binary package for Debian, stay tuned.
@@ -37,6 +39,6 @@ A simple 'urpmi google-gadgets' command will get it installed. Choose the host y
 == Fedora ==
 Yum repositories:
  * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
- * Fedora 8: Not ready yet.
+ * Fedora 8: http://download.opensuse.org/repositories/home:/suzhe/Fedora_8/
 
 Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
