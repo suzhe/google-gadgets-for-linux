@@ -17,3 +17,4 @@ debian/google-gadgets/usr/share/icons/hicolor/128x128/apps/google-gadgets.png us
 debian/google-gadgets/usr/share/icons/hicolor/128x128/mimetypes/application-x-google-gadgets.png usr/share/icons/hicolor/128x128/mimetypes
 debian/google-gadgets/usr/share/icons/hicolor/192x192/apps/google-gadgets.png usr/share/icons/hicolor/192x192/apps
 debian/google-gadgets/usr/share/icons/hicolor/192x192/mimetypes/application-x-google-gadgets.png usr/share/icons/hicolor/192x192/mimetypes
+

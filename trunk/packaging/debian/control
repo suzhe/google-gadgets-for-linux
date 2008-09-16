@@ -2,10 +2,9 @@ Source: google-gadgets
 Section: misc
 Priority: extra
 Maintainer: Jack Coulter <jscinoz@gmail.com>
-Build-Depends: debhelper (>= 5), zlib1g-dev, libgtk2.0-dev, zip,
- libxml2-dev, libdbus-1-dev, librsvg2-dev, libqt4-dev,
- libcurl4-gnutls-dev | libcurl4-openssl-dev,
- libgstreamer-plugins-base0.10-dev, chrpath, libltdl3-dev,
+Build-Depends: debhelper (>= 5), zlib1g-dev, libgtk2.0-dev, zip, chrpath,
+ libxml2-dev, libdbus-1-dev, librsvg2-dev, libqt4-dev, libltdl3-dev,
+ libcurl4-gnutls-dev | libcurl4-openssl-dev, libgstreamer-plugins-base0.10-dev, 
  xulrunner-dev | xulrunner-1.9-dev
 Standards-Version: 3.8.0
 Vcs-Svn: http://google-gadgets-for-linux.googlecode.com/svn/trunk/packaging/debian
@@ -26,7 +25,7 @@ Architecture: any
 Depends: libggadget-1.0-0 (= ${binary:Version})
 Description: Google Gadgets main development files
  This package contains the development files assoicated with libggadget, it is
- needed to write programs that utilise libggadget.
+ needed to write programs that utilise libggadget. 
 
 Package: libggadget-gtk-1.0-0
 Section: libs
@@ -69,7 +68,7 @@ Description: Common files for QT and GTK+ versions of google-gadgets
  Linux, catering to the unique needs of Linux users. It's compatible with the
  gadgets written for Google Desktop for Windows as well as the Universal
  Gadgets on iGoogle. Following Linux norms, this project is open-sourced,
- under the Apache License.
+ under the Apache License. 
  .
  This package includes files common to both GTK+ and QT versions.
 
@@ -84,7 +83,7 @@ Description: GTK+ Version of Google Gadgets
  Linux, catering to the unique needs of Linux users. It's compatible with the
  gadgets written for Google Desktop for Windows aso well as the Universal
  Gadgets on iGoogle. Following Linux norms, this project is open-sourced,
- under the Apache License.
+ under the Apache License. 
  .
  This package includes the GTK+ version.
 
@@ -98,7 +97,7 @@ Description: QT4 version of Google Gadgets
  Linux, catering to the unique needs of Linux users. It's compatible with the
  gadgets written for Google Desktop for Windows as well as the Universal
  Gadgets on iGoogle. Following Linux norms, this project is open-sourced,
- under the Apache License.
+ under the Apache License. 
  .
  This package includes the QT version.
 
@@ -111,9 +110,9 @@ Description: GStreamer Module for Google Gadgets
  Linux, catering to the unique needs of Linux users. It's compatible with the
  gadgets written for Google Desktop for Windows as well as the Universal
  Gadgets on iGoogle. Following Linux norms, this project is open-sourced,
- under the Apache License.
+ under the Apache License. 
  .
- This package includes the GStreamer modules.
+ This package includes the GStreamer modules
 
 Package: google-gadgets-xul
 Section: misc
@@ -124,6 +123,6 @@ Description: XULRunner module for Google Gadgets
  Linux, catering to the unique needs of Linux users. It's compatible with the
  gadgets written for Google Desktop for Windows as well as the Universal
  Gadgets on iGoogle. Following Linux norms, this project is open-sourced,
- under the Apache License.
+ under the Apache License. 
  .
- This package includes the XULRunner Modules.
+ This package includes the XULRunner Modules
