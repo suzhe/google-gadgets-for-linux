@@ -354,7 +354,7 @@ SlideShower.prototype = {
           this.feedList.push(feed);
           debug.trace("add new feed " + url);
         } else {
-          debug.trace("feed is not valid" + feed.url);
+          Trace("feed is not valid", feed.url);
         }
       }
     }

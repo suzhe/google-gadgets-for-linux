@@ -166,4 +166,9 @@ even in the middle of a word. -->
 <PERMISSION_PERSONALDATA>Accesses personalization data</PERMISSION_PERSONALDATA>
 <PERMISSION_ALLACCESS>Executes native code and local applications</PERMISSION_ALLACCESS>
 
+<GADGET_LOAD_FAILURE>The gadget could not be loaded:&#10;&#10;%s</GADGET_LOAD_FAILURE>
+<!-- TODO: The following "Linux"s should be changed if we support platforms other than Linux. -->
+<GADGET_REQUIRE_API_VERSION>The gadget requires Google Gadgets supporting API at least version %s:&#10;&#10;%s</GADGET_REQUIRE_API_VERSION>
+<GADGET_REQUIRE_HOST_VERSION>The gadget requires Google Gadgets for Linux at least version %s:&#10;&#10;%s</GADGET_REQUIRE_HOST_VERSION>
+<GADGET_PLATFORM_NOT_SUPPORTED>The gadget doesn't work on Linux platform:%&#10;&#10;%s</GADGET_PLATFORM_NOT_SUPPORTED> 
 </strings>

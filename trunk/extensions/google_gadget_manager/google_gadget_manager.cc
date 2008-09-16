@@ -384,7 +384,7 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
   instance_options->PutInternalValue(kInstanceGadgetIdOption,
                                      Variant(gadget_id));
   const GadgetInfo *info = GetGadgetInfo(gadget_id);
-  if (info->source == SOURCE_PLUGINS_XML) {
+  if (info && info->source == SOURCE_PLUGINS_XML) {
     StringMap::const_iterator module_id =
         info->attributes.find(kModuleIDAttrib);
     if (module_id != info->attributes.end()) {
@@ -424,8 +424,6 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   if (!gadget_id || !*gadget_id)
     return -1;
 
-  if (GetGadgetInfo(gadget_id) == NULL)
-    return -1;
   global_options_->PutValue(
       (std::string(kGadgetAddedTimeOptionPrefix) + gadget_id).c_str(),
       Variant(main_loop_->GetCurrentTime()));

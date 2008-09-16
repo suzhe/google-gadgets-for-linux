@@ -233,9 +233,12 @@ void CheckGadgetInfo(const char *locale, GoogleGadgetManager *manager,
 TEST(GoogleGadgetsManager, GadgetAddRemove) {
   g_mocked_xml_http_request_requested_url.clear();
   g_mocked_fm.data_[kPluginsXMLLocation] = plugins_xml_file_two_gadgets;
+  OptionsInterface *global_options = GetGlobalOptions();
+  global_options->DeleteStorage();
+  global_options->PutValue(kRunCountOption, Variant(2));
+
   GoogleGadgetManager *manager =
       static_cast<GoogleGadgetManager *>(GetGadgetManager());
-  // Init() is only for unittest to reset the GadgetManager state.
   manager->Init();
 
   manager->ConnectOnNewGadgetInstance(NewSlot(OnAddInstance));
@@ -253,8 +256,6 @@ TEST(GoogleGadgetsManager, GadgetAddRemove) {
   g_accept_add_instance = true;
   ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
-  ASSERT_EQ(-1, manager->NewGadgetInstance("Non-exists"));
-  ASSERT_TRUE(g_added_instances.empty());
 
   ASSERT_EQ(std::string(GADGET_ID1), manager->GetInstanceGadgetId(0));
   ASSERT_EQ(std::string(GADGET_ID1), manager->GetInstanceGadgetId(1));

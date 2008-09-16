@@ -689,8 +689,11 @@ static bool ParseVersion(const char *version,
     parsed_version[i] = static_cast<int>(v);
 
     if (i < kNumVersionParts - 1) {
-      if (*end_ptr != '.')
-        return false;
+      if (*end_ptr != '.') {
+        for (int j = i + 1; j < kNumVersionParts; j++)
+          parsed_version[j] = 0;
+        break;
+      }
       version = end_ptr + 1;
     }
   }

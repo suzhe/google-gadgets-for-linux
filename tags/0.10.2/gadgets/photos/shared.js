@@ -59,6 +59,10 @@ function enumToArray(coll) {
   return aa;
 }
 
+function Trace() {
+  debug.trace(arrayMap(arguments, plainObject).join(","));
+}
+
 function optionsPut(key, value, isDefault) {
   if (isDefault)
     options.putDefaultValue(key, plainObject(value));
