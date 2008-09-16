@@ -33,3 +33,10 @@ We are woking on the binary package for Debian, stay tuned.
 You can find google-gadgets in contrib repository of Mandriva >= 2008.1. You may want to enable backports repository if you want to get the latest version of google-gadgets.
 
 A simple 'urpmi google-gadgets' command will get it installed. Choose the host you want, the gtk or the qt one. 
+
+== Fedora ==
+Yum repositories:
+ * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
+ * Fedora 8: Not ready yet.
+
+Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
