@@ -1,4 +1,5 @@
 #summary GGL running as applet of KDE4's plasma
+#labels Featured
 
 Ever since the beginning of Google Gadgets for Linux, the developers of GGL have made up their minds to work as closely as possible with other Open Source projects. Now I am glad to introduce you the integration of GGL into KDE4's plasma.
 
