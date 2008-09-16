@@ -306,9 +306,13 @@ TEST(StringUtils, SimpleMatchXPath) {
 
 TEST(StringUtils, CompareVersion) {
   int result = 0;
-  ASSERT_FALSE(CompareVersion("1234", "5678", &result));
-  ASSERT_FALSE(CompareVersion("1.2.3.4", "5678", &result));
-  ASSERT_FALSE(CompareVersion("5678", "1.2.3.4", &result));
+  ASSERT_FALSE(CompareVersion("1234.", "5678.", &result));
+  ASSERT_TRUE(CompareVersion("12.34", "56.78", &result));
+  ASSERT_EQ(-1, result);
+  ASSERT_TRUE(CompareVersion("1.2.3.4", "5678", &result));
+  ASSERT_EQ(-1, result);
+  ASSERT_TRUE(CompareVersion("5678", "1.2.3.4", &result));
+  ASSERT_EQ(1, result);
   ASSERT_FALSE(CompareVersion("1.2.3.4", "abcd", &result));
   ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.5", &result));
   ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.", &result));
@@ -325,6 +329,8 @@ TEST(StringUtils, CompareVersion) {
   ASSERT_EQ(1, result);
   ASSERT_TRUE(CompareVersion("14.3.2.1", "1.2.3.4", &result));
   ASSERT_EQ(1, result);
+  ASSERT_TRUE(CompareVersion("1.2", "1.2.0.0", &result));
+  ASSERT_EQ(0, result);
 }
 
 TEST(StringUtils, StartEndWith) {

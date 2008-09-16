@@ -212,9 +212,18 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         !scriptable_options_)
       return false;
 
+    // Create main view early to allow Alert() during initialization.
+    main_view_ = new ViewBundle(
+        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
+        owner_, element_factory_, &global_, NULL, true);
+    ASSERT(main_view_);
+    // Set a default caption before loading manifest.
+    main_view_->view()->SetCaption(GM_("GOOGLE_GADGETS"));
+
     // Create gadget FileManager
     FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
-    if (fm == NULL) return false;
+    if (fm == NULL)
+      return false;
     file_manager_->RegisterFileManager("", fm);
 
     // Create system FileManager
@@ -223,8 +232,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // Load strings and manifest.
     if (!ReadStringsAndManifest(file_manager_, &strings_map_,
-                                &manifest_info_map_))
+                                &manifest_info_map_)) {
+      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
+                                             base_path_.c_str()).c_str());
       return false;
+    }
+
+    main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
 
     std::string min_version = GetManifestInfo(kManifestMinVersion);
     DLOG("Gadget min version: %s", min_version.c_str());
@@ -237,8 +251,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (!CompareVersion(min_version.c_str(), GGL_API_VERSION,
                         &compare_result) ||
         compare_result > 0) {
-      LOG("Gadget required version %s higher than supported version %s",
-          min_version.c_str(), GGL_API_VERSION);
+      main_view_->view()->Alert(
+          StringPrintf(GM_("GADGET_REQUIRE_API_VERSION"),
+                       min_version.c_str(), base_path_.c_str()).c_str());
       return false;
     }
 
@@ -267,12 +282,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     // permissions.
     permissions_.SetGrantedByPermissions(global_permissions, false);
     DLOG("Permissions: %s", permissions_.ToString().c_str());
-
-    // main view must be created before calling RegisterProperties();
-    main_view_ = new ViewBundle(
-        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
-        owner_, element_factory_, &global_, NULL, true);
-    ASSERT(main_view_);
 
     if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
       host_->ShowGadgetDebugConsole(owner_);
@@ -308,14 +317,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
         if (i->second == "no") {
-          LOG("Gadget doesn't support platform %s", GGL_PLATFORM);
+          main_view_->view()->Alert(
+              StringPrintf(GM_("GADGET_PLATFORM_NOT_SUPPORTED"),
+                           base_path_.c_str()).c_str());
           return false;
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformMinVersion)) {
         if (!CompareVersion(i->second.c_str(), GGL_VERSION, &compare_result) ||
             compare_result > 0) {
-          LOG("Gadget required platform version %s higher than supported "
-              "version %s", i->second.c_str(), GGL_VERSION);
+          main_view_->view()->Alert(
+              StringPrintf(GM_("GADGET_REQUIRE_HOST_VERSION"),
+                           i->second.c_str(), base_path_.c_str()).c_str());
           return false;
         }
       }
@@ -342,14 +354,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     std::string main_xml;
     if (!file_manager_->ReadFile(kMainXML, &main_xml)) {
       LOG("Failed to load main.xml.");
+      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
+                                             base_path_.c_str()).c_str());
       return false;
     }
 
-    main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
     RegisterScriptExtensions(main_view_->context());
 
     if (!main_view_->scriptable()->InitFromXML(main_xml, kMainXML)) {
       LOG("Failed to setup the main view");
+      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
+                                             base_path_.c_str()).c_str());
       return false;
     }
 

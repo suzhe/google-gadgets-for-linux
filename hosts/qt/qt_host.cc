@@ -214,6 +214,14 @@ class QtHost::Impl {
         else
           return LoadGadgetInstance(id);
       }
+    } else {
+      QMessageBox::information(
+          NULL,
+          QString::fromUtf8(GM_("GOOGLE_GADGETS")),
+          QString::fromUtf8(
+              StringPrintf(
+                  GM_("GADGET_LOAD_FAILURE"),
+                  gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str()));
     }
     return false;
   }

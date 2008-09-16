@@ -710,6 +710,12 @@ class SideBarGtkHost::Impl {
         delete options;
         return LoadGadgetInstance(id);
       }
+    } else {
+      ShowAlertDialog(
+          GM_("GOOGLE_GADGETS"),
+          StringPrintf(
+              GM_("GADGET_LOAD_FAILURE"),
+              gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str());
     }
     return false;
   }

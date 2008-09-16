@@ -72,7 +72,8 @@ static const char *kGlobalExtensions[] = {
 };
 
 static const char *g_help_string =
-  "Google Gadgets for Linux " GGL_VERSION "\n"
+  "Google Gadgets for Linux " GGL_VERSION
+  " (Gadget API version " GGL_API_VERSION ")\n"
   "Usage: " GGL_APP_NAME "[Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
