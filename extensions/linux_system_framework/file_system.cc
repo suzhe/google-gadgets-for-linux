@@ -880,11 +880,11 @@ class Folders : public FoldersInterface {
         continue;
       struct stat stat_value;
       memset(&stat_value, 0, sizeof(stat_value));
-      std::string folder =
+      std::string filename =
           ggadget::BuildFilePath(path_.c_str(), entry->d_name, NULL);
-      if (stat(folder.c_str(), &stat_value) == 0) {
+      if (stat(filename.c_str(), &stat_value) == 0) {
         if (S_ISDIR(stat_value.st_mode)) {
-          current_folder_ = folder;
+          current_file_ = filename;
           return;
         }
       }
@@ -897,7 +897,7 @@ class Folders : public FoldersInterface {
   std::string path_;
   DIR *dir_;
   bool at_end_;
-  std::string current_folder_;
+  std::string current_file_;
 };
 
 class Folder : public FolderInterface {
@@ -1096,9 +1096,9 @@ FolderInterface *Drive::GetRootFolder() {
 }
 
 FolderInterface *Folders::GetItem() {
-  if (current_folder_.empty())
+  if (current_file_.empty())
     return NULL;
-  return new Folder(current_folder_.c_str());
+  return new Folder(current_file_.c_str());
 }
 
 class TextStream : public TextStreamInterface {
