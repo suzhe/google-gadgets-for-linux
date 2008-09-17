@@ -38,6 +38,9 @@ namespace ggadget {
  *   size_t GetCount();
  * };
  * </code>
+ *
+ * The ItemType must be a typedef to the real item type, and can be used as:
+ * <code>typename E::ItemType</code>
  */
 template <typename E, typename Wrapper, typename Param, uint64_t ClassId>
 class ScriptableEnumerator : public SharedScriptable<ClassId> {
@@ -57,8 +60,8 @@ class ScriptableEnumerator : public SharedScriptable<ClassId> {
   }
 
   Wrapper *GetItem() {
-    return (this->enumerator_->GetItem() != NULL) ?
-      new Wrapper(this->enumerator_->GetItem(), param_) : NULL;
+    typename E::ItemType *item = enumerator_->GetItem();
+    return item ? new Wrapper(item, param_) : NULL;
   }
 
  protected:
