@@ -77,9 +77,11 @@ struct Color {
   /**
    * Parses a color name.
    * @param name the color name in HTML-style color format ("#rrggbb"),
-   *     or HTML-style with alpha ("#aarrggbb"). If @a alpha is @c NULL, only
-   *     "#rrggbb" format is allowed. Any characters not in hexadecimal character
-   *     range will be treated as '0'.
+   *     HTML-style with alpha ("#aarrggbb"), or using SVG color names
+   *     (http://www.w3.org/TR/SVG/types.html#ColorKeywords).
+   *     If @a alpha is @c NULL, only color name or "#rrggbb" format is
+   *     allowed. If in #rrggbb or #aarrggbb format, any characters not
+   *     in hexadecimal character range will be treated as '0'.
    * @param[out] color (required) the parsed color.
    * @param[out] alpha (optional) the parsed alpha value.
    * @return @c true if the format is valid.

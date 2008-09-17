@@ -40,6 +40,16 @@ TEST(Color, FromString) {
   EXPECT_FALSE(Color::FromString("#1234567", &color, &alpha));
   EXPECT_FALSE(Color::FromString("", &color, &alpha));
   EXPECT_FALSE(Color::FromString("#123456789", &color, &alpha));
+
+  EXPECT_TRUE(Color::FromString("aliceblue", &color, &alpha));
+  EXPECT_EQ(1.0, alpha);
+  EXPECT_TRUE(Color::FromChars(240, 248, 255) == color);
+  EXPECT_TRUE(Color::FromString("lightseagreen", &color, NULL));
+  EXPECT_TRUE(Color::FromChars(32, 178, 170) == color);
+  EXPECT_TRUE(Color::FromString("yellowgreen", &color, NULL));
+  EXPECT_TRUE(Color::FromChars(154, 205, 50) == color);
+
+  EXPECT_FALSE(Color::FromString("unknown", &color, NULL));
 }
 
 int main(int argc, char **argv) {
