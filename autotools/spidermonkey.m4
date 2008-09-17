@@ -76,6 +76,13 @@ if test "x$smjs_incdir" = "x" -a "x$smjs_libdir" = "x"; then
 fi
 
 if test "x$has_pkg_smjs" != "xno"; then
+# Fix bogus mozilla-js.pc of xulrunner 1.9 pre release version.
+  if (echo $PKGSMJS_CFLAGS | grep '/stable') > /dev/null 2>&1; then
+    smjs_INCDIR=`$PKG_CONFIG --variable=includedir $has_pkg_smjs`
+    if test -f $smjs_INCDIR/unstable/jsapi.h; then
+      PKGSMJS_CFLAGS="$PKGSMJS_CFLAGS -I$smjs_INCDIR/unstable"
+    fi
+  fi
   smjs_CPPFLAGS="$PKGSMJS_CFLAGS $smjs_CPPFLAGS"
   smjs_LIBS=$PKGSMJS_LIBS
 

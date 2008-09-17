@@ -582,8 +582,7 @@ fi
 has_libcurl=no
 LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
 if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; then
-  AC_MSG_WARN([Libcurl is not useable because it doesn't support SSL or HTTPS])
-  has_libcurl=no
+  AC_MSG_WARN([Libcurl may not useable because it doesn't support SSL or HTTPS])
 fi
 
 # Check libxml2.
@@ -649,13 +648,15 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
 		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
   [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
 		     [has_gtkmozembed=libxul-embedding-unstable],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
-		       [has_gtkmozembed=xulrunner-gtkmozembed],
-      [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
-			 [has_gtkmozembed=firefox2-gtkmozembed],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
-			   [has_gtkmozembed=firefox-gtkmozembed],
-	  [has_gtkmozembed=no])])])])])
+    [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding mozilla-js],
+		      [has_gtkmozembed=libxul-embedding],
+      [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
+			[has_gtkmozembed=xulrunner-gtkmozembed],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
+			  [has_gtkmozembed=firefox2-gtkmozembed],
+	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
+			    [has_gtkmozembed=firefox-gtkmozembed],
+	    [has_gtkmozembed=no])])])])])])
 else
   case $with_gtkmozembed in
     libxul)
@@ -663,7 +664,9 @@ else
                         [has_gtkmozembed=mozilla-gtkmozembed-embedding],
         [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
                            [has_gtkmozembed=libxul-embedding-unstable],
-          [has_gtkmozembed=no])])
+	  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding mozilla-js],
+			    [has_gtkmozembed=libxul-embedding],
+          [has_gtkmozembed=no])])])
       ;;
     xulrunner)
       PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
@@ -796,11 +799,14 @@ if test x$has_gtkmozembed = xno -a x$build_gtkmoz_browser_element = xyes; then
   build_gtkmoz_browser_element=no
 else
   EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
-# Add additional include dirs for mozilla 1.8
+# Add additional include dirs for mozilla 1.8 and pre 1.9
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/content"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/widget"
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/gtkembedmoz"
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpcom"
   GTKMOZEMBED_LDFLAGS=""
   MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
   if test "x$MOZILLA_FIVE_HOME" = "x"; then
