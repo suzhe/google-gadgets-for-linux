@@ -18,15 +18,24 @@
 
 # norootforbuild
 
+#############################################################################
+# Commom part
+#############################################################################
 Name:           google-gadgets
 Version:        0.10.2
-Release:        1
+Release:        2
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        Google Gadgets for Linux
-Packager:       James Su <james.su@gmail.com>
 Url:            http://code.google.com/p/google-gadgets-for-linux/
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+Source0:        http://google-gadgets-for-linux.googlecode.com/files/google-gadgets-for-linux-%{version}.tar.bz2
+#Autoreqprov:   on
+
+#############################################################################
+# openSUSE
+#############################################################################
+%if 0%{?suse_version}
 BuildRequires:  gcc-c++ zip autoconf update-desktop-files flex libtool
 BuildRequires:  gtk2-devel >= 2.10.0
 BuildRequires:  cairo-devel >= 1.2.0
@@ -34,8 +43,8 @@ BuildRequires:  libcurl-devel >= 7.15.0
 BuildRequires:  libxml2-devel >= 2.6.0
 BuildRequires:  zlib-devel >= 1.2.0
 BuildRequires:  librsvg-devel >= 2.18.0
-%if %suse_version > 1100
-BuildRequires:  mozilla-xulrunner190-devel >= 1.9.0
+%if %suse_version >= 1100
+BuildRequires:  mozilla-xulrunner190-devel
 %else
 BuildRequires:  mozilla-xulrunner181-devel
 %endif
@@ -47,7 +56,36 @@ BuildRequires:  gstreamer010-plugins-base-devel
 %endif
 BuildRequires:  dbus-1-devel >= 1.0.2
 BuildRequires:  libqt4-devel >= 4.3
-Source0:        http://google-gadgets-for-linux.googlecode.com/files/google-gadgets-for-linux-%{version}.tar.bz2
+BuildRequires:  startup-notification-devel
+%endif
+
+#############################################################################
+# Fedora, RHEL and CentOS
+#############################################################################
+%if 0%{?fedora_version}
+BuildRequires:  gcc-c++ zip autoconf flex libtool
+BuildRequires:  gtk2-devel >= 2.10.0
+BuildRequires:  cairo-devel >= 1.2.0
+BuildRequires:  libxml2-devel >= 2.6.0
+BuildRequires:  zlib-devel >= 1.2.0
+BuildRequires:  librsvg2-devel >= 2.18.0
+BuildRequires:  gstreamer-plugins-base-devel >= 0.10.6
+BuildRequires:  gstreamer-devel >= 0.10.6
+BuildRequires:  dbus-devel >= 1.0.2
+BuildRequires:  libtool-ltdl-devel
+BuildRequires:  startup-notification-devel
+
+%if %{fedora_version} >= 9
+BuildRequires:  xulrunner-devel >= 1.9
+BuildRequires:  qt-devel >= 4.3
+BuildRequires:  libcurl-devel >= 7.15.0
+%else
+BuildRequires:  firefox-devel >= 2.0
+BuildRequires:  qt4-devel >= 4.3
+BuildRequires:  curl-devel >= 7.15.0
+%endif
+%endif
+
 
 %description
 Google Gadgets for Linux provides a platform for running desktop gadgets under
@@ -65,8 +103,16 @@ Authors:
 License:        Apache License Version 2.0
 Group:          System/Libraries
 Summary:        Google Gadgets main libraries
+
+%if 0%{?suse_version}
 Requires:       libltdl
 Requires:       dbus-1 >= 1.0.2
+%endif
+
+%if 0%{?fedora_version}
+Requires:       libtool-ltdl
+Requires:       dbus >= 1.0.2
+%endif
 
 %description -n libggadget-1_0-0
 This package contains the main Google Gadgets libraries, it is required by both
@@ -81,7 +127,16 @@ Authors:
 License:        Apache License Version 2.0
 Group:          Development/Libraries/C and C++
 Summary:        Google Gadgets main development files
+Requires:       libggadget-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 Requires:       dbus-1-devel >= 1.0.2
+%endif
+
+%if 0%{?fedora_version}
+Requires:       dbus-devel >= 1.0.2
+%endif
+
 
 %description -n libggadget-devel
 This package contains the development files assoicated with libggadget, it is
@@ -97,9 +152,19 @@ License:        Apache License Version 2.0
 Group:          System/Libraries
 Summary:        Google Gadgets GTK+ library
 Requires:       libggadget-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 Requires:       gtk2 >= 2.10.0
 Requires:       cairo >= 1.2.0
 Requires:       librsvg >= 2.18.0
+%endif
+
+%if 0%{?fedora_version}
+Requires:       gtk2 >= 2.10.0
+Requires:       cairo >= 1.2.0
+Requires:       librsvg2 >= 2.18.0
+%endif
+
 
 %description -n libggadget-gtk-1_0-0
 This package contains the GTK+ Google Gadgets library, it is required to run
@@ -115,8 +180,19 @@ License:        Apache License Version 2.0
 Group:          Development/Libraries/C and C++
 Summary:        Google Gadgets GTK+ development files
 Requires:       libggadget-devel = %{version}
+Requires:       libggadget-gtk-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 Requires:       gtk2-devel >= 2.10.0
 Requires:       cairo-devel >= 1.2.0
+Requires:       librsvg-devel >= 2.18.0
+%endif
+
+%if 0%{?fedora_version}
+Requires:       gtk2-devel >= 2.10.0
+Requires:       cairo-devel >= 1.2.0
+Requires:       librsvg2-devel >= 2.18.0
+%endif
 
 %description -n libggadget-gtk-devel
 This package contains the development files assoicated with libggadget-gtk,
@@ -132,9 +208,16 @@ License:        Apache License Version 2.0
 Group:          System/Libraries
 Summary:        Google Gadgets QT library
 Requires:       libggadget-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 Requires:       libqt4 >= 4.3
 %if %suse_version > 1030
 Requires:       libQtWebKit4 >= 4.4.0
+%endif
+%endif
+
+%if 0%{?fedora_version}
+Requires:       qt-x11 >= 4.3
 %endif
 
 %description -n libggadget-qt-1_0-0
@@ -151,9 +234,17 @@ License:        Apache License Version 2.0
 Group:          Development/Libraries/C and C++
 Summary:        Google Gadgets QT development files
 Requires:       libggadget-devel = %{version}
+Requires:       libggadget-qt-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 Requires:       libqt4-devel >= 4.3
 %if %suse_version > 1030
 Requires:       libQtWebKit4-devel >= 4.4.0
+%endif
+%endif
+
+%if 0%{?fedora_version}
+Requires:       qt-devel >= 4.3
 %endif
 
 %description -n libggadget-qt-devel
@@ -169,6 +260,20 @@ License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        Common files for QT and GTK+ versions of google-gadgets
 Requires:       libggadget-1_0-0 = %{version}
+
+%if 0%{?suse_version}
+Requires:       libcurl >= 7.15.0
+Requires:       libxml2 >= 2.6.0
+%endif
+
+%if 0%{?fedora_version}
+%if %{fedora_version} >= 9
+Requires:       libcurl >= 7.15.0
+%else
+Requires:       curl >= 7.15.0
+%endif
+Requires:       libxml2 >= 2.6.0
+%endif
 
 %description common
 Google Gadgets for Linux provides a platform for running desktop gadgets under
@@ -234,10 +339,17 @@ License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        GStreamer modules for Google Gadgets
 Requires:       libggadget-1_0-0 = %{version}
+
+%if 0%{?suse_version}
 %if %suse_version > 1030
 Requires:       gstreamer-0_10-plugins-base
 %else
 Requires:       gstreamer010-plugins-base
+%endif
+%endif
+
+%if 0%{?fedora_version}
+Requires:       gstreamer-plugins-base >= 0.10.6
 %endif
 
 %description gst
@@ -259,10 +371,21 @@ License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        XULRunner modules for Google Gadgets
 Requires:       libggadget-1_0-0 = %{version}
-%if %suse_version > 1100
+
+%if 0%{?suse_version}
+%if %suse_version >= 1100
 Requires:       mozilla-xulrunner190
 %else
 Requires:       mozilla-xulrunner181
+%endif
+%endif
+
+%if 0%{?fedora_version}
+%if %{fedora_version} >= 9
+Requires:       xulrunner >= 1.9
+%else
+Requires:       firefox >= 2.0
+%endif
 %endif
 
 %description xul
@@ -282,16 +405,29 @@ Authors:
 %setup -q -n google-gadgets-for-linux-%{version}
 
 %build
+%if 0%{?suse_version}
 %{suse_update_config -f}
 autoreconf
 %configure --disable-werror
 make %{?jobs:-j%jobs}
+%endif
+
+%if 0%{?fedora_version}
+autoreconf
+%configure --disable-werror
+make %{?_smp_mflags}
+%endif
 
 %install
-%makeinstall
-# these are dynamic modules... we shouldn't be installing them
+rm -fr $RPM_BUILD_ROOT
+make DESTDIR=$RPM_BUILD_ROOT install-strip
+# These are dynamic modules... we shouldn't be installing them
 rm -f $RPM_BUILD_ROOT/%{_libdir}/google-gadgets/modules/*.la
 rm -f $RPM_BUILD_ROOT/%{_libdir}/google-gadgets/modules/*.a
+# Remove all static libraries.
+rm -f $RPM_BUILD_ROOT/%{_libdir}/*.a
+
+%if 0%{?suse_version}
 %suse_update_desktop_file ggl-gtk Network WebBrowser
 %suse_update_desktop_file ggl-qt Network WebBrowser
 
@@ -299,22 +435,23 @@ MD5SUM=$(md5sum COPYING | sed 's/ .*//')
 if test -f /usr/share/doc/licenses/md5/$MD5SUM ; then
   ln -sf /usr/share/doc/licenses/md5/$MD5SUM COPYING
 fi
+%endif
 
 
 %post -n google-gadgets-common
-if [ -f /usr/bin/update-mime-database ]; then
-  /usr/bin/update-mime-database /usr/share/mime > /dev/null
+if [ -x /usr/bin/update-mime-database ]; then
+  /usr/bin/update-mime-database %{_datadir}/mime &> /dev/null || :
 fi
-if [ -f /usr/bin/xdg-icon-resource ]; then
-  /usr/bin/xdg-icon-resource forceupdate --theme hicolor > /dev/null
+if [ -x /usr/bin/xdg-icon-resource ]; then
+  /usr/bin/xdg-icon-resource forceupdate --theme hicolor &> /dev/null || :
 fi
 
 %postun -n google-gadgets-common
-if [ -f /usr/bin/update-mime-database ]; then
-  /usr/bin/update-mime-database %{_datadir}/mime > /dev/null
+if [ -x /usr/bin/update-mime-database ]; then
+  /usr/bin/update-mime-database %{_datadir}/mime &> /dev/null || :
 fi
-if [ -f /usr/bin/xdg-icon-resource ]; then
-  /usr/bin/xdg-icon-resource forceupdate --theme hicolor > /dev/null
+if [ -x /usr/bin/xdg-icon-resource ]; then
+  /usr/bin/xdg-icon-resource forceupdate --theme hicolor &> /dev/null || :
 fi
 
 %post -n libggadget-1_0-0 -p /sbin/ldconfig
@@ -372,10 +509,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libggadget-dbus-1.0*.so
 %{_libdir}/libggadget-js-1.0*.so
 %{_libdir}/libggadget-xdg-1.0*.so
-%{_libdir}/libggadget-1.0*.a
-%{_libdir}/libggadget-dbus-1.0*.a
-%{_libdir}/libggadget-js-1.0*.a
-%{_libdir}/libggadget-xdg-1.0*.a
 %{_libdir}/libggadget-1.0*.la
 %{_libdir}/libggadget-dbus-1.0*.la
 %{_libdir}/libggadget-js-1.0*.la
@@ -394,7 +527,6 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_includedir}/google-gadgets/ggadget/gtk/
 %{_includedir}/google-gadgets/ggadget/gtk/*.h
 %{_libdir}/libggadget-gtk-1.0*.so
-%{_libdir}/libggadget-gtk-1.0*.a
 %{_libdir}/libggadget-gtk-1.0*.la
 %{_libdir}/pkgconfig/libggadget-gtk-1.0.pc
 
@@ -407,7 +539,6 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_includedir}/google-gadgets/ggadget/qt/
 %{_includedir}/google-gadgets/ggadget/qt/*.h
 %{_libdir}/libggadget-qt-1.0*.so
-%{_libdir}/libggadget-qt-1.0*.a
 %{_libdir}/libggadget-qt-1.0*.la
 %{_libdir}/pkgconfig/libggadget-qt-1.0.pc
 
@@ -434,5 +565,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
-* Thu Sep 14 2008 james.su@gmail.com
+* Tue Sep 16 2008 James Su <james.su@gmail.com>
+- Updates dependency information.
+- Removes static libraries.
+- Adds support for Fedora 8 and 9.
+
+* Thu Sep 14 2008 James Su <james.su@gmail.com>
 - Initial release.
