@@ -320,7 +320,10 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
     if (!drag_files_) return;
 
     for (int i = 0; i < urls.size(); i++) {
-      drag_urls_.push_back(urls[i].toString().toUtf8().data());
+      std::string url = urls[i].toString().toUtf8().data();
+      if (url.substr(0, 7) == "file://")
+        url = url.substr(7);
+      drag_urls_.push_back(url);
       drag_files_[i] = drag_urls_[i].c_str();
     }
     drag_files_[urls.size()] = NULL;

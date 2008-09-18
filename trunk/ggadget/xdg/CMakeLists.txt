@@ -16,6 +16,7 @@
 
 SET(SRCS
   desktop_entry.cc
+  icon_theme.cc
   utilities.cc
 )
 
