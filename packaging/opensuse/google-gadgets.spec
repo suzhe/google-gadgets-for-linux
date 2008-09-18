@@ -39,7 +39,7 @@ Source0:        http://google-gadgets-for-linux.googlecode.com/files/google-gadg
 BuildRequires:  gcc-c++ zip autoconf update-desktop-files flex libtool
 BuildRequires:  gtk2-devel >= 2.10.0
 BuildRequires:  cairo-devel >= 1.2.0
-BuildRequires:  libcurl-devel >= 7.15.0
+BuildRequires:  libcurl-devel >= 7.16.0
 BuildRequires:  libxml2-devel >= 2.6.0
 BuildRequires:  zlib-devel >= 1.2.0
 BuildRequires:  librsvg-devel >= 2.18.0
@@ -78,11 +78,11 @@ BuildRequires:  startup-notification-devel
 %if %{fedora_version} >= 9
 BuildRequires:  xulrunner-devel >= 1.9
 BuildRequires:  qt-devel >= 4.3
-BuildRequires:  libcurl-devel >= 7.15.0
+BuildRequires:  libcurl-devel >= 7.16.0
 %else
 BuildRequires:  firefox-devel >= 2.0
 BuildRequires:  qt4-devel >= 4.3
-BuildRequires:  curl-devel >= 7.15.0
+BuildRequires:  curl-devel >= 7.16.0
 %endif
 %endif
 
@@ -262,15 +262,15 @@ Summary:        Common files for QT and GTK+ versions of google-gadgets
 Requires:       libggadget-1_0-0 = %{version}
 
 %if 0%{?suse_version}
-Requires:       libcurl >= 7.15.0
+Requires:       libcurl4 >= 7.16.0
 Requires:       libxml2 >= 2.6.0
 %endif
 
 %if 0%{?fedora_version}
 %if %{fedora_version} >= 9
-Requires:       libcurl >= 7.15.0
+Requires:       libcurl >= 7.16.0
 %else
-Requires:       curl >= 7.15.0
+Requires:       curl >= 7.16.0
 %endif
 Requires:       libxml2 >= 2.6.0
 %endif
@@ -565,6 +565,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
+* Wed Sep 17 2008 James Su <james.su@gmail.com>
+- Fix the name and version of curl library.
+
 * Tue Sep 16 2008 James Su <james.su@gmail.com>
 - Updates dependency information.
 - Removes static libraries.

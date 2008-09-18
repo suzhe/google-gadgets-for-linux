@@ -205,9 +205,10 @@ class FramedViewDecoratorBase::Impl {
     // Only allow displaying two lines of caption.
     if (caption_height > top_height - kVDFramedBorderWidth-
         kVDFramedCaptionMargin * 2) {
+      double simple_caption_height;
       caption_->GetTextFrame()->GetSimpleExtents(&caption_width,
-                                                 &caption_height);
-      caption_height = std::min(caption_height * 2, top_height * 2);
+                                                 &simple_caption_height);
+      caption_height = std::min(simple_caption_height * 2, caption_height);
       top_height = caption_height + kVDFramedBorderWidth +
           kVDFramedCaptionMargin * 2 + 1;
     }
