@@ -67,7 +67,7 @@ static const Variant kSendDefaultArgs[] = { Variant("") };
 static Backoff::ResultType GetBackoffType(unsigned short status) {
   // status == 0: network error, don't do exponential backoff.
   return status == 0 ? Backoff::CONSTANT_BACKOFF :
-         status >= 200 && status < 400 ? Backoff::SUCCESS :
+         (status >= 200 && status < 400) || status == 404 ? Backoff::SUCCESS :
          Backoff::EXPONENTIAL_BACKOFF;
 }
 
