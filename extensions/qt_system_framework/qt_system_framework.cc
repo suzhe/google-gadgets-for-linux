@@ -29,6 +29,9 @@
 #include <ggadget/gadget.h>
 #include <ggadget/gadget.h>
 #include <ggadget/permissions.h>
+#include <ggadget/xdg/desktop_entry.h>
+#include <ggadget/xdg/icon_theme.h>
+#include <ggadget/xdg/utilities.h>
 
 #define Initialize qt_system_framework_LTX_Initialize
 #define Finalize qt_system_framework_LTX_Finalize
@@ -143,9 +146,73 @@ class QtSystemBrowseForFileHelper {
   Gadget *gadget_;
 };
 
-std::string GetFileIcon(const char *file) {
-  // TODO
+// Gets the icon file of a DesktopEntry file.
+static std::string GetDesktopEntryIcon(const char *file) {
+  ASSERT(file);
+  ggadget::xdg::DesktopEntry entry(file);
+  if (entry.IsValid()) {
+    return entry.GetIcon();
+  } else {
+    return "";
+  }
+}
+
+static std::string GetDirectorySpecialIcon(const std::string &file) {
+  // TODO: check .directory file to show the right icon
   return "";
+}
+
+std::string GetFileIcon(const char *file) {
+  static const int kDefaultIconSize = 128;
+  std::vector<std::string> icon_names;
+  std::string type = ggadget::xdg::GetFileMimeType(file);
+  std::string icon_name, icon_file;
+
+  DLOG("GetFileIcon:%s, %s", file, type.c_str());
+
+  if (type == ggadget::xdg::kDesktopEntryMimeType) {
+    icon_name = GetDesktopEntryIcon(file);
+    if (icon_name.length())
+      icon_names.push_back(icon_name);
+  } else if (type == ggadget::xdg::kDirectoryMimeType) {
+    icon_name = GetDirectorySpecialIcon(file);
+    if (icon_name.length())
+      icon_names.push_back(icon_name);
+    icon_names.push_back("folder");
+  } else {
+    icon_name = ggadget::xdg::GetMimeTypeXDGIcon(type.c_str());
+    if (icon_name.length())
+      icon_names.push_back(icon_name);
+
+    // Try icon name similar than: text-plain
+    icon_name = type;
+    for (size_t i = icon_name.find('/', 0); i != std::string::npos;
+         i = icon_name.find('/', i + 1))
+      icon_name[i] = '-';
+    icon_names.push_back(icon_name);
+
+    // Try generic name like text-x-generic.
+    icon_name = type.substr(0, type.find('/')) + "-x-generic";
+    icon_names.push_back(icon_name);
+
+    icon_names.push_back("gnome-mime-" + icon_name);
+
+    // Last resort
+    icon_names.push_back("unknown");
+  }
+  for (size_t i = 0; i < icon_names.size(); i++) {
+    if (icon_names[i][0] == '/') {
+      if (!access(icon_names[i].c_str(), R_OK))
+        return icon_names[i];
+    } else {
+      icon_file = ggadget::xdg::LookupIconInDefaultTheme(icon_names[i], kDefaultIconSize);
+      if (icon_file.length()) {
+        DLOG("Found Icon: %s", icon_file.c_str());
+        return icon_file;
+      }
+    }
+  }
+  return icon_file;
 }
 
 static QtSystemCursor g_cursor_;
