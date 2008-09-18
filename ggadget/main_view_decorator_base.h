@@ -58,7 +58,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /** Possible directions where the pop out view will be shown. */
   enum PopOutDirection {
     POPOUT_TO_LEFT = 0,
-    POPOUT_TO_RIGHT,
+    POPOUT_TO_RIGHT
   };
 
   /**
