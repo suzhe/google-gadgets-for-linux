@@ -98,10 +98,9 @@ GstVideoElement::GstVideoElement(BasicElement *parent, View *view,
       playbin_(NULL),
       receive_image_handler_(NULL),
       tag_list_(NULL),
-      media_changed_(false), position_changed_(false),
-      local_state_(gddVideoStateUndefined),
-      local_error_(gddVideoErrorNoError) {
-
+      media_changed_(false),
+      local_state_(STATE_UNDEFINED),
+      local_error_(ERROR_NO_ERROR) {
   // Initialize Gstreamer.
   gst_init(NULL, NULL);
   g_video_element_count++;
@@ -191,12 +190,12 @@ GstVideoElement::GstVideoElement(BasicElement *parent, View *view,
   gst_object_unref(bus);
 
   // We are ready to play.
-  local_state_ = gddVideoStateReady;
+  local_state_ = STATE_READY;
 }
 
 GstVideoElement::~GstVideoElement() {
   if (playbin_) {
-    gst_element_set_state(playbin_, GST_STATE_NULL);
+    SetPlayState(GST_STATE_NULL);
     gst_object_unref(GST_OBJECT(playbin_));
     playbin_ = NULL;
     videosink_ = NULL;
@@ -215,17 +214,17 @@ BasicElement *GstVideoElement::CreateInstance(BasicElement *parent, View *view,
   return new GstVideoElement(parent, view, name);
 }
 
-bool GstVideoElement::IsAvailable(const std::string& name) {
+bool GstVideoElement::IsAvailable(const std::string &name) {
   if (VideoElementBase::IsAvailable(name))
     return true;
 
-  if (name.compare("volume") == 0) {
+  if (name == "volume") {
     if (playbin_)
       return true;
-  } else if (name.compare("balance") == 0) {
+  } else if (name == "balance") {
     if (playbin_ && panorama_)
       return true;
-  } else if (name.compare("mute") == 0) {
+  } else if (name == "mute") {
     if (playbin_ && volume_)
       return true;
   }
@@ -241,10 +240,8 @@ void GstVideoElement::Play() {
     geometry_initialized_ = true;
   }
   if (playbin_ && src_.length()) {
-    if (gst_element_set_state(playbin_, GST_STATE_PLAYING) ==
-        GST_STATE_CHANGE_FAILURE) {
+    if (SetPlayState(GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE)
       LOGE("Failed to play the media.");
-    }
   } else {
     if (!playbin_)
       DLOG("Playbin was not initialized correctly.");
@@ -254,38 +251,39 @@ void GstVideoElement::Play() {
 }
 
 void GstVideoElement::Pause() {
-  if (playbin_ && local_state_ == gddVideoStatePlaying) {
-    if (gst_element_set_state(playbin_, GST_STATE_PAUSED) ==
-        GST_STATE_CHANGE_FAILURE) {
-      LOGE("Failed to pause the media.");
-    }
-  }
+  if (playbin_ && local_state_ == STATE_PLAYING &&
+      SetPlayState(GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE)
+    LOGE("Failed to pause the media.");
 }
 
-void GstVideoElement::Stop() {
-  if (playbin_ && (local_state_ == gddVideoStatePlaying ||
-                   local_state_ == gddVideoStatePaused ||
-                   local_state_ == gddVideoStateEnded)) {
-    if (gst_element_set_state(playbin_, GST_STATE_NULL) ==
-        GST_STATE_CHANGE_FAILURE) {
+void GstVideoElement::StopInternal(bool fire_state_change) {
+  if (playbin_ && (local_state_ == STATE_PLAYING ||
+                   local_state_ == STATE_PAUSED ||
+                   local_state_ == STATE_ENDED)) {
+    if (SetPlayState(GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE) {
       LOGE("Failed to stop the media.");
-    } else if (local_state_ != gddVideoStateError) {
+    } else if (fire_state_change && local_state_ != STATE_ERROR) {
       // Playbin won't post "STATE CHANGED" message when being set to
       // "NULL" state. We make a state-change scene manually.
       // But We don't clear any ERROR sign, let it be there until gstreamer
       // itself changes its state.
-      local_state_ = gddVideoStateStopped;
+      local_state_ = STATE_STOPPED;
       FireOnStateChangeEvent();
     }
 
+    SetCurrentPositionInternal(0);
     // Clear the last image frame.
     ClearImage();
   }
 }
 
-double GstVideoElement::GetCurrentPosition() {
-  if (playbin_ && (local_state_ == gddVideoStatePlaying ||
-                   local_state_ == gddVideoStatePaused)) {
+void GstVideoElement::Stop() {
+  StopInternal(true);
+}
+
+double GstVideoElement::GetCurrentPosition() const {
+  if (playbin_ && (local_state_ == STATE_PLAYING ||
+                   local_state_ == STATE_PAUSED)) {
     gint64 position;
     GstFormat format = GST_FORMAT_TIME;
 
@@ -296,23 +294,24 @@ double GstVideoElement::GetCurrentPosition() {
   return 0;
 }
 
+void GstVideoElement::SetCurrentPositionInternal(double position) {
+  gst_element_seek(playbin_, 1.0, GST_FORMAT_TIME,
+                   static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH |
+                                             GST_SEEK_FLAG_KEY_UNIT),
+                   GST_SEEK_TYPE_SET,
+                   static_cast<gint64>(position) * GST_SECOND,
+                   GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+}
+
 void GstVideoElement::SetCurrentPosition(double position) {
   // Seek will only be successful under PAUSED or PLAYING state.
   // It's ok to check local state.
-  if (playbin_ && (local_state_ == gddVideoStatePlaying ||
-                   local_state_ == gddVideoStatePaused)) {
-    if (gst_element_seek(playbin_, 1.0, GST_FORMAT_TIME,
-                         static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH |
-                                                   GST_SEEK_FLAG_KEY_UNIT),
-                         GST_SEEK_TYPE_SET,
-                         static_cast<gint64>(position) * GST_SECOND,
-                         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE) == TRUE) {
-      position_changed_ = true;
-    }
-  }
+  if (playbin_ &&
+      (local_state_ == STATE_PLAYING || local_state_ == STATE_PAUSED))
+    SetCurrentPositionInternal(position);
 }
 
-double GstVideoElement::GetDuration() {
+double GstVideoElement::GetDuration() const {
   if (playbin_) {
     gint64 duration;
     GstFormat format = GST_FORMAT_TIME;
@@ -323,15 +322,15 @@ double GstVideoElement::GetDuration() {
   return 0;
 }
 
-GstVideoElement::ErrorCode GstVideoElement::GetErrorCode() {
+GstVideoElement::ErrorCode GstVideoElement::GetErrorCode() const {
   return local_error_;
 }
 
-GstVideoElement::State GstVideoElement::GetState() {
+GstVideoElement::State GstVideoElement::GetState() const {
   return local_state_;
 }
 
-bool GstVideoElement::Seekable() {
+bool GstVideoElement::IsSeekable() const {
   GstQuery *query;
   gboolean res;
   gboolean seekable = FALSE;
@@ -346,13 +345,12 @@ bool GstVideoElement::Seekable() {
   return seekable == TRUE;
 }
 
-std::string GstVideoElement::GetSrc() {
+std::string GstVideoElement::GetSrc() const {
   return src_;
 }
 
 void GstVideoElement::SetSrc(const std::string &src) {
-  if (src_.compare(src) != 0) {
-
+  if (src_ != src) {
     // Empty the tag cache when loading a new media.
     if (tag_list_) {
       gst_tag_list_free(tag_list_);
@@ -362,12 +360,10 @@ void GstVideoElement::SetSrc(const std::string &src) {
     src_ = src;
     media_changed_ = true;
     g_object_set(G_OBJECT(playbin_), "uri", src_.c_str(), NULL);
-    if (GetAutoPlay())
-      Play();
   }
 }
 
-int GstVideoElement::GetVolume() {
+int GstVideoElement::GetVolume() const {
   if (playbin_) {
     double volume;
     g_object_get(G_OBJECT(playbin_), "volume", &volume, NULL);
@@ -393,7 +389,7 @@ void GstVideoElement::SetVolume(int volume) {
   }
 }
 
-std::string GstVideoElement::GetTagInfo(TagType tag) {
+std::string GstVideoElement::GetTagInfo(TagType tag) const {
   gchar *info;
   const char *tag_string = tag_strings[tag];
   if (tag_list_ && tag_string &&
@@ -406,7 +402,7 @@ std::string GstVideoElement::GetTagInfo(TagType tag) {
   }
 }
 
-int GstVideoElement::GetBalance() {
+int GstVideoElement::GetBalance() const {
   if (playbin_ && panorama_) {
     gfloat balance;
     g_object_get(G_OBJECT(panorama_), "panorama", &balance, NULL);
@@ -441,7 +437,7 @@ void GstVideoElement::SetBalance(int balance) {
   }
 }
 
-bool GstVideoElement::GetMute() {
+bool GstVideoElement::IsMute() const {
   if (playbin_ && volume_) {
     gboolean mute;
     g_object_get(G_OBJECT(volume_), "mute", &mute, NULL);
@@ -483,15 +479,15 @@ GstVideoElement::State
 GstVideoElement::GstStateToLocalState(GstState state) {
   switch (state) {
     case GST_STATE_NULL:
-      return gddVideoStateStopped;
+      return STATE_STOPPED;
     case GST_STATE_READY:
-      return gddVideoStateReady;
+      return STATE_READY;
     case GST_STATE_PAUSED:
-      return gddVideoStatePaused;
+      return STATE_PAUSED;
     case GST_STATE_PLAYING:
-      return gddVideoStatePlaying;
+      return STATE_PLAYING;
     default:
-      return gddVideoStateUndefined;
+      return STATE_UNDEFINED;
   }
 }
 
@@ -537,19 +533,19 @@ void GstVideoElement::OnError(GstMessage *msg) {
       (gerror->code == GST_RESOURCE_ERROR_NOT_FOUND ||
        gerror->code == GST_RESOURCE_ERROR_OPEN_READ ||
        gerror->code == GST_RESOURCE_ERROR_OPEN_READ_WRITE)) {
-    local_error_ = gddVideoErrorBadSrc;
+    local_error_ = ERROR_BAD_SRC;
   } else if (gerror->domain == GST_STREAM_ERROR &&
              (gerror->code == GST_STREAM_ERROR_NOT_IMPLEMENTED ||
               gerror->code == GST_STREAM_ERROR_TYPE_NOT_FOUND ||
               gerror->code == GST_STREAM_ERROR_WRONG_TYPE ||
               gerror->code == GST_STREAM_ERROR_CODEC_NOT_FOUND ||
               gerror->code == GST_STREAM_ERROR_FORMAT)) {
-    local_error_ = gddVideoErrorFormatNotSupported;
+    local_error_ = ERROR_FORMAT_NOT_SUPPORTED;
   } else {
-    local_error_ = gddVideoErrorUnknown;
+    local_error_ = ERROR_UNKNOWN;
   }
 
-  local_state_ = gddVideoStateError;
+  local_state_ = STATE_ERROR;
   FireOnStateChangeEvent();
 
   g_error_free(gerror);
@@ -557,8 +553,14 @@ void GstVideoElement::OnError(GstMessage *msg) {
 }
 
 void GstVideoElement::OnMediaEnded() {
-  local_state_ = gddVideoStateEnded;
+  StopInternal(false);
+  local_state_ = STATE_ENDED;
+  State save_state = local_state_;
   FireOnStateChangeEvent();
+  if (local_state_ == save_state) {
+    local_state_ = STATE_READY;
+    FireOnStateChangeEvent();
+  }
 }
 
 void GstVideoElement::OnStateChange(GstMessage *msg) {
@@ -568,21 +570,15 @@ void GstVideoElement::OnStateChange(GstMessage *msg) {
   gst_message_parse_state_changed(msg, &old_state, &new_state, NULL);
 
   State state = GstStateToLocalState(new_state);
-  if (state == gddVideoStatePlaying) {
+  if (state == STATE_PLAYING) {
     // If any change-event is waiting, we invoke it here as the state of
     // the media stream actually changed.
     if (media_changed_) {
       FireOnMediaChangeEvent();
       media_changed_ = false;
     }
-    if (position_changed_) {
-      FireOnPositionChangeEvent();
-      position_changed_ = false;
-    }
-  } else if (state == gddVideoStateUndefined ||
-             state == gddVideoStateError) {
+  } else if (state == STATE_UNDEFINED || state == STATE_ERROR) {
     media_changed_ = false;
-    position_changed_ = false;
   }
 
   if (local_state_ != state) {
@@ -603,7 +599,7 @@ void GstVideoElement::OnElementMessage(GstMessage *msg) {
       ASSERT(receive_image_handler_);
       GadgetVideoSink::Image *image = (*receive_image_handler_)(videosink_);
       if (image) {
-        PutImage(reinterpret_cast<const void*>(image->data),
+        PutImage(image->data,
                  image->x, image->y, image->w, image->h, image->stride);
       }
     }
@@ -619,6 +615,11 @@ void GstVideoElement::OnTagInfo(GstMessage *msg) {
     tag_list_ = gst_tag_list_merge(tag_list_, new_tag_list,
                                    GST_TAG_MERGE_PREPEND);
   }
+}
+
+GstStateChangeReturn GstVideoElement::SetPlayState(GstState state) {
+  GstStateChangeReturn result = gst_element_set_state(playbin_, state);
+  return result;
 }
 
 } // namespace gst

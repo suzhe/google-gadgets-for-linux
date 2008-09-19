@@ -406,8 +406,6 @@ class GstAudioclip : public AudioclipInterface {
   }
 
  private:
-
-
   // Audio source to play.
   std::string src_;
 

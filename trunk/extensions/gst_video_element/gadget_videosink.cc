@@ -803,10 +803,10 @@ no_image:
   return GST_FLOW_ERROR;
 }
 
-void GadgetVideoSink::SetProperty(GObject * object,
+void GadgetVideoSink::SetProperty(GObject *object,
                                   guint prop_id,
-                                  const GValue * value,
-                                  GParamSpec * pspec) {
+                                  const GValue *value,
+                                  GParamSpec *pspec) {
   g_return_if_fail(IS_GADGET_VIDEOSINK(object));
   GadgetVideoSink *videosink = GADGET_VIDEOSINK(object);
 

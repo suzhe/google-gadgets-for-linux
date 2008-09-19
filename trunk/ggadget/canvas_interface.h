@@ -168,8 +168,8 @@ class CanvasInterface {
   virtual bool ClearCanvas() = 0;
 
   /**
-   * Clear a rectangle with top left corner at (x, y). This method will not clear
-   * the clip status of the canvas.
+   * Clear a rectangle with top left corner at (x, y). This method will not
+   * clear the clip status of the canvas.
    * @param x The X-coordinate of the rectangle's top left corner.
    * @param y The Y-coordinate of the rectangle's top left corner.
    * @param w Width of rectangle.
