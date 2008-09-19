@@ -28,6 +28,7 @@
 #include "signals.h"
 #include "slot.h"
 #include "view.h"
+#include "host_interface.h"
 #include "view_host_interface.h"
 #include "view_element.h"
 #include "button_element.h"
@@ -298,6 +299,18 @@ class  MainViewDecoratorBase::Impl {
         owner_->SetMinimized(!minimized_);
       }
     }
+  }
+
+  void OptionsMenuCallback(const char *) {
+    Gadget *gadget = owner_->GetGadget();
+    if (gadget)
+      gadget->ShowOptionsDialog();
+  }
+
+  void AboutMenuCallback(const char *) {
+    Gadget *gadget = owner_->GetGadget();
+    if (gadget)
+      gadget->GetHost()->ShowGadgetAboutDialog(gadget);
   }
 
   void RemoveMenuCallback(const char *) {
@@ -703,7 +716,22 @@ bool MainViewDecoratorBase::OnClientSizing(double *width, double *height) {
 }
 
 void MainViewDecoratorBase::OnAddDecoratorMenuItems(MenuInterface *menu) {
-  if (GetGadget()) {
+  Gadget *gadget = GetGadget();
+  if (gadget) {
+    if (gadget->HasOptionsDialog()) {
+      menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
+                    MenuInterface::MENU_ITEM_ICON_PREFERENCES,
+                    NewSlot(impl_, &Impl::OptionsMenuCallback),
+                    MenuInterface::MENU_ITEM_PRI_GADGET);
+      menu->AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
+    }
+    menu->AddItem(GM_("MENU_ITEM_ABOUT"),
+                  gadget->HasAboutDialog() ?
+                  0 : MenuInterface::MENU_ITEM_FLAG_GRAYED,
+                  MenuInterface::MENU_ITEM_ICON_ABOUT,
+                  NewSlot(impl_, &Impl::AboutMenuCallback),
+                  MenuInterface::MENU_ITEM_PRI_GADGET);
+
     // Use MENU_ITEM_PRI_GADGET to make sure that it's the last menu item.
     menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
                   MenuInterface::MENU_ITEM_ICON_DELETE,

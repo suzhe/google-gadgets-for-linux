@@ -533,14 +533,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   }
 
-  void AboutMenuCallback(const char *) {
-    host_->ShowGadgetAboutDialog(owner_);
-  }
-
-  void OptionsMenuCallback(const char *) {
-    ShowOptionsDialog();
-  }
-
   void DebugConsoleMenuCallback(const char *) {
     host_->ShowGadgetDebugConsole(owner_);
   }
@@ -551,25 +543,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     onaddcustommenuitems_signal_(smenu);
     // Some of the menu handler slots may still hold the reference.
     smenu->Unref();
-    if (HasOptionsDialog()) {
-      menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
-                    MenuInterface::MENU_ITEM_ICON_PREFERENCES,
-                    NewSlot(this, &Impl::OptionsMenuCallback),
-                    MenuInterface::MENU_ITEM_PRI_GADGET);
-      menu->AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
-    }
-    bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
-                         !oncommand_signal_.HasActiveConnections();
     if (debug_console_config_ != DEBUG_CONSOLE_DISABLED) {
       menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0, 0,
                     NewSlot(this, &Impl::DebugConsoleMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
     }
-    menu->AddItem(GM_("MENU_ITEM_ABOUT"),
-                  disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
-                  MenuInterface::MENU_ITEM_ICON_ABOUT,
-                  NewSlot(this, &Impl::AboutMenuCallback),
-                  MenuInterface::MENU_ITEM_PRI_GADGET);
     // Remove item is added in view decorator.
   }
 
@@ -1201,6 +1179,11 @@ const Permissions* Gadget::GetPermissions() const {
 
 int Gadget::GetDefaultFontSize() const {
   return impl_->host_->GetDefaultFontSize();
+}
+
+bool Gadget::HasAboutDialog() const {
+  return !GetManifestInfo(kManifestAboutText).empty() ||
+      impl_->oncommand_signal_.HasActiveConnections();
 }
 
 // static methods
