@@ -58,10 +58,6 @@ class DockedMainViewDecorator::Impl {
       resize_borders_[i] = NULL;
   }
 
-  void CollapseExpandMenuCallback(const char *) {
-    owner_->SetMinimized(!owner_->IsMinimized());
-  }
-
   void UndockMenuCallback(const char *) {
     on_undock_signal_();
   }
@@ -172,9 +168,8 @@ void DockedMainViewDecorator::GetMargins(double *top, double *left,
 
 void DockedMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
   int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
-  menu->AddItem(
-      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
-      NewSlot(impl_, &Impl::CollapseExpandMenuCallback), priority);
+
+  AddCollapseExpandMenuItem(menu);
 
   if (impl_->on_undock_signal_.HasActiveConnections()) {
     menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0, 0,

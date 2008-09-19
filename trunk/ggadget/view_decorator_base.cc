@@ -21,9 +21,11 @@
 #include "logger.h"
 #include "common.h"
 #include "elements.h"
+#include "messages.h"
 #include "gadget_consts.h"
 #include "gadget.h"
 #include "main_loop_interface.h"
+#include "menu_interface.h"
 #include "options_interface.h"
 #include "signals.h"
 #include "slot.h"
@@ -191,6 +193,10 @@ class ViewDecoratorBase::Impl {
       snapshot_->SetPixelHeight(snapshot_->GetSrcHeight());
       view_element_->SetVisible(false);
     }
+  }
+
+  void OnZoomMenuCallback(const char *, double zoom) {
+    owner_->SetChildViewScale(zoom == 0 ? 1.0 : zoom);
   }
 
   bool allow_x_margin_;
@@ -534,6 +540,48 @@ bool ViewDecoratorBase::InsertDecoratorElement(BasicElement *element,
 
 ViewInterface::ResizableMode ViewDecoratorBase::GetChildViewResizable() const {
   return impl_->child_resizable_;
+}
+
+void ViewDecoratorBase::AddZoomMenuItem(MenuInterface *menu) const {
+  static const struct {
+    const char *label;
+    double zoom;
+  } kZoomMenuItems[] = {
+    { "MENU_ITEM_AUTO_FIT", 0 },
+    { "MENU_ITEM_50P", 0.5 },
+    { "MENU_ITEM_75P", 0.75 },
+    { "MENU_ITEM_100P", 1.0 },
+    { "MENU_ITEM_125P", 1.25 },
+    { "MENU_ITEM_150P", 1.50 },
+    { "MENU_ITEM_175P", 1.75 },
+    { "MENU_ITEM_200P", 2.0 },
+  };
+  static const int kNumZoomMenuItems = 8;
+  double scale = GetChildViewScale();
+  int flags[kNumZoomMenuItems];
+  bool has_checked = false;
+
+  for (int i = 0; i < kNumZoomMenuItems; ++i) {
+    flags[i] = 0;
+    if (kZoomMenuItems[i].zoom == scale) {
+      flags[i] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
+      has_checked = true;
+    }
+  }
+
+  // Check "Auto Fit" item if the current scale doesn't match with any
+  // other menu items.
+  if (!has_checked)
+    flags[0] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
+  
+  int priority =  MenuInterface::MENU_ITEM_PRI_DECORATOR;
+  MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
+  for (int i = 0; i < kNumZoomMenuItems; ++i) {
+    zoom->AddItem(GM_(kZoomMenuItems[i].label), flags[i], 0,
+                  NewSlot(impl_, &Impl::OnZoomMenuCallback,
+                          kZoomMenuItems[i].zoom), priority);
+  }
+
 }
 
 void ViewDecoratorBase::OnChildViewChanged() {

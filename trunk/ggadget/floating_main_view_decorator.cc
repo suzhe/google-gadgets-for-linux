@@ -176,16 +176,8 @@ class FloatingMainViewDecorator::Impl {
     }
   }
 
-  void CollapseExpandMenuCallback(const char *) {
-    owner_->SetMinimized(!owner_->IsMinimized());
-  }
-
   void DockMenuCallback(const char *) {
     on_dock_signal_();
-  }
-
-  void OnZoomMenuCallback(const char *, double zoom) {
-    owner_->SetChildViewScale(zoom == 0 ? 1.0 : zoom);
   }
 
  public:
@@ -302,25 +294,9 @@ void FloatingMainViewDecorator::GetMargins(double *top, double *left,
 }
 
 void FloatingMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
-  static const struct {
-    const char *label;
-    double zoom;
-  } kZoomMenuItems[] = {
-    { "MENU_ITEM_AUTO_FIT", 0 },
-    { "MENU_ITEM_50P", 0.5 },
-    { "MENU_ITEM_75P", 0.75 },
-    { "MENU_ITEM_100P", 1.0 },
-    { "MENU_ITEM_125P", 1.25 },
-    { "MENU_ITEM_150P", 1.50 },
-    { "MENU_ITEM_175P", 1.75 },
-    { "MENU_ITEM_200P", 2.0 },
-  };
-  static const int kNumZoomMenuItems = 8;
-
   int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
-  menu->AddItem(
-      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
-      NewSlot(impl_, &Impl::CollapseExpandMenuCallback), priority);
+
+  AddCollapseExpandMenuItem(menu);
 
   if (impl_->on_dock_signal_.HasActiveConnections()) {
     menu->AddItem(GM_("MENU_ITEM_DOCK_TO_SIDEBAR"), 0, 0,
@@ -328,29 +304,7 @@ void FloatingMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
   }
 
   if (!IsMinimized() && !IsPoppedOut()) {
-    double scale = GetChildViewScale();
-    int flags[kNumZoomMenuItems];
-    bool has_checked = false;
-
-    for (int i = 0; i < kNumZoomMenuItems; ++i) {
-      flags[i] = 0;
-      if (kZoomMenuItems[i].zoom == scale) {
-        flags[i] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
-        has_checked = true;
-      }
-    }
-
-    // Check "Auto Fit" item if the current scale doesn't match with any
-    // other menu items.
-    if (!has_checked)
-      flags[0] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
-
-    MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
-    for (int i = 0; i < kNumZoomMenuItems; ++i) {
-      zoom->AddItem(GM_(kZoomMenuItems[i].label), flags[i], 0,
-                    NewSlot(impl_, &Impl::OnZoomMenuCallback,
-                            kZoomMenuItems[i].zoom), priority);
-    }
+    AddZoomMenuItem(menu);
   }
 
   MainViewDecoratorBase::OnAddDecoratorMenuItems(menu);
