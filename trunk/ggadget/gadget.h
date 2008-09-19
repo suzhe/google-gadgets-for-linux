@@ -323,6 +323,9 @@ class Gadget {
    */
   int GetDefaultFontSize() const;
 
+  /* Check if about dialog can be shown */
+  bool HasAboutDialog() const;
+
  public:
   /**
    * A utility to get the manifest infomation of a gadget without
