@@ -26,6 +26,7 @@ lib_LTLIBRARIES		= libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_xdg@GGL_EPOCH@_la_SOURCES = \
 			  desktop_entry.cc \
+				icon_theme.cc \
 			  utilities.cc
 
 libggadget_xdg@GGL_EPOCH@_la_CPPFLAGS = \
