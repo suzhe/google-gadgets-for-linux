@@ -119,7 +119,7 @@ class QtSystemBrowseForFileHelper {
             str[i] = ')';
             char bak = str[i + 1];
             str[i + 1] = '\0';
-            filters << str;
+            filters << QString::fromUtf8(str);
             str[i + 1] = bak;
             str = &str[i+1];
             i = 0;
@@ -137,7 +137,7 @@ class QtSystemBrowseForFileHelper {
     if (dialog.exec()) {
       QStringList fnames = dialog.selectedFiles();
       for (int i = 0; i < fnames.size(); ++i)
-        result->push_back(fnames.at(i).toStdString());
+        result->push_back(fnames.at(i).toUtf8().data());
       return true;
     }
     return false;
