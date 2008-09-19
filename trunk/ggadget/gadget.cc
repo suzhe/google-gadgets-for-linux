@@ -431,22 +431,24 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // Register properties of plugin.
     plugin_.RegisterProperty("plugin_flags", NULL, // No getter.
-                NewSlot(this, &Impl::SetPluginFlags));
+                             NewSlot(this, &Impl::SetPluginFlags));
     plugin_.RegisterProperty("title", NULL, // No getter.
-                NewSlot(main_view_->view(), &View::SetCaption));
+                             NewSlot(main_view_->view(), &View::SetCaption));
     plugin_.RegisterProperty("window_width",
-                NewSlot(main_view_->view(), &View::GetWidth), NULL);
+                             NewSlot(main_view_->view(), &View::GetWidth),
+                             NULL);
     plugin_.RegisterProperty("window_height",
-                NewSlot(main_view_->view(), &View::GetHeight), NULL);
+                             NewSlot(main_view_->view(), &View::GetHeight),
+                             NULL);
 
     plugin_.RegisterMethod("RemoveMe",
-                NewSlot(this, &Impl::RemoveMe));
+                           NewSlot(this, &Impl::RemoveMe));
     plugin_.RegisterMethod("ShowDetailsView",
-                NewSlot(this, &Impl::ShowDetailsViewProxy));
+                           NewSlot(this, &Impl::ShowDetailsViewProxy));
     plugin_.RegisterMethod("CloseDetailsView",
-                NewSlot(this, &Impl::CloseDetailsView));
+                           NewSlot(this, &Impl::CloseDetailsView));
     plugin_.RegisterMethod("ShowOptionsDialog",
-                NewSlot(this, &Impl::ShowOptionsDialog));
+                           NewSlot(this, &Impl::ShowOptionsDialog));
 
     plugin_.RegisterSignal("onShowOptionsDlg",
                            &onshowoptionsdlg_signal_);
@@ -719,12 +721,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return has_options_xml_ || onshowoptionsdlg_signal_.HasActiveConnections();
   }
 
-  static void OptionsDialogCallback(int flag, ViewBundle *options_view) {
+  static bool OptionsDialogCallback(int flag, ViewBundle *options_view) {
     if (options_view) {
       SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
                         Event::EVENT_OK : Event::EVENT_CANCEL);
-      options_view->view()->OnOtherEvent(event);
+      return options_view->view()->OnOtherEvent(event) != EVENT_RESULT_CANCELED;
     }
+    return true;
   }
 
   bool ShowOptionsDialog() {
@@ -797,14 +800,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool ShowDetailsViewProxy(DetailsViewData *details_view_data,
                             const char *title, int flags,
                             Slot *callback) {
-    Slot1<void, int> *feedback_handler =
-        callback ? new SlotProxy1<void, int>(callback) : NULL;
+    Slot1<bool, int> *feedback_handler =
+        callback ? new SlotProxy1<bool, int>(callback) : NULL;
     return ShowDetailsView(details_view_data, title, flags, feedback_handler);
   }
 
   bool ShowDetailsView(DetailsViewData *details_view_data,
                        const char *title, int flags,
-                       Slot1<void, int> *feedback_handler) {
+                       Slot1<bool, int> *feedback_handler) {
     // Reference details_view_data to prevent it from being destroyed by
     // JavaScript GC.
     if (details_view_data)
@@ -1127,7 +1130,7 @@ bool Gadget::ShowXMLOptionsDialog(int flags, const char *xml_file,
 
 bool Gadget::ShowDetailsView(DetailsViewData *details_view_data,
                              const char *title, int flags,
-                             Slot1<void, int> *feedback_handler) {
+                             Slot1<bool, int> *feedback_handler) {
   return impl_->ShowDetailsView(details_view_data, title, flags,
                                 feedback_handler);
 }

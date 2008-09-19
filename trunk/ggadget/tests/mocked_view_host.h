@@ -155,7 +155,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void SetCursor(int type) { }
   virtual void SetTooltip(const char *tooltip) { }
   virtual bool ShowView(bool modal, int flags,
-                        ggadget::Slot1<void, int> *feedback_handler) {
+                        ggadget::Slot1<bool, int> *feedback_handler) {
     delete feedback_handler;
     return false;
   }

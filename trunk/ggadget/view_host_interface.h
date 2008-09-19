@@ -175,7 +175,7 @@ class ViewHostInterface {
    * @return true if the View is shown correctly. Otherwise returns false.
    */
   virtual bool ShowView(bool modal, int flags,
-                        Slot1<void, int> *feedback_handler) = 0;
+                        Slot1<bool, int> *feedback_handler) = 0;
 
   /**
    * Closes the view if it's opened by calling ShowView().

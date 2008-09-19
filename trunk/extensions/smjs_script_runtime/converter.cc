@@ -617,9 +617,8 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
-  // To be compatible with the Windows version, we don't support returning
-  // native Slots to JavaScript.
-  *js_val = JSVAL_VOID;
+  DLOG("Reading native function in JavaScript");
+  // Just leave the value that SpiderMonkey recorded in SetProperty.
   return JS_TRUE;
 }
 

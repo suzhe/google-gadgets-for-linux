@@ -160,7 +160,7 @@ class ViewDecoratorBase : public View {
    * It delegates to real view host's ShowView() method.
    */
   virtual bool ShowDecoratedView(bool modal, int flags,
-                                 Slot1<void, int> *feedback_handler);
+                                 Slot1<bool, int> *feedback_handler);
   /** Closes this ViewDecorator. */
   virtual void CloseDecoratedView();
 

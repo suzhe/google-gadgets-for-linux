@@ -445,7 +445,7 @@ class View : public ViewInterface {
    *        closed. It has no effect for main view.
    * @return true if the View is shown correctly. Otherwise returns false.
    */
-  bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler);
+  bool ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler);
 
   /** Closes the view if it's opened by calling ShowView(). */
   void CloseView();

@@ -235,7 +235,7 @@ class Gadget {
    */
   bool ShowDetailsView(DetailsViewData *details_view_data,
                        const char *title, int flags,
-                       Slot1<void, int> *feedback_handler);
+                       Slot1<bool, int> *feedback_handler);
 
   /**
    * Close the details view if it is opened.

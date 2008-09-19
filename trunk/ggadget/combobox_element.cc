@@ -273,6 +273,16 @@ void ComboBoxElement::DoClassRegister() {
   RegisterMethod("removeString",
                  NewSlot(&ListBoxElement::RemoveString, Impl::GetListBox));
 
+  // Linux specific, not standard API:
+  RegisterProperty("edit",
+                   NewSlot(static_cast<EditElementBase *(ComboBoxElement::*)()>
+                       (&ComboBoxElement::GetEdit)),
+                   NULL);
+  RegisterProperty("droplist",
+                   NewSlot(static_cast<ListBoxElement *(ComboBoxElement::*)()>
+                       (&ComboBoxElement::GetListBox)),
+                   NULL);
+
   RegisterClassSignal(kOnChangeEvent, &Impl::onchange_event_,
                       &ComboBoxElement::impl_);
   RegisterClassSignal(kOnTextChangeEvent, &Impl::ontextchange_event_,

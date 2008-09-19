@@ -1746,7 +1746,7 @@ void View::SetCursor(int type) {
   }
 }
 
-bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
+bool View::ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler) {
   return impl_->view_host_ ?
          impl_->view_host_->ShowView(modal, flags, feedback_handler) :
          false;

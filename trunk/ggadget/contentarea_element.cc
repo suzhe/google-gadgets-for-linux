@@ -511,7 +511,7 @@ class ContentAreaElement::Impl {
     DetailsViewFeedbackHandler(Impl *impl, ContentItem *item)
       : impl_(impl), item_(item), content_area_(impl->owner_) {
     }
-    void operator()(int flags) const {
+    bool operator()(int flags) const {
       if (content_area_.Get() && item_.Get()) {
         impl_->details_open_item_ = NULL;
         if (flags & ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
@@ -521,6 +521,7 @@ class ContentAreaElement::Impl {
         if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
           impl_->OnItemRemove(item_.Get());
       }
+      return true;
     }
     // Not used.
     bool operator==(const DetailsViewFeedbackHandler &) const {
@@ -611,7 +612,7 @@ class ContentAreaElement::Impl {
                     details_view_data) {
                   owner_->GetView()->GetGadget()->ShowDetailsView(
                       details_view_data, title.c_str(), flags,
-                      NewFunctorSlot<void, int>(DetailsViewFeedbackHandler(
+                      NewFunctorSlot<bool, int>(DetailsViewFeedbackHandler(
                           this, mouse_over_item_)));
                   details_open_item_ = mouse_over_item_;
                 }

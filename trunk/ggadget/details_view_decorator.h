@@ -28,7 +28,7 @@ class DetailsViewDecorator : public FramedViewDecoratorBase {
 
  public:
   virtual bool ShowDecoratedView(bool modal, int flags,
-                                 Slot1<void, int> *feedback_handler);
+                                 Slot1<bool, int> *feedback_handler);
   virtual void CloseDecoratedView();
 
  protected:

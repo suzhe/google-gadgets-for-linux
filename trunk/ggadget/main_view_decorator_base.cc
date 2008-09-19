@@ -599,7 +599,7 @@ void MainViewDecoratorBase::SetCaption(const char *caption) {
 }
 
 bool MainViewDecoratorBase::ShowDecoratedView(
-    bool modal, int flags, Slot1<void, int> *feedback_handler) {
+    bool modal, int flags, Slot1<bool, int> *feedback_handler) {
   // Send minimize or restore event to child view, to make sure it's in correct
   // state, especially for iGoogle gadgets.
   View *child = GetChildView();

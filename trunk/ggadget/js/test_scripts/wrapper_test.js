@@ -169,9 +169,9 @@ TEST("Test signals", function() {
   };
 
   scriptable2.onlunch = onlunch_function;
-  // Feature disabled: ASSERT(EQ(onlunch_function, scriptable2.onlunch));
+  ASSERT(EQ(onlunch_function, scriptable2.onlunch));
   scriptable2.onsupper = onsupper_function;
-  // Feature disabled: ASSERT(EQ(onsupper_function, scriptable2.onsupper));
+  ASSERT(EQ(onsupper_function, scriptable2.onsupper));
 
   // Trigger onlunch.
   scriptable2.time = "lunch";
@@ -183,7 +183,8 @@ TEST("Test signals", function() {
   onsupper_triggered = false;
   // Now we have supper when the others are having lunch.
   supper_is_lunch = true;
-  scriptable2.onlunch = onsupper_function;
+  scriptable2.onlunch = scriptable2.onsupper;
+  ASSERT(TRUE(scriptable2.onlunch));
   ASSERT(EQ(scriptable2.onlunch, scriptable2.onsupper));
   scriptable2.time = "lunch";
   ASSERT(EQ("Supper finished", scriptable2.SignalResult));
