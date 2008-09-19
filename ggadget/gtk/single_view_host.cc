@@ -91,7 +91,8 @@ class SingleViewHost::Impl {
       is_keep_above_(false),
       move_dragging_(false),
       enable_signals_(true),
-      feedback_handler_(NULL) {
+      feedback_handler_(NULL),
+      can_close_dialog_(false) {
     ASSERT(owner);
   }
 
@@ -319,7 +320,7 @@ class SingleViewHost::Impl {
     tooltip_->Show(tooltip);
   }
 
-  bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
+  bool ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler) {
     ASSERT(view_);
     ASSERT(window_);
 
@@ -364,7 +365,10 @@ class SingleViewHost::Impl {
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
-      gtk_dialog_run(GTK_DIALOG(window_));
+      can_close_dialog_ = false;
+      while (!can_close_dialog_)
+        gtk_dialog_run(GTK_DIALOG(window_));
+      CloseView();
     }
     return true;
   }
@@ -715,13 +719,19 @@ class SingleViewHost::Impl {
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->feedback_handler_) {
-      (*impl->feedback_handler_)(response == GTK_RESPONSE_OK ?
-                                 ViewInterface::OPTIONS_VIEW_FLAG_OK :
-                                 ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
-      delete impl->feedback_handler_;
-      impl->feedback_handler_ = NULL;
+      bool result = (*impl->feedback_handler_)(
+          response == GTK_RESPONSE_OK ?
+              ViewInterface::OPTIONS_VIEW_FLAG_OK :
+              ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
+      // 5.8 API allows the onok handler to cancel the default action.
+      if (response != GTK_RESPONSE_OK || result) {
+        delete impl->feedback_handler_;
+        impl->feedback_handler_ = NULL;
+        impl->can_close_dialog_ = true;
+      }
+    } else {
+      impl->can_close_dialog_ = true;
     }
-    impl->CloseView();
   }
 
   static gboolean MotionNotifyHandler(GtkWidget *widget, GdkEventMotion *event,
@@ -914,7 +924,8 @@ class SingleViewHost::Impl {
   bool move_dragging_;
   bool enable_signals_;
 
-  Slot1<void, int> *feedback_handler_;
+  Slot1<bool, int> *feedback_handler_;
+  bool can_close_dialog_; // Only useful when a model dialog is running.
 
   Signal0<void> on_view_changed_signal_;
   Signal1<void, bool> on_show_hide_signal_;
@@ -1010,7 +1021,7 @@ void SingleViewHost::SetTooltip(const char *tooltip) {
 }
 
 bool SingleViewHost::ShowView(bool modal, int flags,
-                              Slot1<void, int> *feedback_handler) {
+                              Slot1<bool, int> *feedback_handler) {
   return impl_->ShowView(modal, flags, feedback_handler);
 }
 

@@ -112,7 +112,7 @@ class SideBar::Impl : public View {
       owner_->view_host_->SetTooltip(tooltip);
     }
     virtual bool ShowView(bool modal, int flags,
-                          Slot1<void, int> *feedback_handler) {
+                          Slot1<bool, int> *feedback_handler) {
       delete feedback_handler;
       if (view_element_->GetChildView()) {
         view_element_->SetVisible(true);

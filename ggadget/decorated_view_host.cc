@@ -162,7 +162,7 @@ void DecoratedViewHost::SetTooltip(const char *tooltip) {
 }
 
 bool DecoratedViewHost::ShowView(bool modal, int flags,
-                              Slot1<void, int> *feedback_handler) {
+                                 Slot1<bool, int> *feedback_handler) {
   if (impl_->auto_load_child_view_size_) {
     impl_->view_decorator_->LoadChildViewSize();
     impl_->child_view_size_loaded_ = true;

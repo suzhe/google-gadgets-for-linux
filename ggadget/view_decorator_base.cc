@@ -510,7 +510,7 @@ void ViewDecoratorBase::SetSize(double width, double height) {
 }
 
 bool ViewDecoratorBase::ShowDecoratedView(bool modal, int flags,
-                                          Slot1<void, int> *feedback_handler) {
+                                          Slot1<bool, int> *feedback_handler) {
   // Derived class shall override this method to do more things.
   return ShowView(modal, flags, feedback_handler);
 }

@@ -77,7 +77,7 @@ class SingleViewHost : public ViewHostInterface {
   virtual void SetCursor(int type);
   virtual void SetTooltip(const char *tooltip);
   virtual bool ShowView(bool modal, int flags,
-                        Slot1<void, int> *feedback_handler);
+                        Slot1<bool, int> *feedback_handler);
   virtual void CloseView();
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);

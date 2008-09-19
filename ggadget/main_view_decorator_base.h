@@ -162,7 +162,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual void SetCaption(const char *caption);
 
   virtual bool ShowDecoratedView(bool modal, int flags,
-                                 Slot1<void, int> *feedback_handler);
+                                 Slot1<bool, int> *feedback_handler);
 
  protected:
   virtual void OnChildViewChanged();

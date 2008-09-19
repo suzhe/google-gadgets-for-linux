@@ -134,6 +134,10 @@ void ScrollingElement::DoRegister() {
 
 void ScrollingElement::DoClassRegister() {
   BasicElement::DoClassRegister();
+  RegisterProperty("scrollbar",
+                   NewSlot(static_cast<ScrollBarElement *(ScrollingElement::*)
+                       ()>(&ScrollingElement::GetScrollBar)),
+                   NULL);
 }
 
 ScrollingElement::~ScrollingElement() {
@@ -317,6 +321,14 @@ double ScrollingElement::GetClientHeight() const {
 
 Connection *ScrollingElement::ConnectOnScrolledEvent(Slot0<void> *slot) {
   return impl_->on_scrolled_event_.Connect(slot);
+}
+
+ScrollBarElement *ScrollingElement::GetScrollBar() {
+  return impl_->scrollbar_;
+}
+
+const ScrollBarElement *ScrollingElement::GetScrollBar() const {
+  return impl_->scrollbar_;
 }
 
 } // namespace ggadget

@@ -117,9 +117,10 @@ var gUpdatingLanguageBox = false;
 function UpdateLanguageBox() {
   gUpdatingLanguageBox = true;
   var default_language = framework.system.languageCode().toLowerCase();
-  gadget.debug.trace("Default language: " + default_language);
-  if (!default_language || !gPlugins[default_language])
+  if (!default_language || !gPlugins[default_language] ||
+      !GetDisplayLanguage(default_language))
     default_language = "en";
+  gadget.debug.trace("Default language: " + default_language);
 
   language_box.removeAllElements();
   var languages = [];

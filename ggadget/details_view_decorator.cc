@@ -67,7 +67,7 @@ class DetailsViewDecorator::Impl {
  public:
   DetailsViewDecorator *owner_;
   int flags_;
-  Slot1<void, int> *feedback_handler_;
+  Slot1<bool, int> *feedback_handler_;
 };
 
 DetailsViewDecorator::DetailsViewDecorator(ViewHostInterface *host)
@@ -82,7 +82,7 @@ DetailsViewDecorator::~DetailsViewDecorator() {
 }
 
 bool DetailsViewDecorator::ShowDecoratedView(
-    bool modal, int flags, Slot1<void, int> *feedback_handler) {
+    bool modal, int flags, Slot1<bool, int> *feedback_handler) {
   delete impl_->feedback_handler_;
   impl_->feedback_handler_ = feedback_handler;
   if (flags & DETAILS_VIEW_FLAG_TOOLBAR_OPEN) {

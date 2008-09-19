@@ -150,7 +150,7 @@ class QtViewHost::Impl {
   }
 
   bool ShowView(bool modal, int flags,
-                Slot1<void, int> *feedback_handler) {
+                Slot1<bool, int> *feedback_handler) {
     ASSERT(view_);
     if (feedback_handler_ && feedback_handler_ != feedback_handler)
       delete feedback_handler_;
@@ -251,6 +251,7 @@ class QtViewHost::Impl {
 
   void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag) {
     if (feedback_handler_) {
+      // TODO(idlecat511): Handle result of feedback_handler_ in case of OK.
       (*feedback_handler_)(flag);
       delete feedback_handler_;
       feedback_handler_ = NULL;
@@ -290,7 +291,7 @@ class QtViewHost::Impl {
   bool record_states_;
   Connection *onoptionchanged_connection_;
 
-  Slot1<void, int> *feedback_handler_;
+  Slot1<bool, int> *feedback_handler_;
 
   bool composite_;
   bool input_shape_mask_;
@@ -412,7 +413,7 @@ void QtViewHost::SetTooltip(const char *tooltip) {
 }
 
 bool QtViewHost::ShowView(bool modal, int flags,
-                          Slot1<void, int> *feedback_handler) {
+                          Slot1<bool, int> *feedback_handler) {
   return impl_->ShowView(modal, flags, feedback_handler);
 }
 
