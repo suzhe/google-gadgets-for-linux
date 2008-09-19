@@ -143,9 +143,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   DEFINE_CLASS_ID(0xa34d00e04d0acfbb, XMLHttpRequestInterface);
 
   XMLHttpRequest(Session *session, MainLoopInterface *main_loop,
-                 XMLParserInterface *xml_parser)
+                 XMLParserInterface *xml_parser,
+                 const QString &default_user_agent)
       : main_loop_(main_loop),
         xml_parser_(xml_parser),
+        default_user_agent_(default_user_agent),
         http_(NULL),
         request_header_(NULL),
         session_(session),
@@ -278,6 +280,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     request_header_ = new QHttpRequestHeader(method_, path.c_str());
     request_header_->setValue("Host", host_.c_str());
+    if (!default_user_agent_.isEmpty())
+      request_header_->setValue("User-Agent", default_user_agent_);
     DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
     return NO_ERR;
   }
@@ -879,6 +883,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
+  QString default_user_agent_;
   QHttp *http_;
   QHttpRequestHeader *request_header_;
   QHttpResponseHeader response_header_;
@@ -949,11 +954,13 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   virtual XMLHttpRequestInterface *CreateXMLHttpRequest(
       int session_id, XMLParserInterface *parser) {
     if (session_id == 0)
-      return new XMLHttpRequest(NULL, GetGlobalMainLoop(), parser);
+      return new XMLHttpRequest(NULL, GetGlobalMainLoop(), parser,
+                                default_user_agent_);
 
     Sessions::iterator it = sessions_.find(session_id);
     if (it != sessions_.end())
-      return new XMLHttpRequest(it->second, GetGlobalMainLoop(), parser);
+      return new XMLHttpRequest(it->second, GetGlobalMainLoop(), parser,
+                                default_user_agent_);
 
     DLOG("XMLHttpRequestFactory::CreateXMLHttpRequest: "
          "Invalid session: %d", session_id);
@@ -961,13 +968,15 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   }
 
   virtual void SetDefaultUserAgent(const char *user_agent) {
-    // FIXME
+    if (user_agent)
+      default_user_agent_ = user_agent;
   }
 
  private:
   typedef std::map<int, Session*> Sessions;
   Sessions sessions_;
   int next_session_id_;
+  QString default_user_agent_;
 };
 } // namespace qt
 } // namespace ggadget
