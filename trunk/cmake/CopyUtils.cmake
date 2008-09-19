@@ -21,7 +21,7 @@ MACRO(COPY_FILE_INTERNAL _source _dest _depends)
   FILE(TO_NATIVE_PATH ${_source} COPY_FILE_INTERNAL_native_source)
   FILE(TO_NATIVE_PATH ${_dest} COPY_FILE_INTERNAL_native_dest)
   ADD_CUSTOM_COMMAND(OUTPUT ${_dest}
-    COMMAND unlink ${COPY_FILE_INTERNAL_native_dest} 
+    COMMAND rm -f ${COPY_FILE_INTERNAL_native_dest} 
     COMMAND cp -Pp
       ${COPY_FILE_INTERNAL_native_source} ${COPY_FILE_INTERNAL_native_dest}
     DEPENDS ${_depends})
