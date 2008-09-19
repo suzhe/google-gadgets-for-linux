@@ -253,6 +253,8 @@ const char *ScriptableEvent::GetName() const {
     // Windows version returns "onchange" for "ontextchange" events,
     // so we do the same. Both "onchange" and "ontextchange" are of
     // EVENT_CHANGE type.
+    case Event::EVENT_STATE_CHANGE: return kOnStateChangeEvent;
+    case Event::EVENT_MEDIA_CHANGE: return kOnMediaChangeEvent;
 
     case Event::EVENT_MOUSE_DOWN: return kOnMouseDownEvent;
     case Event::EVENT_MOUSE_UP: return kOnMouseUpEvent;

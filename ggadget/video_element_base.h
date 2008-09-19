@@ -18,14 +18,12 @@
 #define GGADGET_VIDEO_ELEMENT_BASE_H__
 
 #include <string>
-
 #include <ggadget/basic_element.h>
-#include <ggadget/object_videoplayer.h>
-#include <ggadget/signals.h>
-#include <ggadget/slot.h>
-#include <ggadget/view.h>
 
 namespace ggadget {
+
+template <typename R> class Slot0;
+class View;
 
 /**
  * This class is platform-independent. Real video element should inherit
@@ -36,27 +34,27 @@ class VideoElementBase : public BasicElement {
   DEFINE_CLASS_ID(0x7C5D2E793806427F, BasicElement);
 
   enum State {
-    gddVideoStateUndefined,
-    gddVideoStateReady,
-    gddVideoStatePlaying,
-    gddVideoStatePaused,
-    gddVideoStateStopped,
-    gddVideoStateEnded,
-    gddVideoStateError,
+    STATE_ERROR = -1,
+    STATE_UNDEFINED = 0,
+    STATE_STOPPED = 1,
+    STATE_READY = 2,
+    STATE_PAUSED = 3,
+    STATE_PLAYING = 4,
+    STATE_ENDED = 5
   };
 
   enum ErrorCode {
-    gddVideoErrorNoError,
-    gddVideoErrorUnknown,
-    gddVideoErrorBadSrc,
-    gddVideoErrorFormatNotSupported,
+    ERROR_NO_ERROR = 0,
+    ERROR_UNKNOWN = 1,
+    ERROR_BAD_SRC = 2,
+    ERROR_FORMAT_NOT_SUPPORTED = 3
   };
 
   enum TagType {
-    tagAuthor,
-    tagTitle,
-    tagAlbum,
-    tagDate,
+    TAG_AUTHOR,
+    TAG_TITLE,
+    TAG_ALBUM,
+    TAG_DATE
   };
 
   /** Ranges of balance and volume. */
@@ -71,20 +69,18 @@ class VideoElementBase : public BasicElement {
                    bool children);
   virtual ~VideoElementBase();
 
-  /**
-   *            Standard gadget APIs.
-   */
+  // Standard gadget APIs.
 
   /**
    * Checks whether the control is currently available, Possible controls
-   * includes "play", "pause", "stop", "seek", "volume", with two non-standard
-   * controls "balance" and "mute".
+   * includes "play", "pause", "stop", "seek", "volume", "currentPosition",
+   * "balance" and "mute".
    * Play backend in a state that doesn't allow the control, lacking support
    * because of the play backend or video property, are possible causes that
    * make some controls unavailable.
    * Returns true if the control avaiable.
    */
-  virtual bool IsAvailable(const std::string &name);
+  virtual bool IsAvailable(const std::string &name) const;
 
   /** Starts playing the current media from the current position. */
   virtual void Play() = 0;
@@ -96,69 +92,58 @@ class VideoElementBase : public BasicElement {
   virtual void Stop() = 0;
 
   /**
-   * Gets/sets the autoPlay property.
-   * The property is used to indicate whether to start playing the current
-   * video automatically without calling play function explicitly.
-   */
-  bool GetAutoPlay();
-  void SetAutoPlay(bool autoplay);
-
-  /**
-   * Gets/sets the currentTime property.
-   * The property showes the current position within the video stream, in
+   * Gets/sets the currentPosition property.
+   * The property shows the current position within the video stream, in
    * seconds.
    */
-  virtual double GetCurrentPosition() = 0;
+  virtual double GetCurrentPosition() const = 0;
   virtual void SetCurrentPosition(double position) = 0;
 
   /**
    * Gets the length of the video. If no video data is available,
    * returns 0.
    */
-  virtual double GetDuration() = 0;
+  virtual double GetDuration() const = 0;
 
   /** Gets the error code that most recently reported. */
-  virtual ErrorCode GetErrorCode() = 0;
+  virtual ErrorCode GetErrorCode() const = 0;
 
   /** Gets the play state of the video stream. */
-  virtual State GetState() = 0;
+  virtual State GetState() const = 0;
 
   /** Indicates whether the video is seekable. */
-  virtual bool Seekable() = 0;
+  virtual bool IsSeekable() const = 0;
 
   /**
    * Gets/sets the address of the video resource to playback. The attribute,
    * if present, must contain a valid URL.
    */
-  virtual std::string GetSrc() = 0;
+  virtual std::string GetSrc() const = 0;
   virtual void SetSrc(const std::string &src) = 0;
 
   /** Gets/sets the volume. */
-  virtual int GetVolume() = 0;
+  virtual int GetVolume() const = 0;
   virtual void SetVolume(int volume) = 0;
 
-  /** Sets callbacks. */
-  Connection *ConnectOnStateChangeEvent(Slot0<void> *handler);
+  // Not standard APIs, but needed when hosted by object element.
 
-  /**
-   *    Not standard APIs, but needed when hosted by object element.
-   */
-
-  virtual std::string GetTagInfo(TagType tag) = 0;
-  virtual int GetBalance() = 0;
+  virtual std::string GetTagInfo(TagType tag) const = 0;
+  virtual int GetBalance() const = 0;
   virtual void SetBalance(int balance) = 0;
-  virtual bool GetMute() = 0;
+  virtual bool IsMute() const = 0;
   virtual void SetMute(bool mute) = 0;
 
-  Connection *ConnectOnPositionChangeEvent(Slot0<void> *handler);
+  Connection *ConnectOnStateChangeEvent(Slot0<void> *handler);
   Connection *ConnectOnMediaChangeEvent(Slot0<void> *handler);
+
+  virtual void Layout();
 
  protected:
   /**
    * Register properties, methods, and signals. The real video element
    * doesn't need to do any registation, and should never call this function.
    */
-  virtual void DoRegister();
+  virtual void DoClassRegister();
 
   /**
    * Draw a video frame on the canvas @canvas.
@@ -186,7 +171,7 @@ class VideoElementBase : public BasicElement {
    * @param stride bytes per line for the image buffer (with pads).
    * @see DoDraw.
    * */
-  bool PutImage(const void *data, int x, int y, int w, int h, int stride);
+  bool PutImage(const char *data, int x, int y, int w, int h, int stride);
 
   /**
    * The real video element should call this method to clear the last image
@@ -200,7 +185,6 @@ class VideoElementBase : public BasicElement {
    * events occurs.
    */
   void FireOnStateChangeEvent();
-  void FireOnPositionChangeEvent();
   void FireOnMediaChangeEvent();
 
  private:

@@ -17,11 +17,11 @@
 #ifndef GGADGET_OBJECT_VIDEOPLAYER_H__
 #define GGADGET_OBJECT_VIDEOPLAYER_H__
 
-#include <ggadget/view.h>
-#include <ggadget/signals.h>
 #include <ggadget/basic_element.h>
 
 namespace ggadget {
+
+class View;
 
 /**
  * This class is a wrapper of video element, but provides more functionalities
@@ -44,11 +44,6 @@ class ObjectVideoPlayer : public BasicElement {
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
 
-  /**
-   * We have video element as child element, but cannot expose it to the
-   * outside code. So we must override Layout to delegate layout operation
-   * to the video element.
-   */
   void Layout();
 
  protected:

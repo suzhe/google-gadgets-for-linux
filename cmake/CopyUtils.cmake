@@ -20,13 +20,9 @@ MACRO(COPY_FILE_INTERNAL _source _dest _depends)
     DEPENDS ${_dest})
   FILE(TO_NATIVE_PATH ${_source} COPY_FILE_INTERNAL_native_source)
   FILE(TO_NATIVE_PATH ${_dest} COPY_FILE_INTERNAL_native_dest)
-  IF(WIN32)
-    SET(COPY_FILE_INTERNAL_cp_cmd copy)
-  ELSE(WIN32)
-    SET(COPY_FILE_INTERNAL_cp_cmd cp -PpR)
-  ENDIF(WIN32)
   ADD_CUSTOM_COMMAND(OUTPUT ${_dest}
-    COMMAND ${COPY_FILE_INTERNAL_cp_cmd}
+    COMMAND unlink ${COPY_FILE_INTERNAL_native_dest} 
+    COMMAND cp -Pp
       ${COPY_FILE_INTERNAL_native_source} ${COPY_FILE_INTERNAL_native_dest}
     DEPENDS ${_depends})
 ENDMACRO(COPY_FILE_INTERNAL _source _dest)

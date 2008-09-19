@@ -51,24 +51,24 @@ class GstVideoElement: public VideoElementBase {
   virtual void Pause();
   virtual void Stop();
 
-  virtual double GetCurrentPosition();
+  virtual double GetCurrentPosition() const;
   virtual void SetCurrentPosition(double position);
 
-  virtual double GetDuration();
-  virtual ErrorCode GetErrorCode();
-  virtual State GetState();
-  virtual bool Seekable();
+  virtual double GetDuration() const;
+  virtual ErrorCode GetErrorCode() const;
+  virtual State GetState() const;
+  virtual bool IsSeekable() const;
 
-  virtual std::string GetSrc();
+  virtual std::string GetSrc() const;
   virtual void SetSrc(const std::string &src);
 
-  virtual int GetVolume();
+  virtual int GetVolume() const;
   virtual void SetVolume(int volume);
 
-  virtual std::string GetTagInfo(TagType tag);
-  virtual int GetBalance();
+  virtual std::string GetTagInfo(TagType tag) const;
+  virtual int GetBalance() const;
   virtual void SetBalance(int balance);
-  virtual bool GetMute();
+  virtual bool IsMute() const;
   virtual void SetMute(bool mute);
 
  protected:
@@ -87,6 +87,10 @@ class GstVideoElement: public VideoElementBase {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(GstVideoElement);
 
+  void SetCurrentPositionInternal(double position);
+  void StopInternal(bool fire_state_change);
+  GstStateChangeReturn SetPlayState(GstState state);
+
   std::string src_;  // Media source to play.
 
   bool geometry_initialized_;
@@ -101,8 +105,6 @@ class GstVideoElement: public VideoElementBase {
   GstTagList *tag_list_;
 
   bool media_changed_;
-  bool position_changed_;
-
   State local_state_;
   ErrorCode local_error_;
 };

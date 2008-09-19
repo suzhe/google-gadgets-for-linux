@@ -16,27 +16,24 @@
 
 #include "video_element_base.h"
 
-#include <ggadget/canvas_interface.h>
-#include <ggadget/basic_element.h>
-#include <ggadget/elements.h>
+#include "basic_element.h"
+#include "canvas_interface.h"
+#include "elements.h"
+#include "object_videoplayer.h"
+#include "scriptable_event.h"
+#include "signals.h"
+#include "view.h"
 
 namespace ggadget {
-
-const char kOnStateChangeEvent[] = "onstatechange";
-const char kOnPositionChangeEvent[]  = "onpositionchange";
-const char kOnMediaChangeEvent[]  = "onmediachange";
 
 class VideoElementBase::Impl {
  public:
   Impl()
-      : autoplay_(true), image_data_(NULL),
+      : image_data_(NULL),
         image_x_(0), image_y_(0), image_w_(0), image_h_(0), image_stride_(0) {
   }
   ~Impl() { }
 
-  bool autoplay_;
-
-  // Datas for image.
   const char *image_data_;
   int image_x_;
   int image_y_;
@@ -44,9 +41,7 @@ class VideoElementBase::Impl {
   int image_h_;
   int image_stride_;
 
-  // Signal events
   EventSignal on_state_change_event_;
-  EventSignal on_position_change_event_;
   EventSignal on_media_change_event_;
 };
 
@@ -68,22 +63,18 @@ VideoElementBase::~VideoElementBase() {
   delete impl_;
 }
 
-bool VideoElementBase::IsAvailable(const std::string &name) {
+bool VideoElementBase::IsAvailable(const std::string &name) const {
   State state = GetState();
-  if (name.compare("play") == 0) {
-    if (state == gddVideoStateReady || state == gddVideoStatePaused ||
-        state == gddVideoStateStopped)
-      return true;
-  } else if (name.compare("pause") == 0) {
-    if (state == gddVideoStatePlaying)
-      return true;
-  } else if (name.compare("stop") == 0) {
-    if (state == gddVideoStatePlaying || state == gddVideoStatePaused ||
-        state == gddVideoStateEnded)
-      return true;
-  } else if (name.compare("seek") == 0 || name.compare("currentPosition")) {
-    if (state == gddVideoStatePlaying || state == gddVideoStatePaused)
-      return Seekable();
+  if (name == "play") {
+    return state == STATE_READY || state == STATE_PAUSED ||
+           state == STATE_STOPPED;
+  } else if (name == "pause") {
+    return state == STATE_PLAYING;
+  } else if (name == "stop") {
+    return state == STATE_PLAYING || state == STATE_PAUSED ||
+           state == STATE_ENDED;
+  } else if (name == "seek" || name == "currentPosition") {
+    return (state == STATE_PLAYING || state == STATE_PAUSED) && IsSeekable();
   }
 
   // For "volume", "balance", and "mute", let the real video element to
@@ -91,87 +82,73 @@ bool VideoElementBase::IsAvailable(const std::string &name) {
   return false;
 }
 
-bool VideoElementBase::GetAutoPlay() {
-  return impl_->autoplay_;
-}
-
-void VideoElementBase::SetAutoPlay(bool autoplay) {
-  impl_->autoplay_ = autoplay;
-}
-
 Connection *VideoElementBase::ConnectOnStateChangeEvent(Slot0<void> *handler) {
   return impl_->on_state_change_event_.Connect(handler);
-}
-
-Connection *VideoElementBase::ConnectOnPositionChangeEvent(Slot0<void> *handler) {
-  return impl_->on_position_change_event_.Connect(handler);
 }
 
 Connection *VideoElementBase::ConnectOnMediaChangeEvent(Slot0<void> *handler) {
   return impl_->on_media_change_event_.Connect(handler);
 }
 
-void VideoElementBase::DoRegister() {
-  BasicElement::DoRegister();
+void VideoElementBase::DoClassRegister() {
+  BasicElement::DoClassRegister();
 
-  RegisterProperty("autoPlay",
-                   NewSlot(this, &VideoElementBase::GetAutoPlay),
-                   NewSlot(this, &VideoElementBase::SetAutoPlay));
-  RegisterProperty("currentTime",
-                   NewSlot(this, &VideoElementBase::GetCurrentPosition),
-                   NewSlot(this, &VideoElementBase::SetCurrentPosition));
-  RegisterProperty("duration",
-                   NewSlot(this, &VideoElementBase::GetDuration),
-                   NULL);
-  RegisterProperty("error",
-                   NewSlot(this, &VideoElementBase::GetErrorCode),
-                   NULL);
-  RegisterProperty("state",
-                   NewSlot(this, &VideoElementBase::GetState),
-                   NULL);
-  RegisterProperty("seekable",
-                   NewSlot(this, &VideoElementBase::Seekable),
-                   NULL);
+  RegisterProperty("currentPosition",
+                   NewSlot(&VideoElementBase::GetCurrentPosition),
+                   NewSlot(&VideoElementBase::SetCurrentPosition));
+  RegisterProperty("duration", NewSlot(&VideoElementBase::GetDuration), NULL);
+  RegisterProperty("error", NewSlot(&VideoElementBase::GetErrorCode), NULL);
+  RegisterProperty("state", NewSlot(&VideoElementBase::GetState), NULL);
+  RegisterProperty("seekable", NewSlot(&VideoElementBase::IsSeekable), NULL);
   RegisterProperty("src",
-                   NewSlot(this, &VideoElementBase::GetSrc),
-                   NewSlot(this, &VideoElementBase::SetSrc));
+                   NewSlot(&VideoElementBase::GetSrc),
+                   NewSlot(&VideoElementBase::SetSrc));
   RegisterProperty("volume",
-                   NewSlot(this, &VideoElementBase::GetVolume),
-                   NewSlot(this, &VideoElementBase::SetVolume));
+                   NewSlot(&VideoElementBase::GetVolume),
+                   NewSlot(&VideoElementBase::SetVolume));
   RegisterProperty("balance",
-                   NewSlot(this, &VideoElementBase::GetBalance),
-                   NewSlot(this, &VideoElementBase::SetBalance));
+                   NewSlot(&VideoElementBase::GetBalance),
+                   NewSlot(&VideoElementBase::SetBalance));
   RegisterProperty("mute",
-                   NewSlot(this, &VideoElementBase::GetMute),
-                   NewSlot(this, &VideoElementBase::SetMute));
+                   NewSlot(&VideoElementBase::IsMute),
+                   NewSlot(&VideoElementBase::SetMute));
 
-  RegisterMethod("isAvailable", NewSlot(this, &VideoElementBase::IsAvailable));
-  RegisterMethod("play", NewSlot(this, &VideoElementBase::Play));
-  RegisterMethod("pause", NewSlot(this, &VideoElementBase::Pause));
-  RegisterMethod("stop", NewSlot(this, &VideoElementBase::Stop));
+  RegisterMethod("isAvailable", NewSlot(&VideoElementBase::IsAvailable));
+  RegisterMethod("play", NewSlot(&VideoElementBase::Play));
+  RegisterMethod("pause", NewSlot(&VideoElementBase::Pause));
+  RegisterMethod("stop", NewSlot(&VideoElementBase::Stop));
 
-  RegisterSignal(kOnStateChangeEvent, &impl_->on_state_change_event_);
-  RegisterSignal(kOnPositionChangeEvent, &impl_->on_position_change_event_);
-  RegisterSignal(kOnMediaChangeEvent, &impl_->on_media_change_event_);
+  RegisterClassSignal(kOnStateChangeEvent, &Impl::on_state_change_event_,
+                      &VideoElementBase::impl_);
+  RegisterClassSignal(kOnMediaChangeEvent, &Impl::on_media_change_event_,
+                      &VideoElementBase::impl_);
 }
 
 void VideoElementBase::DoDraw(CanvasInterface *canvas) {
-  if (canvas && impl_->image_data_) {
-    canvas->DrawRawImage(impl_->image_x_,
-                         impl_->image_y_,
-                         impl_->image_data_,
+  if (!impl_->image_data_ ||
+      impl_->image_x_ != 0 || impl_->image_y_ != 0 ||
+      impl_->image_w_ != GetPixelWidth() ||
+      impl_->image_h_ != GetPixelHeight()) {
+    canvas->DrawFilledRect(0, 0, GetPixelWidth(), GetPixelHeight(),
+                           Color::kBlack);
+  }
+  if (impl_->image_data_) {
+    canvas->DrawRawImage(impl_->image_x_, impl_->image_y_, impl_->image_data_,
                          CanvasInterface::RAWIMAGE_FORMAT_RGB24,
                          impl_->image_w_, impl_->image_h_,
                          impl_->image_stride_);
   }
-  if (IsSizeChanged()) {
-    SetGeometry(GetPixelWidth(), GetPixelHeight());
-  }
 }
 
-bool VideoElementBase::PutImage(const void *data,
+void VideoElementBase::Layout() {
+  BasicElement::Layout();
+  if (IsSizeChanged())
+    SetGeometry(GetPixelWidth(), GetPixelHeight());
+}
+
+bool VideoElementBase::PutImage(const char *data,
                                 int x, int y, int w, int h, int stride) {
-  impl_->image_data_ = reinterpret_cast<const char*>(data);
+  impl_->image_data_ = reinterpret_cast<const char *>(data);
   impl_->image_x_ = x;
   impl_->image_y_ = y;
   impl_->image_w_ = w;
@@ -187,15 +164,15 @@ void VideoElementBase::ClearImage() {
 }
 
 void VideoElementBase::FireOnStateChangeEvent() {
-  impl_->on_state_change_event_();
-}
-
-void VideoElementBase::FireOnPositionChangeEvent() {
-  impl_->on_position_change_event_();
+  SimpleEvent event(Event::EVENT_STATE_CHANGE);
+  ScriptableEvent s_event(&event, this, NULL);
+  GetView()->FireEvent(&s_event, impl_->on_state_change_event_);
 }
 
 void VideoElementBase::FireOnMediaChangeEvent() {
-  impl_->on_media_change_event_();
+  SimpleEvent event(Event::EVENT_MEDIA_CHANGE);
+  ScriptableEvent s_event(&event, this, NULL);
+  GetView()->FireEvent(&s_event, impl_->on_media_change_event_);
 }
 
 } // namespace ggadget
