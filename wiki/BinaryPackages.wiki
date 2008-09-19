@@ -25,7 +25,7 @@ Either of above two choices is ok, you can choose one of them.
 
 == Ubuntu ==
 You can find binary package for xUbuntu 8.04 at:
- * http://download.opensuse.org/repositories/home:/suzhe/xUbuntu_8.04/
+ * ~~http://download.opensuse.org/repositories/home:/suzhe/xUbuntu_8.04/~~ (It's broken right now)
  * http://www.getdeb.net/app/Google+Gadgets
 
 == Debian sid ==
