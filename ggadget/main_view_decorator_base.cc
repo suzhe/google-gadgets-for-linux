@@ -300,6 +300,9 @@ class  MainViewDecoratorBase::Impl {
       }
     }
   }
+  void CollapseExpandMenuCallback(const char *) {
+    owner_->SetMinimized(!owner_->IsMinimized());
+  }
 
   void OptionsMenuCallback(const char *) {
     Gadget *gadget = owner_->GetGadget();
@@ -713,6 +716,13 @@ bool MainViewDecoratorBase::OnClientSizing(double *width, double *height) {
   if (impl_->minimized_)
     *height = kVDMainMinimizedHeight;
   return true;
+}
+
+void MainViewDecoratorBase::AddCollapseExpandMenuItem(MenuInterface *menu) const {
+  menu->AddItem(
+      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
+      NewSlot(impl_, &Impl::CollapseExpandMenuCallback),
+      MenuInterface::MENU_ITEM_PRI_DECORATOR);
 }
 
 void MainViewDecoratorBase::OnAddDecoratorMenuItems(MenuInterface *menu) {

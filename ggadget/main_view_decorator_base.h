@@ -171,6 +171,9 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual void GetClientExtents(double *width, double *height) const;
   virtual bool OnClientSizing(double *width, double *height);
 
+  /* Add Collapse/Expand menu item to menu */
+  void AddCollapseExpandMenuItem(MenuInterface *menu) const;
+
  protected:
   /**
    * This method will be called when displaying context menu.

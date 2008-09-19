@@ -187,6 +187,9 @@ class ViewDecoratorBase : public View {
   /** Gets resizable mode of current child view. */
   ResizableMode GetChildViewResizable() const;
 
+  /* Add zoom menu item to context menu */
+  void AddZoomMenuItem(MenuInterface *menu) const;
+
  protected:
   /**
    * This method will be called if child view is changed.
