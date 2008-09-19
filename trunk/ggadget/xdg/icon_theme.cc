@@ -15,6 +15,7 @@
 */
 #include <sys/time.h>
 #include <time.h>
+#include <cstdlib>
 
 #include <map>
 #include <vector>
