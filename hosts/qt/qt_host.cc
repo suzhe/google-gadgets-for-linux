@@ -367,9 +367,15 @@ class QtHost::Impl {
 
   ViewHostInterface *NewViewHost(Gadget *gadget,
                                  ViewHostInterface::Type type) {
+    QWidget *parent = NULL;
+    bool record_states = true;
+    if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
+      parent = static_cast<QWidget*>(gadget->GetMainView()->GetNativeWidget());
+      record_states = false;
+    }
     QtViewHost *qvh = new QtViewHost(
-        type, 1.0, composite_, false, true,
-        static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+        type, 1.0, composite_, false, record_states,
+        view_debug_mode_, parent);
     QObject::connect(obj_, SIGNAL(show(bool)),
                      qvh->GetQObject(), SLOT(OnShow(bool)));
 
@@ -466,8 +472,9 @@ class QtHost::Impl {
     if (child) {
       expanded_original_ = decorated;
       QtViewHost *qvh = new QtViewHost(
-          ViewHostInterface::VIEW_HOST_MAIN, 1.0, composite_, false, false,
-          view_debug_mode_);
+          ViewHostInterface::VIEW_HOST_MAIN, 1.0,
+          composite_, false, false, view_debug_mode_,
+          static_cast<QWidget*>(decorated->GetNativeWidget()));
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       PopOutMainViewDecorator *view_decorator =
           new PopOutMainViewDecorator(qvh);
@@ -489,6 +496,9 @@ class QtHost::Impl {
       ViewInterface *child = expanded_popout_->GetView();
       ASSERT(child);
       if (child) {
+        // Close details view
+        child->GetGadget()->CloseDetailsView();
+
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
         expanded_original_->GetViewDecorator()->OnOtherEvent(event);

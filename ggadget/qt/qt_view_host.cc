@@ -27,6 +27,7 @@
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
+#include <ggadget/view.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
@@ -48,7 +49,8 @@ class QtViewHost::Impl {
        bool composite,
        bool decorated,
        bool record_states,
-       int debug_mode)
+       int debug_mode,
+       QWidget *parent)
     : view_(NULL),
       type_(type),
       widget_(NULL),
@@ -63,6 +65,7 @@ class QtViewHost::Impl {
       composite_(composite),
       input_shape_mask_(true),
       keep_above_(false),
+      parent_widget_(parent),
       qt_obj_(new QtViewHostObject(this)) {
     if (type != ViewHostInterface::VIEW_HOST_MAIN) {
       composite_ = false;
@@ -108,7 +111,7 @@ class QtViewHost::Impl {
   }
 
   void SaveWindowStates() {
-    if (view_ && view_->GetGadget() && type_ != VIEW_HOST_OPTIONS && window_) {
+    if (view_ && view_->GetGadget() && record_states_ && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       DLOG("Save:%d, %d", window_->pos().x(), window_->pos().y());
@@ -121,32 +124,36 @@ class QtViewHost::Impl {
     }
   }
 
+  void DefaultPosition() {
+    if (!parent_widget_) return;
+    int w = view_->GetWidth();
+    int h = view_->GetHeight();
+    QPoint p = GetPopupPosition(parent_widget_->geometry(), QSize(w, h));
+    window_->move(p);
+  }
+
   void LoadWindowStates() {
-    if (view_ && view_->GetGadget() && type_ != VIEW_HOST_OPTIONS && window_) {
+    if (view_ && view_->GetGadget() && record_states_ && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
+      // restore KeepAbove state
+      Variant keep_above =
+          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
+      if (keep_above.type() == Variant::TYPE_BOOL &&
+          VariantValue<bool>()(keep_above)) {
+        KeepAboveMenuCallback(NULL, true);
+      }
+      // restore position
       Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
       Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
       int x, y;
       if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
         DLOG("Restore:%d, %d", x, y);
         window_->move(x, y);
-      } else {
-        // Always place details window to the center of the screen if the window
-        // position was not saved before.
-        if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
-          widget_->Center();
-        }
-      }
-      Variant keep_above =
-          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
-      if (keep_above.type() == Variant::TYPE_BOOL &&
-          VariantValue<bool>()(keep_above)) {
-        KeepAboveMenuCallback(NULL, true);
-      } else {
-        KeepAboveMenuCallback(NULL, false);
+        return;
       }
     }
+    DefaultPosition();
   }
 
   bool ShowView(bool modal, int flags,
@@ -206,7 +213,7 @@ class QtViewHost::Impl {
       SetGadgetWindowIcon(window_, view_->GetGadget());
       window_->setWindowTitle(caption_);
 
-      if (record_states_) LoadWindowStates();
+      LoadWindowStates();
       window_->setAttribute(Qt::WA_DeleteOnClose, true);
 
       if (type_ == ViewHostInterface::VIEW_HOST_MAIN) {
@@ -296,6 +303,7 @@ class QtViewHost::Impl {
   bool composite_;
   bool input_shape_mask_;
   bool keep_above_;
+  QWidget *parent_widget_;
   QtViewHostObject *qt_obj_;    // used for handling qt signal
   QString caption_;
   QMenu context_menu_;
@@ -322,8 +330,8 @@ void QtViewHostObject::OnShow(bool flag) {
 
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
                        double zoom, bool composite, bool decorated,
-                       bool record_states, int debug_mode)
-  : impl_(new Impl(type, zoom, composite, decorated, record_states, debug_mode)) {
+                       bool record_states, int debug_mode, QWidget *parent)
+  : impl_(new Impl(type, zoom, composite, decorated, record_states, debug_mode, parent)) {
 }
 
 QtViewHost::~QtViewHost() {

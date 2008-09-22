@@ -32,9 +32,13 @@ namespace qt {
 class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
+  /**
+   * @param parent If not null, this view host will be shown at the popup
+   *               position of parent
+   */
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool composite, bool decorated,
-             bool record_states, int debug_mode);
+             bool record_states, int debug_mode, QWidget* parent);
   virtual ~QtViewHost();
 
   virtual Type GetType() const;

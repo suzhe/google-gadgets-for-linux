@@ -52,6 +52,14 @@ bool CheckRequiredExtensions(std::string *error_message);
  */
 void InitXHRUserAgent(const char *app_name);
 
+/**
+ * Get popup position to show a (w1, h1) rectangle for an existing (x,
+ * y, w, h) rectangle on a scene of sw width and sh height.
+ */
+void GetPopupPosition(int x, int y, int w, int h,
+                      int w1, int h1, int sw, int sh,
+                      int *x1, int *y1);
+
 } // namespace ggadget
 
 #endif // GGADGET_HOST_UTILS_H__

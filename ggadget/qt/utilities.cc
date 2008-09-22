@@ -21,12 +21,14 @@
 #include <string>
 #include <QtGui/QMessageBox>
 #include <QtGui/QPixmap>
+#include <QtGui/QDesktopWidget>
 
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/view_interface.h>
@@ -387,6 +389,18 @@ QPixmap GetGadgetIcon(const Gadget *gadget) {
 void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget) {
   widget->setWindowIcon(GetGadgetIcon(gadget));
 }
+
+QPoint GetPopupPosition(const QRect &rect, const QSize &size) {
+  int x, y;
+  QDesktopWidget desktop;
+  QRect r = desktop.screenGeometry();
+  ggadget::GetPopupPosition(rect.x(), rect.y(), rect.width(), rect.height(),
+                            size.width(), size.height(),
+                            r.width(), r.height(),
+                            &x, &y);
+  return QPoint(x, y);
+}
+
 
 } // namespace qt
 } // namespace ggadget
