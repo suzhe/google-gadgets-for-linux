@@ -19,6 +19,7 @@ SUBDIRS = dbus_script_class \
 	  qt_edit_element \
 	  qt_xml_http_request \
 	  gtkmoz_browser_element \
+	  gtk_flash_element \
 	  qtwebkit_browser_element \
 	  default_framework \
 	  gst_audio_framework \

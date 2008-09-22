@@ -119,12 +119,14 @@ build_gtk_host=yes
 build_qt_host=yes
 build_libggadget_dbus=yes
 build_libggadget_gtk=yes
+build_libggadget_npapi_container=yes
 build_libggadget_qt=yes
 build_gtkmoz_browser_element=yes
 build_qtwebkit_browser_element=yes
 build_gst_audio_framework=yes
 build_gst_video_element=yes
 build_qt_system_framework=yes
+build_gtk_flash_element=yes
 build_gtk_system_framework=yes
 build_qt_script_runtime=yes
 build_smjs_script_runtime=yes
@@ -163,6 +165,14 @@ AC_ARG_WITH([gst-audio-sink],
 	    [default_gst_audio_sink=$withval],
 	    [default_gst_audio_sink="autoaudiosink"])
 
+AC_ARG_WITH([browser-plugins-dir],
+	    AS_HELP_STRING([--with-browser-plugins-dir=plugins directory],
+		[Specifiy directory of browser plugins. But when the program is
+		 running, the environment variable BROWSER_PLUGINS_DIR has
+		 higher priority if it's set. ]),
+	    [default_browser_plugins_dir=$withval],
+	    [default_browser_plugins_dir=""])
+
 AC_ARG_ENABLE([gtk-host],
 	      AS_HELP_STRING([--disable-gtk-host],
 			     [don't build gtk host]),
@@ -187,6 +197,12 @@ AC_ARG_ENABLE([libggadget-gtk],
 	      [build_libggadget_gtk=$enableval],
 	      [build_libggadget_gtk=yes])
 
+AC_ARG_ENABLE([libggadget-npapi-container],
+	      AS_HELP_STRING([--disable-libggadget-npapi-container],
+			     [don't build libggadget-npapi-container]),
+	      [build_libggadget_npapi_container=$enableval],
+	      [build_libggadget_npapi_container=yes])
+
 AC_ARG_ENABLE([libggadget-qt],
 	      AS_HELP_STRING([--disable-libggadget-qt],
 			     [don't build libggadget-qt]),
@@ -210,6 +226,12 @@ AC_ARG_ENABLE([gst-video-element],
 			     [don't build gst-video-element]),
 	      [build_gst_video_element=$enableval],
 	      [build_gst_video_element=yes])
+
+AC_ARG_ENABLE([gtk-flash-element],
+	      AS_HELP_STRING([--disable-gtk-flash-element],
+			     [don't build gtk-flash-element]),
+	      [build_gtk_flash_element=$enableval],
+	      [build_gtk_flash_element=yes])
 
 AC_ARG_ENABLE([qt-system-framework],
 	      AS_HELP_STRING([--disable-qt-system-framework],
@@ -482,6 +504,9 @@ if test "x$no_x" != "xyes"; then
   AC_SUBST(X_CFLAGS)
   AC_SUBST(X_LIBS)
   AC_SUBST(X_PRE_LIBS)
+else
+  build_libggadget_npapi_container=no
+  build_gtk_flash_element=no
 fi
 
 # Check qt4
@@ -687,6 +712,7 @@ else
       AC_MSG_ERROR([--with-gtkmozembed, invalid value])
   esac
 fi
+AM_CONDITIONAL(ENABLE_UPDATE_MIME_DATABASE, test x$enable_update_mime_database = xyes)
 
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
@@ -758,6 +784,7 @@ if test x$has_gtk2 != xyes; then
   build_gtk_host=no
   build_gtk_system_framework=no
   build_libggadget_gtk=no
+  build_gtk_flash_element=no
 else
   gtk2_target=`$PKG_CONFIG --variable=target gtk+-2.0`
   AM_CONDITIONAL([GTK2_TARGET_X11], [test x$gtk2_target = xx11])
@@ -846,12 +873,12 @@ AM_CONDITIONAL(
   [test x$build_libggadget_dbus = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
-  [test x$build_gtkmoz_browser_element = xyes])
+  [GGL_BUILD_LIBGGADGET_NPAPI_CONTAINER],
+  [test x$build_libggadget_npapi_container = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT],
-  [test x$build_qtwebkit_browser_element = xyes])
+  [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
+  [test x$build_gtkmoz_browser_element = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_GST_AUDIO_FRAMEWORK],
@@ -862,8 +889,16 @@ AM_CONDITIONAL(
   [test x$build_gst_video_element = xyes])
 
 AM_CONDITIONAL(
+  [GGL_BUILD_GTK_FLASH_ELEMENT],
+  [test x$build_gtk_flash_element = xyes])
+
+AM_CONDITIONAL(
   [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
   [test x$build_gtk_system_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT],
+  [test x$build_qtwebkit_browser_element = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_QT_SYSTEM_FRAMEWORK],
@@ -894,6 +929,7 @@ AM_CONDITIONAL(
   [test x$build_gtk_host = xyes])
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
+AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
 
 if test x$ZIP = x; then
@@ -930,6 +966,13 @@ fi
 if test x$default_gst_audio_sink != x; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS \
                      -DGGL_DEFAULT_GST_AUDIO_SINK=\\\"$default_gst_audio_sink\\\""
+fi
+
+#Browser plugins directory
+if test x$default_browser_plugins_dir != x; then
+  AC_DEFINE_UNQUOTED([GGL_DEFAULT_BROWSER_PLUGINS_DIR],
+		     ["$default_browser_plugins_dir"],
+		     [Default browser plugins directory.])
 fi
 
 #pthread lib
@@ -978,6 +1021,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/libxml2_xml_parser/Makefile
 		 extensions/linux_system_framework/Makefile
 		 extensions/linux_system_framework/tests/Makefile
+		 extensions/gtk_flash_element/Makefile
 		 extensions/qt_edit_element/Makefile
 		 extensions/qt_script_runtime/Makefile
 		 extensions/qt_script_runtime/tests/Makefile
@@ -1002,6 +1046,9 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/dbus/Makefile
 		 ggadget/dbus/tests/Makefile
 		 ggadget/dbus/libggadget-dbus-1.0.pc
+		 ggadget/npapi/Makefile
+		 ggadget/npapi/tests/Makefile
+		 ggadget/npapi/libggadget-npapi-container-1.0.pc
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 ggadget/gtk/libggadget-gtk-1.0.pc
@@ -1030,40 +1077,42 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 Build options:
-  Version                       $GGL_VERSION
-  Install prefix                $prefix
-  Install included libltdl      $enable_ltdl_install
-  Build shared libs             $enable_shared
-  Build static libs             $enable_static
-  Enable debug                  $enable_debug
-  Host type                     $ggl_host_type
+  Version                            $GGL_VERSION
+  Install prefix                     $prefix
+  Install included libltdl           $enable_ltdl_install
+  Build shared libs                  $enable_shared
+  Build static libs                  $enable_static
+  Enable debug                       $enable_debug
+  Host type                          $ggl_host_type
   OEM brand                     $ggl_oem_brand
 
  Libraries:
-  GTK SVG Support               $has_librsvg
-  Build libggadget-gtk          $build_libggadget_gtk
-  Build libggadget-qt           $build_libggadget_qt
-  Build libggadget-dbus         $build_libggadget_dbus
+  GTK SVG Support                    $has_librsvg
+  Build libggadget-gtk               $build_libggadget_gtk
+  Build libggadget-qt                $build_libggadget_qt
+  Build libggadget-dbus              $build_libggadget_dbus
+  Build libggadget-npapi-container   $build_libggadget_npapi_container
 
  Extensions:
-  Build dbus-script-class       $build_libggadget_dbus
-  Build gtk-edit-element        $build_libggadget_gtk
-  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
-  Build qtwebkit-browser        $build_qtwebkit_browser_element
-  Build gst-audio-framework     $build_gst_audio_framework
-  Build gst-video-element       $build_gst_video_element
-  Build gtk-system-framework    $build_gtk_system_framework
-  Build qt-system-framework     $build_qt_system_framework
-  Build linux-system-framework  $build_linux_system_framework
-  Build smjs-script-runtime     $build_smjs_script_runtime
-  Build qt-script-runtime       $build_qt_script_runtime
-  Build curl-xml-http-request   $build_curl_xml_http_request
-  Build qt-xml-http-request     $build_qt_xml_http_request
-  Build libxml2-xml-parser      $build_libxml2_xml_parser
+  Build dbus-script-class            $build_libggadget_dbus
+  Build gtk-edit-element             $build_libggadget_gtk
+  Build gtkmoz-browser-element       $build_gtkmoz_browser_element
+  Build qtwebkit-browser             $build_qtwebkit_browser_element
+  Build gst-audio-framework          $build_gst_audio_framework
+  Build gst-video-element            $build_gst_video_element
+  Build gtk-system-framework         $build_gtk_system_framework
+  Build gtk-flash-element            $build_gtk_flash_element
+  Build qt-system-framework          $build_qt_system_framework
+  Build linux-system-framework       $build_linux_system_framework
+  Build smjs-script-runtime          $build_smjs_script_runtime
+  Build qt-script-runtime            $build_qt_script_runtime
+  Build curl-xml-http-request        $build_curl_xml_http_request
+  Build qt-xml-http-request          $build_qt_xml_http_request
+  Build libxml2-xml-parser           $build_libxml2_xml_parser
 
  Hosts:
-  Build gtk host                $build_gtk_host
-  Build qt host                 $build_qt_host
+  Build gtk host                     $build_gtk_host
+  Build qt host                      $build_qt_host
 ])
 
 if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then

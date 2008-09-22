@@ -196,7 +196,7 @@ class ViewWidgetBinder::Impl {
 
     if (button != MouseEvent::BUTTON_NONE && type != Event::EVENT_INVALID) {
       MouseEvent e(type, event->x / impl->zoom_, event->y / impl->zoom_,
-                   0, 0, button, mod);
+                   0, 0, button, mod, event);
 
       result = impl->view_->OnMouseEvent(e);
 
@@ -243,7 +243,7 @@ class ViewWidgetBinder::Impl {
     if (button != MouseEvent::BUTTON_NONE) {
       MouseEvent e(Event::EVENT_MOUSE_UP,
                    event->x / impl->zoom_, event->y / impl->zoom_,
-                   0, 0, button, mod);
+                   0, 0, button, mod, event);
       result = impl->view_->OnMouseEvent(e);
 
       if (!impl->dbl_click_) {
@@ -270,6 +270,7 @@ class ViewWidgetBinder::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
+    LOG("View_widget_Binder: Key Pressed");
 
     impl->host_->SetTooltip(NULL);
 

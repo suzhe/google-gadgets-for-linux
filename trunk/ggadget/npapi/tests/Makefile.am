@@ -12,7 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-EXTRA_DIST=valgrind npapi
-SUBDIRS = codesighs editline unzip xdgmime
+INCLUDES		= -I$(top_builddir) \
+			  -I$(top_srcdir)
+
+AM_CPPFLAGS 		= $(PREDEFINED_MACROS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
+
+LDADD			= $(top_builddir)/unittest/libgtest.la \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/npapi/libggadget-npapi-container@GGL_EPOCH@.la
+
+check_PROGRAMS		= npapi_plugin_script_test
+
+npapi_plugin_script_test_SOURCES = npapi_plugin_script_test.cc
+
+TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
+TESTS 			= $(check_PROGRAMS)

@@ -59,6 +59,7 @@ static const char *kGlobalExtensions[] = {
   "dbus-script-class",
   "gtk-edit-element",
   "gtkmoz-browser-element",
+  "gtk-flash-element",
   "gst-video-element",
   "gtk-system-framework",
   "gst-audio-framework",

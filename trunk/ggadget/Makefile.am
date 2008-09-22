@@ -27,6 +27,10 @@ if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
 endif
 
+if GGL_BUILD_LIBGGADGET_NPAPI_CONTAINER
+SUBDIRS += npapi
+endif
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
@@ -109,6 +113,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_event.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
+			  scriptable_function.h \
 			  scriptable_helper.h \
 			  scriptable_holder.h \
 			  scriptable_image.h \
@@ -129,6 +134,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
+			  video_element_base.h \
 			  variant.h \
 			  video_element_base.h \
 			  view.h \
@@ -206,6 +212,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_event.cc \
 			  scriptable_file_system.cc \
 			  scriptable_framework.cc \
+			  scriptable_function.cc \
 			  scriptable_helper.cc \
 			  scriptable_image.cc \
 			  scriptable_menu.cc \
