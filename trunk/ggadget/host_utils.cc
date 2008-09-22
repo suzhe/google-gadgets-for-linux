@@ -164,4 +164,37 @@ void InitXHRUserAgent(const char *app_name) {
   xhr_factory->SetDefaultUserAgent(user_agent.c_str());
 }
 
+static int BestPosition(int total, int pos, int size) {
+  if (pos + size < total)
+    return pos;
+  else if (size > total)
+    return 0;
+  else
+    return total - size;
+}
+
+void GetPopupPosition(int x, int y, int w, int h,
+                      int w1, int h1, int sw, int sh,
+                      int *x1, int *y1) {
+  int left_gap = x - w1;
+  int right_gap = sw - (x + w + w1);
+  int top_gap = y - h1;
+  int bottom_gap = sh - (y + h + h1);
+
+  // We prefer to popup to right
+  if (right_gap >= 0) {
+    *x1 = x + w;
+    *y1 = BestPosition(sh, y, h1);
+  } else if (left_gap > top_gap && left_gap > bottom_gap) {
+    *x1 = x - w1;
+    *y1 = BestPosition(sh, y, h1);
+  } else if (top_gap > bottom_gap) {
+    *y1 = y - h1;
+    *x1 = BestPosition(sw, x, w1);
+  } else {
+    *y1 = y + h;
+    *x1 = BestPosition(sw, x, w1);
+  }
+}
+
 } // namespace ggadget

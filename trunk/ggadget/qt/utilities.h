@@ -47,6 +47,11 @@ bool OpenURL(const Gadget *gadget, const char *url);
 QPixmap GetGadgetIcon(const Gadget *gadget);
 
 void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
+
+/* Get the proper popup position to show a rectangle of @param size for an existing
+ * rectangle with geometry @param rect
+ */
+QPoint GetPopupPosition(const QRect &rect, const QSize &size);
 } // namespace qt
 } // namespace ggadget
 
