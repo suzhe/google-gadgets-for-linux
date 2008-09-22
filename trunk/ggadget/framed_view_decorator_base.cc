@@ -53,13 +53,13 @@ class FramedViewDecoratorBase::Impl {
   };
 
   enum ResizeBorderId {
-    RESIZE_TOP = 0,
-    RESIZE_LEFT,
-    RESIZE_BOTTOM,
+    RESIZE_LEFT = 0,
+    RESIZE_TOP,
     RESIZE_RIGHT,
+    RESIZE_BOTTOM,
     RESIZE_TOP_LEFT,
-    RESIZE_TOP_RIGHT,
     RESIZE_BOTTOM_LEFT,
+    RESIZE_TOP_RIGHT,
     RESIZE_BOTTOM_RIGHT,
     NUMBER_OF_RESIZE_BORDERS
   };
@@ -68,20 +68,33 @@ class FramedViewDecoratorBase::Impl {
  public:
   Impl(FramedViewDecoratorBase *owner)
     : owner_(owner),
-      top_(new ImgElement(NULL, owner, NULL)),
-      background_(new ImgElement(NULL, owner, NULL)),
-      bottom_(new ImgElement(NULL, owner, NULL)),
-      resize_border_(new DivElement(NULL, owner, NULL)),
-      caption_(new LabelElement(NULL, owner, NULL)),
-      close_button_(new ButtonElement(NULL, owner, NULL)),
-      action_div_(new DivElement(NULL, owner, NULL)) {
+      frame_(new DivElement(NULL, owner, NULL)),
+      top_(new ImgElement(frame_, owner, NULL)),
+      background_(new ImgElement(frame_, owner, NULL)),
+      bottom_(new ImgElement(frame_, owner, NULL)),
+      caption_(new LabelElement(frame_, owner, NULL)),
+      close_button_(new ButtonElement(frame_, owner, NULL)),
+      action_div_(new DivElement(frame_, owner, NULL)),
+      resize_border_(new DivElement(NULL, owner, NULL)) {
+    frame_->GetChildren()->InsertElement(top_, NULL);
+    frame_->GetChildren()->InsertElement(background_, NULL);
+    frame_->GetChildren()->InsertElement(bottom_, NULL);
+    frame_->GetChildren()->InsertElement(caption_, NULL);
+    frame_->GetChildren()->InsertElement(close_button_, NULL);
+    frame_->GetChildren()->InsertElement(action_div_, NULL);
+    frame_->SetPixelX(0);
+    frame_->SetPixelY(0);
+    frame_->SetRelativeWidth(1);
+    frame_->SetRelativeHeight(1);
+    frame_->SetVisible(true);
+    owner->InsertDecoratorElement(frame_, true);
+
     top_->SetSrc(Variant(kVDFramedTop));
     top_->SetStretchMiddle(true);
     top_->SetPixelX(0);
     top_->SetPixelY(0);
     top_->SetRelativeWidth(1);
     top_->SetVisible(true);
-    owner->InsertDecoratorElement(top_, true);
 
     background_->SetSrc(Variant(kVDFramedBackground));
     background_->SetStretchMiddle(true);
@@ -89,7 +102,6 @@ class FramedViewDecoratorBase::Impl {
     background_->SetPixelY(top_->GetSrcHeight());
     background_->SetRelativeWidth(1);
     background_->EnableCanvasCache(true);
-    owner->InsertDecoratorElement(background_, true);
 
     bottom_->SetSrc(Variant(kVDFramedBottom));
     bottom_->SetStretchMiddle(true);
@@ -98,7 +110,6 @@ class FramedViewDecoratorBase::Impl {
     bottom_->SetRelativePinY(1);
     bottom_->SetRelativeWidth(1);
     bottom_->SetVisible(false);
-    owner_->InsertDecoratorElement(bottom_, true);
 
     // Setup resize borders.
     for (size_t i = 0; i < NUMBER_OF_RESIZE_BORDERS; ++i) {
@@ -126,8 +137,8 @@ class FramedViewDecoratorBase::Impl {
     resize_border_->SetRelativeWidth(1);
     resize_border_->SetRelativeHeight(1);
     resize_border_->SetVisible(true);
-    resize_border_->SetEnabled(true);
-    owner->InsertDecoratorElement(resize_border_, true);
+    resize_border_->SetEnabled(false);
+    owner->InsertDecoratorElement(resize_border_, false);
 
     caption_->GetTextFrame()->SetColor(Color::kBlack, 1);
     caption_->GetTextFrame()->SetWordWrap(false);
@@ -138,7 +149,6 @@ class FramedViewDecoratorBase::Impl {
     caption_->ConnectOnClickEvent(
         NewSlot(owner, &FramedViewDecoratorBase::OnCaptionClicked));
     caption_->SetEnabled(false);
-    owner->InsertDecoratorElement(caption_, true);
 
     close_button_->SetPixelY(kVDFramedBorderWidth);
     close_button_->SetImage(Variant(kVDFramedCloseNormal));
@@ -146,13 +156,11 @@ class FramedViewDecoratorBase::Impl {
     close_button_->SetDownImage(Variant(kVDFramedCloseDown));
     close_button_->ConnectOnClickEvent(
         NewSlot(owner, &FramedViewDecoratorBase::OnCloseButtonClicked));
-    owner->InsertDecoratorElement(close_button_, true);
     close_button_->Layout();
 
     action_div_->SetVisible(false);
     action_div_->SetRelativePinX(1);
     action_div_->SetRelativePinY(1);
-    owner->InsertDecoratorElement(action_div_, true);
   }
 
   void SetShowActionArea(bool show) {
@@ -187,83 +195,121 @@ class FramedViewDecoratorBase::Impl {
     action_div_->SetPixelHeight(height);
   }
 
-  void DoLayout() {
-    double width = owner_->GetWidth();
-    double height = owner_->GetHeight();
-    double caption_width, caption_height;
-    double top_height;
-
-    close_button_->SetPixelX(width - kVDFramedBorderWidth -
-                             close_button_->GetPixelWidth());
-    caption_width = close_button_->GetPixelX() - caption_->GetPixelX() -
-        kVDFramedCaptionMargin;
-    caption_->SetPixelWidth(caption_width);
-    caption_->GetTextFrame()->GetExtents(caption_width, &caption_width,
-                                         &caption_height);
-    top_height = top_->GetSrcHeight();
-
-    // Only allow displaying two lines of caption.
-    if (caption_height > top_height - kVDFramedBorderWidth-
-        kVDFramedCaptionMargin * 2) {
-      double simple_caption_height;
-      caption_->GetTextFrame()->GetSimpleExtents(&caption_width,
-                                                 &simple_caption_height);
-      caption_height = std::min(simple_caption_height * 2, caption_height);
-      top_height = caption_height + kVDFramedBorderWidth +
-          kVDFramedCaptionMargin * 2 + 1;
-    }
-
-    caption_->SetPixelHeight(caption_height);
-    top_->SetPixelHeight(top_height);
-
-    background_->SetPixelY(top_height);
-    if (bottom_->IsVisible()) {
-      bottom_->SetPixelHeight(action_div_->GetPixelHeight() +
-                              kVDFramedBorderWidth + kVDFramedActionMargin * 2);
-      background_->SetPixelHeight(height - top_height -
-                                  bottom_->GetPixelHeight());
-    } else {
-      background_->SetPixelHeight(height - top_height);
-    }
-
-    if (action_div_->IsVisible()) {
-      action_div_->SetPixelX(width - kVDFramedBorderWidth -
-                             kVDFramedActionMargin);
-      action_div_->SetPixelY(height - kVDFramedBorderWidth -
-                             kVDFramedActionMargin);
-    }
-
+  void LayoutResizeBorder() {
     resize_border_->SetVisible(
         owner_->GetChildViewResizable() == ViewInterface::RESIZABLE_TRUE);
+
+    if (resize_border_->IsVisible()) {
+      Elements *children = resize_border_->GetChildren();
+      double left, top, right, bottom;
+      bool specified = false;
+      View *child = owner_->GetChildView();
+      // Uses decoration frame's resize border if frame is visible.
+      if (!frame_->IsVisible() && child)
+        specified = child->GetResizeBorder(&left, &top, &right, &bottom);
+
+      if (!specified) {
+        left = kVDFramedBorderWidth;
+        top = kVDFramedBorderWidth;
+        right = kVDFramedBorderWidth;
+        bottom = kVDFramedBorderWidth;
+      }
+
+      children->GetItemByIndex(RESIZE_LEFT)->SetPixelWidth(left);
+      children->GetItemByIndex(RESIZE_TOP)->SetPixelHeight(top);
+      children->GetItemByIndex(RESIZE_RIGHT)->SetPixelWidth(right);
+      children->GetItemByIndex(RESIZE_BOTTOM)->SetPixelHeight(bottom);
+      children->GetItemByIndex(RESIZE_TOP_LEFT)->SetPixelWidth(left);
+      children->GetItemByIndex(RESIZE_TOP_LEFT)->SetPixelHeight(top);
+      children->GetItemByIndex(RESIZE_TOP_RIGHT)->SetPixelWidth(right);
+      children->GetItemByIndex(RESIZE_TOP_RIGHT)->SetPixelHeight(top);
+      children->GetItemByIndex(RESIZE_BOTTOM_LEFT)->SetPixelWidth(left);
+      children->GetItemByIndex(RESIZE_BOTTOM_LEFT)->SetPixelHeight(bottom);
+      children->GetItemByIndex(RESIZE_BOTTOM_RIGHT)->SetPixelWidth(right);
+      children->GetItemByIndex(RESIZE_BOTTOM_RIGHT)->SetPixelHeight(bottom);
+    }
+  }
+
+  void DoLayout() {
+    if (frame_->IsVisible()) {
+      double width = owner_->GetWidth();
+      double height = owner_->GetHeight();
+      double caption_width, caption_height;
+      double top_height;
+
+      close_button_->SetPixelX(width - kVDFramedBorderWidth -
+                               close_button_->GetPixelWidth());
+      caption_width = close_button_->GetPixelX() - caption_->GetPixelX() -
+          kVDFramedCaptionMargin;
+      caption_->SetPixelWidth(caption_width);
+      caption_->GetTextFrame()->GetExtents(caption_width, &caption_width,
+                                           &caption_height);
+      top_height = top_->GetSrcHeight();
+
+      // Only allow displaying two lines of caption.
+      if (caption_height > top_height - kVDFramedBorderWidth-
+          kVDFramedCaptionMargin * 2) {
+        double simple_caption_height;
+        caption_->GetTextFrame()->GetSimpleExtents(&caption_width,
+                                                   &simple_caption_height);
+        caption_height = std::min(simple_caption_height * 2, caption_height);
+        top_height = caption_height + kVDFramedBorderWidth +
+            kVDFramedCaptionMargin * 2 + 1;
+      }
+
+      caption_->SetPixelHeight(caption_height);
+      top_->SetPixelHeight(top_height);
+
+      background_->SetPixelY(top_height);
+      if (bottom_->IsVisible()) {
+        bottom_->SetPixelHeight(action_div_->GetPixelHeight() +
+                                kVDFramedBorderWidth +
+                                kVDFramedActionMargin * 2);
+        background_->SetPixelHeight(height - top_height -
+                                    bottom_->GetPixelHeight());
+      } else {
+        background_->SetPixelHeight(height - top_height);
+      }
+
+      if (action_div_->IsVisible()) {
+        action_div_->SetPixelX(width - kVDFramedBorderWidth -
+                               kVDFramedActionMargin);
+        action_div_->SetPixelY(height - kVDFramedBorderWidth -
+                               kVDFramedActionMargin);
+      }
+    }
+
+    LayoutResizeBorder();
   }
 
  public:
   FramedViewDecoratorBase *owner_;
+  DivElement *frame_;
   ImgElement *top_;
   ImgElement *background_;
   ImgElement *bottom_;
-  DivElement *resize_border_;
   LabelElement *caption_;
   ButtonElement *close_button_;
   DivElement *action_div_;
+  DivElement *resize_border_;
 };
 
 const FramedViewDecoratorBase::Impl::ResizeBorderInfo
 FramedViewDecoratorBase::Impl::kResizeBordersInfo[] = {
-  { 0, 0, 0, 0, -1, kVDFramedBorderWidth,
-    ViewInterface::CURSOR_SIZENS, ViewInterface::HT_TOP },
   { 0, 0, 0, 0, kVDFramedBorderWidth, -1,
     ViewInterface::CURSOR_SIZEWE, ViewInterface::HT_LEFT },
-  { 0, 1, 0, 1, -1, kVDFramedBorderWidth,
-    ViewInterface::CURSOR_SIZENS, ViewInterface::HT_BOTTOM },
+  { 0, 0, 0, 0, -1, kVDFramedBorderWidth,
+    ViewInterface::CURSOR_SIZENS, ViewInterface::HT_TOP },
   { 1, 0, 1, 0, kVDFramedBorderWidth, -1,
     ViewInterface::CURSOR_SIZEWE, ViewInterface::HT_RIGHT },
+  { 0, 1, 0, 1, -1, kVDFramedBorderWidth,
+    ViewInterface::CURSOR_SIZENS, ViewInterface::HT_BOTTOM },
   { 0, 0, 0, 0, kVDFramedBorderWidth, kVDFramedBorderWidth,
     ViewInterface::CURSOR_SIZENWSE, ViewInterface::HT_TOPLEFT },
-  { 1, 0, 1, 0, kVDFramedBorderWidth, kVDFramedBorderWidth,
-    ViewInterface::CURSOR_SIZENESW, ViewInterface::HT_TOPRIGHT },
   { 0, 1, 0, 1, kVDFramedBorderWidth, kVDFramedBorderWidth,
     ViewInterface::CURSOR_SIZENESW, ViewInterface::HT_BOTTOMLEFT },
+  { 1, 0, 1, 0, kVDFramedBorderWidth, kVDFramedBorderWidth,
+    ViewInterface::CURSOR_SIZENESW, ViewInterface::HT_TOPRIGHT },
   { 1, 1, 1, 1, kVDFramedBorderWidth, kVDFramedBorderWidth,
     ViewInterface::CURSOR_SIZENWSE, ViewInterface::HT_BOTTOMRIGHT }
 };
@@ -332,9 +378,18 @@ bool FramedViewDecoratorBase::OnAddContextMenuItems(MenuInterface *menu) {
   return false;
 }
 
+void FramedViewDecoratorBase::SetFrameVisible(bool visible) {
+  impl_->frame_->SetVisible(visible);
+  UpdateViewSize();
+}
+
+bool FramedViewDecoratorBase::IsFrameVisible() const {
+  return impl_->frame_->IsVisible();
+}
+
 void FramedViewDecoratorBase::SetResizable(ResizableMode resizable) {
   ViewDecoratorBase::SetResizable(resizable);
-  impl_->resize_border_->SetVisible(resizable == RESIZABLE_TRUE);
+  impl_->LayoutResizeBorder();
 }
 
 void FramedViewDecoratorBase::SetCaption(const char *caption) {
@@ -354,22 +409,25 @@ void FramedViewDecoratorBase::DoLayout() {
   impl_->DoLayout();
 }
 
-void FramedViewDecoratorBase::GetMargins(double *top, double *left,
-                                         double *bottom, double *right) const {
-  *top = impl_->background_->GetPixelY();
-  *bottom = impl_->bottom_->IsVisible() ? impl_->bottom_->GetPixelHeight() :
-      kVDFramedBorderWidth;
-  *left = kVDFramedBorderWidth;
-  *right = kVDFramedBorderWidth;
+void FramedViewDecoratorBase::GetMargins(double *left, double *top,
+                                         double *right, double *bottom) const {
+  if (impl_->frame_->IsVisible()) {
+    *left = kVDFramedBorderWidth;
+    *top = impl_->background_->GetPixelY();
+    *right = kVDFramedBorderWidth;
+    *bottom = impl_->bottom_->IsVisible() ? impl_->bottom_->GetPixelHeight() :
+        kVDFramedBorderWidth;
+  } else {
+    *left = *top = *right = *bottom = 0;
+  }
 }
 
 void FramedViewDecoratorBase::GetMinimumClientExtents(double *width,
                                                       double *height) const {
+  *width = 0;
   *height = 0;
-  if (impl_->action_div_->IsVisible())
+  if (impl_->frame_->IsVisible() && impl_->action_div_->IsVisible())
     *width = impl_->action_div_->GetPixelWidth() + kVDFramedActionMargin * 2;
-  else
-    *width = 0;
 }
 
 void FramedViewDecoratorBase::OnCaptionClicked() {

@@ -44,8 +44,8 @@ class DockedMainViewDecorator : public MainViewDecoratorBase {
   Connection *ConnectOnUndock(Slot0<void> *slot);
 
  protected:
-  virtual void GetMargins(double *top, double *left,
-                          double *bottom, double *right) const;
+  virtual void GetMargins(double *left, double *top,
+                          double *right, double *bottom) const;
 
  protected:
   virtual void OnAddDecoratorMenuItems(MenuInterface *menu);

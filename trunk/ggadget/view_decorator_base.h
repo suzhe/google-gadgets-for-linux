@@ -215,8 +215,8 @@ class ViewDecoratorBase : public View {
    * The default implementation returns zero for all sides.
    * Derived class shall override this method to provide correct values.
    */
-  virtual void GetMargins(double *top, double *left,
-                          double *bottom, double *right) const;
+  virtual void GetMargins(double *left, double *top,
+                          double *right, double *bottom) const;
 
   /**
    * Gets the minimum size of client area, the area to show child view or

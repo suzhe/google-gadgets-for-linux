@@ -121,6 +121,10 @@ class View : public ViewInterface {
   virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
+  virtual void SetResizeBorder(double left, double top,
+                               double right, double bottom);
+  virtual bool GetResizeBorder(double *left, double *top,
+                               double *right, double *bottom) const;
   virtual void MarkRedraw();
 
   virtual void Draw(CanvasInterface *canvas);
