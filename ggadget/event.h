@@ -105,7 +105,8 @@ class Event {
 
  protected:
   // This class is abstract.
-  explicit Event(Type t) : type_(t) { }
+  explicit Event(Type t, void *original = NULL)
+      : type_(t), original_(original) { }
 
  public:
   Type GetType() const { return type_; }
@@ -118,9 +119,14 @@ class Event {
                                         type_ < EVENT_KEY_RANGE_END; }
   bool IsDragEvent() const { return type_ > EVENT_DRAG_RANGE_START &&
                                     type_ < EVENT_DRAG_RANGE_END; }
+  void *GetOriginalEvent() const { return original_; }
+  void SetOriginalEvent(void *original) {
+    original_ = original;
+  }
 
  private:
   Type type_;
+  void *original_;
 };
 
 class SimpleEvent : public Event {
@@ -160,11 +166,13 @@ class MouseEvent : public PositionEvent {
 
   MouseEvent(Type t, double x, double y,
              int wheel_delta_x, int wheel_delta_y,
-             int button, int modifier)
+             int button, int modifier,
+             void *original = NULL)
       : PositionEvent(t, x, y),
         wheel_delta_x_(wheel_delta_x), wheel_delta_y_(wheel_delta_y),
         button_(button), modifier_(modifier) {
     ASSERT(IsMouseEvent());
+    SetOriginalEvent(original);
   }
 
   int GetButton() const { return button_; }
@@ -292,17 +300,12 @@ class KeyboardEvent : public Event {
   };
 
   KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)
-      : Event(t), key_code_(key_code), modifier_(modifier),
-        original_event_(original) {
+      : Event(t, original), key_code_(key_code), modifier_(modifier) {
     ASSERT(IsKeyboardEvent());
   }
 
   unsigned int GetKeyCode() const { return key_code_; }
   void SetKeyCode(unsigned int key_code) { key_code_ = key_code; }
-  void *GetOriginalEvent() const { return original_event_; }
-  void SetOriginalEvent(void *original_event) {
-    original_event_ = original_event;
-  }
 
   int GetModifier() const { return modifier_; }
   void SetModifier(int m) { modifier_ = m; }
@@ -310,7 +313,6 @@ class KeyboardEvent : public Event {
  private:
   int key_code_;
   int modifier_;
-  void *original_event_;
 };
 
 /**

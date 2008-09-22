@@ -20,13 +20,14 @@ INCLUDES		= -I$(top_builddir) \
 
 xdgincludedir		= $(GGL_INCLUDE_DIR)/ggadget/xdg
 xdginclude_HEADERS	= desktop_entry.h \
+			  icon_theme.h \
 			  utilities.h
 
 lib_LTLIBRARIES		= libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_xdg@GGL_EPOCH@_la_SOURCES = \
 			  desktop_entry.cc \
-				icon_theme.cc \
+			  icon_theme.cc \
 			  utilities.cc
 
 libggadget_xdg@GGL_EPOCH@_la_CPPFLAGS = \
