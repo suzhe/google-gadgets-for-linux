@@ -35,6 +35,9 @@ class FramedViewDecoratorBase : public ViewDecoratorBase {
   void AddActionElement(BasicElement *element);
   void RemoveActionElements();
 
+  void SetFrameVisible(bool visible);
+  bool IsFrameVisible() const;
+
  public:
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual void SetResizable(ResizableMode resizable);
@@ -43,8 +46,8 @@ class FramedViewDecoratorBase : public ViewDecoratorBase {
  protected:
   virtual void OnChildViewChanged();
   virtual void DoLayout();
-  virtual void GetMargins(double *top, double *left,
-                          double *bottom, double *right) const;
+  virtual void GetMargins(double *left, double *top,
+                          double *right, double *bottom) const;
   virtual void GetMinimumClientExtents(double *width, double *height) const;
 
  protected:

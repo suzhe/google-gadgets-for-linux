@@ -127,8 +127,8 @@ class ViewDecoratorBase::Impl {
 
   void UpdateClientPosition() {
     if (view_element_->IsVisible() || snapshot_->IsVisible()) {
-      double top, left, bottom, right;
-      owner_->GetMargins(&top, &left, &bottom, &right);
+      double left, top, right, bottom;
+      owner_->GetMargins(&left, &top, &right, &bottom);
       double client_width;
       double client_height;
       GetClientSize(&client_width, &client_height);
@@ -149,9 +149,9 @@ class ViewDecoratorBase::Impl {
   void UpdateClientSize() {
     double width = owner_->GetWidth();
     double height = owner_->GetHeight();
-    double top, left, bottom, right;
+    double left, top, right, bottom;
     double min_width, min_height;
-    owner_->GetMargins(&top, &left, &bottom, &right);
+    owner_->GetMargins(&left, &top, &right, &bottom);
     owner_->GetMinimumClientExtents(&min_width, &min_height);
     double client_width = std::max(width - left - right, min_width);
     double client_height = std::max(height - top - bottom, min_height);
@@ -258,8 +258,8 @@ void ViewDecoratorBase::SetAllowYMargin(bool allow) {
 
 void ViewDecoratorBase::UpdateViewSize() {
   // DLOG("DecoratedView::UpdateViewSize()");
-  double top, left, bottom, right;
-  GetMargins(&top, &left, &bottom, &right);
+  double left, top, right, bottom;
+  GetMargins(&left, &top, &right, &bottom);
   double width = GetWidth();
   double height = GetHeight();
   double client_width = width - left - right;
@@ -450,10 +450,10 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 
   double orig_width = *width;
   double orig_height = *height;
-  double top, left, bottom, right;
+  double left, top, right, bottom;
   double min_width, min_height;
   double client_width, client_height;
-  GetMargins(&top, &left, &bottom, &right);
+  GetMargins(&left, &top, &right, &bottom);
   GetMinimumClientExtents(&min_width, &min_height);
 
   client_width = std::max(*width - left - right, min_width);
@@ -496,9 +496,9 @@ void ViewDecoratorBase::SetSize(double width, double height) {
   if (GetWidth() == width && GetHeight() == height)
     return;
 
-  double top, left, bottom, right;
+  double left, top, right, bottom;
   double min_width, min_height;
-  GetMargins(&top, &left, &bottom, &right);
+  GetMargins(&left, &top, &right, &bottom);
   GetMinimumClientExtents(&min_width, &min_height);
   double client_width = std::max(width - left - right, min_width);
   double client_height = std::max(height - top - bottom, min_height);
@@ -595,12 +595,12 @@ void ViewDecoratorBase::DoLayout() {
   // To be implemented by derived classes, when the window size is changed.
 }
 
-void ViewDecoratorBase::GetMargins(double *top, double *left,
-                                   double *bottom, double *right) const {
-  *top = 0;
+void ViewDecoratorBase::GetMargins(double *left, double *top,
+                                   double *right, double *bottom) const {
   *left = 0;
-  *bottom = 0;
+  *top = 0;
   *right = 0;
+  *bottom = 0;
 }
 
 void ViewDecoratorBase::GetMinimumClientExtents(double *width,

@@ -668,8 +668,8 @@ void MainViewDecoratorBase::DoLayout() {
     impl_->OnMinimizedChanged();
   }
 
-  double top, left, bottom, right;
-  GetMargins(&top, &left, &bottom, &right);
+  double left, top, right, bottom;
+  GetMargins(&left, &top, &right, &bottom);
   double width = GetWidth();
   double height = GetHeight();
   double client_center = top + (height - top - bottom) / 2.0;

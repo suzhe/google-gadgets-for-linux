@@ -133,8 +133,8 @@ Connection *DockedMainViewDecorator::ConnectOnUndock(Slot0<void> *slot) {
   return impl_->on_undock_signal_.Connect(slot);
 }
 
-void DockedMainViewDecorator::GetMargins(double *top, double *left,
-                                         double *bottom, double *right) const {
+void DockedMainViewDecorator::GetMargins(double *left, double *top,
+                                         double *right, double *bottom) const {
   ButtonBoxPosition button_position = GetButtonBoxPosition();
   ButtonBoxOrientation button_orientation = GetButtonBoxOrientation();
 
@@ -157,10 +157,10 @@ void DockedMainViewDecorator::GetMargins(double *top, double *left,
       btn_edge = right;
   }
 
-  *top = (impl_->resize_borders_[0] ? kVDMainDockedResizeBorderWidth : 0);
   *left = (impl_->resize_borders_[1] ? kVDMainDockedResizeBorderWidth : 0);
-  *bottom = (impl_->resize_borders_[2] ? kVDMainDockedResizeBorderWidth : 0);
+  *top = (impl_->resize_borders_[0] ? kVDMainDockedResizeBorderWidth : 0);
   *right = (impl_->resize_borders_[3] ? kVDMainDockedResizeBorderWidth : 0);
+  *bottom = (impl_->resize_borders_[2] ? kVDMainDockedResizeBorderWidth : 0);
 
   if (!IsMinimized())
     *btn_edge = btn_margin;

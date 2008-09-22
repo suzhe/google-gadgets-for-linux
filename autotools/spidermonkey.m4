@@ -66,6 +66,7 @@ smjs_LIBS=""
 
 # if both incdir and libdir are not specified, then try to detect it by
 # pkg-config.
+has_pkg_smjs=no
 if test "x$smjs_incdir" = "x" -a "x$smjs_libdir" = "x"; then
   PKG_CHECK_MODULES([PKGSMJS], [mozilla-js], [has_pkg_smjs=mozilla-js],
     [PKG_CHECK_MODULES([PKGSMJS], [xulrunner-js], [has_pkg_smjs=xulrunner-js],
@@ -78,9 +79,9 @@ fi
 if test "x$has_pkg_smjs" != "xno"; then
 # Fix bogus mozilla-js.pc of xulrunner 1.9 pre release version.
   if (echo $PKGSMJS_CFLAGS | grep '/stable') > /dev/null 2>&1; then
-    smjs_INCDIR=`$PKG_CONFIG --variable=includedir $has_pkg_smjs`
-    if test -f $smjs_INCDIR/unstable/jsapi.h; then
-      PKGSMJS_CFLAGS="$PKGSMJS_CFLAGS -I$smjs_INCDIR/unstable"
+    smjs_incdir=`$PKG_CONFIG --variable=includedir $has_pkg_smjs`
+    if test -f $smjs_incdir/unstable/jsapi.h; then
+      PKGSMJS_CFLAGS="$PKGSMJS_CFLAGS -I$smjs_incdir/unstable"
     fi
   fi
   smjs_CPPFLAGS="$PKGSMJS_CFLAGS $smjs_CPPFLAGS"
@@ -93,6 +94,10 @@ if test "x$has_pkg_smjs" != "xno"; then
     smjs_libdir=`echo $PKGSMJS_LIBS | sed -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
     if test ! -e "$smjs_libdir"; then
       smjs_libdir=""
+    elif test -e "$smjs_libdir/libmozjs.so"; then
+      # Try to find out the correct xulrunner path.
+      MOZJS_PATH=`readlink -f $smjs_libdir/libmozjs.so`
+      smjs_libdir=`dirname $MOZJS_PATH`
     fi
   fi
 

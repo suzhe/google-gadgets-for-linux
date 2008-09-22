@@ -43,8 +43,8 @@ class FloatingMainViewDecorator : public MainViewDecoratorBase {
 
  protected:
   virtual void DoLayout();
-  virtual void GetMargins(double *top, double *left,
-                          double *bottom, double *right) const;
+  virtual void GetMargins(double *left, double *top,
+                          double *right, double *bottom) const;
 
  protected:
   virtual void OnAddDecoratorMenuItems(MenuInterface *menu);

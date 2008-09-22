@@ -85,40 +85,45 @@ bool DetailsViewDecorator::ShowDecoratedView(
     bool modal, int flags, Slot1<bool, int> *feedback_handler) {
   delete impl_->feedback_handler_;
   impl_->feedback_handler_ = feedback_handler;
-  if (flags & DETAILS_VIEW_FLAG_TOOLBAR_OPEN) {
-    SetCaptionClickable(true);
-  }
   RemoveActionElements();
-  if (flags & DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) {
-    ButtonElement *negative_button = new ButtonElement(NULL, this, NULL);
-    negative_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
-    negative_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
-    negative_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
-    negative_button->SetStretchMiddle(true);
-    negative_button->SetPixelHeight(kVDDetailsButtonHeight);
-    negative_button->SetVisible(true);
-    negative_button->GetTextFrame()->SetText(GMS_("DONT_SHOW_CONTENT_ITEM"));
-    negative_button->ConnectOnClickEvent(
-        NewSlot(impl_, &Impl::OnNegativeButtonClicked));
-    AddActionElement(negative_button);
-  }
-  if (flags & DETAILS_VIEW_FLAG_REMOVE_BUTTON) {
-    ButtonElement *remove_button = new ButtonElement(NULL, this, NULL);
-    remove_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
-    remove_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
-    remove_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
-    remove_button->SetStretchMiddle(true);
-    remove_button->GetTextFrame()->SetText(GMS_("REMOVE_CONTENT_ITEM"));
-    remove_button->SetPixelHeight(kVDDetailsButtonHeight);
-    remove_button->SetIconImage(Variant(kVDDetailsButtonNegfbNormal));
-    remove_button->SetIconPosition(ButtonElement::ICON_RIGHT);
-    remove_button->ConnectOnClickEvent(
-        NewSlot(impl_, &Impl::OnRemoveButtonClicked));
-    remove_button->ConnectOnMouseOverEvent(
-        NewSlot(impl_, &Impl::OnRemoveButtonMouseOver, remove_button));
-    remove_button->ConnectOnMouseOutEvent(
-        NewSlot(impl_, &Impl::OnRemoveButtonMouseOut, remove_button));
-    AddActionElement(remove_button);
+  if (flags & DETAILS_VIEW_FLAG_NO_FRAME) {
+    SetFrameVisible(false);
+  } else {
+    SetFrameVisible(true);
+    if (flags & DETAILS_VIEW_FLAG_TOOLBAR_OPEN) {
+      SetCaptionClickable(true);
+    }
+    if (flags & DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) {
+      ButtonElement *negative_button = new ButtonElement(NULL, this, NULL);
+      negative_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
+      negative_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
+      negative_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
+      negative_button->SetStretchMiddle(true);
+      negative_button->SetPixelHeight(kVDDetailsButtonHeight);
+      negative_button->SetVisible(true);
+      negative_button->GetTextFrame()->SetText(GMS_("DONT_SHOW_CONTENT_ITEM"));
+      negative_button->ConnectOnClickEvent(
+          NewSlot(impl_, &Impl::OnNegativeButtonClicked));
+      AddActionElement(negative_button);
+    }
+    if (flags & DETAILS_VIEW_FLAG_REMOVE_BUTTON) {
+      ButtonElement *remove_button = new ButtonElement(NULL, this, NULL);
+      remove_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
+      remove_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
+      remove_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
+      remove_button->SetStretchMiddle(true);
+      remove_button->GetTextFrame()->SetText(GMS_("REMOVE_CONTENT_ITEM"));
+      remove_button->SetPixelHeight(kVDDetailsButtonHeight);
+      remove_button->SetIconImage(Variant(kVDDetailsButtonNegfbNormal));
+      remove_button->SetIconPosition(ButtonElement::ICON_RIGHT);
+      remove_button->ConnectOnClickEvent(
+          NewSlot(impl_, &Impl::OnRemoveButtonClicked));
+      remove_button->ConnectOnMouseOverEvent(
+          NewSlot(impl_, &Impl::OnRemoveButtonMouseOver, remove_button));
+      remove_button->ConnectOnMouseOutEvent(
+          NewSlot(impl_, &Impl::OnRemoveButtonMouseOut, remove_button));
+      AddActionElement(remove_button);
+    }
   }
 
   return FramedViewDecoratorBase::ShowDecoratedView(modal, 0, NULL);

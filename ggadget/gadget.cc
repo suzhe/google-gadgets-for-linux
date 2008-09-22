@@ -775,11 +775,31 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return ret;
   }
 
+  class DetailsViewCallbackProxy : public Slot1<bool, int> {
+   public:
+    explicit DetailsViewCallbackProxy(Slot *callback) : callback_(callback) {}
+    ~DetailsViewCallbackProxy() { delete callback_; }
+    virtual ResultVariant Call(ScriptableInterface *object,
+                               int argc, const Variant argv[]) const {
+      ASSERT(argc == 1);
+      bool result = true;
+      callback_->Call(object, argc, argv).v().ConvertToBool(&result);
+      return ResultVariant(Variant(result));
+    }
+    virtual bool operator==(const Slot &another) const {
+      return false;
+    }
+   private:
+    Slot *callback_;
+  };
+
   bool ShowDetailsViewProxy(DetailsViewData *details_view_data,
                             const char *title, int flags,
                             Slot *callback) {
+    // Can't use SlotProxy<bool, int> here, because it can't handle return
+    // value type conversion.
     Slot1<bool, int> *feedback_handler =
-        callback ? new SlotProxy1<bool, int>(callback) : NULL;
+        callback ? new DetailsViewCallbackProxy(callback) : NULL;
     return ShowDetailsView(details_view_data, title, flags, feedback_handler);
   }
 

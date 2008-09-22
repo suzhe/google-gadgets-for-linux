@@ -23,6 +23,7 @@
 #include <list>
 #include <set>
 #include <vector>
+#include <cstdlib>
 
 #include "view.h"
 #include "basic_element.h"
@@ -192,6 +193,11 @@ class View::Impl {
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
+      resize_border_specified_(false),
+      resize_border_left_(0),
+      resize_border_top_(0),
+      resize_border_right_(0),
+      resize_border_bottom_(0),
 #ifdef _DEBUG
       draw_count_(0),
       view_draw_count_(0),
@@ -279,6 +285,11 @@ class View::Impl {
 
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
     obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetSize));
+
+    // Added in GDWin 5.8
+    obj->RegisterProperty("resizeBorder",
+                          NewSlot(this, &Impl::GetResizeBorder),
+                          NewSlot(this, &Impl::SetResizeBorder));
 
     // Extended APIs.
 #if 0
@@ -827,9 +838,8 @@ class View::Impl {
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
 
-      if (view_host_) {
+      if (view_host_)
         view_host_->QueueResize();
-      }
     }
   }
 
@@ -843,6 +853,62 @@ class View::Impl {
 
   double GetHeight() {
     return height_;
+  }
+
+  void SetResizeBorder(const std::string &value) {
+    resize_border_specified_ = false;
+    std::vector<std::string> values;
+    SplitStringList(value, " ", &values);
+    double double_values[4];
+    for (size_t i = 0; i < 4; ++i) {
+      if (!Variant(values[i]).ConvertToDouble(double_values + i)) {
+        LOG("Invalid resize border value: %s", value.c_str());
+        return;
+      }
+      if (double_values[i] < 0)
+        double_values[i] = 0;
+    }
+
+    if (values.size() == 4) {
+      resize_border_left_ = double_values[0];
+      resize_border_top_ = double_values[1];
+      resize_border_right_ = double_values[2];
+      resize_border_bottom_ = double_values[3];
+    } else if (values.size() == 2) {
+      resize_border_left_ = double_values[0];
+      resize_border_right_ = double_values[0];
+      resize_border_top_ = double_values[1];
+      resize_border_bottom_ = double_values[1];
+    } else if (values.size() == 1) {
+      resize_border_left_ = double_values[0];
+      resize_border_top_ = double_values[0];
+      resize_border_right_ = double_values[0];
+      resize_border_bottom_ = double_values[0];
+    } else {
+      LOG("Invalid resize border value: %s", value.c_str());
+      return;
+    }
+
+    resize_border_specified_ = true;
+    if (view_host_)
+      view_host_->QueueResize();
+  }
+
+  std::string GetResizeBorder() {
+    if (!resize_border_specified_) {
+      return "";
+    } else if (resize_border_left_ == resize_border_top_ &&
+               resize_border_top_ == resize_border_right_ &&
+               resize_border_right_ == resize_border_bottom_) {
+      return StringPrintf("%.0f", resize_border_left_);
+    } else if (resize_border_left_ == resize_border_right_ &&
+               resize_border_top_ == resize_border_bottom_) {
+      return StringPrintf("%.0f %.0f", resize_border_left_, resize_border_top_);
+    } else {
+      return StringPrintf("%.0f %.0f %.0f %.0f",
+                          resize_border_left_, resize_border_top_,
+                          resize_border_right_, resize_border_bottom_);
+    }
   }
 
   void MarkRedraw() {
@@ -1333,6 +1399,12 @@ class View::Impl {
   bool events_enabled_;
   bool need_redraw_;
 
+  bool resize_border_specified_;
+  double resize_border_left_;
+  double resize_border_top_;
+  double resize_border_right_;
+  double resize_border_bottom_;
+
 #ifdef _DEBUG
   int draw_count_;
   int view_draw_count_;
@@ -1459,6 +1531,30 @@ void View::SetShowCaptionAlways(bool show_always) {
 
 bool View::GetShowCaptionAlways() const {
   return impl_->show_caption_always_;
+}
+
+void View::SetResizeBorder(double left, double top,
+                           double right, double bottom) {
+  impl_->resize_border_specified_ = true;
+  impl_->resize_border_left_ = (left > 0 ? left : 0);
+  impl_->resize_border_top_ = (top > 0 ? top : 0);
+  impl_->resize_border_right_ = (right > 0 ? right : 0);
+  impl_->resize_border_bottom_ = (bottom > 0 ? bottom : 0);
+  if (impl_->view_host_)
+    impl_->view_host_->QueueResize();
+}
+
+bool View::GetResizeBorder(double *left, double *top,
+                           double *right, double *bottom) const {
+  if (left)
+    *left = impl_->resize_border_left_;
+  if (top)
+    *top = impl_->resize_border_top_;
+  if (right)
+    *right = impl_->resize_border_right_;
+  if (bottom)
+    *bottom = impl_->resize_border_bottom_;
+  return impl_->resize_border_specified_;
 }
 
 void View::MarkRedraw() {
