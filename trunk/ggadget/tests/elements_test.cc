@@ -103,6 +103,16 @@ TEST_F(ElementsTest, TestOrder) {
   ASSERT_INDEX(2U, elements_, e3);
   ASSERT_TRUE(NULL == elements_->GetItemByIndex(3));
 
+  ASSERT_TRUE(elements_->InsertElement(e1, e2));
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e3);
+
+  ASSERT_TRUE(elements_->InsertElement(e3, NULL));
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e3);
+
   ASSERT_TRUE(elements_->InsertElement(e1, NULL));
   ASSERT_INDEX(0U, elements_, e2);
   ASSERT_INDEX(1U, elements_, e3);
@@ -112,6 +122,37 @@ TEST_F(ElementsTest, TestOrder) {
   ASSERT_INDEX(0U, elements_, e2);
   ASSERT_INDEX(1U, elements_, e1);
   ASSERT_INDEX(2U, elements_, e3);
+}
+
+TEST_F(ElementsTest, TestOrderAfter) {
+  ggadget::BasicElement *e1 = elements_->AppendElement("muffin", NULL);
+  ggadget::BasicElement *e2 = elements_->AppendElement("pie", NULL);
+  ggadget::BasicElement *e3 = elements_->AppendElement("pie", NULL);
+  ASSERT_EQ(3U, elements_->GetCount());
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e3);
+  ASSERT_TRUE(NULL == elements_->GetItemByIndex(3));
+
+  ASSERT_TRUE(elements_->InsertElementAfter(e3, e2));
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e3);
+
+  ASSERT_TRUE(elements_->InsertElementAfter(e1, NULL));
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e3);
+
+  ASSERT_TRUE(elements_->InsertElementAfter(e3, NULL));
+  ASSERT_INDEX(0U, elements_, e3);
+  ASSERT_INDEX(1U, elements_, e1);
+  ASSERT_INDEX(2U, elements_, e2);
+
+  ASSERT_TRUE(elements_->InsertElementAfter(e2, e3));
+  ASSERT_INDEX(0U, elements_, e3);
+  ASSERT_INDEX(1U, elements_, e2);
+  ASSERT_INDEX(2U, elements_, e1);
 }
 
 TEST_F(ElementsTest, TestOrderInView) {
@@ -206,6 +247,19 @@ TEST_F(ElementsTest, TestInsert) {
   ASSERT_INDEX(2U, elements_, e1);
   ASSERT_INDEX(1U, elements_, e2);
   ASSERT_INDEX(0U, elements_, e3);
+  ASSERT_TRUE(NULL == e4);
+}
+
+TEST_F(ElementsTest, TestInsertAfter) {
+  ggadget::BasicElement *e1 = elements_->InsertElementAfter("muffin", NULL,
+                                                            NULL);
+  ggadget::BasicElement *e2 = elements_->InsertElementAfter("pie", e1, NULL);
+  ggadget::BasicElement *e3 = elements_->InsertElementAfter("pie", e1, NULL);
+  ggadget::BasicElement *e4 = elements_->InsertElementAfter("bread", e1, NULL);
+  ASSERT_EQ(3U, elements_->GetCount());
+  ASSERT_INDEX(0U, elements_, e1);
+  ASSERT_INDEX(2U, elements_, e2);
+  ASSERT_INDEX(1U, elements_, e3);
   ASSERT_TRUE(NULL == e4);
 }
 

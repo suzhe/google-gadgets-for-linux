@@ -103,6 +103,14 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                               const char *name);
 
   /**
+   * Create a new element after the specified element.
+   * @see InsertElement()
+   */
+  BasicElement *InsertElementAfter(const char *tag_name,
+                                   const BasicElement *after,
+                                   const char *name);
+
+  /**
    * Appends an existing element to the end of the children list.
    * The specified element can be owned by another parent element, in this
    * case, it'll be reparented appropriately.
@@ -129,6 +137,12 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   bool InsertElement(BasicElement *element, const BasicElement *before);
 
   /**
+   * Inserts an existing element after the specified element.
+   * @see InsertElement()
+   */
+  bool InsertElementAfter(BasicElement *element, const BasicElement *after);
+
+  /**
    * Create a new element from XML definition and add it to the end of the
    * children list.
    * @param xml the XML definition of the element.
@@ -152,6 +166,14 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                                      const BasicElement *before);
 
   /**
+   * Create a new element from XML definition and insert it after the
+   * specified element.
+   * @see InsertElementFromXML()
+   */
+  BasicElement *InsertElementFromXMLAfter(const std::string &xml,
+                                          const BasicElement *after);
+
+  /**
    * Appends an element holded in a variant to the end of the children list.
    *
    * The specified variant may hold a pointer to an existing element, or the
@@ -159,14 +181,12 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *
    * @param element A variant holding an existing element or the XML definition
    *                of a new element.
-   * @return If element parameter holds an existing element, then returns
-   *         boolean value indicating success or failure. Otherwise returns
-   *         the pointer to the new element on success, or null on failure.
+   * @return the pointer to the new element on success, or @c NULL on failure.
    */
-  Variant AppendElementVariant(const Variant &element);
+  BasicElement *AppendElementVariant(const Variant &element);
 
   /**
-   * Inserts an element holded in a variant before the specified element.
+   * Inserts an element held in a variant before the specified element.
    * The element to be inserted can be owned by another parent element, in this
    * case, it'll be reparented appropriately.
    *
@@ -179,12 +199,17 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *     before this element. If the specified element is not the direct child
    *     of the container or this parameter is @c NULL, this method will insert
    *     the element at the end of the children list.
-   * @return If element parameter holds an existing element, then returns
-   *         boolean value indicating success or failure. Otherwise returns
-   *         the pointer to the new element on success, or null on failure.
+   * @return the pointer to the new element on success, or @c NULL on failure.
    */
-  Variant InsertElementVariant(const Variant &element,
-                               const BasicElement *before);
+  BasicElement *InsertElementVariant(const Variant &element,
+                                     const BasicElement *before);
+
+  /**
+   * Inserts an element held in a variant after the specified element.
+   * @see InsertElementVariant()
+   */
+  BasicElement *InsertElementVariantAfter(const Variant &element,
+                                          const BasicElement *after);
 
   /**
    * Remove the specified element from the container.

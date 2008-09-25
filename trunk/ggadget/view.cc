@@ -264,8 +264,15 @@ class View::Impl {
     obj->RegisterVariantConstant("children", Variant(&children_));
     obj->RegisterMethod("appendElement",
                         NewSlot(&children_, &Elements::AppendElementVariant));
+    // insertElement was deprecated by insertElementBehind.
     obj->RegisterMethod("insertElement",
                         NewSlot(&children_, &Elements::InsertElementVariant));
+    obj->RegisterMethod("insertElementBehind",
+                        NewSlot(&children_, &Elements::InsertElementVariant));
+    // Added in 5.8 API.
+    obj->RegisterMethod("insertElementInFrontOf",
+                        NewSlot(&children_,
+                                &Elements::InsertElementVariantAfter));
     obj->RegisterMethod("removeElement",
                         NewSlot(&children_, &Elements::RemoveElement));
     obj->RegisterMethod("removeAllElements",

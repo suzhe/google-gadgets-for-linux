@@ -1119,8 +1119,16 @@ void BasicElement::DoClassRegister() {
                          &BasicElement::GetChildren)), NULL);
     RegisterMethod("appendElement", NewSlot(&Elements::AppendElementVariant,
                                             GetElementChildren));
+    // insertElement was deprecated by insertElementBehind.
     RegisterMethod("insertElement", NewSlot(&Elements::InsertElementVariant,
                                             GetElementChildren));
+    RegisterMethod("insertElementBehind",
+                   NewSlot(&Elements::InsertElementVariant,
+                           GetElementChildren));
+    // Added in 5.8 API.
+    RegisterMethod("insertElementInFrontOf",
+                   NewSlot(&Elements::InsertElementVariantAfter,
+                           GetElementChildren));
     RegisterMethod("removeElement", NewSlot(&Elements::RemoveElement,
                                             GetElementChildren));
     RegisterMethod("removeAllElements", NewSlot(&Elements::RemoveAllElements,
@@ -1200,6 +1208,9 @@ void BasicElement::DoClassRegister() {
                              NewSlot(&BasicElement::GetFlip),
                              NewSlot(&BasicElement::SetFlip),
                              kFlipNames, arraysize(kFlipNames));
+  // Note: don't use 'index' property until it is in the public API.
+  RegisterProperty("index", NewSlot(&BasicElement::GetIndex), NULL);
+
   RegisterMethod("focus", NewSlot(&BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(&BasicElement::KillFocus));
 
