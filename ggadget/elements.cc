@@ -71,6 +71,23 @@ class Elements::Impl {
       children_[i]->SetIndex(i);
   }
 
+  bool IsChild(const BasicElement *element) {
+    return element->GetIndex() != kInvalidIndex &&
+           element->GetParentElement() == owner_;
+  }
+
+  const BasicElement *GetBeforeFromAfter(const BasicElement *after) {
+    if (after) {
+      ASSERT(IsChild(after));
+      size_t index = after->GetIndex();
+      if (index + 1 < children_.size())
+        return children_[index + 1];
+    } else if (children_.size()) {
+      return children_[0];
+    }
+    return NULL;
+  }
+
   bool InsertElementInternal(BasicElement *element,
                              const BasicElement *before) {
     if (view_->OnElementAdd(element)) {
@@ -92,15 +109,6 @@ class Elements::Impl {
     return false;
   }
 
-  BasicElement *AppendElement(const char *tag_name, const char *name) {
-    if (!factory_) return NULL;
-
-    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
-    if (e == NULL)
-      return NULL;
-    return InsertElementInternal(e, NULL) ? e : NULL;
-  }
-
   void RemoveElementInternal(BasicElement *element) {
     ASSERT_ELEMENT_INTEGRITY(element);
     element->QueueDraw();
@@ -116,9 +124,12 @@ class Elements::Impl {
     ASSERT(element);
     if (element == before)
       return false;
-    if (before && (before->GetIndex() == kInvalidIndex ||
-                   before->GetParentElement() != owner_))
-      return false;
+    if (before) {
+      if (!IsChild(before))
+        return false;
+      if (IsChild(element) && element->GetIndex() + 1 == before->GetIndex())
+        return true;
+    }
     if (element->GetView() != view_)
       return false;
     for (BasicElement *e = owner_; e; e = e->GetParentElement()) {
@@ -146,8 +157,7 @@ class Elements::Impl {
                               const char *name) {
     if (!factory_)
       return NULL;
-    if (before && (before->GetIndex() == kInvalidIndex ||
-                   before->GetParentElement() != owner_))
+    if (before && !IsChild(before))
       return NULL;
 
     BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
@@ -157,7 +167,7 @@ class Elements::Impl {
   }
 
   bool RemoveElement(BasicElement *element) {
-    if (!element || element->GetParentElement() != owner_)
+    if (!element || !IsChild(element))
       return false;
 
     RemoveElementInternal(element);
@@ -478,13 +488,21 @@ const BasicElement *Elements::GetItemByName(const char *child) const {
 }
 
 BasicElement *Elements::AppendElement(const char *tag_name, const char *name) {
-  return impl_->AppendElement(tag_name, name);
+  return impl_->InsertElement(tag_name, NULL, name);
 }
 
 BasicElement *Elements::InsertElement(const char *tag_name,
                                       const BasicElement *before,
                                       const char *name) {
   return impl_->InsertElement(tag_name, before, name);
+}
+
+BasicElement *Elements::InsertElementAfter(const char *tag_name,
+                                           const BasicElement *after,
+                                           const char *name) {
+  if (after && !impl_->IsChild(after))
+    return NULL;
+  return impl_->InsertElement(tag_name, impl_->GetBeforeFromAfter(after), name);
 }
 
 bool Elements::AppendElement(BasicElement *element) {
@@ -496,13 +514,25 @@ bool Elements::InsertElement(BasicElement *element,
   return impl_->InsertElement(element, before);
 }
 
+bool Elements::InsertElementAfter(BasicElement *element,
+                                  const BasicElement *after) {
+  if (after && !impl_->IsChild(after))
+    return false;
+  if (after == element)
+    return false;
+  const BasicElement *before = impl_->GetBeforeFromAfter(after);
+  if (before == element)
+    return true;
+  return impl_->InsertElement(element, before);
+}
+
 BasicElement *Elements::AppendElementFromXML(const std::string &xml) {
   return InsertElementFromXML(xml, NULL);
 }
 
 BasicElement *Elements::InsertElementFromXML(const std::string &xml,
                                              const BasicElement *before) {
-  if (before && before->GetParentElement() != impl_->owner_)
+  if (before && !impl_->IsChild(before))
     return NULL;
 
   DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
@@ -535,12 +565,19 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
   return result;
 }
 
-Variant Elements::AppendElementVariant(const Variant &element) {
+BasicElement *Elements::InsertElementFromXMLAfter(const std::string &xml,
+                                             const BasicElement *after) {
+  if (after && !impl_->IsChild(after))
+    return NULL;
+  return InsertElementFromXML(xml, impl_->GetBeforeFromAfter(after));
+}
+
+BasicElement *Elements::AppendElementVariant(const Variant &element) {
   return InsertElementVariant(element, NULL);
 }
 
-Variant Elements::InsertElementVariant(const Variant &element,
-                                       const BasicElement *before) {
+BasicElement *Elements::InsertElementVariant(const Variant &element,
+                                             const BasicElement *before) {
   BasicElement *result = NULL;
   if (element.type() == Variant::TYPE_STRING) {
     result = InsertElementFromXML(VariantValue<std::string>()(element), before);
@@ -549,7 +586,14 @@ Variant Elements::InsertElementVariant(const Variant &element,
     if (elm && InsertElement(elm, before))
       result = elm;
   }
-  return Variant(result);
+  return result;
+}
+
+BasicElement *Elements::InsertElementVariantAfter(const Variant &element,
+                                                  const BasicElement *after) {
+  if (after && !impl_->IsChild(after))
+    return NULL;
+  return InsertElementVariant(element, impl_->GetBeforeFromAfter(after));
 }
 
 bool Elements::RemoveElement(BasicElement *element) {
