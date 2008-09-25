@@ -72,7 +72,8 @@ TEST(Backoff, FirstRequest) {
 
 // Make sure time_interval is a legal value.
 // Valid Ranage: 2^(error_count - 4) .. 2^(error_count - 1) +- 20%
-bool IsValidTimeout(int interval, int error_count, int *exp) {
+bool IsValidTimeout(uint64_t a_interval, int error_count, int *exp) {
+  int interval = static_cast<int>(a_interval);
   if (error_count <= 3 && interval == 0) {
     *exp = -1;
     return true;

@@ -135,14 +135,15 @@ class ComboBoxElement::Impl {
     double height = std::max(
         0.0, owner_->BasicElement::GetPixelHeight() - item_pixel_height_);
     if (max_items_ > 0) {
-      double items = std::min(listbox_->GetChildren()->GetCount(), max_items_);
-      height = std::min(height, items * item_pixel_height_);
+      size_t items = std::min(listbox_->GetChildren()->GetCount(), max_items_);
+      height = std::min(height,
+                        static_cast<double>(items) * item_pixel_height_);
     }
     listbox_->SetPixelHeight(height);
   }
 
   void ScrollList(bool down) {
-    int count = listbox_->GetChildren()->GetCount();
+    int count = static_cast<int>(listbox_->GetChildren()->GetCount());
     if (count == 0) {
       return;
     }
@@ -188,7 +189,7 @@ class ComboBoxElement::Impl {
 
   ComboBoxElement *owner_;
   BasicElement *mouseover_child_, *grabbed_child_;
-  int max_items_;
+  size_t max_items_;
   ListBoxElement *listbox_;
   EditElementBase *edit_; // is NULL if and only if COMBO_DROPLIST mode
   bool button_over_, button_down_;
@@ -391,11 +392,11 @@ void ComboBoxElement::SetDroplistVisible(bool visible) {
   impl_->SetDroplistVisible(visible);
 }
 
-int ComboBoxElement::GetMaxDroplistItems() const {
+size_t ComboBoxElement::GetMaxDroplistItems() const {
   return impl_->max_items_;
 }
 
-void ComboBoxElement::SetMaxDroplistItems(int max_droplist_items) {
+void ComboBoxElement::SetMaxDroplistItems(size_t max_droplist_items) {
   if (max_droplist_items != impl_->max_items_) {
     impl_->max_items_ = max_droplist_items;
     QueueDraw();
@@ -686,22 +687,28 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
   if (event.GetType() == Event::EVENT_KEY_DOWN) {
     result = EVENT_RESULT_HANDLED;
     switch (event.GetKeyCode()) {
-     case KeyboardEvent::KEY_UP:
-      impl_->ScrollList(false);
-      break;
-     case KeyboardEvent::KEY_DOWN:
-      impl_->ScrollList(true);
-      break;
-     case KeyboardEvent::KEY_RETURN:
-       // Windows only allows the box to be closed with the enter key,
-       // not opened. Weird.
-
-      // Close dropdown on selection.
-      SetDroplistVisible(false);
-      break;
-     default:
-      result = EVENT_RESULT_UNHANDLED;
-      break;
+      case KeyboardEvent::KEY_UP:
+        impl_->ScrollList(false);
+        break;
+      case KeyboardEvent::KEY_DOWN:
+        if (event.GetModifier() == Event::MOD_CONTROL &&
+            !IsDroplistVisible()) {
+          SetDroplistVisible(true);
+        } else {
+          impl_->ScrollList(true);
+        }
+        break;
+      case KeyboardEvent::KEY_ESCAPE:
+      case KeyboardEvent::KEY_RETURN:
+        if (IsDroplistVisible()) {
+          SetDroplistVisible(false);
+        } else {
+          result = EVENT_RESULT_UNHANDLED;
+        }
+        break;
+      default:
+        result = EVENT_RESULT_UNHANDLED;
+        break;
     }
   }
   return result;

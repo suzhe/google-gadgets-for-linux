@@ -78,7 +78,7 @@ enum DOMExceptionCode {
   DOM_INVALID_ACCESS_ERR          = 15,
   */
   /** Extended error code to indicate an unexpected null pointer argument. */
-  DOM_NULL_POINTER_ERR            = 200,
+  DOM_NULL_POINTER_ERR            = 200
 };
 
 namespace internal {
@@ -101,7 +101,7 @@ class DOMNodeInterface : public ScriptableInterface {
     DOCUMENT_NODE               = 9,
     DOCUMENT_TYPE_NODE          = 10,
     DOCUMENT_FRAGMENT_NODE      = 11,
-    NOTATION_NODE               = 12,
+    NOTATION_NODE               = 12
   };
 
   /** For implementation only.  Placed here to ensure consistent vtbl offset. */

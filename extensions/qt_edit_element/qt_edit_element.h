@@ -55,8 +55,6 @@ class QtEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
-  virtual double GetSize() const;
-  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;
@@ -83,6 +81,7 @@ class QtEditElement : public EditElementBase {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
   virtual void GetDefaultSize(double *width, double *height) const;
+  virtual void OnFontSizeChange();
 
  private:
   void GetScrollBarInfo(int *x_range, int *y_range,
@@ -125,7 +124,6 @@ class QtEditElement : public EditElementBase {
   Texture *background_;
   Color text_color_;
   std::string font_family_;
-  double font_size_;
   QString password_char_;
   QAbstractTextDocumentLayout::PaintContext paint_ctx_;
   DISALLOW_EVIL_CONSTRUCTORS(QtEditElement);

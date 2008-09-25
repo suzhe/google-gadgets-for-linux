@@ -48,7 +48,7 @@ class SideBar::Impl : public View {
  public:
   class SideBarViewHost : public ViewHostInterface {
    public:
-    SideBarViewHost(SideBar::Impl *owner, int index)
+    SideBarViewHost(SideBar::Impl *owner, size_t index)
       : owner_(owner),
         view_element_(new ViewElement(owner->main_div_, owner, NULL, true)),
         initial_index_(index) {
@@ -144,11 +144,11 @@ class SideBar::Impl : public View {
     virtual int GetDebugMode() const {
       return owner_->view_host_->GetDebugMode();
     }
-    int GetInitialIndex() const { return initial_index_; }
+    size_t GetInitialIndex() const { return initial_index_; }
    private:
     SideBar::Impl *owner_;
     ViewElement *view_element_;
-    int initial_index_;
+    size_t initial_index_;
   };
 
   Impl(SideBar *owner, ViewHostInterface *view_host)
@@ -207,7 +207,7 @@ class SideBar::Impl : public View {
     if (event.GetButton() != MouseEvent::BUTTON_LEFT)
       return result;
 
-    int index = 0;
+    size_t index = 0;
     double x, y;
     BasicElement *element = NULL;
     ViewElement *focused = GetMouseOverViewElement();
@@ -270,7 +270,7 @@ class SideBar::Impl : public View {
         if (hit_element_bottom_) {
           // set cursor so that user understand that it's still in layout process
           SetCursor(CURSOR_SIZENS);
-          int index = GetIndex(focused);
+          size_t index = focused->GetIndex();
           if (offset < 0) {
             if (DownResize(false, index + 1, &offset) &&
                 UpResize(true, index, &offset)) {
@@ -287,7 +287,7 @@ class SideBar::Impl : public View {
                     kUndockDragThreshold)) {
           focused->ViewCoordToChildViewCoord(mouse_move_event_x_,
                                              mouse_move_event_y_, &x, &y);
-          onundock_signal_(focused->GetChildView(), GetIndex(focused), x, y);
+          onundock_signal_(focused->GetChildView(), focused->GetIndex(), x, y);
           ResetState();
         } else if (hit_sidebar_border_) {
           return EVENT_RESULT_UNHANDLED;
@@ -355,8 +355,8 @@ class SideBar::Impl : public View {
            down_cast<ViewElement*>(e) : NULL;
   }
 
-  ViewHostInterface *NewViewHost(int index) {
-    DLOG("sidebar: NewViewHost with index: %d", index);
+  ViewHostInterface *NewViewHost(size_t index) {
+    DLOG("sidebar: NewViewHost with index: %zu", index);
     SideBarViewHost *vh = new SideBarViewHost(this, index);
     return vh;
   }
@@ -386,9 +386,9 @@ class SideBar::Impl : public View {
     }
   }
 
-  int GetIndexOfPosition(double y) const {
-    int count = children_->GetCount();
-    for (int i = 0; i < count; ++i) {
+  size_t GetIndexOfPosition(double y) const {
+    size_t count = children_->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
       double x, middle;
       e->SelfCoordToViewCoord(0, e->GetPixelHeight()/2, &x, &middle);
@@ -398,18 +398,18 @@ class SideBar::Impl : public View {
     return count;
   }
 
-  int GetIndexOfView(const ViewInterface *view) const {
-    int count = children_->GetCount();
-    for (int i = 0; i < count; ++i) {
+  size_t GetIndexOfView(const ViewInterface *view) const {
+    size_t count = children_->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
       View *v = e->GetChildView();
       if (v == view)
         return i;
     }
-    return -1;
+    return kInvalidIndex;
   }
 
-  void InsertPlaceholder(int index, double height) {
+  void InsertPlaceholder(size_t index, double height) {
     // only one null element is allowed
     if (!null_element_) {
       null_element_ = new ViewElement(main_div_, this, NULL, true);
@@ -426,10 +426,10 @@ class SideBar::Impl : public View {
     }
   }
 
-  void EnumerateViews(Slot2<bool, int, View*> *slot) {
+  void EnumerateViews(Slot2<bool, size_t, View*> *slot) {
     ASSERT(slot);
-    int count = children_->GetCount();
-    for (int i = 0; i < count; ++i) {
+    size_t count = children_->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
       View *v = e->GetChildView();
       if (v && !(*slot)(i, v))
@@ -526,19 +526,12 @@ class SideBar::Impl : public View {
     view_host_->ShowContextMenu(MouseEvent::BUTTON_LEFT);
   }
 
-  int GetIndex(const BasicElement *element) const {
-    ASSERT(element->IsInstanceOf(ViewElement::CLASS_ID));
-    for (int i = 0; i < children_->GetCount(); ++i)
-      if (element == children_->GetItemByIndex(i)) return i;
-    return -1;
-  }
-
-  void InsertViewElement(int index, ViewElement *element) {
-    ASSERT(index >= 0);
+  void InsertViewElement(size_t index, ViewElement *element) {
+    ASSERT(index != kInvalidIndex);
     ASSERT(element);
-    int count = children_->GetCount();
+    size_t count = children_->GetCount();
     if (initializing_) {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         ViewElement *e = down_cast<ViewElement*>(children_->GetItemByIndex(i));
         View *v = e->GetChildView();
         if (v) {
@@ -570,8 +563,8 @@ class SideBar::Impl : public View {
 
   void Layout() {
     double y = 0;
-    int count = children_->GetCount();
-    for (int i = 0; i < count; ++i) {
+    size_t count = children_->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       ViewElement *e = down_cast<ViewElement *>(children_->GetItemByIndex(i));
       double width = main_div_->GetPixelWidth();
       double height = ceil(e->GetPixelHeight());
@@ -588,10 +581,10 @@ class SideBar::Impl : public View {
   }
 
   // *offset could be any value
-  bool UpResize(bool do_resize, int index, double *offset) {
+  bool UpResize(bool do_resize, size_t index, double *offset) {
     double sign = *offset > 0 ? 1 : -1;
     double count = 0;
-    while (*offset * sign > count * sign && index >= 0) {
+    while (*offset * sign > count * sign && index != kInvalidIndex) {
       ViewElement *element =
           down_cast<ViewElement *>(children_->GetItemByIndex(index));
       double w = element->GetPixelWidth();
@@ -612,21 +605,22 @@ class SideBar::Impl : public View {
       }
       index--;
     }
-    if (do_resize)
+    if (do_resize) {
       // recover upmost elements' size
-      while (index >= 0) {
+      while (index != kInvalidIndex) {
         ViewElement *element =
             down_cast<ViewElement *>(children_->GetItemByIndex(index));
         element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
         index--;
       }
+    }
     DLOG("original: at last off: %.1lf, count: %.1lf", *offset, count);
     if (count == 0) return false;
     *offset = count;
     return true;
   }
 
-  bool DownResize(bool do_resize, int index, double *offset) {
+  bool DownResize(bool do_resize, size_t index, double *offset) {
     double count = 0;
     if (blank_height_ > 0) count = std::max(-blank_height_, *offset);
     while (*offset < count && index < children_->GetCount()) {
@@ -665,7 +659,7 @@ class SideBar::Impl : public View {
   }
 
   double GetBlankHeight() const {
-    int index = children_->GetCount();
+    size_t index = children_->GetCount();
     if (!index) return GetHeight();
     BasicElement *element = children_->GetItemByIndex(index - 1);
     return GetHeight() - element->GetPixelY() - element->GetPixelHeight();
@@ -698,7 +692,7 @@ class SideBar::Impl : public View {
 
   bool initializing_;
 
-  Signal4<void, View*, int, double, double> onundock_signal_;
+  Signal4<void, View*, size_t, double, double> onundock_signal_;
   Signal1<void, View*> onclick_signal_;
   Signal1<void, MenuInterface *> onmenu_signal_;
 };
@@ -716,7 +710,7 @@ void SideBar::SetInitializing(bool initializing) {
   impl_->initializing_ = initializing;
 }
 
-ViewHostInterface *SideBar::NewViewHost(int index) {
+ViewHostInterface *SideBar::NewViewHost(size_t index) {
   return impl_->NewViewHost(index);
 }
 
@@ -756,15 +750,15 @@ bool SideBar::IsMinimized() const {
   return impl_->IsMinimized();
 }
 
-int SideBar::GetIndexOfPosition(double y) const {
+size_t SideBar::GetIndexOfPosition(double y) const {
   return impl_->GetIndexOfPosition(y);
 }
 
-int SideBar::GetIndexOfView(const ViewInterface *view) const {
+size_t SideBar::GetIndexOfView(const ViewInterface *view) const {
   return impl_->GetIndexOfView(view);
 }
 
-void SideBar::InsertPlaceholder(int index, double height) {
+void SideBar::InsertPlaceholder(size_t index, double height) {
   return impl_->InsertPlaceholder(index, height);
 }
 
@@ -772,12 +766,12 @@ void SideBar::ClearPlaceholder() {
   impl_->ClearPlaceholder();
 }
 
-void SideBar::EnumerateViews(Slot2<bool, int, View*> *slot) {
+void SideBar::EnumerateViews(Slot2<bool, size_t, View*> *slot) {
   impl_->EnumerateViews(slot);
 }
 
 Connection *SideBar::ConnectOnUndock(
-    Slot4<void, View*, int, double, double> *slot) {
+    Slot4<void, View*, size_t, double, double> *slot) {
   return impl_->onundock_signal_.Connect(slot);
 }
 

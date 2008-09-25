@@ -87,6 +87,8 @@ ElementFactory::ElementFactory()
                        &ObjectVideoPlayer::CreateInstance);
   RegisterElementClass("progid:WMPlayer.OCX.7",
                        &ObjectVideoPlayer::CreateInstance);
+  RegisterElementClass("progid:WMPlayer.OCX",
+                       &ObjectVideoPlayer::CreateInstance);
   RegisterElementClass("progressbar", &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);

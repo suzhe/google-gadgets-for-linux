@@ -72,7 +72,7 @@ GtkEditElement::~GtkEditElement() {
 }
 
 void GtkEditElement::Layout() {
-  ScrollingElement::Layout();
+  EditElementBase::Layout();
   int range, line_step, page_step, cur_pos;
 
   impl_->SetWidth(static_cast<int>(ceil(GetClientWidth())));
@@ -90,7 +90,7 @@ void GtkEditElement::Layout() {
 }
 
 void GtkEditElement::MarkRedraw() {
-  ScrollingElement::MarkRedraw();
+  EditElementBase::MarkRedraw();
   impl_->MarkRedraw();
 }
 
@@ -153,14 +153,6 @@ std::string GtkEditElement::GetPasswordChar() const {
 
 void GtkEditElement::SetPasswordChar(const char *passwordChar) {
   impl_->SetPasswordChar(passwordChar);
-}
-
-double GtkEditElement::GetSize() const {
-  return impl_->GetFontSize();
-}
-
-void GtkEditElement::SetSize(double size) {
-  impl_->SetFontSize(size);
 }
 
 bool GtkEditElement::IsStrikeout() const {
@@ -240,7 +232,7 @@ void GtkEditElement::DoDraw(CanvasInterface *canvas) {
 }
 
 EventResult GtkEditElement::HandleMouseEvent(const MouseEvent &event) {
-  if (ScrollingElement::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
+  if (EditElementBase::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
     return EVENT_RESULT_HANDLED;
   return impl_->OnMouseEvent(event);
 }
@@ -265,6 +257,10 @@ void GtkEditElement::GetDefaultSize(double *width, double *height) const {
 
   *width = kDefaultEditElementWidth;
   *height = kDefaultEditElementHeight;
+}
+
+void GtkEditElement::OnFontSizeChange() {
+  impl_->OnFontSizeChange();
 }
 
 void GtkEditElement::OnScrolled() {

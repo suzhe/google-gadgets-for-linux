@@ -193,6 +193,7 @@ class View::Impl {
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
+      theme_changed_(false),
       resize_border_specified_(false),
       resize_border_left_(0),
       resize_border_top_(0),
@@ -315,6 +316,7 @@ class View::Impl {
     obj->RegisterSignal(kOnMouseOutEvent, &onmouseout_event_);
     obj->RegisterSignal(kOnMouseOverEvent, &onmouseover_event_);
     obj->RegisterSignal(kOnMouseUpEvent, &onmouseup_event_);
+    obj->RegisterSignal(kOnMouseWheelEvent, &onmousewheel_event_);
     obj->RegisterSignal(kOnOkEvent, &onok_event_);
     obj->RegisterSignal(kOnOpenEvent, &onopen_event_);
     obj->RegisterSignal(kOnOptionChangedEvent, &onoptionchanged_event_);
@@ -326,6 +328,8 @@ class View::Impl {
     obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
     // Not a standard signal.
     obj->RegisterSignal(kOnContextMenuEvent, &oncontextmenu_event_);
+    // 5.8 API.
+    obj->RegisterSignal(kOnThemeChangedEvent, &onthemechanged_event_);
   }
 
   void MapChildPositionEvent(const PositionEvent &org_event,
@@ -610,7 +614,8 @@ class View::Impl {
         FireEvent(&scriptable_event, onmouseover_event_);
         break;
       case Event::EVENT_MOUSE_WHEEL:
-        // View doesn't have mouse wheel event according to the API document.
+        // 5.8 API added onmousewheel for view.
+        FireEvent(&scriptable_event, onmousewheel_event_);
         break;
       default:
         ASSERT(false);
@@ -643,6 +648,145 @@ class View::Impl {
     return result;
   }
 
+  void SetFocusToFirstElement() {
+    if (children_.GetCount()) {
+      BasicElement *first = children_.GetItemByIndex(0);
+      if (!first->IsTabStop())
+        first = GetNextFocusElement(first);
+      SetFocus(first);
+    }
+  }
+
+  void SetFocusToLastElement() {
+    size_t count = children_.GetCount();
+    if (count) {
+      BasicElement *last = children_.GetItemByIndex(count - 1);
+      if (!last->IsTabStop())
+        last = GetPreviousFocusElement(last);
+      SetFocus(last);
+    }
+  }
+
+  void MoveFocusForward() {
+    BasicElement *current = focused_element_.Get();
+    if (current) {
+      // Try children first.
+      BasicElement *next = GetFirstFocusInSubTrees(current);
+      if (!next)
+        next = GetNextFocusElement(current);
+      if (next && next != current)
+        SetFocus(next);
+      // Otherwise leave the focus unchanged.
+    } else {
+      SetFocusToFirstElement();
+    }
+  }
+
+  void MoveFocusBackward() {
+    BasicElement *current = focused_element_.Get();
+    if (current) {
+      BasicElement *previous = GetPreviousFocusElement(current);
+      if (previous && previous != current)
+        SetFocus(previous);
+      // Otherwise leave the focus unchanged.
+    } else {
+      SetFocusToLastElement();
+    }
+  }
+
+  // Note: this method doesn't search in descendants.
+  BasicElement *GetNextFocusElement(BasicElement *current) {
+    // Try previous siblings first.
+    BasicElement *parent = current->GetParentElement();
+    Elements *elements = parent ? parent->GetChildren() : &children_;
+    size_t index = current->GetIndex();
+    if (index + 1 < elements->GetCount()) {
+      BasicElement *result =
+          GetFirstFocusInTree(elements->GetItemByIndex(index + 1));
+      if (result)
+        return result;
+    }
+    // All next siblings and their children are not focusable, up to the parent.
+    if (parent)
+      return GetNextFocusElement(parent);
+
+    // Now at the top level, wrap back to the first element.
+    for (size_t i = 0; i <= index; i++) {
+      BasicElement *result = GetFirstFocusInTree(children_.GetItemByIndex(i));
+      if (result)
+        return result;
+    }
+    return NULL;
+  }
+
+  BasicElement *GetPreviousFocusElement(BasicElement *current) {
+    // Try previous siblings first.
+    BasicElement *parent = current->GetParentElement();
+    Elements *elements = parent ? parent->GetChildren() : &children_;
+    size_t index = current->GetIndex();
+    if (index > 0) {
+      BasicElement *result =
+          GetLastFocusInTree(elements->GetItemByIndex(index - 1));
+      if (result)
+        return result;
+    }
+    // All previous siblings and their children are not focusable, up to the
+    // parent.
+    if (parent)
+      return GetPreviousFocusElement(parent);
+
+    // Now at the top level, wrap back to the last element.
+    for (size_t i = children_.GetCount(); i > index; i--) {
+      BasicElement *result =
+          GetLastFocusInTree(children_.GetItemByIndex(i - 1));
+      if (result)
+        return result;
+    }
+    return NULL;
+  }
+
+  BasicElement *GetFirstFocusInTree(BasicElement *current) {
+    return current->IsTabStop() ? current : GetFirstFocusInSubTrees(current);
+  }
+
+  BasicElement *GetFirstFocusInSubTrees(BasicElement *current) {
+    if (current->IsVisible()) {
+      Elements *children = current->GetChildren();
+      if (children) {
+        size_t childcount = children->GetCount();
+        for (size_t i = 0; i < childcount; i++) {
+          BasicElement *result =
+              GetFirstFocusInTree(children->GetItemByIndex(i));
+          if (result)
+            return result;
+        }
+      }
+    }
+    return NULL;
+  }
+
+  BasicElement *GetLastFocusInTree(BasicElement *current) {
+    BasicElement *result = GetLastFocusInSubTrees(current);
+    if (result)
+      return result;
+    return current->IsTabStop() ? current : NULL;
+  }
+
+  BasicElement *GetLastFocusInSubTrees(BasicElement *current) {
+    if (current->IsVisible()) {
+      Elements *children = current->GetChildren();
+      if (children) {
+        for (size_t i = children->GetCount(); i > 0; i--) {
+          BasicElement *result =
+              GetLastFocusInTree(children->GetItemByIndex(i - 1));
+          if (result)
+            return result;
+        }
+      }
+    }
+    return NULL;
+  }
+
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
@@ -652,6 +796,8 @@ class View::Impl {
 
     bool old_interactive =
         gadget_ ? gadget_->SetInUserInteraction(true) : false;
+
+    BasicElement *old_focused_element = focused_element_.Get();
 
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
@@ -676,6 +822,20 @@ class View::Impl {
         focused_element_.Reset(NULL);
       } else {
         result = focused_element_.Get()->OnKeyEvent(event);
+        if (result != EVENT_RESULT_CANCELED) {
+          // From API 5.8, tab keys are not sent to elements, but move focus.
+          if (event.GetType() == Event::EVENT_KEY_DOWN &&
+              event.GetKeyCode() == KeyboardEvent::KEY_TAB &&
+              // Only move focus when focus was not moved by the view's and
+              // the focused element's event handler.
+              old_focused_element == focused_element_.Get()) {
+            if (event.GetModifier() & Event::MOD_SHIFT)
+              MoveFocusBackward();
+            else
+              MoveFocusForward();
+            result = EVENT_RESULT_HANDLED;
+          }
+        }
       }
     }
 
@@ -768,7 +928,8 @@ class View::Impl {
 #endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
-        // For now we don't automatically set focus to some element.
+        if (!focused_element_.Get())
+          SetFocusToFirstElement();
         break;
       case Event::EVENT_FOCUS_OUT:
         SetFocus(NULL);
@@ -805,6 +966,11 @@ class View::Impl {
         break;
       case Event::EVENT_UNDOCK:
         FireEvent(&scriptable_event, onundock_event_);
+        break;
+      case Event::EVENT_THEME_CHANGED:
+        MarkRedraw();
+        owner_->QueueDraw();
+        theme_changed_ = true;
         break;
       default:
         ASSERT(false);
@@ -957,6 +1123,12 @@ class View::Impl {
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedSizeEvents();
+    if (theme_changed_) {
+      SimpleEvent event(Event::EVENT_THEME_CHANGED);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      FireEvent(&scriptable_event, onthemechanged_event_);
+      theme_changed_ = false;
+    }
 
     CanvasInterface *target;
     if (canvas_cache_) {
@@ -1177,7 +1349,6 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
-    owner_->AddElementToClipRegion(element, NULL);
     if (element == tooltip_element_.Get())
       owner_->SetTooltip(NULL);
 
@@ -1336,6 +1507,7 @@ class View::Impl {
   EventSignal onmouseout_event_;
   EventSignal onmouseover_event_;
   EventSignal onmouseup_event_;
+  EventSignal onmousewheel_event_;
   EventSignal onok_event_;
   EventSignal onopen_event_;
   EventSignal onoptionchanged_event_;
@@ -1346,6 +1518,7 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
   EventSignal oncontextmenu_event_;
+  EventSignal onthemechanged_event_;
 
   ImageCache image_cache_;
 
@@ -1398,6 +1571,7 @@ class View::Impl {
   bool draw_queued_;
   bool events_enabled_;
   bool need_redraw_;
+  bool theme_changed_;
 
   bool resize_border_specified_;
   double resize_border_left_;
@@ -1906,6 +2080,9 @@ Connection *View::ConnectOnMouseOutEvent(Slot0<void> *handler) {
 Connection *View::ConnectOnMouseUpEvent(Slot0<void> *handler) {
   return impl_->onmouseup_event_.Connect(handler);
 }
+Connection *View::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
+  return impl_->onmousewheel_event_.Connect(handler);
+}
 Connection *View::ConnectOnOkEvent(Slot0<void> *handler) {
   return impl_->onok_event_.Connect(handler);
 }
@@ -1935,6 +2112,9 @@ Connection *View::ConnectOnUndockEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnContextMenuEvent(Slot0<void> *handler) {
   return impl_->oncontextmenu_event_.Connect(handler);
+}
+Connection *View::ConnectOnThemeChangedEvent(Slot0<void> *handler) {
+  return impl_->onthemechanged_event_.Connect(handler);
 }
 
 } // namespace ggadget

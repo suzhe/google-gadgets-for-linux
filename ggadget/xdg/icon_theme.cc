@@ -45,7 +45,7 @@ static std::vector<std::string> *icon_formats = NULL;
 static const int kDefaultThemeNum = 5;
 static IconTheme *default_themes[kDefaultThemeNum];
 
-static int last_check_time = 0;
+static time_t last_check_time = 0;
 static void EnsureUpdated();
 
 class IconTheme {
@@ -265,7 +265,7 @@ class IconTheme {
     }
 
     if (icon_path != "" || !inherits || inherits_ == "") return icon_path;
-    
+
     IconTheme *theme = LoadTheme(inherits_);
     if (theme)
       return theme->GetIconPath(icon_name, size, inherits);
@@ -442,7 +442,7 @@ static void InitIconDir() {
 static void EnsureUpdated() {
   struct timeval t;
   gettimeofday(&t, NULL);
-  int now = t.tv_sec;
+  time_t now = t.tv_sec;
 
   if (last_check_time == 0) {
     icon_dirs = new std::map<std::string, int>;
@@ -454,7 +454,7 @@ static void EnsureUpdated() {
     last_check_time = now;
   } else {
     // TODO: something changed. start over
-    if (now - last_check_time > kUpdateInterval) {
+    if (now > last_check_time + kUpdateInterval) {
 
     }
   }

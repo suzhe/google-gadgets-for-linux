@@ -81,8 +81,7 @@ class GtkEditImpl {
   Color GetTextColor();
   void SetFontFamily(const char *font);
   std::string GetFontFamily();
-  void SetFontSize(double size);
-  double GetFontSize();
+  void OnFontSizeChange();
   void SetPasswordChar(const char *c);
   std::string GetPasswordChar();
   bool IsScrollBarRequired();

@@ -100,7 +100,7 @@ TEST(ViewTest, XMLConstruction) {
   ASSERT_FALSE(view.GetShowCaptionAlways());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view.GetResizable());
   ASSERT_STREQ("", view.GetCaption().c_str());
-  ASSERT_EQ(0, view.GetChildren()->GetCount());
+  ASSERT_EQ(0U, view.GetChildren()->GetCount());
 
   const char *xml =
     "<view width=\"123\" height=\"456\" caption=\"View-Caption\"\n"
@@ -116,7 +116,7 @@ TEST(ViewTest, XMLConstruction) {
   ASSERT_TRUE(view.GetShowCaptionAlways());
   ASSERT_EQ(123, view.GetWidth());
   ASSERT_EQ(456, view.GetHeight());
-  ASSERT_EQ(2, view.GetChildren()->GetCount());
+  ASSERT_EQ(2U, view.GetChildren()->GetCount());
 
   ggadget::BasicElement *m = view.GetElementByName("muffin");
   ASSERT_TRUE(m != NULL);

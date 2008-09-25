@@ -121,8 +121,8 @@ class ListBoxElement::Impl {
   bool ClearSelection(ItemElement *avoid) {
     bool result = false;
     Elements *elements = owner_->GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child != avoid) {
         if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
@@ -147,8 +147,8 @@ class ListBoxElement::Impl {
 
   ItemElement *FindItemByString(const char *str) {
     Elements *elements = owner_->GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -163,8 +163,8 @@ class ListBoxElement::Impl {
 
   ItemElement *GetSelectedItem() {
     Elements *elements = owner_->GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -387,8 +387,8 @@ void ListBoxElement::SetItemOverColor(const Variant &color) {
     impl_->item_over_color_ = GetView()->LoadTexture(color);
 
     Elements *elements = GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -417,8 +417,8 @@ void ListBoxElement::SetItemSelectedColor(const Variant &color) {
     impl_->item_selected_color_ = GetView()->LoadTexture(color);
 
     Elements *elements = GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -446,8 +446,8 @@ void ListBoxElement::SetItemSeparatorColor(const Variant &color) {
     impl_->item_separator_color_ = GetView()->LoadTexture(color);
 
     Elements *elements = GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -468,8 +468,8 @@ void ListBoxElement::SetItemSeparator(bool separator) {
     impl_->item_separator_ = separator;
 
     Elements *elements = GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -491,13 +491,13 @@ void ListBoxElement::SetMultiSelect(bool multiselect) {
 
 int ListBoxElement::GetSelectedIndex() const {
   const Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
+  size_t childcount = elements->GetCount();
+  for (size_t i = 0; i < childcount; i++) {
     const BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       const ItemElement *item = down_cast<const ItemElement *>(child);
       if (item->IsSelected()) {
-        return i;
+        return static_cast<int>(i);
       }
     } else {
       LOG(kErrorItemExpected);
@@ -512,7 +512,8 @@ int ListBoxElement::GetSelectedIndex() const {
 }
 
 void ListBoxElement::SetSelectedIndex(int index) {
-  BasicElement *item = GetChildren()->GetItemByIndex(index);
+  BasicElement *item =
+      GetChildren()->GetItemByIndex(static_cast<size_t>(index));
   if (!item) {
     // Only occurs when initializing from XML, selectedIndex is set before
     // items are added.
@@ -591,8 +592,8 @@ void ListBoxElement::SelectRange(ItemElement *endpoint) {
   } else {
     bool started = false;
     Elements *elements = GetChildren();
-    int childcount = elements->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
@@ -639,7 +640,7 @@ bool ListBoxElement::AppendString(const char *str) {
   return result;
 }
 
-bool ListBoxElement::InsertStringAt(const char *str, int index) {
+bool ListBoxElement::InsertStringAt(const char *str, size_t index) {
   Elements *elements = GetChildren();
   if (elements->GetCount() == index) {
     return AppendString(str);
@@ -676,19 +677,6 @@ void ListBoxElement::Layout() {
   impl_->SetPendingSelection();
   // This field is no longer used after the first layout.
   impl_->selected_index_ = -1;
-
-  // Inform children (items) of their index.
-  Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      item->SetIndex(i);
-    } else {
-      LOG(kErrorItemExpected);
-    }
-  }
 
   // Call parent Layout() after SetIndex().
   DivElement::Layout();

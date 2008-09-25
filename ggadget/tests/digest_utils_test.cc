@@ -68,7 +68,7 @@ TEST(DigestUtils, GenerateSHA1) {
   };
   char str[130];
   for (int i = 0; i < 130; i++)
-    str[i] = i;
+    str[i] = static_cast<char>(i);
   for (int i = 117; i < 130; i++) {
     ASSERT_TRUE(GenerateSHA1(std::string(str, i), &result));
     ASSERT_EQ(std::string(digests117_130[i - 117]), ToHexString(result));

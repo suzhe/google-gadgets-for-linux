@@ -50,7 +50,7 @@ class BaseScriptable : public ScriptableHelperDefault {
   }
   double MethodDouble2(bool p1, long p2) {
     AppendBuffer("MethodDouble2(%d, %ld)\n", p1, p2);
-    return p1 ? p2 : -p2;
+    return static_cast<double>(p1 ? p2 : -p2);
   }
   void SetDoubleProperty(double double_property) {
     double_property_ = double_property;
@@ -216,7 +216,7 @@ class ExtScriptable : public BaseScriptable {
     }
 
     void FireComplexSignal(const char *s, int i) {
-      // Signals returning ScriptableInterface * call only be called with Emit(). 
+      // Signals returning ScriptableInterface * call only be called with Emit().
       Variant params[] = { Variant(s), Variant(i) };
       ResultVariant signal_result = complex_signal_.Emit(2, params);
       complex_signal_data_.Reset(

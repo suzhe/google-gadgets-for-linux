@@ -56,7 +56,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   /**
    * @return number of children.
    */
-  int GetCount() const;
+  size_t GetCount() const;
 
   /**
    * Returns the element identified by the index.
@@ -64,8 +64,8 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * @return the pointer to the specified element. If the parameter is out of
    *     range, @c NULL is returned.
    */
-  BasicElement *GetItemByIndex(int child);
-  const BasicElement *GetItemByIndex(int child) const;
+  BasicElement *GetItemByIndex(size_t child);
+  const BasicElement *GetItemByIndex(size_t child) const;
 
   /**
    * Returns the element identified by the name.

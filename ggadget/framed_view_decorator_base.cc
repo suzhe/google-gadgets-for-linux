@@ -180,8 +180,8 @@ class FramedViewDecoratorBase::Impl {
     Elements *elements = action_div_->GetChildren();
     double width = 0;
     double height = 0;
-    int count = elements->GetCount();
-    for (int i = 0; i < count; ++i) {
+    size_t count = elements->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       BasicElement *elm = elements->GetItemByIndex(i);
       elm->Layout();
       if (elm->IsVisible()) {

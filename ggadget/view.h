@@ -477,6 +477,7 @@ class View : public ViewInterface {
   Connection *ConnectOnMouseOverEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseOutEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseWheelEvent(Slot0<void> *handler);
   Connection *ConnectOnOkEvent(Slot0<void> *handler);
   Connection *ConnectOnOpenEvent(Slot0<void> *handler);
   Connection *ConnectOnOptionChangedEvent(Slot0<void> *handler);
@@ -487,6 +488,7 @@ class View : public ViewInterface {
   Connection *ConnectOnSizingEvent(Slot0<void> *handler);
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
   Connection *ConnectOnContextMenuEvent(Slot0<void> *handler);
+  Connection *ConnectOnThemeChangedEvent(Slot0<void> *handler);
 
  public:
   /** For performance testing. */

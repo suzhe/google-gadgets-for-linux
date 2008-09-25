@@ -105,7 +105,7 @@ void BaseScriptable::DoClassRegister() {
 void BaseScriptable::DoRegisterConstants() {
   RegisterConstant("Fixed", 123456789);
   RegisterConstants(arraysize(enum_type_names), enum_type_names, NULL);
-  
+
   // Register 10 integer constants.
   static char names_arr[20][20]; // Ugly...
   char *names[10];
@@ -114,7 +114,7 @@ void BaseScriptable::DoRegisterConstants() {
     sprintf(names[i], "ICONSTANT%d", i);
   }
   RegisterConstants(10, names, NULL);
-  
+
   // Register 10 string constants.
   Variant const_values[10];
   for (int i = 0; i < 10; i++) {
@@ -170,7 +170,7 @@ void ExtScriptable::DoRegister() {
     RegisterProperty("OverrideSelf",
                      NewSlot(this, &ExtScriptable::GetSelf), NULL);
     RegisterConstant("length", kArraySize);
-  
+
     RegisterMethod("NewObject",
         NewSlotWithDefaultArgs(NewSlot(this, &ExtScriptable::NewObject),
                                kNewObjectDefaultArgs));
@@ -189,7 +189,7 @@ void ExtScriptable::DoRegister() {
     RegisterMethod("FireComplexSignal",
                    NewSlot(&inner_, &Inner::FireComplexSignal));
   }
-  
+
   // The following are always object-based.
   RegisterReadonlySimpleProperty("SignalResult", &inner_.signal_result_);
   SetInheritsFrom(Prototype::GetInstance());
@@ -212,7 +212,7 @@ void ExtScriptable::DoClassRegister() {
     RegisterProperty("OverrideSelf",
                      NewSlot(&ExtScriptable::GetSelf), NULL);
     RegisterConstant("length", kArraySize);
-  
+
     RegisterMethod("NewObject",
         NewSlotWithDefaultArgs(NewSlot(&ExtScriptable::NewObject),
                                kNewObjectDefaultArgs));
@@ -238,16 +238,16 @@ ExtScriptable::~ExtScriptable() {
 }
 
 ScriptableArray *ExtScriptable::ConcatArray(ScriptableInterface *array1,
-                                              ScriptableInterface *array2) {
+                                            ScriptableInterface *array2) {
   if (array1 == NULL || array2 == NULL)
     return NULL;
-  size_t count1 = VariantValue<size_t>()(array1->GetProperty("length").v());
-  size_t count2 = VariantValue<size_t>()(array2->GetProperty("length").v());
+  int count1 = VariantValue<int>()(array1->GetProperty("length").v());
+  int count2 = VariantValue<int>()(array2->GetProperty("length").v());
 
   ScriptableArray *array = new ScriptableArray();
-  for (size_t i = 0; i < count1; i++)
+  for (int i = 0; i < count1; i++)
     array->Append(array1->GetPropertyByIndex(i).v());
-  for (size_t i = 0; i < count2; i++)
+  for (int i = 0; i < count2; i++)
     array->Append(array2->GetPropertyByIndex(i).v());
   return array;
 }

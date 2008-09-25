@@ -124,7 +124,7 @@ class ListBoxElement : public DivElement {
    * at the specified index.
    * @return true on success, false otherwise.
    */
-  bool InsertStringAt(const char *str, int index);
+  bool InsertStringAt(const char *str, size_t index);
 
   /**
    * Searches for the lowest-indexed Item element that has one Label child

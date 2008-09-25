@@ -153,21 +153,49 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
     const DOMAttrInterface *attr =
         down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
     std::string name = attr->GetName();
-    std::string value = attr->GetValue();
     if (GadgetStrCmp(kInnerTextProperty, name.c_str()) == 0) {
       LOG("%s:%d:%d: %s is not allowed in XML as an attribute: ",
           filename, attr->GetRow(), attr->GetColumn(), kInnerTextProperty);
       continue;
     }
 
-    if (GadgetStrCmp(kNameAttr, name.c_str()) != 0 &&
+    if (name.find('.') == name.npos &&
+        GadgetStrCmp(kNameAttr, name.c_str()) != 0 &&
         (!is_object || GadgetStrCmp(kClassIdAttr, name.c_str()) != 0)) {
       SetScriptableProperty(scriptable, script_context, filename,
                             attr->GetRow(), attr->GetColumn(),
-                            name.c_str(), value.c_str(), tag_name.c_str());
+                            name.c_str(), attr->GetValue().c_str(),
+                            tag_name.c_str());
     }
   }
   // "innerText" property is set in InsertElementFromDOM().
+
+  // Deal with inner object properties after all normal properties, because
+  // some object is only available when some other properties are set.
+  // For example, div's scroll bar is only available when autoscroll='true'.
+  for (size_t i = 0; i < length; i++) {
+    const DOMAttrInterface *attr =
+        down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
+    std::string name = attr->GetName();
+    std::string object_name, property_name;
+    if (SplitString(name, ".", &object_name, &property_name)) {
+      ResultVariant object_v = scriptable->GetProperty(object_name.c_str());
+      if (object_v.v().type() == Variant::TYPE_SCRIPTABLE) {
+        ScriptableInterface *object =
+            VariantValue<ScriptableInterface *>()(object_v.v());
+        if (object) {
+          SetScriptableProperty(object, script_context, filename,
+                                attr->GetRow(), attr->GetColumn(),
+                                property_name.c_str(), attr->GetValue().c_str(),
+                                tag_name.c_str());
+          continue;
+        }
+      }
+
+      LOG("%s:%d:%d Can't set property %s for %s", filename,
+          attr->GetRow(), attr->GetColumn(), name.c_str(), tag_name.c_str());
+    }
+  }
 }
 
 BasicElement *InsertElementFromDOM(Elements *elements,

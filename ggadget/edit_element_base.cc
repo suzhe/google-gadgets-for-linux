@@ -16,6 +16,7 @@
 
 #include "edit_element_base.h"
 #include "event.h"
+#include "gadget_consts.h"
 #include "logger.h"
 #include "scriptable_event.h"
 #include "scrolling_element.h"
@@ -31,7 +32,11 @@ static const char *kAlignNames[] = {
 
 class EditElementBase::Impl {
  public:
-  Impl(EditElementBase *owner) : owner_(owner) { }
+  Impl(EditElementBase *owner)
+      : owner_(owner),
+        size_(kDefaultFontSize),
+        size_is_default_(true) {
+  }
 
   void FireOnChangeEvent() {
     SimpleEvent event(Event::EVENT_CHANGE);
@@ -46,6 +51,8 @@ class EditElementBase::Impl {
   }
 
   EditElementBase *owner_;
+  double size_;
+  bool size_is_default_;
   EventSignal onchange_event_;
 };
 
@@ -94,6 +101,9 @@ void EditElementBase::DoClassRegister() {
   RegisterProperty("wordWrap",
                    NewSlot(&EditElementBase::IsWordWrap),
                    NewSlot(&EditElementBase::SetWordWrap));
+  RegisterProperty("scrolling",
+                   NewSlot(&ScrollingElement::IsAutoscroll),
+                   NewSlot(&ScrollingElement::SetAutoscroll));
   RegisterProperty("readonly",
                    NewSlot(&EditElementBase::IsReadOnly),
                    NewSlot(&EditElementBase::SetReadOnly));
@@ -116,6 +126,42 @@ void EditElementBase::DoClassRegister() {
 
 EditElementBase::~EditElementBase() {
   delete impl_;
+}
+
+bool EditElementBase::IsTabStop() const {
+  return IsReallyEnabled();
+}
+
+void EditElementBase::Layout() {
+  if (impl_->size_is_default_) {
+    int default_size = GetView()->GetDefaultFontSize();
+    if (default_size != impl_->size_) {
+      impl_->size_ = default_size;
+      OnFontSizeChange();
+    }
+  }
+  ScrollingElement::Layout();
+}
+
+double EditElementBase::GetSize() const {
+  return impl_->size_is_default_ ? -1 : impl_->size_;
+}
+
+void EditElementBase::SetSize(double size) {
+  if (size == -1) {
+    impl_->size_is_default_ = true;
+    size = GetView()->GetDefaultFontSize();
+  } else {
+    impl_->size_is_default_ = false;
+  }
+  if (size != impl_->size_) {
+    impl_->size_ = size;
+    OnFontSizeChange();
+  }
+}
+
+double EditElementBase::GetCurrentSize() const {
+  return impl_->size_;
 }
 
 Connection *EditElementBase::ConnectOnChangeEvent(Slot0<void> *slot) {

@@ -125,7 +125,7 @@ IF(GGL_OEM_BRAND)
 ENDIF(GGL_OEM_BRAND)
 
 IF(UNIX)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror -Wconversion")
   # No "-Wall -Werror" for C flags, to avoid third_party code break.
   SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   SET(PROJECT_RESOURCE_DIR share/${PRODUCT_NAME})

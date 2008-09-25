@@ -235,17 +235,18 @@ class ZipFileManager::Impl {
       zip_info.internal_fa = unz_info.internal_fa;
       zip_info.external_fa = unz_info.external_fa;
       std::string content;
-      bool result = zipOpenNewFileInZip(dest_, filename, &zip_info,
-                                        extra, unz_info.size_file_extra,
-                                        NULL, 0, comment,
-                                        unz_info.compression_method,
-                                        Z_DEFAULT_COMPRESSION) == ZIP_OK &&
+      bool result = zipOpenNewFileInZip(
+                        dest_, filename, &zip_info, extra,
+                        static_cast<uInt>(unz_info.size_file_extra),
+                        NULL, 0, comment,
+                        static_cast<int>(unz_info.compression_method),
+                        Z_DEFAULT_COMPRESSION) == ZIP_OK &&
                     impl_->ReadFile(filename, &content) &&
                     zipWriteInFileInZip(
                         dest_, content.c_str(),
                         static_cast<unsigned>(content.size())) == UNZ_OK;
       if (!result)
-        LOG("Failed to copy file %s from zip to temp zip", filename); 
+        LOG("Failed to copy file %s from zip to temp zip", filename);
       delete [] extra;
       delete [] comment;
       zipCloseFileInZip(dest_);
@@ -606,7 +607,7 @@ class ZipFileManager::Impl {
     }
     return true;
   }
-    
+
   // At least one file must be added to an empty zip archive, otherwise the
   // archive will become invalid and can't be opened again.
   bool AddReadMeFileInZip(zipFile zip, const char *zip_path) {

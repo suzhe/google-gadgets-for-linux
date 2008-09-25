@@ -17,6 +17,9 @@
 IF(GGL_BUILD_LIBGGADGET_QT)
 
 APPLY_CONFIG(QT)
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-conversion")
+
 ADD_MODULE(qt-system-framework qt_system_framework.cc)
 TARGET_LINK_LIBRARIES(qt-system-framework
   ggadget${GGL_EPOCH}

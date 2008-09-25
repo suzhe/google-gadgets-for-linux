@@ -51,8 +51,8 @@ class ComboBoxElement : public BasicElement {
   /**
    * Gets and sets the maximum # of items to show before scrollbar is displayed.
    */
-  int GetMaxDroplistItems() const;
-  void SetMaxDroplistItems(int max_droplist_items);
+  size_t GetMaxDroplistItems() const;
+  void SetMaxDroplistItems(size_t max_droplist_items);
 
 
   /** Gets and sets the type of this combobox. */

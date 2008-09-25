@@ -95,14 +95,14 @@ class TextFrame {
    * font size to default. The gadget host may allow the user to change the
    * default font size.
    */
-  int GetSize() const;
-  void SetSize(int size);
+  double GetSize() const;
+  void SetSize(double size);
 
   /**
    * Same as GetSize(), except that if size is default, GetCurrentSize()
    * returns the current default point size instead of -1.
    */
-  int GetCurrentSize() const;
+  double GetCurrentSize() const;
 
   /** Gets and sets whether the text is struke-out. */
   bool IsStrikeout() const;

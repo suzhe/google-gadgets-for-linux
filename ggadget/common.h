@@ -224,6 +224,12 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  */
 #define arraysize(array) (sizeof(::ggadget::ArraySizeHelper(array)))
 
+/**
+ * Used to indicate an invalid index when size_t is used for the type of the
+ * index.
+ */
+const size_t kInvalidIndex = static_cast<size_t>(-1L);
+
 } // namespace ggadget
 
 #endif  // GGADGET_COMMON_H__
