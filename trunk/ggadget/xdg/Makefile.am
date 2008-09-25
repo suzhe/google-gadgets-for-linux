@@ -18,9 +18,9 @@ SUBDIRS 		= tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
+noinst_HEADERS		= icon_theme.h
 xdgincludedir		= $(GGL_INCLUDE_DIR)/ggadget/xdg
 xdginclude_HEADERS	= desktop_entry.h \
-			  icon_theme.h \
 			  utilities.h
 
 lib_LTLIBRARIES		= libggadget-xdg@GGL_EPOCH@.la

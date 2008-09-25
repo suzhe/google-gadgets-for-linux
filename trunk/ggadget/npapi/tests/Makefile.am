@@ -21,7 +21,7 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/npapi/libggadget-npapi-container@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
 
 check_PROGRAMS		= npapi_plugin_script_test
 

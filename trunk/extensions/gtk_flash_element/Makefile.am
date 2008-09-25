@@ -40,7 +40,7 @@ gtk_flash_element_la_LIBADD = \
 			      @GTK2_LIBS@ \
 			      $(X_LIBS) \
 			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			      $(top_builddir)/ggadget/npapi/libggadget-npapi-container@GGL_EPOCH@.la
+			      $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
 
 gtk_flash_element_la_LDFLAGS = \
 			       -avoid-version \

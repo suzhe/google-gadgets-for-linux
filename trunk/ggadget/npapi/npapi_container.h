@@ -17,7 +17,7 @@
 #ifndef GGADGET_NPAPI_NPAPI_CONTAINER_H__
 #define GGADGET_NPAPI_NPAPI_CONTAINER_H__
 
-#include "npapi_plugin.h"
+#include <ggadget/npapi/npapi_plugin.h>
 #include <ggadget/basic_element.h>
 
 namespace ggadget {
