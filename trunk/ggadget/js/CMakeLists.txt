@@ -16,6 +16,8 @@
 
 ADD_SUBDIRECTORY(tests)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-conversion")
+
 ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
   COMMAND flex -o jscript_massager.cc ${CMAKE_CURRENT_SOURCE_DIR}/jscript_massager.l
   MAIN_DEPENDENCY jscript_massager.l )

@@ -223,28 +223,29 @@ std::string EncodeURLComponent(const std::string &source) {
 }
 
 std::string DecodeURL(const std::string &source) {
-#define VALID_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') || \
-                           ((c) >= 'A' && (c) <= 'F') || \
-                           ((c) >= 'a' && (c) <= 'f'))
-#define DECODE_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : ( \
-                            ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : ( \
-                            ((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : 0)))
+#define DECODE_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
+                            (((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : \
+                             (((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : \
+                              -1)))
   std::string dest;
   std::string::const_iterator end = source.end();
   for (std::string::const_iterator i = source.begin(); i != end; ++i) {
-    unsigned char src = *i;
-    if (src == '%' && i + 1 != end && i + 2 != end &&
-        VALID_HEX_CHAR(*(i + 1)) && VALID_HEX_CHAR(*(i + 2))) {
-      src = (DECODE_HEX_CHAR(*(i + 1)) << 4) | DECODE_HEX_CHAR(*(i + 2));
-      dest.append(1, src);
-      i += 2;
+    char src = *i;
+    if (src == '%' && i + 1 != end && i + 2 != end) {
+      int decoded1 = DECODE_HEX_CHAR(*(i + 1));
+      int decoded2 = DECODE_HEX_CHAR(*(i + 2));
+      if (decoded1 != -1 && decoded2 != -1) {
+        dest.append(1, static_cast<char>((decoded1 << 4) | decoded2));
+        i += 2;
+      } else {
+        dest.append(1, src);
+      }
     } else {
       // not a special char: just copy
       dest.append(1, src);
     }
   }
   return dest;
-#undef VALID_HEX_CHAR
 #undef DECODE_HEX_CHAR
 }
 

@@ -288,9 +288,9 @@ class NativeMainLoop::Impl {
       } else if (iter->second.type == TIMEOUT_WATCH) {
         if (iter->second.next_time <= now)
           timeout = 0;
-        else if (timeout == -1 || (iter->second.next_time - now) <
-                 static_cast<uint64_t>(timeout))
-          timeout = iter->second.next_time - now;
+        else if (timeout == -1 || iter->second.next_time <
+                 static_cast<uint64_t>(timeout + now))
+          timeout = static_cast<int>(iter->second.next_time - now);
       }
     }
 
@@ -444,7 +444,7 @@ class NativeMainLoop::Impl {
 
   bool IsMainThread() const {
 #ifdef HAVE_PTHREAD
-    return pthread_equal(pthread_self(), main_loop_thread_) == 0;    
+    return pthread_equal(pthread_self(), main_loop_thread_) == 0;
 #else
     return true;
 #endif

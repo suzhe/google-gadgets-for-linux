@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <set>
 #include <iostream>
+#include <cstdlib>
 
 #include "ggadget/logger.h"
 #include "ggadget/file_manager_interface.h"
@@ -135,8 +136,8 @@ void TestFileManagerWriteFunctions(const std::string &prefix,
   uint64_t t = time(NULL) * UINT64_C(1000);
   ASSERT_TRUE(fm->WriteFile((prefix + "new_file").c_str(), data, false));
   ASSERT_TRUE(fm->FileExists((prefix + "new_file").c_str(), &path));
-  EXPECT_NEAR(fm->GetLastModifiedTime((prefix + "new_file").c_str()), t,
-              UINT64_C(1000));
+  EXPECT_LE(abs(static_cast<int>(
+      fm->GetLastModifiedTime((prefix + "new_file").c_str()) - t)), 1000);
   EXPECT_STREQ((full_base_path + "/new_file").c_str(), path.c_str());
   ASSERT_TRUE(fm->ReadFile((prefix + "new_file").c_str(), &data));
   EXPECT_STREQ("new_file contents\n", data.c_str());
@@ -187,7 +188,7 @@ void TestFileManagerWriteFunctions(const std::string &prefix,
 std::set<std::string> actual_set;
 bool EnumerateCallback(const char *name) {
   LOG("EnumerateCallback: %zu %s", actual_set.size(), name);
-  EXPECT_TRUE(actual_set.find(name) == actual_set.end()); 
+  EXPECT_TRUE(actual_set.find(name) == actual_set.end());
   actual_set.insert(name);
   return true;
 }
@@ -371,6 +372,6 @@ TEST(FileManager, FileManagerWrapper) {
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
-  
+
   return RUN_ALL_TESTS();
 }

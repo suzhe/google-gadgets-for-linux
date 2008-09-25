@@ -24,6 +24,7 @@
 #include <gdk/gdkkeysyms.h>
 
 #include <ggadget/common.h>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/logger.h>
 #include <ggadget/texture.h>
@@ -45,8 +46,6 @@ namespace gtk {
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 static const int kCursorBlinkTimeout = 400;
-static const char *kDefaultFontFamily = "Sans";
-static const double kDefaultFontSize = 10;
 static const double kStrongCursorLineWidth = 1.2;
 static const double kStrongCursorBarWidth = 1.2;
 static const double kWeakCursorLineWidth = 3;
@@ -97,8 +96,6 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       selection_changed_(false),
       cursor_moved_(false),
       update_canvas_(false),
-      font_family_(kDefaultFontFamily),
-      font_size_(kDefaultFontSize),
       background_(new Texture(kDefaultBackgroundColor, 1)),
       text_color_(kDefaultTextColor),
       align_(CanvasInterface::ALIGN_LEFT) {
@@ -356,26 +353,16 @@ Color GtkEditImpl::GetTextColor() {
 }
 
 void GtkEditImpl::SetFontFamily(const char *font) {
-  std::string new_font((font && *font) ? font : kDefaultFontFamily);
-  if (font_family_ != new_font) {
-    font_family_ = new_font;
+  if (AssignIfDiffer(font, &font_family_))
     QueueRefresh(true, true);
-  }
 }
 
 std::string GtkEditImpl::GetFontFamily() {
   return font_family_;
 }
 
-void GtkEditImpl::SetFontSize(double size) {
-  if (font_size_ != size) {
-    font_size_ = size;
-    QueueRefresh(true, true);
-  }
-}
-
-double GtkEditImpl::GetFontSize() {
-  return font_size_;
+void GtkEditImpl::OnFontSizeChange() {
+  QueueRefresh(true, true);
 }
 
 void GtkEditImpl::SetPasswordChar(const char *c) {
@@ -689,9 +676,11 @@ PangoLayout* GtkEditImpl::CreateLayout() {
   {
     /* safe to down_cast here, because we know the actual implementation. */
     CairoFont *font = down_cast<CairoFont*>(
-        graphics_->NewFont(font_family_.c_str(), font_size_,
-          italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
-          bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL));
+        graphics_->NewFont(
+            font_family_.empty() ? kDefaultFontName : font_family_.c_str(),
+            owner_->GetCurrentSize(),
+            italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
+            bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL));
     ASSERT(font);
     attr = pango_attr_font_desc_new(font->GetFontDescription());
     attr->start_index = 0;

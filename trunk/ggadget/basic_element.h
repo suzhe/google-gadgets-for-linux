@@ -92,8 +92,21 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   const BasicElement *GetParentElement() const;
 
-  /** Sets the parent element. */
+  /**
+   * Sets the parent element.
+   * Only for @c Elements class which knows how to keep integrity.
+   */
   void SetParentElement(BasicElement *parent);
+
+  /**
+   * Gets and sets the index of the element in parent.
+   * This is not used to change Z-order etc., but is only used by the parent
+   * to let the element cache the current index, which must be synchronized
+   * with the element tree structure.
+   * Only for @c Elements class which knows how to keep integrity.
+   */
+  size_t GetIndex() const;
+  void SetIndex(size_t index);
 
   /**
    * Enables or disables canvas cache of this element. It can make rendering
@@ -325,6 +338,10 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Removes the keyboard focus from the element.
    */
   void KillFocus();
+  /**
+   * Checks if the element can be focused with the Tab key.
+   */
+  virtual bool IsTabStop() const;
 
  public:
   /** Get the associated View of the current element. */

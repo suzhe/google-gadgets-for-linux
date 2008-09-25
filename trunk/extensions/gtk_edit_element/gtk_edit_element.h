@@ -52,8 +52,6 @@ class GtkEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
-  virtual double GetSize() const;
-  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;
@@ -80,6 +78,7 @@ class GtkEditElement : public EditElementBase {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
   virtual void GetDefaultSize(double *width, double *height) const;
+  virtual void OnFontSizeChange();
 
  private:
   void OnScrolled();

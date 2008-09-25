@@ -63,7 +63,7 @@ TEST(StringUtils, StringPrintf) {
   EXPECT_STREQ("123", StringPrintf("%d", 123).c_str());
   char *buf = new char[100000];
   for (int i = 0; i < 100000; i++)
-    buf[i] = (i % 50) + '0';
+    buf[i] = static_cast<char>((i % 50) + '0');
   buf[99999] = 0;
   EXPECT_STREQ(buf, StringPrintf("%s", buf).c_str());
   delete buf;

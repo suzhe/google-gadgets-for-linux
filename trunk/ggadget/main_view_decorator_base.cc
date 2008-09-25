@@ -158,8 +158,8 @@ class  MainViewDecoratorBase::Impl {
     Elements *elements = buttons_div_->GetChildren();
     double width = kVDMainButtonMargin;
     double height = kVDMainButtonMargin;
-    int count = elements->GetCount();
-    for (int i = 0; i < count; ++i) {
+    size_t count = elements->GetCount();
+    for (size_t i = 0; i < count; ++i) {
       BasicElement *button = elements->GetItemByIndex(i);
       button->Layout();
       if (button->IsVisible()) {
@@ -424,8 +424,8 @@ bool MainViewDecoratorBase::IsButtonVisible(ButtonId button_id) const {
 
 void MainViewDecoratorBase::SetButtonBoxVisible(bool visible) {
   const Elements *elements = impl_->buttons_div_->GetChildren();
-  int count = elements->GetCount();
-  for (int i = 0; i < count; ++i) {
+  size_t count = elements->GetCount();
+  for (size_t i = 0; i < count; ++i) {
     const BasicElement *elm = elements->GetItemByIndex(i);
     if (elm && elm->IsVisible()) {
       // Only show button box when there is at least one visible button.

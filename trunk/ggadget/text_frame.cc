@@ -126,7 +126,7 @@ class TextFrame::Impl {
   CanvasInterface::Trimming trimming_;
   bool bold_, italic_;
   int flags_;
-  int size_;
+  double size_;
   bool size_is_default_;
   std::string font_name_, color_, text_;
   double width_, height_;
@@ -250,11 +250,11 @@ void TextFrame::SetItalic(bool italic) {
   }
 }
 
-int TextFrame::GetSize() const {
+double TextFrame::GetSize() const {
   return impl_->size_is_default_ ? -1 : impl_->size_;
 }
 
-void TextFrame::SetSize(int size) {
+void TextFrame::SetSize(double size) {
   if (size == -1) {
     impl_->size_is_default_ = true;
     size = impl_->view_->GetDefaultFontSize();
@@ -267,7 +267,7 @@ void TextFrame::SetSize(int size) {
   }
 }
 
-int TextFrame::GetCurrentSize() const {
+double TextFrame::GetCurrentSize() const {
   return impl_->size_;
 }
 

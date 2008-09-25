@@ -30,12 +30,11 @@ static const size_t utf8_length[] = {
   1, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0
 };
 
-static const char utf8_string[] = {
-  0x61,0xc2,0x80,0xdf,0xbf,0xe0,0xa0,0x80,0xe1,0xbf,0xbf,0xe2,0x80,0x80,
-  0xed,0x9f,0xbf,0xee,0x80,0x80,0xef,0xbf,0xbf,0xf0,0x90,0x80,0x80,
-  0xf0,0xa2,0x80,0x80,0xf3,0xaf,0xbf,0xbf,0xf3,0xb0,0x80,0x80,
-  0xf4,0x8a,0xab,0xbf, 0
-};
+static const char utf8_string[] =
+  "\x61\xc2\x80\xdf\xbf\xe0\xa0\x80\xe1\xbf\xbf\xe2\x80\x80"
+  "\xed\x9f\xbf\xee\x80\x80\xef\xbf\xbf\xf0\x90\x80\x80"
+  "\xf0\xa2\x80\x80\xf3\xaf\xbf\xbf\xf3\xb0\x80\x80"
+  "\xf4\x8a\xab\xbf";
 
 static const size_t utf16_length[] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0
@@ -48,10 +47,9 @@ static const UTF16Char utf16_string[] = {
 };
 
 static const size_t invalid_utf8_length = 8;
-static const char invalid_utf8_string[] = {
-  //---------------------------------------v
-  0x61,0xc2,0x80,0xdf,0xbf,0xe0,0xa0,0x80,0xb1,0xbf,0xbf,0xe2,0x80,0x80, 0
-};
+static const char invalid_utf8_string[] =
+  //--------------------------------v
+  "\x61\xc2\x80\xdf\xbf\xe0\xa0\x80\xb1\xbf\xbf\xe2\x80\x80";
 
 static const size_t invalid_utf16_length = 9;
 static const UTF16Char invalid_utf16_string[] = {

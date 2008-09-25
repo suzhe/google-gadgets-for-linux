@@ -49,6 +49,7 @@ class BasicElement::Impl {
                   new Elements(view->GetElementFactory(), owner, view) :
                   NULL),
         view_(view),
+        index_(kInvalidIndex), // Invalid until set by Elements.
         hittest_(ViewInterface::HT_CLIENT),
         cursor_(ViewInterface::CURSOR_DEFAULT),
         drop_target_(false),
@@ -991,6 +992,7 @@ class BasicElement::Impl {
   BasicElement *owner_;
   Elements *children_;
   View *view_;
+  size_t index_;
   ViewInterface::HitTest hittest_;
   ViewInterface::CursorType cursor_;
   bool drop_target_;
@@ -1616,6 +1618,14 @@ void BasicElement::SetParentElement(BasicElement *parent) {
   impl_->parent_ = parent;
 }
 
+size_t BasicElement::GetIndex() const {
+  return impl_->index_;
+}
+
+void BasicElement::SetIndex(size_t index) {
+  impl_->index_ = index;
+}
+
 void BasicElement::EnableCanvasCache(bool enable) {
   impl_->cache_enabled_ = enable;
   if (!enable && impl_->cache_) {
@@ -1656,6 +1666,10 @@ void BasicElement::Focus() {
 
 void BasicElement::KillFocus() {
   impl_->view_->SetFocus(NULL);
+}
+
+bool BasicElement::IsTabStop() const {
+  return false;
 }
 
 void BasicElement::Layout() {

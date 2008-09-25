@@ -139,7 +139,7 @@ void CheckDoubleVariant(T value, const char *str_value) {
 }
 
 TEST(Variant, TestDouble) {
-  CheckDoubleVariant<float>(-12345.6789e-20, "-1.23457e-16");
+  CheckDoubleVariant<float>(-12345.6789e-20f, "-1.23457e-16");
   CheckDoubleVariant<double>(30423.34932, "30423.3");
   CheckDoubleVariant<double>(0, "0");
 }

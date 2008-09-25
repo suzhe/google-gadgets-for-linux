@@ -63,6 +63,7 @@ const char kOnTextChangeEvent[]    = "ontextchange";
 const char kOnContextMenuEvent[]   = "oncontextmenu";
 const char kOnStateChangeEvent[]   = "onstatechange";
 const char kOnMediaChangeEvent[]   = "onmediachange";
+const char kOnThemeChangedEvent[]  = "onthemechanged";
 
 /**
  * Scriptable decorator for @c Event.

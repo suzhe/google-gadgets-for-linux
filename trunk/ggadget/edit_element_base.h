@@ -42,6 +42,9 @@ class EditElementBase : public ScrollingElement {
   virtual void DoClassRegister();
 
  public:
+  virtual bool IsTabStop() const;
+  virtual void Layout();
+
   /**
    * Connects a specified slot to OnChange event signal.
    * The signal will be fired when FireOnChangeEvent() method is called by
@@ -85,9 +88,20 @@ class EditElementBase : public ScrollingElement {
   virtual std::string GetPasswordChar() const = 0;
   virtual void SetPasswordChar(const char *passwordChar) = 0;
 
-  /** Gets and sets the text size in points. */
-  virtual double GetSize() const = 0;
-  virtual void SetSize(double size) = 0;
+  /**
+   * Gets and sets the text size in points. Setting size to -1 will reset the
+   * font size to default. The gadget host may allow the user to change the
+   * default font size.
+   * Subclasses should implement @c DoGetSize() and @c GetSize().
+   */
+  double GetSize() const;
+  void SetSize(double size);
+
+  /**
+   * Same as GetSize(), except that if size is default, GetCurrentSize()
+   * returns the current default point size instead of -1.
+   */
+  double GetCurrentSize() const;
 
   /** Gets and sets whether the text is struke-out. */
   virtual bool IsStrikeout() const = 0;
@@ -139,6 +153,10 @@ class EditElementBase : public ScrollingElement {
    * Derived class shall call this method if the value is changed.
    */
   void FireOnChangeEvent() const;
+
+ protected:
+  /** Informs the derived class that the font size has changed. */
+  virtual void OnFontSizeChange() = 0;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(EditElementBase);

@@ -99,7 +99,7 @@ class SideBarGtkHost::Impl {
     SingleViewHost *floating;
     SingleViewHost *popout;
 
-    int  index_in_sidebar;
+    size_t index_in_sidebar;
     bool undock_by_drag;
     bool old_keep_above;
     bool details_on_right;
@@ -407,7 +407,7 @@ class SideBarGtkHost::Impl {
   }
 
   // Handle gadget undock by dragging out of sidebar
-  void OnSideBarUndock(View *view, int index,
+  void OnSideBarUndock(View *view, size_t index,
                        double offset_x, double offset_y) {
     ASSERT(view);
     int gadget_id = view->GetGadget()->GetInstanceID();
@@ -544,7 +544,7 @@ class SideBarGtkHost::Impl {
       gadgets_shown_ = VariantValue<bool>()(value);
   }
 
-  bool SaveGadgetOrder(int index, View *view) {
+  bool SaveGadgetOrder(size_t index, View *view) {
     Gadget *gadget = view->GetGadget();
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue(kOptionPositionInSideBar, Variant(index));
@@ -954,7 +954,7 @@ class SideBarGtkHost::Impl {
         gdk_window_raise(info->floating->GetWindow()->window);
       }
 
-      int index = sidebar_->GetIndexOfPosition(h);
+      size_t index = sidebar_->GetIndexOfPosition(h);
       int width, height;
       info->floating->GetWindowSize(&width, &height);
       sidebar_->InsertPlaceholder(index, static_cast<double>(height));
@@ -1471,7 +1471,11 @@ class SideBarGtkHost::Impl {
     else  // default value is TARGET_SIDEBAR
       gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     value = opt->GetInternalValue(kOptionPositionInSideBar);
-    value.ConvertToInt(&gadgets_[gadget->GetInstanceID()].index_in_sidebar);
+    int temp_int = 0;
+    if (value.ConvertToInt(&temp_int)) {
+      gadgets_[gadget->GetInstanceID()].index_in_sidebar =
+          static_cast<size_t>(std::max(0, temp_int));
+    }
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget, ViewHostInterface::Type type) {
@@ -1595,23 +1599,16 @@ class SideBarGtkHost::Impl {
     ShowOrHideSideBar(!closed_);
   }
 
-  void MarkRedrawAll() {
-    sidebar_->GetSideBarViewHost()->GetView()->MarkRedraw();
-    sidebar_->GetSideBarViewHost()->QueueDraw();
+  void OnThemeChanged() {
+    SimpleEvent event(Event::EVENT_THEME_CHANGED);
+    sidebar_->GetSideBarViewHost()->GetView()->OnOtherEvent(event);
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      if (it->second.details) {
-        it->second.details->GetView()->MarkRedraw();
-        it->second.details->QueueDraw();
-      }
-      if (it->second.floating) {
-        it->second.floating->GetView()->MarkRedraw();
-        it->second.floating->QueueDraw();
-      }
-      if (it->second.popout) {
-        it->second.popout->GetView()->MarkRedraw();
-        it->second.popout->QueueDraw();
-      }
+      it->second.main_decorator->GetView()->OnOtherEvent(event);
+      if (it->second.details)
+        it->second.details->GetView()->OnOtherEvent(event);
+      if (it->second.popout)
+        it->second.popout->GetView()->OnOtherEvent(event);
     }
   }
 
@@ -1626,7 +1623,7 @@ class SideBarGtkHost::Impl {
     if (new_font_size != font_size_) {
       font_size_ = new_font_size;
       options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
-      MarkRedrawAll();
+      OnThemeChanged();
     }
   }
 

@@ -503,21 +503,16 @@ class SimpleGtkHost::Impl {
       ShowAllMenuCallback(NULL);
   }
 
-  void MarkRedrawAll() {
+  void OnThemeChanged() {
+    SimpleEvent event(Event::EVENT_THEME_CHANGED);
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      if (it->second.main) {
-        it->second.main->GetView()->MarkRedraw();
-        it->second.main->QueueDraw();
-      }
-      if (it->second.details) {
-        it->second.details->GetView()->MarkRedraw();
-        it->second.details->QueueDraw();
-      }
-      if (it->second.popout) {
-        it->second.popout->GetView()->MarkRedraw();
-        it->second.popout->QueueDraw();
-      }
+      if (it->second.main)
+        it->second.main->GetView()->OnOtherEvent(event);
+      if (it->second.details)
+        it->second.details->GetView()->OnOtherEvent(event);
+      if (it->second.popout)
+        it->second.popout->GetView()->OnOtherEvent(event);
     }
   }
 
@@ -533,7 +528,7 @@ class SimpleGtkHost::Impl {
       font_size_ = new_font_size;
       if (options_)
         options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
-      MarkRedrawAll();
+      OnThemeChanged();
     }
   }
 

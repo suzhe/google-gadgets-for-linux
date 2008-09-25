@@ -32,7 +32,7 @@ class ItemElement::Impl {
  public:
   Impl(BasicElement *parent)
     : parent_(NULL), selected_(false), mouseover_(false),
-      drawoverlay_(true), background_(NULL), index_(0) {
+      drawoverlay_(true), background_(NULL) {
     if (parent->IsInstanceOf(ListBoxElement::CLASS_ID)) {
       parent_ = down_cast<ListBoxElement *>(parent);
     } else {
@@ -53,7 +53,6 @@ class ItemElement::Impl {
   ListBoxElement *parent_;
   bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
-  int index_;
 };
 
 ItemElement::ItemElement(BasicElement *parent, View *view,
@@ -133,12 +132,6 @@ bool ItemElement::IsMouseOver() const {
   return impl_->mouseover_;
 }
 
-void ItemElement::SetIndex(int index) {
-  if (impl_->index_ != index) {
-    impl_->index_ = index;
-  }
-}
-
 Variant ItemElement::GetBackground() const {
   return Variant(Texture::GetSrc(impl_->background_));
 }
@@ -164,8 +157,8 @@ void ItemElement::SetSelected(bool selected) {
 
 std::string ItemElement::GetLabelText() const {
   const Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
+  size_t childcount = elements->GetCount();
+  for (size_t i = 0; i < childcount; i++) {
     const BasicElement *e = elements->GetItemByIndex(i);
     if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
       const LabelElement *label = down_cast<const LabelElement *>(e);
@@ -179,8 +172,8 @@ std::string ItemElement::GetLabelText() const {
 
 void ItemElement::SetLabelText(const char *text) {
   Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
+  size_t childcount = elements->GetCount();
+  for (size_t i = 0; i < childcount; i++) {
     BasicElement *e = elements->GetItemByIndex(i);
     if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
       LabelElement *label = down_cast<LabelElement *>(e);
@@ -228,7 +221,7 @@ void ItemElement::GetDefaultSize(double *width, double *height) const {
 
 void ItemElement::GetDefaultPosition(double *x, double *y) const {
   *x = 0;
-  *y = impl_->index_ * GetPixelHeight();
+  *y = static_cast<double>(GetIndex()) * GetPixelHeight();
 }
 
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {

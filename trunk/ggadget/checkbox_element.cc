@@ -85,13 +85,13 @@ class CheckBoxElement::Impl {
 
   void ResetPeerRadioButtons() {
     BasicElement *parent = owner_->GetParentElement();
-    Elements *peers = parent ? 
+    Elements *peers = parent ?
                       parent->GetChildren() : owner_->GetView()->GetChildren();
     // Radio buttons under the same parent should transfer checked
     // state automatically. This function should only be called
     // when this radio button's value is set to true.
-    int childcount = peers->GetCount();
-    for (int i = 0; i < childcount; i++) {
+    size_t childcount = peers->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
       BasicElement *child = peers->GetItemByIndex(i);
       if (child != owner_ && child->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
         CheckBoxElement *radio = down_cast<CheckBoxElement *>(child);

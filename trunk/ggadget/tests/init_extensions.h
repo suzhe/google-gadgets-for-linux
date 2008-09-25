@@ -26,7 +26,8 @@
 #define GGADGET_TESTS_INIT_EXTENSIONS_H__
 
 #define INIT_EXTENSIONS(argc, argv, extensions) \
-    InitExtensions((argc) > 1 ? (argc) - 1 : arraysize(extensions), \
+    InitExtensions( \
+        (argc) > 1 ? (argc) - 1 : static_cast<int>(arraysize(extensions)), \
         (argc) > 1 ? const_cast<const char **>(argv) + 1 : (extensions))
 
 

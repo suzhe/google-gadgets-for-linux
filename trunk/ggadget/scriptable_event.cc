@@ -255,6 +255,7 @@ const char *ScriptableEvent::GetName() const {
     // EVENT_CHANGE type.
     case Event::EVENT_STATE_CHANGE: return kOnStateChangeEvent;
     case Event::EVENT_MEDIA_CHANGE: return kOnMediaChangeEvent;
+    case Event::EVENT_THEME_CHANGED: return kOnThemeChangedEvent;
 
     case Event::EVENT_MOUSE_DOWN: return kOnMouseDownEvent;
     case Event::EVENT_MOUSE_UP: return kOnMouseUpEvent;
