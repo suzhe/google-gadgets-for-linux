@@ -27,7 +27,7 @@ if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
 endif
 
-if GGL_BUILD_LIBGGADGET_NPAPI_CONTAINER
+if GGL_BUILD_LIBGGADGET_NPAPI
 SUBDIRS += npapi
 endif
 
@@ -134,7 +134,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
-			  video_element_base.h \
 			  variant.h \
 			  video_element_base.h \
 			  view.h \

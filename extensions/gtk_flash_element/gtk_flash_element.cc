@@ -70,10 +70,6 @@ using namespace ggadget::npapi;
 // browse_frm/thread/aa0fff388526cbf4/41b4c06914d7274a
 static const bool kPluginSupportScriptableAPI = false;
 
-// Use windowless/transparent mode by default.
-static char *attrn[] = { "wmode" };
-static char *attrv[] = { "transparent" };
-
 class GtkFlashElement::Impl {
  public:
   Impl(GtkFlashElement *owner, View *view)
@@ -82,8 +78,14 @@ class GtkFlashElement::Impl {
         windowless_(true), pixmap_(NULL),
         flash_element_(NULL),
         initialized_(false), focused_(false) {
+    // Use windowless/transparent mode by default.
+    char *attrn[1] = { strdup("wmode") };
+    char *attrv[1] = { strdup("transparent") };
     plugin_ = GetGlobalNPContainer()->CreatePlugin(FLASH_MIME_TYPE, owner,
                                                    true, GTK2, 1, attrn, attrv);
+    free(attrn[0]);
+    free(attrv[0]);
+
     if (plugin_) {
       windowless_ =
           plugin_->GetWindowType() == WindowTypeWindowless ? true : false;
@@ -132,9 +134,15 @@ class GtkFlashElement::Impl {
     // do is to create a new flash plugin instance, destroy the old one.
     // Although this is a little ugly, it works.
     if (!kPluginSupportScriptableAPI) {
+      // Use windowless/transparent mode by default.
+      char *attrn[1] = { strdup("wmode") };
+      char *attrv[1] = { strdup("transparent") };
       NPPlugin *plugin =
           GetGlobalNPContainer()->CreatePlugin(FLASH_MIME_TYPE, owner_,
                                                true, GTK2, 1, attrn, attrv);
+      free(attrn[0]);
+      free(attrv[0]);
+
       if (plugin) {
         ASSERT(plugin->GetWindowType() == WindowTypeWindowless);
         initialized_ = true;

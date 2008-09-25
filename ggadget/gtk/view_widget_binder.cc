@@ -270,7 +270,6 @@ class ViewWidgetBinder::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
-    LOG("View_widget_Binder: Key Pressed");
 
     impl->host_->SetTooltip(NULL);
 

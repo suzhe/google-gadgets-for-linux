@@ -15,7 +15,7 @@
 
 # Putting . into SBUDIRS list to force building current directory first.
 
-if GGL_BUILD_LIBGGADGET_NPAPI_CONTAINER
+if GGL_BUILD_LIBGGADGET_NPAPI
 
 SUBDIRS= . tests
 
@@ -29,28 +29,28 @@ npapiincludedir		= $(GGL_INCLUDE_DIR)/ggadget/npapi
 npapiinclude_HEADERS	= npapi_container.h \
 			  npapi_plugin.h
 
-lib_LTLIBRARIES		= libggadget-npapi-container@GGL_EPOCH@.la
+lib_LTLIBRARIES		= libggadget-npapi@GGL_EPOCH@.la
 
-libggadget_npapi_container@GGL_EPOCH@_la_SOURCES = \
+libggadget_npapi@GGL_EPOCH@_la_SOURCES = \
 			  npapi_container.cc \
 			  npapi_plugin.cc \
 			  npapi_plugin_script.cc
 
-libggadget_npapi_container@GGL_EPOCH@_la_CXXFLAGS = \
+libggadget_npapi@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-libggadget_npapi_container@GGL_EPOCH@_la_CPPFLAGS = \
+libggadget_npapi@GGL_EPOCH@_la_CPPFLAGS = \
 			  $(PREDEFINED_MACROS)
 
-libggadget_npapi_container@GGL_EPOCH@_la_LIBADD = \
+libggadget_npapi@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(X_LIBS)
 
-libggadget_npapi_container@GGL_EPOCH@_la_LDFLAGS = \
-	-version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
-	-export-dynamic
+libggadget_npapi@GGL_EPOCH@_la_LDFLAGS = \
+			  -version-info $(LIBGGADGET_VERSION) \
+			  -export-dynamic
 
 pkgconfigdir= $(libdir)/pkgconfig
-pkgconfig_DATA= libggadget-npapi-container@GGL_EPOCH@.pc
+pkgconfig_DATA= libggadget-npapi@GGL_EPOCH@.pc
 
 endif

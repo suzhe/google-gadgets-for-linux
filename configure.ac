@@ -119,7 +119,7 @@ build_gtk_host=yes
 build_qt_host=yes
 build_libggadget_dbus=yes
 build_libggadget_gtk=yes
-build_libggadget_npapi_container=yes
+build_libggadget_npapi=yes
 build_libggadget_qt=yes
 build_gtkmoz_browser_element=yes
 build_qtwebkit_browser_element=yes
@@ -171,7 +171,7 @@ AC_ARG_WITH([browser-plugins-dir],
 		 running, the environment variable BROWSER_PLUGINS_DIR has
 		 higher priority if it's set. ]),
 	    [default_browser_plugins_dir=$withval],
-	    [default_browser_plugins_dir=""])
+	    [default_browser_plugins_dir="$libdir/firefox/plugins"])
 
 AC_ARG_ENABLE([gtk-host],
 	      AS_HELP_STRING([--disable-gtk-host],
@@ -197,11 +197,11 @@ AC_ARG_ENABLE([libggadget-gtk],
 	      [build_libggadget_gtk=$enableval],
 	      [build_libggadget_gtk=yes])
 
-AC_ARG_ENABLE([libggadget-npapi-container],
-	      AS_HELP_STRING([--disable-libggadget-npapi-container],
-			     [don't build libggadget-npapi-container]),
-	      [build_libggadget_npapi_container=$enableval],
-	      [build_libggadget_npapi_container=yes])
+AC_ARG_ENABLE([libggadget-npapi],
+	      AS_HELP_STRING([--disable-libggadget-npapi],
+			     [don't build libggadget-npapi]),
+	      [build_libggadget_npapi=$enableval],
+	      [build_libggadget_npapi=yes])
 
 AC_ARG_ENABLE([libggadget-qt],
 	      AS_HELP_STRING([--disable-libggadget-qt],
@@ -439,6 +439,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LN_S
+AC_PROG_SED
 
 # Checks for zip command.
 AC_PATH_PROG([ZIP], [zip])
@@ -505,7 +506,7 @@ if test "x$no_x" != "xyes"; then
   AC_SUBST(X_LIBS)
   AC_SUBST(X_PRE_LIBS)
 else
-  build_libggadget_npapi_container=no
+  build_libggadget_npapi=no
   build_gtk_flash_element=no
 fi
 
@@ -841,7 +842,7 @@ else
 # It usually occurs on some pre xulrunner 1.9 versions.
 # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
 # FIXME: Following method might not work on systems other than Linux.
-    MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | sed -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+    MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
     # Try to find out the correct xulrunner path.
     if test -e "$MOZILLA_FIVE_HOME/libxpcom.so"; then
       XPCOM_PATH=`readlink -f $MOZILLA_FIVE_HOME/libxpcom.so`
@@ -873,8 +874,8 @@ AM_CONDITIONAL(
   [test x$build_libggadget_dbus = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_NPAPI_CONTAINER],
-  [test x$build_libggadget_npapi_container = xyes])
+  [GGL_BUILD_LIBGGADGET_NPAPI],
+  [test x$build_libggadget_npapi = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
@@ -970,9 +971,8 @@ fi
 
 #Browser plugins directory
 if test x$default_browser_plugins_dir != x; then
-  AC_DEFINE_UNQUOTED([GGL_DEFAULT_BROWSER_PLUGINS_DIR],
-		     ["$default_browser_plugins_dir"],
-		     [Default browser plugins directory.])
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \
+                     -DGGL_DEFAULT_BROWSER_PLUGINS_DIR=\\\"$default_browser_plugins_dir\\\""
 fi
 
 #pthread lib
@@ -1048,7 +1048,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/npapi/Makefile
 		 ggadget/npapi/tests/Makefile
-		 ggadget/npapi/libggadget-npapi-container-1.0.pc
+		 ggadget/npapi/libggadget-npapi-1.0.pc
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 ggadget/gtk/libggadget-gtk-1.0.pc
@@ -1077,42 +1077,42 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 Build options:
-  Version                            $GGL_VERSION
-  Install prefix                     $prefix
-  Install included libltdl           $enable_ltdl_install
-  Build shared libs                  $enable_shared
-  Build static libs                  $enable_static
-  Enable debug                       $enable_debug
-  Host type                          $ggl_host_type
+  Version                       $GGL_VERSION
+  Install prefix                $prefix
+  Install included libltdl      $enable_ltdl_install
+  Build shared libs             $enable_shared
+  Build static libs             $enable_static
+  Enable debug                  $enable_debug
+  Host type                     $ggl_host_type
   OEM brand                     $ggl_oem_brand
 
  Libraries:
-  GTK SVG Support                    $has_librsvg
-  Build libggadget-gtk               $build_libggadget_gtk
-  Build libggadget-qt                $build_libggadget_qt
-  Build libggadget-dbus              $build_libggadget_dbus
-  Build libggadget-npapi-container   $build_libggadget_npapi_container
+  GTK SVG Support               $has_librsvg
+  Build libggadget-gtk          $build_libggadget_gtk
+  Build libggadget-qt           $build_libggadget_qt
+  Build libggadget-dbus         $build_libggadget_dbus
+  Build libggadget-npapi        $build_libggadget_npapi
 
  Extensions:
-  Build dbus-script-class            $build_libggadget_dbus
-  Build gtk-edit-element             $build_libggadget_gtk
-  Build gtkmoz-browser-element       $build_gtkmoz_browser_element
-  Build qtwebkit-browser             $build_qtwebkit_browser_element
-  Build gst-audio-framework          $build_gst_audio_framework
-  Build gst-video-element            $build_gst_video_element
-  Build gtk-system-framework         $build_gtk_system_framework
-  Build gtk-flash-element            $build_gtk_flash_element
-  Build qt-system-framework          $build_qt_system_framework
-  Build linux-system-framework       $build_linux_system_framework
-  Build smjs-script-runtime          $build_smjs_script_runtime
-  Build qt-script-runtime            $build_qt_script_runtime
-  Build curl-xml-http-request        $build_curl_xml_http_request
-  Build qt-xml-http-request          $build_qt_xml_http_request
-  Build libxml2-xml-parser           $build_libxml2_xml_parser
+  Build dbus-script-class       $build_libggadget_dbus
+  Build gtk-edit-element        $build_libggadget_gtk
+  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
+  Build qtwebkit-browser        $build_qtwebkit_browser_element
+  Build gst-audio-framework     $build_gst_audio_framework
+  Build gst-video-element       $build_gst_video_element
+  Build gtk-system-framework    $build_gtk_system_framework
+  Build gtk-flash-element       $build_gtk_flash_element
+  Build qt-system-framework     $build_qt_system_framework
+  Build linux-system-framework  $build_linux_system_framework
+  Build smjs-script-runtime     $build_smjs_script_runtime
+  Build qt-script-runtime       $build_qt_script_runtime
+  Build curl-xml-http-request   $build_curl_xml_http_request
+  Build qt-xml-http-request     $build_qt_xml_http_request
+  Build libxml2-xml-parser      $build_libxml2_xml_parser
 
  Hosts:
-  Build gtk host                     $build_gtk_host
-  Build qt host                      $build_qt_host
+  Build gtk host                $build_gtk_host
+  Build qt host                 $build_qt_host
 ])
 
 if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then
