@@ -41,4 +41,8 @@ Yum repositories:
  * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
  * Fedora 8: http://download.opensuse.org/repositories/home:/suzhe/Fedora_8/
 
+== Slackware ==
+You can get binary package for Slackware 12.1 from:
+ * http://repository.slacky.eu/slackware-12.1/desktop/google-gadgets/
+
 Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
