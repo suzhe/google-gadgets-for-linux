@@ -80,11 +80,23 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /** Checks if a specified button is visible. */
   bool IsButtonVisible(ButtonId button_id) const;
 
-  /** Show sor hides the button box. */
+  /** Shows or hides the button box. */
   void SetButtonBoxVisible(bool visible);
 
   /** Checks if the button box is visible. */
   bool IsButtonBoxVisible() const;
+
+  /** Shows or hides the minimized icon. */
+  void SetMinimizedIconVisible(bool visible);
+
+  /** Checks if the minimized icon is visible. */
+  bool IsMinimizedIconVisible() const;
+
+  /** Shows or hides the minimized caption. */
+  void SetMinimizedCaptionVisible(bool visible);
+
+  /** Checks if the minimized caption is visible. */
+  bool IsMinimizedCaptionVisible() const;
 
   /** Sets display position of the button box. */
   void SetButtonBoxPosition(ButtonBoxPosition position);
