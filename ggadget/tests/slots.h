@@ -19,6 +19,7 @@
 
 #include <vector>
 #include "ggadget/scriptable_interface.h"
+#include "ggadget/string_utils.h"
 #include "ggadget/variant.h"
 
 namespace ggadget {
@@ -28,22 +29,22 @@ DECLARE_VARIANT_PTR_TYPE(std::vector<int>);
 using namespace ggadget;
 
 // Hold the result of test functions/methods.
-extern char result[1024];
+extern std::string result;
 
 inline void TestVoidFunction0() {
-  strcpy(result, "TestVoidFunction0");
+  result = "TestVoidFunction0";
 }
 
 inline void TestVoidFunction9(int p1, bool p2, const char *p3,
                               const std::string &p4, std::string p5,
                               char p6, unsigned char p7,
                               short p8, std::vector<int> *p9) {
-  sprintf(result, "TestVoidFunction9: %d %d %s %s %s %c %c %d %d",
-          p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+  result = StringPrintf("TestVoidFunction9: %d %d %s %s %s %c %c %d %d",
+               p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
 }
 
 inline bool TestBoolFunction0() {
-  strcpy(result, "TestBoolFunction0");
+  result = "TestBoolFunction0";
   return false;
 }
 
@@ -51,19 +52,19 @@ inline bool TestBoolFunction9(int p1, bool p2, const char *p3,
                               const std::string &p4, std::string p5,
                               char p6, unsigned char p7,
                               short p8, const std::vector<int> *p9) {
-  sprintf(result, "TestBoolFunction9: %d %d %s %s %s %c %c %d %d",
-          p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+  result = StringPrintf("TestBoolFunction9: %d %d %s %s %s %c %c %d %d",
+               p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   return true;
 }
 
 inline Variant TestVariant(Variant p) {
-  sprintf(result, "%s", p.Print().c_str());
+  result = p.Print();
   return p;
 }
 
 struct TestVoidFunctor0 {
   void operator()() const {
-    strcpy(result, "TestVoidFunctor0");
+    result = "TestVoidFunctor0";
   }
   // This operator== is required for testing.  Slot's == will call it.
   bool operator==(TestVoidFunctor0 f) const { return true; }
@@ -73,8 +74,8 @@ struct TestVoidFunctor9 {
   void operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
                   short p8, std::vector<int> *p9) const {
-    sprintf(result, "TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = StringPrintf("TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
+                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   }
   // This operator== is required for testing.  Slot's == will call it.
   bool operator==(TestVoidFunctor9 f) const { return true; }
@@ -82,7 +83,7 @@ struct TestVoidFunctor9 {
 
 struct TestBoolFunctor0 {
   bool operator()() const {
-    strcpy(result, "TestBoolFunctor0");
+    result = "TestBoolFunctor0";
     return false;
   }
   // This operator== is required for testing.  Slot's == will call it.
@@ -93,8 +94,8 @@ struct TestBoolFunctor9 {
   bool operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
                   short p8, const std::vector<int> *p9) const {
-    sprintf(result, "TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = StringPrintf("TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
+                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
     return true;
   }
   // This operator== is required for testing.  Slot's == will call it.
@@ -110,30 +111,30 @@ class TestClass0 {
 class TestClass : public TestClass0 {
  public:
   void TestVoidMethod0() {
-    strcpy(result, "TestVoidMethod0");
+    result = "TestVoidMethod0";
   }
   bool TestBoolMethod0() const {
-    strcpy(result, "TestBoolMethod0");
+    result = "TestBoolMethod0";
     return true;
   }
   virtual void TestVoidMethod2(char p1, unsigned long p2) {
-    sprintf(result, "TestVoidMethod2: %c %lx", p1, p2);
+    result = StringPrintf("TestVoidMethod2: %c %lx", p1, p2);
   }
   double TestDoubleMethod2(int p1, double p2) const {
-    sprintf(result, "TestDoubleMethod2: %d %.3lf", p1, p2);
+    result = StringPrintf("TestDoubleMethod2: %d %.3lf", p1, p2);
     return 2;
   }
   void TestVoidMethod9(int p1, bool p2, const char *p3, const std::string &p4,
                        std::string p5, char p6, unsigned char p7,
                        short p8, std::vector<int> *p9) const {
-    sprintf(result, "TestVoidMethod9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = StringPrintf("TestVoidMethod9: %d %d %s %s %s %c %c %d %d",
+                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   }
   bool TestBoolMethod9(int p1, bool p2, const char *p3, const std::string &p4,
                        std::string p5, char p6, unsigned char p7,
                        short p8, const std::vector<int> *p9) {
-    sprintf(result, "TestBoolMethod9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = StringPrintf("TestBoolMethod9: %d %d %s %s %s %c %c %d %d",
+                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
     return false;
   }
 

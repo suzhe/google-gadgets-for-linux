@@ -32,6 +32,9 @@
 namespace ggadget {
 
 const size_t kBufferSize = 4096;
+// UNIX_PATH_MAX is not available in <sys/un.h>.
+const size_t kSizeOfSunPath =
+    sizeof(reinterpret_cast<struct sockaddr_un *>(0)->sun_path);
 
 class RunOnce::Impl : public WatchCallbackInterface {
  public:
@@ -42,26 +45,27 @@ class RunOnce::Impl : public WatchCallbackInterface {
 
   Impl(const char *path)
       : path_(path),
-      is_running_(false),
-      watch_id_(-1),
-      fd_(-1) {
+        is_running_(false),
+        watch_id_(-1),
+        fd_(-1) {
     ASSERT(path);
-    int fd = RunAsServer();
-    if (fd == -1) {
-      fd = RunAsClient();
-      if (fd != -1) {
-        is_running_ = true;
-        fd_ = fd;
-        return;
-      } else {
-        unlink(path_.c_str());
-        fd = RunAsServer();
+    if (path_.size() < kSizeOfSunPath) {
+      fd_ = RunAsServer();
+      if (fd_ == -1) {
+        fd_ = RunAsClient();
+        if (fd_ != -1) {
+          is_running_ = true;
+          return;
+        } else {
+          unlink(path_.c_str());
+          fd_ = RunAsServer();
+        }
       }
     }
 
     is_running_ = false;
-    fd_ = fd;
-    watch_id_ = GetGlobalMainLoop()->AddIOReadWatch(fd, this);
+    if (fd_ != -1)
+      watch_id_ = GetGlobalMainLoop()->AddIOReadWatch(fd_, this);
   }
 
   ~Impl() {
@@ -88,8 +92,10 @@ class RunOnce::Impl : public WatchCallbackInterface {
     if (!is_running_)
       return 0;
 
-    if (fd_ == -1)
+    if (fd_ == -1) {
+      // In case of repeated SendMessage() calls.
       fd_ = RunAsClient();
+    }
 
     sig_t old_proc = signal(SIGPIPE, SIG_IGN);
 
@@ -166,7 +172,8 @@ end:
     int fd;
     struct sockaddr_un uaddr;
     uaddr.sun_family = AF_UNIX;
-    strcpy(uaddr.sun_path, path_.c_str());
+    ASSERT(path_.size() < kSizeOfSunPath);
+    strncpy(uaddr.sun_path, path_.c_str(), kSizeOfSunPath);
     fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (bind(fd, (struct sockaddr*) &uaddr, sizeof(uaddr)) == -1) {
       close(fd);
@@ -180,7 +187,8 @@ end:
     int fd;
     struct sockaddr_un uaddr;
     uaddr.sun_family = AF_UNIX;
-    strcpy(uaddr.sun_path, path_.c_str());
+    ASSERT(path_.size() < kSizeOfSunPath);
+    strncpy(uaddr.sun_path, path_.c_str(), kSizeOfSunPath);
     fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (connect(fd, (struct sockaddr*) &uaddr, sizeof(uaddr)) == -1) {
       close(fd);
