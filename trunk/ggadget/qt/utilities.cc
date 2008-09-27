@@ -295,6 +295,20 @@ unsigned int GetKeyCode(int qt_key) {
   return pos->qt_key == qt_key ? pos->key_code : 0;
 }
 
+static std::string EscapeHtmlText(const std::string str) {
+  std::string output;
+  std::string::size_type pos;
+  for (pos = 0; pos < str.length(); pos++) {
+    if (str[pos] == '<')
+      output.append("&lt;");
+    else if (str[pos] == '>')
+      output.append("&gt;");
+    else
+      output.push_back(str[pos]);
+  }
+  return output;
+}
+
 void ShowGadgetAboutDialog(Gadget *gadget) {
   ASSERT(gadget);
 
@@ -333,9 +347,9 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
     about_text = ExtractTextFromHTML(about_text.c_str());
 
   std::string title_copyright = "<b>";
-  title_copyright.append(title_text);
+  title_copyright.append(EscapeHtmlText(title_text));
   title_copyright.append("</b><br>");
-  title_copyright.append(copyright_text);
+  title_copyright.append(EscapeHtmlText(copyright_text));
 
   // Load icon
   std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
