@@ -20,6 +20,7 @@
 
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/logger.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/dbus/dbus_result_receiver.h>
 #include "hal_strings.h"
 
@@ -122,9 +123,7 @@ void User::GetDeviceName(const char *device_udi) {
                              MESSAGE_TYPE_STRING,
                              (subsystem.GetValue() + ".bus_number").c_str(),
                              MESSAGE_TYPE_INVALID)) {
-        char buf[21];
-        sprintf(buf, "%jd", bus_number.GetValue());
-        device_name += buf;
+        device_name += StringPrintf("%jd", bus_number.GetValue());
         input_devices_.push_back(device_name);
       } else {
         // This parent has no information about bus number, go to the grandparent

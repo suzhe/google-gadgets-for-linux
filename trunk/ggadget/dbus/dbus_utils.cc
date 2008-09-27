@@ -1080,8 +1080,7 @@ class DBusDemarshaller::Impl {
             // The string must be duplicated, otherwise it'll be destroyed when
             // return.
             // So the caller must free it.
-            char* s = new char[str.length() + 1];
-            strcpy(s, str.c_str());
+            char *s = strdup(str.c_str());
             memcpy(return_storage, &s, sizeof(const char*));
             break;
           }

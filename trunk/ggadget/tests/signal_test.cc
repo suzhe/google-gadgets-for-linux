@@ -49,8 +49,8 @@ static void CheckSlot(int i, Slot *slot) {
   ResultVariant call_result =
       slot->Call(NULL, testdata[i].argc, testdata[i].args);
   ASSERT_EQ(testdata[i].return_value, call_result.v());
-  printf("%d: '%s' '%s'\n", i, result, testdata[i].result);
-  ASSERT_STREQ(testdata[i].result, result);
+  printf("%d: '%s' '%s'\n", i, result.c_str(), testdata[i].result);
+  ASSERT_STREQ(testdata[i].result, result.c_str());
 }
 
 TEST(signal, SignalBasics) {
