@@ -211,15 +211,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (!host_ || !element_factory_ || !file_manager_ || !options_ ||
         !scriptable_options_)
       return false;
-
-    // Create main view early to allow Alert() during initialization.
-    main_view_ = new ViewBundle(
-        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
-        owner_, element_factory_, &global_, NULL, true);
-    ASSERT(main_view_);
-    // Set a default caption before loading manifest.
-    main_view_->view()->SetCaption(GM_("GOOGLE_GADGETS"));
-
+    
     // Create gadget FileManager
     FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
     if (fm == NULL)
@@ -230,14 +222,23 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     fm = CreateFileManager(kDirSeparatorStr);
     if (fm) file_manager_->RegisterFileManager(kDirSeparatorStr, fm);
 
+    std::string error_msg;
     // Load strings and manifest.
     if (!ReadStringsAndManifest(file_manager_, &strings_map_,
                                 &manifest_info_map_)) {
-      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
-                                             base_path_.c_str()).c_str());
+      error_msg = StringPrintf(GM_("GADGET_LOAD_FAILURE"), base_path_.c_str());
+    }
+    // Create main view early to allow Alert() during initialization.
+    main_view_ = new ViewBundle(
+        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
+        owner_, element_factory_, &global_, NULL, true);
+    ASSERT(main_view_);
+
+    if (!error_msg.empty()) {
+      main_view_->view()->Alert(error_msg.c_str());
       return false;
     }
-
+ 
     main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
 
     std::string min_version = GetManifestInfo(kManifestMinVersion);
