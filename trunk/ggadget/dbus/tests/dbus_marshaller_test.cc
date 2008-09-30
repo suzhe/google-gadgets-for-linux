@@ -20,6 +20,7 @@ limitations under the License.
 #include <dbus/dbus.h>
 #include <limits>
 
+#include "ggadget/dbus/dbus_proxy.h"
 #include "ggadget/dbus/dbus_utils.h"
 #include "ggadget/scriptable_array.h"
 #include "ggadget/logger.h"

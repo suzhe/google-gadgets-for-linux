@@ -450,6 +450,16 @@ class NativeMainLoop::Impl {
 #endif
   }
 
+  void WakeUp() {
+#ifdef HAVE_PTHREAD
+    if (!IsMainThread()) {
+      pthread_mutex_lock(&mutex_);
+      WakeUpUnLocked();
+      pthread_mutex_unlock(&mutex_);
+    }
+#endif
+  }
+
  private:
 #ifdef HAVE_PTHREAD
   void WakeUpUnLocked() {
@@ -559,6 +569,9 @@ uint64_t NativeMainLoop::GetCurrentTime() const {
 }
 bool NativeMainLoop::IsMainThread() const {
   return impl_->IsMainThread();
+}
+void NativeMainLoop::WakeUp() {
+  impl_->WakeUp();
 }
 
 } // namespace ggadget

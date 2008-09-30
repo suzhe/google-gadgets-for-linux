@@ -17,22 +17,19 @@
 #ifndef GGADGET_DBUS_DBUS_PROXY_H__
 #define GGADGET_DBUS_DBUS_PROXY_H__
 
-#include <map>
 #include <string>
-#include <vector>
 #include <ggadget/variant.h>
-
-class DBusConnection;
+#include <ggadget/signals.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
-template <typename R> class Slot0;
-template <typename R, typename P1, typename P2> class Slot2;
-class MainLoopInterface;
+class RegisterableInterface;
+DECLARE_VARIANT_PTR_TYPE(Variant);
 
 namespace dbus {
 
-class DBusProxy;
+static const int kDefaultDBusTimeout = 1000;  // 1 second.
 
 enum MessageType {
   MESSAGE_TYPE_INVALID = 0,
@@ -46,150 +43,79 @@ enum MessageType {
   MESSAGE_TYPE_UINT64,
   MESSAGE_TYPE_DOUBLE,
   MESSAGE_TYPE_STRING,
+  MESSAGE_TYPE_OBJECT_PATH,
+  MESSAGE_TYPE_SIGNATURE,
   MESSAGE_TYPE_ARRAY,
   MESSAGE_TYPE_STRUCT,
   MESSAGE_TYPE_VARIANT,
   MESSAGE_TYPE_DICT
 };
 
-/**
- * Factory class of DBusProxy.
- */
-class DBusProxyFactory {
- public:
-  /**
-   * Constructor of DBusProxyFactory.
-   * @param main_loop the main loop used in the process. Use @c NULL if user
-   *        isn't interested in the asynchronous features offered by the
-   *        DBusProxy.
-   */
-  DBusProxyFactory(MainLoopInterface *main_loop);
-  ~DBusProxyFactory();
-
-  /**
-   * Generate a proxy using system bus to transfer messages.
-   * @param name destination name on the message bus
-   * @param path name of the object instance to call methods on
-   * @param interface name of the interface to call methods on
-   * @param only_talk_to_current_owner use @true if the proxy only want to talk
-   *        with current owner of the @c name. If the owner shutdown the
-   *        connection no matter why, the proxy will not work any more.
-   */
-  DBusProxy* NewSystemProxy(const char *name,
-                            const char *path,
-                            const char *interface,
-                            bool only_talk_to_current_owner);
-  /**
-   * Generate a proxy using session bus to transfer messages.
-   * @param name destination name on the message bus
-   * @param path name of the object instance to call methods on
-   * @param interface name of the interface to call methods on
-   * @param only_talk_to_current_owner use @true if the proxy only want to talk
-   *        with current owner of the @c name. If the owner shutdown the
-   *        connection no matter why, the proxy will not work any more.
-   */
-  DBusProxy* NewSessionProxy(const char *name,
-                             const char *path,
-                             const char *interface,
-                             bool only_talk_to_current_owner);
- private:
-  class Impl;
-  Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(DBusProxyFactory);
-};
-
-/**
- * DBuse proxy.
- * User should not directly new the proxy. Use DBusProxyFactory instead.
- *
- * All methods have two style: @c va_list parameters and @c Variant vector
- * parameters. The @c va_list style method is prepared for C++ user.
- * Usage exsample:
- * <code>
- * class IntValue {
- *  public:
- *   IntValue() : value_(0) {
- *   }
- *   ~IntValue() {}
- *   bool Callback(int id, const Variant &value) {
- *     DLOG("expect receiving a int type.");
- *     ASSERT(value.type() == Variant::TYPE_INT64);
- *     int64_t v = VariantValue<int64_t>()(value);
- *     value_ = static_cast<int>(v);
- *     return true;
- *   }
- *   int value() const { return value_; }
- *  private:
- *   int value_;
- * };
- * DBusProxyFactory factory(mainloop);
- * DBusProxy *proxy = factory.NewSystemProxy("org.freedesktop.DBus",
- *                                           "/org/freedesktop/DBus",
- *                                           "org.freedesktop.DBus",
- *                                           false);
- * IntValue obj;
- * proxy->Call("DummyMethod", true, -1,
- *             NewSlot(&obj, &IntValue::Callback),
- *             MESSAGE_TYPE_INVALID);
- * cout << "returned int value: " << obj.value();
- * </code>
- *
- * The methods that is Variant vector parameter style should not be called by
- * C++ code directly. They are used by JS code.
- */
+/** A class to wrap a remote DBus object. */
 class DBusProxy {
  public:
-  /**
-   * C-tor.
-   * @param connection the connection to the remote bus
-   * @param mainloop the main loop to which the proxy attach
-   * @param name any name on the message bus
-   * @param path name of the object instance to call methods on
-   * @param interface name of the interface to call methods on
-   */
-  DBusProxy(DBusConnection *connection,
-            MainLoopInterface *mainloop,
-            const char* name,
-            const char* path,
-            const char* interface);
+  // Access typs of a property.
+  // They can be used as bitmask.
+  enum PropertyAccess {
+    PROP_UNKNOWN = 0,
+    PROP_READ = 1,
+    PROP_WRITE = 2,
+    PROP_READ_WRITE = 3
+  };
+
   ~DBusProxy();
+
+  /** Gets the name of remote target bound to this proxy. */
+  std::string GetName() const;
+
+  /** Gets the path of remote object bound to this proxy. */
+  std::string GetPath() const;
+
+  /** Gets the interface name of remote object bound to this proxy. */
+  std::string GetInterface() const;
 
   /**
    * Callback slot to receive values from the DBus server. The callback will
    * return a @c bool: @true if it want to keep receiving next argument and
    * @false otherwise. The first parameter of the callback indecate the index of
    * current argument, and the second parameter is the value of current argument.
+   *
+   * When error occurres, the callback will be called with -1 as the index and
+   * an error message as the argument value.
    */
   typedef Slot2<bool, int, const Variant&> ResultCallback;
 
   /**
-   * Function for calling a method and receiving reply values.
+   * Calls a method of the remote DBus object.
    * All of the input arguments are specified first,
    * followed by @c MESSAGE_TYPE_INVALID.
+   *
+   * This method is for writing C/C++ code.
    *
    * @param method method name to call
    * @param sync @c true if the caller want to block this method and wait for
    *        reply and @c false otherwise.
    * @param timeout timeout in milisecond that the caller would
    *        cancel waiting reply. When @c timeout is set to -1,
-   *        for sync case, sane default time out value will be set by dbus,
-   *        and for async case, callback will always there until a reply back
-   * @param callback callback to receive the arguments returned from DBus server
+   *        for sync case, sane default timeout value will be set by dbus,
+   *        for async case, callback will always be there until a reply back.
+   * @param callback callback to receive the reply returned from DBus server
    *        Note that the @c Call will own the callback and delete it after
    *        execute. If it is set to @c NULL, the method will not wait for the
    *        reply.
    * @param first_arg_type type of first input argument
-   * @return @c false if an error happen @c true otherwise
+   * @return a number greater than zero will be returned when succeeds,
+   *    otherwise returns zero. For async call, the returned number can be used
+   *    to cancel the call.
    */
-  bool Call(const char* method,
-            bool sync,
-            int timeout,
-            ResultCallback *callback,
-            MessageType first_arg_type,
-            ...);
+  int CallMethod(const std::string &method, bool sync, int timeout,
+                 ResultCallback *callback,
+                 MessageType first_arg_type, ...);
 
   /**
-   * Function for calling a method and receiving reply values.
+   * Calls a method of the remote DBus object.
+   *
+   * This method is for script binding.
    *
    * @param method method name to call
    * @param sync @c true if the caller want to block this method and wait for
@@ -198,51 +124,203 @@ class DBusProxy {
    *        cancel waiting reply. When @c timeout is set to -1,
    *        for sync case, sane default time out value will be set by dbus,
    *        and for async case, callback will always there until a reply back
-   * @param in_arguments arguments array handed in
-   * @param count size of @c in_arguments
    * @param callback callback to receive the arguments returned from DBus server
    *        Note that the @c Call will own the callback and delete it after
    *        execute. If it is set to @c NULL, the method will not wait for the
    *        reply.
-   * @return @c false if an error happen @c true otherwise
+   * @param argc number of arguments
+   * @param argv array to hold arguments
+   * @return a number greater than zero will be returned when succeeds,
+   *    otherwise returns zero. For async call, the returned number can be used
+   *    to cancel the call.
    */
-  bool Call(const char* method,
-            bool sync,
-            int timeout,
-            const Variant *in_arguments, size_t count,
-            ResultCallback *callback);
+  int CallMethod(const std::string &method, bool sync, int timeout,
+                 ResultCallback *callback,
+                 int argc, const Variant *argv);
 
   /**
-   * Connect a slot to a signal name that the proxy listen to. When the proxy got
-   * such signal, the slot will be invoked.
-   * NOTE that the proxy will manage the ownership of the slot.
-   * @param signal the signal name
-   * @param dbus_signal_slot the slot which will be invoked when a signal come
+   * Cancels an async method call.
+   *
+   * @param index the index returned by CallMethod().
+   * @return @c true when succeeds, otherwsize returns @c false.
    */
-  void ConnectToSignal(const char *signal, Slot0<void>* dbus_signal_slot);
+  bool CancelMethodCall(int index);
+
+  /** Checks if a specified method call is still pending. */
+  bool IsMethodCallPending(int index) const;
 
   /**
-   * There is a protocol named Introspectable in DBus protocols. By this
-   * mechanism, we could get all methods and signals one interface supported.
-   * This function will enumerate all supported method calls.
-   * @param slot the callback slot used to handle the enumerated methods. It
-   *        will got two parameters, the first is the method call name, the
-   *        second is a slot represent that method call, the @slot own the second
-   *        parameter. This slot should return @c true if it want to keep
-   *        receiving enumerated method
-   * @return @c true if everything goes well and @false if the callback @slot
-   *         return false or no method calls at all
+   * Gets the information of a known method by its name.
+   *
+   * @param method the name of the method.
+   * @param[out] argc number of arguments
+   * @param[out] arg_types an array containing the types of arguments,
+   *    caller must free it.
+   * @param[out] retc number of return values.
+   * @param[out] ret_types an array containing the types of return values,
+   *    caller must free it.
+   * @return @c true if the method is available.
    */
-  bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot) const;
+  bool GetMethodInfo(const std::string &method,
+                     int *argc, Variant::Type **arg_types,
+                     int *retc, Variant::Type **ret_types);
+
   /**
-   * Similar with @GetMethods.
-   * @return @c true if everything goes well and @false if the callback @slot
-   *         return false or no method calls at all
+   * Enumerates all known properties.
+   * @param callback it will be called for each property with property's name.
+   *        The callback should return @c false if it doesn't want to continue.
+   *        It will be deleted by this method after finishing enumeration.
+   * @return @c false if the callback returns @c false.
    */
-  bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const;
+  bool EnumerateMethods(Slot1<bool, const std::string &> *callback);
+
+  /**
+   * Gets the value of a named property of the DBusProxy object.
+   *
+   * @param property the name of the property.
+   * @return the property value, or a @c Variant of type @c Variant::TYPE_VOID
+   *     if this property is not supported.
+   */
+  ResultVariant GetProperty(const std::string &property);
+
+  /**
+   * Sets the value of a named property.
+   * @param property the name of the property.
+   * @param value the property value. The type must be compatible with the
+   *     prototype returned from @c GetPropertyInfo().
+   * @return @c true if the property is supported and succeeds.
+   */
+  bool SetProperty(const std::string &property, const Variant &value);
+
+  /**
+   * Gets the information of a known property by its name.
+   *
+   * @param property the name of the property.
+   * @param[out,optional] type returns the value type of the property.
+   * @return The access type of the property. If the property is unknown,
+   *         PROP_UNKNOWN will be returned.
+   */
+  PropertyAccess GetPropertyInfo(const std::string &property,
+                                 Variant::Type *type);
+
+  /**
+   * Enumerates all known properties.
+   * @param callback it will be called for each property with property's name.
+   *        The callback should return @c false if it doesn't want to continue.
+   *        It will be deleted by this method after finishing enumeration.
+   * @return @c false if the callback returns @c false.
+   */
+  bool EnumerateProperties(Slot1<bool, const std::string &> *callback);
+
+  /**
+   * Connects a slot to SignalEmit signal.
+   *
+   * The SignalEmit signal will be emitted whenever a signal message of the
+   * DBusProxy object is received. The slot connected to this signal will be
+   * called with following parameters:
+   *  - name of the remote signal
+   *  - number of arguments
+   *  - an Variant array containing values of all arguments
+   * The slot returns nothing.
+   *
+   * @param callback the slot to be connected to this signal.
+   * @return the connected @c Connection, or @c NULL on any error. The caller
+   *    shall always save the connection and disconnect it when destroying,
+   *    because dbus proxies with the same name, path and interface shares
+   *    the same OnSignalEmit signal.
+   */
+  Connection* ConnectOnSignalEmit(
+      Slot3<void, const std::string &, int, const Variant *> *callback);
+
+  /**
+   * Gets the information of a known signal by its name.
+   *
+   * @param signal the name of the signal.
+   * @param[out] argc number of arguments
+   * @param[out] arg_types an array containing the types of arguments,
+   *    caller must free it.
+   * @return @c true if the signal is available.
+   */
+  bool GetSignalInfo(const std::string &signal,
+                     int *argc, Variant::Type **arg_types);
+
+  /**
+   * Enumerates all known signals.
+   * @param callback it will be called for each signal with signal's name.
+   *        The callback should return @c false if it doesn't want to continue.
+   *        It will be deleted by this method after finishing enumeration.
+   * @return @c false if the callback returns @c false.
+   */
+  bool EnumerateSignals(Slot1<bool, const std::string &> *callback);
+
+  /**
+   * Creates a new proxy for a child node of this proxy.
+   *
+   * @param path the relative path of the child node.
+   * @param interface the interface to be used.
+   * @return a new DBusProxy object for the specified child node, or @c NULL
+   *    if the specified child node is not available.
+   */
+  DBusProxy *NewChildProxy(const std::string &path,
+                           const std::string &interface);
+
+  /**
+   * Enumerates all known children of this proxy.
+   * @param callback it will be called for each child with child's name.
+   *        The callback should return @c false if it doesn't want to continue.
+   *        It will be deleted by this method after finishing enumeration.
+   * @return @c false if the callback returns @c false.
+   */
+  bool EnumerateChildren(Slot1<bool, const std::string &> *callback);
+
+  /**
+   * Creates a new proxy for a specified interface of this proxy.
+   *
+   * @param interface name of the interface.
+   * @return a new DBusProxy object for the specified interface, or @c NULL
+   *    if the specified interface is not supported by this proxy.
+   */
+  DBusProxy *NewInterfaceProxy(const std::string &interface);
+
+  /**
+   * Enumerates all known interfaces of this proxy.
+   * @param callback it will be called for names of each interface.
+   *        The callback should return @c false if it doesn't want to continue.
+   *        It will be deleted by this method after finishing enumeration.
+   * @return @c false if the callback returns @c false.
+   */
+  bool EnumerateInterfaces(Slot1<bool, const std::string &> *callback);
+
+ public:
+  /**
+   * Creates a proxy for an object on system bus.
+   * @param name destination name on the message bus
+   * @param path path to the object instance
+   * @param interface name of the interface of the object
+   */
+  static DBusProxy* NewSystemProxy(const std::string &name,
+                                   const std::string &path,
+                                   const std::string &interface);
+
+  /**
+   * Creates a proxy for an object on session bus.
+   * @param name destination name on the message bus
+   * @param path path to the object instance
+   * @param interface name of the interface of the object
+   */
+  static DBusProxy* NewSessionProxy(const std::string &name,
+                                    const std::string &path,
+                                    const std::string &interface);
+
  private:
   class Impl;
   Impl *impl_;
+
+  /**
+   * Private constructor to prevent creating DBusProxy object directly.
+   */
+  DBusProxy();
+
   DISALLOW_EVIL_CONSTRUCTORS(DBusProxy);
 };
 

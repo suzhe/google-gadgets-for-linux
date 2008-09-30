@@ -412,7 +412,7 @@ bool SplitString(const std::string &source, const std::string &separator,
 }
 
 bool SplitStringList(const std::string &source, const std::string &separator,
-                     std::vector<std::string> *result) {
+                     StringVector *result) {
   if (result)
     result->clear();
   if (!source.length())

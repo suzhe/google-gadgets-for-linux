@@ -89,6 +89,8 @@ struct CaseInsensitiveStringComparator {
 typedef std::map<std::string, std::string,
                  CaseInsensitiveStringComparator> CaseInsensitiveStringMap;
 
+typedef std::vector<std::string> StringVector;
+
 /**
  * Assigns a <code>const char *</code> string to a std::string if they are
  * different.
@@ -250,7 +252,7 @@ bool SplitString(const std::string &source, const std::string &separator,
  * @return @c true if separator found.
  */
 bool SplitStringList(const std::string &source, const std::string &separator,
-                     std::vector<std::string> *result);
+                     StringVector *result);
 
 /**
  * Compresses white spaces in a string using the rule like HTML formatting:

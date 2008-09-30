@@ -70,7 +70,7 @@ class LocalizedFileManager::Impl {
     file_manager_ = NULL;
   }
 
-  std::vector<std::string> prefixes_;
+  StringVector prefixes_;
   FileManagerInterface *file_manager_;
 };
 
@@ -118,7 +118,7 @@ bool LocalizedFileManager::ReadFile(const char *file, std::string *data) {
       return true;
 
     // Then try localized file.
-    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
+    for (StringVector::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ReadFile(path.c_str(), data))
@@ -148,7 +148,7 @@ bool LocalizedFileManager::RemoveFile(const char *file) {
     if (impl_->file_manager_->RemoveFile(file))
       result = true;
 
-    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
+    for (StringVector::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->RemoveFile(path.c_str()))
@@ -170,7 +170,7 @@ bool LocalizedFileManager::ExtractFile(const char *file, std::string *into_file)
       return true;
 
     // Then try localized file.
-    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
+    for (StringVector::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ExtractFile(path.c_str(), into_file))
@@ -191,7 +191,7 @@ bool LocalizedFileManager::FileExists(const char *file, std::string *path) {
     if (impl_->file_manager_->FileExists(file, path))
       return true;
 
-    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
+    for (StringVector::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->FileExists(path.c_str(), NULL))

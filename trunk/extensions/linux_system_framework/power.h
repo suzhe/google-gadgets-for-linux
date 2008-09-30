@@ -38,7 +38,6 @@ class Power : public PowerInterface {
   virtual int GetTimeTotal();
 
  private:
-  DBusProxyFactory factory_;
   DBusProxy *battery_;
   DBusProxy *ac_adapter_;
 };

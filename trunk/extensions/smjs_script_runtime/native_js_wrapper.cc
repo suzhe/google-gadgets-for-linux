@@ -655,7 +655,13 @@ class NameCollector {
 
 JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
                                   jsval *statep, jsid *idp) {
-#ifdef GGADGET_SMJS_ENUMERATE_SUPPORTED
+  if (!scriptable_->IsEnumeratable()) {
+    *statep = JSVAL_NULL;
+    if (idp)
+      *idp = JS_ValueToId(js_context_, INT_TO_JSVAL(0), idp);
+    return JS_TRUE;
+  }
+
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   std::vector<std::string> *properties;
   switch (enum_op) {
@@ -689,11 +695,6 @@ JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
     default:
       return JS_FALSE;
   }
-#else
-  *statep = JSVAL_NULL;
-  if (idp)
-    *idp = JS_ValueToId(js_context_, INT_TO_JSVAL(0), idp);
-#endif
   return JS_TRUE;
 }
 

@@ -31,13 +31,11 @@ namespace linux_system {
 const char kProcfsInterruptsFile[] = "/proc/interrupts";
 
 User::User()
-    : factory_(NULL),
-      period_(kDefaultIdlePeriod),
+    : period_(kDefaultIdlePeriod),
       last_irq_(time(NULL)) {
-  DBusProxy *proxy = factory_.NewSystemProxy(kHalDBusName,
-                                             kHalObjectManager,
-                                             kHalInterfaceManager,
-                                             false);
+  DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
+                                               kHalObjectManager,
+                                               kHalInterfaceManager);
   FindDevices(proxy, kHalCapabilityInputKeyboard);
   FindDevices(proxy, kHalCapabilityInputMouse);
   delete proxy;
@@ -63,10 +61,10 @@ void User::FindDevices(DBusProxy *proxy, const char *capability) {
   std::vector<std::string> devices_udi;
   DBusStringArrayReceiver receiver(&devices_udi);
 
-  if (!proxy->Call("FindDeviceByCapability", true, -1,
-                   receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, capability,
-                   MESSAGE_TYPE_INVALID)) {
+  if (!proxy->CallMethod("FindDeviceByCapability", true,
+                         kDefaultDBusTimeout, receiver.NewSlot(),
+                         MESSAGE_TYPE_STRING, capability,
+                         MESSAGE_TYPE_INVALID)) {
     DLOG("Failed to get devices with capability %s", capability);
     return;
   }
@@ -82,33 +80,32 @@ void User::GetDeviceName(const char *device_udi) {
   DBusProxy *proxy, *parent_proxy;
   DBusStringReceiver parent, subsystem;
 
-  proxy = factory_.NewSystemProxy(kHalDBusName,
-                                  device_udi,
-                                  kHalInterfaceDevice,
-                                  false);
-  ASSERT(proxy);
-
+  proxy = DBusProxy::NewSystemProxy(kHalDBusName,
+                                    device_udi,
+                                    kHalInterfaceDevice);
   while (proxy) {
-    proxy->Call(kHalMethodGetProperty, true, -1,
-                parent.NewSlot(),
-                MESSAGE_TYPE_STRING, kHalPropInfoParent,
-                MESSAGE_TYPE_INVALID);
-    parent_proxy = factory_.NewSystemProxy(kHalDBusName,
-                                           parent.GetValue().c_str(),
-                                           kHalInterfaceDevice,
-                                           false);
-    ASSERT(parent_proxy);
+    proxy->CallMethod(kHalMethodGetProperty, true,
+                      kDefaultDBusTimeout, parent.NewSlot(),
+                      MESSAGE_TYPE_STRING, kHalPropInfoParent,
+                      MESSAGE_TYPE_INVALID);
+    parent_proxy = DBusProxy::NewSystemProxy(kHalDBusName,
+                                             parent.GetValue().c_str(),
+                                             kHalInterfaceDevice);
+    if (!parent_proxy) {
+      delete proxy;
+      break;
+    }
 
-    if (!parent_proxy->Call(kHalMethodGetProperty, true, -1,
-                            subsystem.NewSlot(),
-                            MESSAGE_TYPE_STRING, kHalPropInfoSubsystem,
-                            MESSAGE_TYPE_INVALID)) {
+    if (!parent_proxy->CallMethod(kHalMethodGetProperty, true,
+                                  kDefaultDBusTimeout, subsystem.NewSlot(),
+                                  MESSAGE_TYPE_STRING, kHalPropInfoSubsystem,
+                                  MESSAGE_TYPE_INVALID)) {
       // Devices may still use "info.bus" instead of "info.subsystem"
       subsystem.Reset();
-      parent_proxy->Call(kHalMethodGetProperty, true, -1,
-                         subsystem.NewSlot(),
-                         MESSAGE_TYPE_STRING, kHalPropInfoSubsystemOld,
-                         MESSAGE_TYPE_INVALID);
+      parent_proxy->CallMethod(kHalMethodGetProperty, true,
+                               kDefaultDBusTimeout, subsystem.NewSlot(),
+                               MESSAGE_TYPE_STRING, kHalPropInfoSubsystemOld,
+                               MESSAGE_TYPE_INVALID);
     }
     DLOG("Subsystem the device connected to: %s", subsystem.GetValue().c_str());
 
@@ -118,11 +115,11 @@ void User::GetDeviceName(const char *device_udi) {
         subsystem.GetValue().compare("usb_device") == 0) {
       std::string device_name("usb");
       DBusIntReceiver bus_number;
-      if (parent_proxy->Call(kHalMethodGetProperty, true, -1,
-                             bus_number.NewSlot(),
-                             MESSAGE_TYPE_STRING,
-                             (subsystem.GetValue() + ".bus_number").c_str(),
-                             MESSAGE_TYPE_INVALID)) {
+      if (parent_proxy->CallMethod(kHalMethodGetProperty, true,
+                                 kDefaultDBusTimeout, bus_number.NewSlot(),
+                                 MESSAGE_TYPE_STRING,
+                                 (subsystem.GetValue() + ".bus_number").c_str(),
+                                 MESSAGE_TYPE_INVALID)) {
         device_name += StringPrintf("%jd", bus_number.GetValue());
         input_devices_.push_back(device_name);
       } else {

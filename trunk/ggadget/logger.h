@@ -63,9 +63,9 @@ struct LogHelper {
 #define LOGE ::ggadget::LogHelper(::ggadget::LOG_ERROR, __FILE__, __LINE__)
 
 #ifdef NDEBUG
-#define ASSERT_M(x, y)
-#define VERIFY(x)
-#define VERIFY_M(x, y)
+#define ASSERT_M(x, y) ((void)0)
+#define VERIFY(x) (x) ((void)(x))
+#define VERIFY_M(x, y) ((void)(x))
 #define DLOG  true ? (void) 0 : LOGT
 #else // NDEBUG
 

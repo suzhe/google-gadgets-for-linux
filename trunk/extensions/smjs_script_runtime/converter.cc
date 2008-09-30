@@ -374,11 +374,20 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
     arg_types = slot->GetArgTypes();
     *expected_argc = static_cast<uintN>(slot->GetArgCount());
     if (*expected_argc == INT_MAX) {
-      // Simply converting each arguments to native.
+      // Simply converts each arguments to native.
       *params = new Variant[argc];
       *expected_argc = argc;
+      uintN arg_type_idx = 0;
       for (uintN i = 0; i < argc; i++) {
-        JSBool result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
+        JSBool result = false;
+        if (arg_types && arg_types[arg_type_idx] != Variant::TYPE_VOID) {
+          result = ConvertJSToNative(cx, owner,
+                                     Variant(arg_types[arg_type_idx]),
+                                     argv[i], &(*params)[i]);
+          ++arg_type_idx;
+        } else {
+          result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
+        }
         if (!result) {
           for (uintN j = 0; j < i; j++)
             FreeNativeValue((*params)[j]);
