@@ -44,6 +44,7 @@ class MainLoop : public MainLoopInterface {
   virtual bool IsRunning() const;
   virtual uint64_t GetCurrentTime() const;
   virtual bool IsMainThread() const;
+  virtual void WakeUp();
 
  private:
   class Impl;

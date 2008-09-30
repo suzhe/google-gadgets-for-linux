@@ -31,7 +31,7 @@
 #define IW_MODE_ADHOC 1
 
 using ggadget::dbus::DBusProxy;
-using ggadget::dbus::DBusProxyFactory;
+using ggadget::dbus::kDefaultDBusTimeout;
 using ggadget::dbus::DBusBooleanReceiver;
 using ggadget::dbus::MESSAGE_TYPE_BOOLEAN;
 using ggadget::dbus::MESSAGE_TYPE_INVALID;
@@ -44,19 +44,16 @@ namespace linux_system {
 class WirelessAccessPoint::Impl {
  public:
   Impl(const std::string &name)
-      : factory_(NULL),
-        path_(name),
+      : path_(name),
         type_(WirelessAccessPointInterface::WIRELESS_TYPE_ANY),
         strength_(0),
         last_check_time_in_sec_(0) {
-    proxy_ = factory_.NewSystemProxy(kNetworkManagerDBusName,
+    proxy_ = DBusProxy::NewSystemProxy(kNetworkManagerDBusName,
                                      path_.c_str(),
-                                     kNetworkManagerDeviceInterface,
-                                     false);
-    connect_proxy_ = factory_.NewSystemProxy(kNetworkManagerDBusName,
+                                     kNetworkManagerDeviceInterface);
+    connect_proxy_ = DBusProxy::NewSystemProxy(kNetworkManagerDBusName,
                                              kNetworkManagerObjectPath,
-                                             kNetworkManagerInterface,
-                                             false);
+                                             kNetworkManagerInterface);
   }
   ~Impl() {
     delete proxy_;
@@ -76,30 +73,31 @@ class WirelessAccessPoint::Impl {
   }
   void Connect(Slot1<void, bool> *callback) {
     DBusBooleanReceiver receiver;
-    connect_proxy_->Call(kNetworkManagerMethodGetWireless, true, -1,
-                         receiver.NewSlot(), MESSAGE_TYPE_INVALID);
+    connect_proxy_->CallMethod(kNetworkManagerMethodGetWireless, true,
+                               kDefaultDBusTimeout, receiver.NewSlot(),
+                               MESSAGE_TYPE_INVALID);
     bool result = false;
     if (!receiver.GetValue()) {
-      result = connect_proxy_->Call(kNetworkManagerMethodSetWireless,
-                                    true, -1, NULL,
-                                    MESSAGE_TYPE_BOOLEAN, true,
-                                    MESSAGE_TYPE_INVALID);
+      result = connect_proxy_->CallMethod(kNetworkManagerMethodSetWireless,
+                                          true, kDefaultDBusTimeout, NULL,
+                                          MESSAGE_TYPE_BOOLEAN, true,
+                                          MESSAGE_TYPE_INVALID);
     }
-    result = connect_proxy_->Call(kNetworkManagerMethodSetActive,
-                                  true, -1, NULL,
-                                  MESSAGE_TYPE_STRING, path_.c_str(),
-                                  MESSAGE_TYPE_STRING, name_.c_str(),
-                                  MESSAGE_TYPE_INVALID);
+    result = connect_proxy_->CallMethod(kNetworkManagerMethodSetActive,
+                                        true, kDefaultDBusTimeout, NULL,
+                                        MESSAGE_TYPE_STRING, path_.c_str(),
+                                        MESSAGE_TYPE_STRING, name_.c_str(),
+                                        MESSAGE_TYPE_INVALID);
     if (callback) {
       (*callback)(result);
       delete callback;
     }
   }
   void Disconnect(Slot1<void, bool> *callback) {
-    bool result = connect_proxy_->Call(kNetworkManagerMethodSetWireless,
-                                       true, -1, NULL,
-                                       MESSAGE_TYPE_BOOLEAN, false,
-                                       MESSAGE_TYPE_INVALID);
+    bool result = connect_proxy_->CallMethod(kNetworkManagerMethodSetWireless,
+                                             true, kDefaultDBusTimeout, NULL,
+                                             MESSAGE_TYPE_BOOLEAN, false,
+                                             MESSAGE_TYPE_INVALID);
     DLOG("Disconnect result: %s", result ? "true" : "false");
     if (callback) {
       (*callback)(result);
@@ -110,9 +108,10 @@ class WirelessAccessPoint::Impl {
   void Refresh() {
     time_t now = time(NULL);
     if (now - last_check_time_in_sec_ < kCheckInterval) return;
-    proxy_->Call(kNetworkManagerMethodGetProperties, true, -1,
-                 NewSlot(this, &Impl::GetInterestedProperties),
-                 MESSAGE_TYPE_INVALID);
+    proxy_->CallMethod(kNetworkManagerMethodGetProperties, true,
+                       kDefaultDBusTimeout,
+                       NewSlot(this, &Impl::GetInterestedProperties),
+                       MESSAGE_TYPE_INVALID);
   }
   bool GetInterestedProperties(int id, const Variant &value) {
     switch (id) {
@@ -139,7 +138,6 @@ class WirelessAccessPoint::Impl {
     }
     return true;
   }
-  DBusProxyFactory factory_;
   DBusProxy *proxy_;
   DBusProxy *connect_proxy_;
   std::string path_;

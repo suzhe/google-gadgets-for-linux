@@ -91,6 +91,11 @@ class ScriptableInterface {
   virtual bool IsStrict() const = 0;
 
   /**
+   * Tests if this object can be enumerated by a for-in enumeration in script.
+   */
+  virtual bool IsEnumeratable() const = 0;
+
+  /**
    * Connects a callback which will be called when @c Ref() or @c Unref() is
    * called.
    * @param slot the callback. The parameters of the slot are:

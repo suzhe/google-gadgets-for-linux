@@ -201,20 +201,49 @@ void FreeNativeValue(const Variant &native_val) {
 }
 
 bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot,
-                           Variant **argv) {
+                           int *expected_argc, Variant **argv) {
   *argv = NULL;
-  int expected_argc = 0;
   int argc = ctx->argumentCount();
+  *expected_argc = argc;
   const Variant::Type *arg_types = NULL;
   const Variant *default_args = NULL;
 
   if (slot->HasMetadata()) {
     arg_types = slot->GetArgTypes();
-    expected_argc = slot->GetArgCount();
+    *expected_argc = slot->GetArgCount();
+    if (*expected_argc == INT_MAX) {
+      // Simply converts each arguments to native.
+      *argv = new Variant[argc];
+      *expected_argc = argc;
+      int arg_type_idx = 0;
+      for (int i = 0; i < argc; ++i) {
+        bool result = false;
+        if (arg_types && arg_types[arg_type_idx] != Variant::TYPE_VOID) {
+          result = ConvertJSToNative(ctx->engine(),
+                                     Variant(arg_types[arg_type_idx]),
+                                     ctx->argument(i), &(*argv)[i]);
+          ++arg_type_idx;
+        } else {
+          result = ConvertJSToNativeVariant(ctx->engine(), ctx->argument(i),
+                                            &(*argv)[i]);
+        }
+        if (!result) {
+          for (int j = 0; j < i; j++)
+            FreeNativeValue((*argv)[j]);
+          delete [] *argv;
+          *argv = NULL;
+          ctx->throwError(QString("Failed to convert argument %1 to native")
+                          .arg(i));
+          return false;
+        }
+      }
+      return true;
+    }
+
     default_args = slot->GetDefaultArgs();
-    if (argc != expected_argc) {
-      int min_argc = expected_argc;
-      if (min_argc > 0 && default_args && argc < expected_argc) {
+    if (argc != *expected_argc) {
+      int min_argc = *expected_argc;
+      if (min_argc > 0 && default_args && argc < *expected_argc) {
         for (int i = min_argc - 1; i >= 0; i--) {
           if (default_args[i].type() != Variant::TYPE_VOID)
             min_argc--;
@@ -222,7 +251,7 @@ bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot,
             break;
         }
       }
-      if (argc > expected_argc || argc < min_argc) {
+      if (argc > *expected_argc || argc < min_argc) {
         ctx->throwError(
             QString("Wrong number of arguments: at least %1, actual:%2")
             .arg(min_argc).arg(argc));
@@ -231,10 +260,10 @@ bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot,
     }
   }
 
-  if (expected_argc > 0) {
-    *argv = new Variant[expected_argc];
+  if (*expected_argc > 0) {
+    *argv = new Variant[*expected_argc];
     // Fill up trailing default argument values.
-    for (int i = argc; i < expected_argc; i++) {
+    for (int i = argc; i < *expected_argc; i++) {
       (*argv)[i] = default_args[i];
     }
 

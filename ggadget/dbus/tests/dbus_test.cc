@@ -38,7 +38,9 @@ const char* kDisconnect  = "Disconnected";
 const char* kSystemRule  = "type='signal',interface='"DBUS_INTERFACE_LOCAL "'";
 const char* kSessionRule = "type='signal',interface='com.google.Gadget.Test'";
 
-int feed = rand();
+static int g_feed = rand();
+
+static NativeMainLoop *g_mainloop;
 
 DBusHandlerResult FilterFunction(DBusConnection *connection,
                                  DBusMessage *message,
@@ -50,7 +52,7 @@ DBusHandlerResult FilterFunction(DBusConnection *connection,
   if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, kDisconnect)) {
     DLOG("server: got system disconnect signal, exit.");
     dbus_connection_close(connection);
-    exit(0);
+    _exit(0);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else {
     LOG("server: got other message.");
@@ -170,15 +172,18 @@ DBusHandlerResult path_message_func(DBusConnection *connection,
                                          kDisconnect)) {
     DLOG("server: received disconnected call from peer.");
     dbus_connection_close(connection);
-    exit(0);
+    _exit(0);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else if (dbus_message_is_method_call(message,
                                          kInterface,
                                          "Signal")) {
     DLOG("server: received signal echo call from peer.");
+    DBusMessage *reply = dbus_message_new_method_return(message);
+    dbus_connection_send(connection, reply, NULL);
     DBusMessage *signal = dbus_message_new_signal(kPath, kInterface, "signal1");
     dbus_connection_send(connection, signal, NULL);
     dbus_connection_flush(connection);
+    dbus_message_unref(reply);
     dbus_message_unref(signal);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else if (dbus_message_is_method_call(message,
@@ -188,10 +193,7 @@ DBusHandlerResult path_message_func(DBusConnection *connection,
     DBusMessage *reply = dbus_message_new_method_return(message);
     dbus_int32_t rand_feed = *(reinterpret_cast<dbus_int32_t*>(user_data));
     DLOG("server: feed: %d", rand_feed);
-    struct timespec tm;
-    tm.tv_sec = 0;
-    tm.tv_nsec = 100000000;
-    nanosleep(&tm, NULL);
+    usleep(500000);
     dbus_message_append_args(reply,
                              DBUS_TYPE_INT32, &rand_feed,
                              DBUS_TYPE_INVALID);
@@ -273,6 +275,7 @@ class IntValue {
     ASSERT(value.type() == Variant::TYPE_INT64);
     int64_t v = VariantValue<int64_t>()(value);
     value_ = static_cast<int>(v);
+    g_mainloop->Quit();
     return true;
   }
   int value() const { return value_; }
@@ -288,18 +291,41 @@ class BoolValue {
   bool Callback(int id, const Variant &value) {
     ASSERT(value.type() == Variant::TYPE_BOOL);
     value_ = VariantValue<bool>()(value);
+    g_mainloop->Quit();
     return true;
   }
  private:
   bool value_;
 };
 
+class StringValue {
+ public:
+  std::string value() const { return value_; }
+  bool Callback(int id, const Variant &value) {
+    ASSERT(value.type() == Variant::TYPE_STRING);
+    value_ = VariantValue<std::string>()(value);
+    g_mainloop->Quit();
+    return true;
+  }
+ private:
+  std::string value_;
+};
+
+void StartServer() {
+  int id = fork();
+  if (id == 0) {
+    DLOG("server start");
+    StartDBusServer(g_feed);
+    _exit(0);
+  }
+}
+
 // if crash, we should kill testing server
 void ExitHandler(int signo) {
   KillServer();
 }
 
-void RegisterSignalHander() {
+void RegisterSignalHandler() {
   signal(SIGQUIT, ExitHandler);
   signal(SIGSEGV, ExitHandler);
   signal(SIGTERM, ExitHandler);
@@ -309,134 +335,101 @@ void RegisterSignalHander() {
 
 }  // anonymous namespace
 
+TEST(DBusProxy, AsyncCall) {
+  DBusProxy *proxy = DBusProxy::NewSessionProxy(kName, kPath, kInterface);
+  IntValue obj;
+  //This timeout test doesn't work on dbus 1.2.1, seems that it's a bug of dbus
+  //library, which damages the memory when timeout expired.
+  //EXPECT_TRUE(proxy->CallMethod("Hello", false, 200,
+  //                              NewSlot(&obj, &IntValue::Callback),
+  //                              MESSAGE_TYPE_INVALID));
+  //g_mainloop->Run();
+  //EXPECT_EQ(0, obj.value());
+  EXPECT_TRUE(proxy->CallMethod("Hello", false, 1000,
+                                NewSlot(&obj, &IntValue::Callback),
+                                MESSAGE_TYPE_INVALID));
+  g_mainloop->Run();
+  EXPECT_EQ(g_feed, obj.value());
+  delete proxy;
+}
+
 TEST(DBusProxy, SystemCall) {
   const char *kDBusName = "org.freedesktop.DBus";
-  DBusProxyFactory *factory = new DBusProxyFactory(NULL);
-  DBusProxy *proxy =
-      factory->NewSystemProxy(kDBusName,
-                              "/org/freedeskop/DBus",
-                              kDBusName,
-                              false);
+  DBusProxy *proxy = DBusProxy::NewSystemProxy(kDBusName,
+                                               "/org/freedeskop/DBus",
+                                               kDBusName);
   BoolValue obj;
-  proxy->Call("NameHasOwner", true, -1,
-              NewSlot(&obj, &BoolValue::Callback),
-              MESSAGE_TYPE_STRING, kDBusName, MESSAGE_TYPE_INVALID);
+  proxy->CallMethod("NameHasOwner", true, -1,
+                    NewSlot(&obj, &BoolValue::Callback),
+                    MESSAGE_TYPE_STRING, kDBusName, MESSAGE_TYPE_INVALID);
   DLOG("result of NameHasOwner: %d", obj.value());
   EXPECT_TRUE(obj.value());
   delete proxy;
 }
 
 TEST(DBusProxy, SyncCall) {
-  int id = fork();
-  if (id == 0) {
-    DLOG("server start");
-    StartDBusServer(feed);
-    StartDBusServer(feed * 2);
-    exit(0);
-  } else {
-    RegisterSignalHander();
-    sleep(1);  /** wait server start */
-    DLOG("client start");
-    DBusProxyFactory *factory = new DBusProxyFactory(NULL);
-    DBusProxy *proxy =
-        factory->NewSessionProxy(kName, kPath, kInterface, false);
-    IntValue obj;
-    EXPECT_TRUE(proxy->Call("Hello", true, -1,
-                            NewSlot(&obj, &IntValue::Callback),
-                            MESSAGE_TYPE_INVALID));
-    DLOG("read feed: %d", obj.value());
-    EXPECT_EQ(feed, obj.value());
-    delete proxy;
-    delete factory;
-  }
-}
-
-class Timeout : public WatchCallbackInterface {
- public:
-  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-    main_loop->Quit();
-    return false;
-  }
-  virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-    delete this;
-  }
-};
-
-TEST(DBusProxy, AsyncCall) {
-  NativeMainLoop mainloop;
-  DBusProxyFactory factory(&mainloop);
-  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, false);
-  mainloop.AddTimeoutWatch(200, new Timeout);
+  DBusProxy *proxy = DBusProxy::NewSessionProxy(kName, kPath, kInterface);
   IntValue obj;
-  EXPECT_TRUE(proxy->Call("Hello", false, 50,
-                          NewSlot(&obj, &IntValue::Callback),
-                          MESSAGE_TYPE_INVALID));
-  mainloop.Run();
-  EXPECT_EQ(0, obj.value());
-  mainloop.AddTimeoutWatch(1000, new Timeout);
-  EXPECT_TRUE(proxy->Call("Hello", false, -1,
-                          NewSlot(&obj, &IntValue::Callback),
-                          MESSAGE_TYPE_INVALID));
-  mainloop.Run();
-  EXPECT_EQ(feed, obj.value());
+  EXPECT_TRUE(proxy->CallMethod("Hello", true, -1,
+                                NewSlot(&obj, &IntValue::Callback),
+                                MESSAGE_TYPE_INVALID));
+  DLOG("read feed: %d", obj.value());
+  EXPECT_EQ(g_feed, obj.value());
   delete proxy;
 }
 
-class SignalSlot {
+TEST(DBusProxy, SystemAsyncCall) {
+  DBusProxy *proxy = DBusProxy::NewSessionProxy(kName, kPath, kInterface);
+  StringValue obj;
+  proxy->CallMethod("Echo", false, -1,
+                    NewSlot(&obj, &StringValue::Callback),
+                    MESSAGE_TYPE_STRING, "Hello world",
+                    MESSAGE_TYPE_INVALID);
+  g_mainloop->Run();
+  DLOG("result of Echo: %s", obj.value().c_str());
+  EXPECT_STREQ("Hello world", obj.value().c_str());
+  delete proxy;
+}
+
+class SignalCallback {
  public:
-  SignalSlot() : value_(0) {}
-  int value() const {return value_;}
-  void Callback() { ++value_; }
+  SignalCallback() : value_(0) {}
+  int value() const { return value_; }
+  void Callback(const std::string &name, int argc, const Variant *argv) {
+    EXPECT_STREQ("signal1", name.c_str());
+    ++value_;
+    g_mainloop->Quit();
+  }
  private:
   int value_;
 };
 
 TEST(DBusProxy, ConnectToSignal) {
-  NativeMainLoop mainloop;
-  DBusProxyFactory factory(&mainloop);
-  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, false);
+  DBusProxy *proxy = DBusProxy::NewSessionProxy(kName, kPath, kInterface);
   ASSERT(proxy);
-  SignalSlot slot;
-  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
-  Timeout *timeout = new Timeout;
-  mainloop.AddTimeoutWatch(1000, timeout);
-  mainloop.Run();
+  SignalCallback slot;
+  proxy->ConnectOnSignalEmit(NewSlot(&slot, &SignalCallback::Callback));
+  EXPECT_TRUE(proxy->CallMethod("Signal", false, -1, NULL, MESSAGE_TYPE_INVALID));
+  g_mainloop->Run();
   EXPECT_NE(0, slot.value());
-  delete proxy;
-}
-
-TEST(DBusProxy, ConnectToSignalByName) {
-  NativeMainLoop mainloop;
-  DBusProxyFactory factory(&mainloop);
-  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, true);
-  ASSERT(proxy);
-  SignalSlot slot;
-  Timeout *timeout = new Timeout;
-  mainloop.AddTimeoutWatch(2000, timeout);
-  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
-  mainloop.Run();
-  int old = slot.value();
-  EXPECT_NE(0, old);
-  KillServer();
-  timeout = new Timeout;
-  mainloop.AddTimeoutWatch(2000, timeout);
-  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
-  mainloop.Run();
-  EXPECT_EQ(old, slot.value());
   delete proxy;
 }
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
+  StartServer();
+
+  g_mainloop = new NativeMainLoop();
+  SetGlobalMainLoop(g_mainloop);
 
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
 
+  RegisterSignalHandler();
+  sleep(1);  /** wait server start */
+  DLOG("client start");
   int result = RUN_ALL_TESTS();
   KillServer();
   return result;

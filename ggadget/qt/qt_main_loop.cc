@@ -177,6 +177,10 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
     }
   }
 
+  bool IsMainThread() {
+    return pthread_equal(pthread_self(), main_thread_) != 0;
+  }
+
   std::list<WatchNode *> unused_watches_;
 
  private:
@@ -208,10 +212,6 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
       delete (*iter);
     }
     unused_watches_.clear();
-  }
-
-  bool IsMainThread() {
-    return pthread_equal(pthread_self(), main_thread_) != 0;
   }
 
   std::map<int, WatchNode*> watches_;
@@ -282,6 +282,14 @@ uint64_t QtMainLoop::GetCurrentTime() const {
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+}
+
+bool QtMainLoop::IsMainThread() const {
+  return impl_->IsMainThread();
+}
+
+void QtMainLoop::WakeUp() {
+  // FIXME
 }
 
 void QtMainLoop::MarkUnusedWatchNode(WatchNode *node) {

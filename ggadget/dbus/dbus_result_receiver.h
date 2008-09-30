@@ -24,6 +24,7 @@
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
 #include <ggadget/scriptable_interface.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/dbus/dbus_proxy.h>
 
 namespace ggadget {
@@ -99,8 +100,8 @@ typedef DBusSingleResultReceiver<ScriptableInterface *> DBusScriptableReceiver;
  *
  * ...
  *
- * std::vector<std::string> result
- * DBusArrayResultReceiver<std::string> receiver(&result);
+ * StringVector result
+ * DBusArrayResultReceiver<StringVector> receiver(&result);
  *
  * proxy->Call("method, true, -1, receiver.NewSlot(), ...);
  *
@@ -109,9 +110,9 @@ typedef DBusSingleResultReceiver<ScriptableInterface *> DBusScriptableReceiver;
 template<typename T>
 class DBusArrayResultReceiver {
  public:
-  typedef typename VariantValue<T>::value_type RType;
+  typedef typename T::value_type ValueType;
 
-  DBusArrayResultReceiver(std::vector<RType> *result)
+  DBusArrayResultReceiver(T *result)
     : result_(result) {
     ASSERT(result_);
     result_->clear();
@@ -133,22 +134,22 @@ class DBusArrayResultReceiver {
 
  private:
   bool Enumerator(int id, const Variant &value) {
-    if (VariantType<T>::type != value.type()) {
+    if (VariantType<ValueType>::type != value.type()) {
       DLOG("Type mismatch of the no. %d element in the array,"
            " expect %d, actual %d", id, VariantType<T>::type, value.type());
       return false;
     }
-    result_->push_back(VariantValue<T>()(value));
+    result_->push_back(VariantValue<ValueType>()(value));
     return true;
   }
 
-  std::vector<RType> *result_;
+  T *result_;
 };
 
-typedef DBusArrayResultReceiver<bool> DBusBooleanArrayReceiver;
-typedef DBusArrayResultReceiver<int64_t> DBusIntArrayReceiver;
-typedef DBusArrayResultReceiver<std::string> DBusStringArrayReceiver;
-typedef DBusArrayResultReceiver<double> DBusDoubleArrayReceiver;
+typedef DBusArrayResultReceiver<std::vector<bool> > DBusBooleanArrayReceiver;
+typedef DBusArrayResultReceiver<std::vector<int64_t> > DBusIntArrayReceiver;
+typedef DBusArrayResultReceiver<StringVector> DBusStringArrayReceiver;
+typedef DBusArrayResultReceiver<std::vector<double> > DBusDoubleArrayReceiver;
 
 }  // namespace dbus
 }  // namespace ggadget

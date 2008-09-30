@@ -54,6 +54,7 @@
 #include "scriptable_interface.h"
 #include "scriptable_menu.h"
 #include "slot.h"
+#include "string_utils.h"
 #include "texture.h"
 #include "view_host_interface.h"
 #include "xml_dom_interface.h"
@@ -1030,7 +1031,7 @@ class View::Impl {
 
   void SetResizeBorder(const std::string &value) {
     resize_border_specified_ = false;
-    std::vector<std::string> values;
+    StringVector values;
     SplitStringList(value, " ", &values);
     double double_values[4];
     for (size_t i = 0; i < 4; ++i) {

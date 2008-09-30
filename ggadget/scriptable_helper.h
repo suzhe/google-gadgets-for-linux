@@ -284,6 +284,12 @@ class ScriptableHelper : public I,
    */
   virtual bool IsStrict() const { return true; }
 
+  /**
+   * By default, scriptable object can not be enumerated by script.
+   * @see ScriptableInterface::IsEnumeratable()
+   */
+  virtual bool IsEnumeratable() const { return false; }
+
   /** @see ScriptableInterface::ConnectionOnReferenceChange() */
   virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot) {
     return impl_->ConnectOnReferenceChange(slot);

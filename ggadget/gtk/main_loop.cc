@@ -346,6 +346,10 @@ uint64_t MainLoop::GetCurrentTime() const {
 bool MainLoop::IsMainThread() const {
   return impl_->IsMainThread();
 }
+void MainLoop::WakeUp() {
+  g_main_context_wakeup(g_main_context_default());
+}
+
 
 } // namespace gtk
 } // namespace ggadget

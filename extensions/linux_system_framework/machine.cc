@@ -32,65 +32,59 @@ namespace linux_system {
 
 using namespace ggadget::dbus;
 
-namespace {
-
-const char* kKeysInMachineInfo[] = {
+static const char* kKeysInMachineInfo[] = {
   "cpu family", "model", "stepping",
   "vendor_id", "model name", "cpu MHz"
 };
 
 // Represents the file names for reading CPU info.
-const char kCPUInfoFile[] = "/proc/cpuinfo";
-
-}  // namespace anonymous
+static const char kCPUInfoFile[] = "/proc/cpuinfo";
 
 Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
-  DBusProxyFactory factory(NULL);
-  DBusProxy *proxy = factory.NewSystemProxy(kHalDBusName,
-                                            kHalObjectComputer,
-                                            kHalInterfaceDevice,
-                                            false);
+  DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
+                                               kHalObjectComputer,
+                                               kHalInterfaceDevice);
   DBusStringReceiver string_receiver;
 
-  if (!proxy->Call(kHalMethodGetProperty, true, -1,
-                   string_receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalPropSystemUUID,
-                   MESSAGE_TYPE_INVALID)) {
+  if (!proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                         string_receiver.NewSlot(),
+                         MESSAGE_TYPE_STRING, kHalPropSystemUUID,
+                         MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->Call(kHalMethodGetProperty, true, -1,
-                string_receiver.NewSlot(),
-                MESSAGE_TYPE_STRING, kHalPropSystemUUIDOld,
-                MESSAGE_TYPE_INVALID);
+    proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                      string_receiver.NewSlot(),
+                      MESSAGE_TYPE_STRING, kHalPropSystemUUIDOld,
+                      MESSAGE_TYPE_INVALID);
   }
   serial_number_ = string_receiver.GetValue();
   string_receiver.Reset();
 
   /** get machine vendor */
-  if (!proxy->Call(kHalMethodGetProperty, true, -1,
-                   string_receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalPropSystemVendor,
-                   MESSAGE_TYPE_INVALID)) {
+  if (!proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                         string_receiver.NewSlot(),
+                         MESSAGE_TYPE_STRING, kHalPropSystemVendor,
+                         MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->Call(kHalMethodGetProperty, true, -1,
-                string_receiver.NewSlot(),
-                MESSAGE_TYPE_STRING, kHalPropSystemVendorOld,
-                MESSAGE_TYPE_INVALID);
+    proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                      string_receiver.NewSlot(),
+                      MESSAGE_TYPE_STRING, kHalPropSystemVendorOld,
+                      MESSAGE_TYPE_INVALID);
   }
   machine_vendor_ = string_receiver.GetValue();
   string_receiver.Reset();
 
   /** get machine model*/
-  if (!proxy->Call(kHalMethodGetProperty, true, -1,
-                   string_receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalPropSystemProduct,
-                   MESSAGE_TYPE_INVALID)) {
+  if (!proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                         string_receiver.NewSlot(),
+                         MESSAGE_TYPE_STRING, kHalPropSystemProduct,
+                         MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->Call(kHalMethodGetProperty, true, -1,
-                string_receiver.NewSlot(),
-                MESSAGE_TYPE_STRING, kHalPropSystemProductOld,
-                MESSAGE_TYPE_INVALID);
+    proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                      string_receiver.NewSlot(),
+                      MESSAGE_TYPE_STRING, kHalPropSystemProductOld,
+                      MESSAGE_TYPE_INVALID);
   }
   machine_model_ = string_receiver.GetValue();
 

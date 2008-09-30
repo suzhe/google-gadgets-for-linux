@@ -527,9 +527,9 @@ std::string GetFullPathOfSystemCommand(const char *command) {
   if (env_path_value == NULL)
     return "";
 
-  std::vector<std::string> paths;
+  StringVector paths;
   SplitStringList(env_path_value, ":", &paths);
-  for (std::vector<std::string>::iterator i = paths.begin();
+  for (StringVector::iterator i = paths.begin();
        i != paths.end(); ++i) {
     std::string path = BuildFilePath(i->c_str(), command, NULL);
     if (access(path.c_str(), X_OK) == 0)

@@ -283,11 +283,13 @@ static QScriptValue SlotCaller(QScriptContext *context, QScriptEngine *engine) {
   ASSERT(wrapper);
 
   Variant *argv = NULL;
-  bool ret = ConvertJSArgsToNative(context, wrapper->slot_, &argv);
+  int expected_argc = context->argumentCount();
+  bool ret = ConvertJSArgsToNative(context, wrapper->slot_,
+                                   &expected_argc,  &argv);
   if (!ret) return engine->undefinedValue();
 
   ResultVariant res = wrapper->slot_->Call(wrapper->object_,
-                                           wrapper->slot_->GetArgCount(), argv);
+                                           expected_argc, argv);
   delete [] argv;
 
   QScriptValue exception;
@@ -526,10 +528,11 @@ QVariant ResolverScriptClass::extension(Extension extension,
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
 
   Variant *argv = NULL;
-  if (!ConvertJSArgsToNative(context, call_slot_, &argv))
+  int expected_argc = context->argumentCount();
+  if (!ConvertJSArgsToNative(context, call_slot_, &expected_argc, &argv))
     return QVariant();
 
-  ResultVariant res = call_slot_->Call(object_, call_slot_->GetArgCount(), argv);
+  ResultVariant res = call_slot_->Call(object_, expected_argc, argv);
   delete [] argv;
   if (!CheckException(context, object_, NULL))
     return QVariant();

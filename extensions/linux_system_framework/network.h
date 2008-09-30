@@ -53,7 +53,6 @@ class Network : public NetworkInterface {
   int last_active_interface_;
   std::vector<std::string> interfaces_;
   std::vector<DBusProxy *> proxies_;
-  DBusProxyFactory factory_;
   Wireless wireless_;
 };
 

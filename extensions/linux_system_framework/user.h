@@ -51,7 +51,6 @@ class User : public UserInterface {
   void GetDeviceName(const char *device_udi);
   bool CheckInputEvents(int watch_id);
 
-  DBusProxyFactory factory_;
   std::vector<std::string> input_devices_;
 
   time_t period_;

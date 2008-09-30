@@ -26,7 +26,7 @@
 #include "wireless_access_point.h"
 
 using ggadget::dbus::DBusProxy;
-using ggadget::dbus::DBusProxyFactory;
+using ggadget::dbus::kDefaultDBusTimeout;
 using ggadget::dbus::DBusStringArrayReceiver;
 using ggadget::dbus::MESSAGE_TYPE_INVALID;
 
@@ -38,8 +38,7 @@ const int kNMDeviceType80211Wireless = 2;
 
 class Wireless::Impl {
  public:
-  Impl() : factory_(NULL),
-           network_manager_client_(NULL),
+  Impl() : network_manager_client_(NULL),
            is_active_(false),
            strength_(0),
            last_check_time_in_sec_(0) {
@@ -82,13 +81,16 @@ class Wireless::Impl {
   }
  private:
   void GetWirelessDevices() {
-    DBusProxy *proxy = factory_.NewSystemProxy(kNetworkManagerDBusName,
+    DBusProxy *proxy = DBusProxy::NewSystemProxy(kNetworkManagerDBusName,
                                                kNetworkManagerObjectPath,
-                                               kNetworkManagerInterface, false);
+                                               kNetworkManagerInterface);
+    if (!proxy) return;
+
     std::vector<std::string> strlist;
     DBusStringArrayReceiver receiver(&strlist);
-    if (!proxy->Call(kNetworkManagerMethodGetDevices, true, -1,
-                     receiver.NewSlot(), MESSAGE_TYPE_INVALID)) {
+    if (!proxy->CallMethod(kNetworkManagerMethodGetDevices, true,
+                           kDefaultDBusTimeout, receiver.NewSlot(),
+                           MESSAGE_TYPE_INVALID)) {
       DLOG("Get wireless Devices failed.");
       delete proxy;
       return;
@@ -96,15 +98,15 @@ class Wireless::Impl {
     delete proxy;
     for (std::vector<std::string>::iterator it = strlist.begin();
         it != strlist.end(); ++it) {
-      proxy = factory_.NewSystemProxy(kNetworkManagerDBusName,
+      proxy = DBusProxy::NewSystemProxy(kNetworkManagerDBusName,
                                       it->c_str(),
-                                      kNetworkManagerInterface,
-                                      false);
+                                      kNetworkManagerInterface);
       find_wireless_device_ = false;
       is_active_ = false;
-      proxy->Call(kNetworkManagerMethodGetProperties, true, -1,
-                  NewSlot(this, &Impl::GetDeviceProperties),
-                  MESSAGE_TYPE_INVALID);
+      proxy->CallMethod(kNetworkManagerMethodGetProperties, true,
+                        kDefaultDBusTimeout,
+                        NewSlot(this, &Impl::GetDeviceProperties),
+                        MESSAGE_TYPE_INVALID);
       if (!find_wireless_device_) {
         delete proxy;
       } else {
@@ -122,9 +124,10 @@ class Wireless::Impl {
     for (ProxyVector::iterator it = wireless_proxies_.begin();
          it != wireless_proxies_.end(); ++it) {
       is_active_ = false;
-      (*it)->Call(kNetworkManagerMethodGetProperties, true, -1,
-                  NewSlot(this, &Impl::GetDeviceProperties),
-                  MESSAGE_TYPE_INVALID);
+      (*it)->CallMethod(kNetworkManagerMethodGetProperties, true,
+                        kDefaultDBusTimeout,
+                        NewSlot(this, &Impl::GetDeviceProperties),
+                        MESSAGE_TYPE_INVALID);
       if (is_active_) {
         network_manager_client_ = *it;
         break;
@@ -192,7 +195,6 @@ class Wireless::Impl {
   }
  private:
   // dbus proxies
-  DBusProxyFactory factory_;
   typedef std::vector<DBusProxy*> ProxyVector;
   ProxyVector wireless_proxies_;
   DBusProxy *network_manager_client_;

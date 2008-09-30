@@ -14,15 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "dbus_proxy.h"
+#include "dbus_utils.h"
+
+#include <algorithm>
+#include <vector>
 #include <map>
 #include <dbus/dbus.h>
 
-#include "dbus_proxy.h"
-#include "dbus_utils.h"
 #include <ggadget/common.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
+#include <ggadget/signals.h>
 #include <ggadget/slot.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
@@ -32,734 +36,1558 @@ limitations under the License.
 namespace ggadget {
 namespace dbus {
 
-struct Prototype {
-  explicit Prototype(const char *n) : name(n) {}
-  std::string name;
-  Arguments in_args;
-  Arguments out_args;
-};
-typedef std::vector<Prototype> PrototypeVector;
-
-static const char kIntrospectInterface[] ="org.freedesktop.DBus.Introspectable";
-static const char kIntrospectMethod[] = "Introspect";
-
-static void VariantListToArguments(const Variant *list_start, size_t count,
-                                   Arguments *args) {
-  Arguments tmp;
-  for (size_t i = 0; i < count; ++i)
-    tmp.push_back(Argument(*list_start++));
-  args->swap(tmp);
-}
-
-class DBusProxyFactory::Impl {
- public:
-  Impl(MainLoopInterface *main_loop) :
-    main_loop_(main_loop),
-    system_bus_(NULL), session_bus_(NULL),
-    system_bus_closure_(NULL), session_bus_closure_(NULL) {
-  }
-  ~Impl() {
-    if (system_bus_) {
-      if (main_loop_) {
-        delete system_bus_closure_;
-        dbus_connection_close(system_bus_);
-      }
-      dbus_connection_unref(system_bus_);
-    }
-    if (session_bus_) {
-      if (main_loop_) {
-        delete session_bus_closure_;
-        dbus_connection_close(session_bus_);
-      }
-      dbus_connection_unref(session_bus_);
-    }
-  }
-
-  DBusProxy* NewSystemProxy(const char *name,
-                            const char *path,
-                            const char *interface,
-                            bool by_owner) {
-    if (!system_bus_) {
-      system_bus_ = GetBus(true);
-      if (main_loop_ && system_bus_)
-        system_bus_closure_ = new DBusMainLoopClosure(system_bus_, main_loop_);
-    }
-    if (by_owner)
-      name = GetOwner(true, name).c_str();
-    return new DBusProxy(system_bus_, main_loop_, name, path, interface);
-  }
-
-  DBusProxy* NewSessionProxy(const char *name,
-                             const char *path,
-                             const char *interface,
-                             bool by_owner) {
-    if (!session_bus_) {
-      session_bus_ = GetBus(false);
-      if (main_loop_ && session_bus_)
-        session_bus_closure_ =
-            new DBusMainLoopClosure(session_bus_, main_loop_);
-    }
-    if (by_owner)
-      name = GetOwner(false, name).c_str();
-    return new DBusProxy(session_bus_, main_loop_, name, path, interface);
-  }
-
- private:
-  DBusConnection* GetBus(bool system_bus) {
-    DBusError error;
-    dbus_error_init(&error);
-    DBusConnection *connection = NULL;
-    if (system_bus) {
-      connection = GetDBusBus(DBUS_BUS_SYSTEM, &error);
-    } else {
-      connection = GetDBusBus(DBUS_BUS_SESSION, &error);
-    }
-    if (dbus_error_is_set(&error))
-      LOG("error: %s, %s", error.name, error.message);
-    dbus_error_free(&error);
-    return connection;
-  }
-
-  DBusConnection* GetDBusBus(DBusBusType type, DBusError *error) {
-    // If the main_loop_ is set, we should use private bus so that any
-    // main_loop-related configuration will not affect default bus.
-    if (main_loop_)
-      return dbus_bus_get_private(type, error);
-    return dbus_bus_get(type, error);
-  }
-
-  std::string GetOwner(bool system_bus,
-                       const char* name) {
-    DBusMessage *message = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
-                                                        DBUS_PATH_DBUS,
-                                                        DBUS_INTERFACE_DBUS,
-                                                        "GetNameOwner");
-    dbus_message_append_args(message, DBUS_TYPE_STRING,
-                             &name, DBUS_TYPE_INVALID);
-    DBusConnection *bus = system_bus ? system_bus_ : session_bus_;
-    if (!bus) return "";
-    DBusError error;
-    dbus_error_init(&error);
-    DBusMessage *reply = dbus_connection_send_with_reply_and_block(bus,
-                                                                   message,
-                                                                   -1,
-                                                                   &error);
-    const char* base_name;
-    dbus_message_get_args(reply, &error, DBUS_TYPE_STRING, &base_name,
-                          DBUS_TYPE_INVALID);
-    dbus_message_unref(reply);
-    return std::string(base_name);
-  }
-
- private:
-  MainLoopInterface *main_loop_;
-  DBusConnection *system_bus_;
-  DBusConnection *session_bus_;
-  DBusMainLoopClosure *system_bus_closure_;
-  DBusMainLoopClosure *session_bus_closure_;
-};
-
-DBusProxyFactory::DBusProxyFactory(MainLoopInterface *main_loop) :
-  impl_(new Impl(main_loop)) {
-}
-
-DBusProxyFactory::~DBusProxyFactory() {
-  delete impl_;
-}
-
-DBusProxy* DBusProxyFactory::NewSystemProxy(const char *name,
-                                            const char *path,
-                                            const char *interface,
-                                            bool only_talk_to_current_owner) {
-  return impl_->NewSystemProxy(name, path, interface,
-                               only_talk_to_current_owner);
-}
-
-DBusProxy* DBusProxyFactory::NewSessionProxy(const char *name,
-                                             const char *path,
-                                             const char *interface,
-                                             bool only_talk_to_current_owner) {
-  return impl_->NewSessionProxy(name, path, interface,
-                                only_talk_to_current_owner);
-}
-
 class DBusProxy::Impl {
+  // Structure to hold information of an argument.
+  struct ArgPrototype {
+    std::string name;
+    std::string signature;
+  };
+  typedef std::vector<ArgPrototype> ArgPrototypeVector;
+
+  // Structure to hold information of a method or a signal.
+  // in_args stores information of all arguments to be sent to remote dbus
+  // object.
+  // out_args stores information of all arguments to be read from remote dbus
+  // object.
+  //
+  // For signal the in_args shall be empty.
+  struct MethodSignalPrototype {
+    ArgPrototypeVector in_args;
+    ArgPrototypeVector out_args;
+  };
+  typedef std::map<std::string, MethodSignalPrototype> MethodSignalPrototypeMap;
+
+  struct PropertyPrototype {
+    PropertyAccess access;
+    std::string signature;
+  };
+  typedef std::map<std::string, PropertyPrototype> PropertyPrototypeMap;
+
+  typedef std::map<int, DBusPendingCall *> PendingCallMap;
+
+  // Class to hold owner<->names mapping information.
+  class OwnerNamesCache {
+   public:
+    bool IsNameMonitored(const std::string &name) const {
+      return names_info_.find(name) != names_info_.end();
+    }
+    void MonitorName(const std::string &name) {
+      if (!name.empty()) names_info_[name].refcount++;
+    }
+    void UnmonitorName(const std::string &name) {
+      NamesInfoMap::iterator it = names_info_.find(name);
+      if (it != names_info_.end()) {
+        -- it->second.refcount;
+        if (it->second.refcount <= 0) {
+          if (!it->second.owner.empty())
+            RemoveOwnerName(it->second.owner, name);
+          names_info_.erase(it);
+        }
+      }
+    }
+    void SetNameOwner(const std::string &name, const std::string &owner) {
+      NamesInfoMap::iterator it = names_info_.find(name);
+      if (it != names_info_.end()) {
+        if (!it->second.owner.empty())
+          RemoveOwnerName(it->second.owner, name);
+        if (!owner.empty())
+          AddOwnerName(owner, name);
+        it->second.owner = owner;
+      }
+    }
+    void GetOwnerNames(const std::string &owner,
+                       StringVector *names) const {
+      OwnerNamesMap::const_iterator it = owner_names_.find(owner);
+      names->clear();
+      if (it != owner_names_.end()) {
+        names->assign(it->second.begin(), it->second.end());
+      }
+    }
+    void Clear() {
+      owner_names_.clear();
+      names_info_.clear();
+    }
+
+   private:
+    void AddOwnerName(const std::string &owner, const std::string &name) {
+      OwnerNamesMap::iterator it = owner_names_.find(owner);
+      if (it == owner_names_.end()) {
+        owner_names_[owner].push_back(name);
+      } else {
+        StringVector::iterator nit = it->second.begin();
+        for (; nit != it->second.end(); ++nit) {
+          if (*nit == name) return;
+        }
+        it->second.push_back(name);
+      }
+    }
+    void RemoveOwnerName(const std::string &owner, const std::string &name) {
+      OwnerNamesMap::iterator it = owner_names_.find(owner);
+      ASSERT(it != owner_names_.end());
+      StringVector::iterator nit = it->second.begin();
+      for (; nit != it->second.end(); ++nit) {
+        if (*nit == name) {
+          it->second.erase(nit);
+          break;
+        }
+      }
+      if (it->second.size() == 0)
+        owner_names_.erase(it);
+    }
+
+    struct NameInfo {
+      NameInfo() : refcount(0) { }
+      int refcount;
+      std::string owner;
+    };
+
+    // first: owner, second: names
+    typedef std::map<std::string, StringVector > OwnerNamesMap;
+    OwnerNamesMap owner_names_;
+
+    // first: name, second: name's information
+    typedef std::map<std::string, NameInfo> NamesInfoMap;
+    NamesInfoMap names_info_;
+  };
+
+  // Class to manage a dbus connection.
+  class Manager {
+   public:
+    explicit Manager(DBusBusType type)
+      : type_(type),
+        bus_(NULL),
+        main_loop_closure_(NULL),
+        bus_proxy_(NULL),
+        destroying_(false) {
+    }
+    ~Manager() {
+      ASSERT(proxies_.size() == 0);
+      if (proxies_.size()) {
+        LOGW("%zu DBusProxy objects are still available when destroying"
+             " DBus Connection for bus %d",
+             proxies_.size(), type_);
+        // Detach existing proxies from this manager.
+        ProxyMap::iterator it = proxies_.begin();
+        for(; it != proxies_.end(); ++it)
+          it->second->DetachFromManager();
+      }
+      Destroy();
+    }
+    DBusConnection *Get() {
+      if (EnsureInitialized())
+        return bus_;
+      return NULL;
+    }
+    bool IsAsyncSupported() const {
+      return main_loop_closure_ != NULL;
+    }
+    DBusBusType GetType() const {
+      return type_;
+    }
+    // For debug purpose.
+    const char *GetTypeName() const {
+      return type_ == DBUS_BUS_SYSTEM ? "system" : "session";
+    }
+
+    // Creates a new Impl object.
+    // The Impl object is shared among all DBusProxy objects with the same
+    // name, path and interface.
+    Impl *NewImpl(const std::string &name, const std::string &path,
+                  const std::string &interface) {
+      if (EnsureInitialized()) {
+        std::string tri_name = GetTriName(name, path, interface);
+        ProxyMap::iterator it = proxies_.find(tri_name);
+        if (it != proxies_.end()) {
+          ASSERT(it->second);
+          it->second->Ref();
+          return it->second;
+        } else {
+          // Initial refcount is 1.
+          Impl *impl = new Impl(this, name, path, interface);
+          if (impl->Initialize()) {
+            proxies_[tri_name] = impl;
+            MonitorImplName(name);
+            std::string match_rule = impl->GetMatchRule();
+            DLOG("Add Match to %s bus: %s", GetTypeName(), match_rule.c_str());
+            dbus_bus_add_match(bus_, match_rule.c_str(), NULL);
+            return impl;
+          } else {
+            delete impl;
+          }
+        }
+      }
+      return NULL;
+    }
+    // Deletes an existing Impl object.
+    // Note, it doesn't care about the reference count of the Impl object.
+    bool DeleteImpl(Impl *impl) {
+      ASSERT(!destroying_);
+      if (!destroying_) {
+        std::string tri_name =
+            GetTriName(impl->GetName(), impl->GetPath(), impl->GetInterface());
+        ProxyMap::iterator it = proxies_.find(tri_name);
+        if (it != proxies_.end()) {
+          ASSERT(it->second == impl);
+          if (bus_) {
+            std::string match_rule = impl->GetMatchRule();
+            DLOG("Remove Match from %s bus: %s",
+                 GetTypeName(), match_rule.c_str());
+            dbus_bus_remove_match(bus_, match_rule.c_str(), NULL);
+          }
+          UnmonitorImplName(impl->GetName());
+          delete impl;
+          proxies_.erase(it);
+          if (proxies_.size() == 0) {
+            DLOG("No proxy left, destroy %s bus.", GetTypeName());
+            // No more proxy, destroy the connection to save resource.
+            Destroy();
+          }
+          return true;
+        } else {
+          DLOG("Unknown proxy: %s", tri_name.c_str());
+        }
+      }
+      return false;
+    }
+
+    bool EnsureInitialized() {
+      ASSERT(!destroying_);
+      if (!bus_ && !destroying_) {
+        DLOG("Initialize DBus %s bus.",
+             type_ == DBUS_BUS_SYSTEM ? "system" : "session");
+        DBusError error;
+        dbus_error_init(&error);
+        bus_ = dbus_bus_get_private(type_, &error);
+        if (!bus_) {
+          LOG("Failed to initialize DBus, type: %d, error: %s, %s",
+              type_, error.name, error.message);
+          return false;
+        }
+        dbus_error_free(&error);
+        dbus_connection_set_exit_on_disconnect(bus_, FALSE);
+        dbus_bus_add_match(bus_,
+                           "type='signal',sender='" DBUS_SERVICE_DBUS
+                           "',path='" DBUS_PATH_DBUS
+                           "',interface='" DBUS_INTERFACE_DBUS
+                           "',member='NameOwnerChanged'",
+                           NULL);
+        dbus_connection_add_filter(bus_, BusFilter, this, NULL);
+        MainLoopInterface *main_loop = GetGlobalMainLoop();
+        if (main_loop)
+          main_loop_closure_ = new DBusMainLoopClosure(bus_, main_loop);
+        else
+          DLOG("DBus proxy may not work without main loop.");
+        // Re-monitor names of existing proxies.
+        if (proxies_.size()) {
+          ProxyMap::iterator it = proxies_.begin();
+          for(; it != proxies_.end(); ++it)
+            MonitorImplName(it->second->GetName());
+        }
+      }
+      return bus_ != NULL && !destroying_;
+    }
+
+    void Destroy() {
+      ASSERT(!destroying_);
+      if (bus_ && !destroying_) {
+        DLOG("Destroy DBus %s bus.",
+             type_ == DBUS_BUS_SYSTEM ? "system" : "session");
+        destroying_ = true;
+        // Remove filter first to avoid receiving signals anymore.
+        dbus_connection_remove_filter(bus_, BusFilter, this);
+        dbus_bus_remove_match(bus_,
+                              "type='signal',sender='" DBUS_SERVICE_DBUS
+                              "',path='" DBUS_PATH_DBUS
+                              "',interface='" DBUS_INTERFACE_DBUS
+                              "',member='NameOwnerChanged'",
+                              NULL);
+
+        // Cancel all pending calls.
+        ProxyMap::iterator it = proxies_.begin();
+        for(; it != proxies_.end(); ++it)
+          it->second->CancelAllPendingCalls();
+
+        // Clears all monitored names, without destroying existing proxies.
+        // Existing proxies can be reused when dbus connection is
+        // established again.
+        owner_names_.Clear();
+        delete main_loop_closure_;
+        // Bus must be closed before unref.
+        dbus_connection_close(bus_);
+        dbus_connection_unref(bus_);
+        delete bus_proxy_;
+        main_loop_closure_ = NULL;
+        bus_ = NULL;
+        bus_proxy_ = NULL;
+        destroying_ = false;
+      }
+    }
+
+   private:
+    Impl *GetBusProxy() {
+      if (EnsureInitialized()) {
+        if (!bus_proxy_) {
+          bus_proxy_ = new Impl(this, DBUS_SERVICE_DBUS, DBUS_PATH_DBUS,
+                                DBUS_INTERFACE_DBUS);
+          if (!bus_proxy_->Initialize()) {
+            DLOG("Failed to create bus proxy.");
+            delete bus_proxy_;
+            bus_proxy_ = NULL;
+          }
+        }
+        return bus_proxy_;
+      }
+      return NULL;
+    }
+
+    // Callback to receive the result of "GetNameOwner" async call.
+    bool GetNameOwnerCallback(int index, const Variant &result,
+                              const std::string &name) {
+      if (bus_ && !destroying_ && index == 0) {
+        std::string owner;
+        if (result.ConvertToString(&owner)) {
+          DLOG("The owner of name %s is %s", name.c_str(), owner.c_str());
+          owner_names_.SetNameOwner(name, owner);
+        }
+      }
+      // One owner is enough.
+      return false;
+    }
+
+    void MonitorImplName(const std::string &name) {
+      // Don't monitor owner names.
+      if (name[0] == ':') return;
+      if (owner_names_.IsNameMonitored(name)) {
+        // If the name is already monitored, just increate its refcount
+        // by calling MonitorName() again.
+        owner_names_.MonitorName(name);
+      } else {
+        // Otherwise monitor the name and then try to fetch the name's owner.
+        owner_names_.MonitorName(name);
+        Impl *proxy = GetBusProxy();
+        if (proxy) {
+          Arguments in_args;
+          in_args.push_back(Argument(Variant(name)));
+          // It's weird that this template can't be deduced automatically.
+          ResultCallback *callback =
+              NewSlot<bool, int, const Variant&, Manager, const std::string&>(
+                  this, &Manager::GetNameOwnerCallback, name);
+          proxy->CallMethod("GetNameOwner", IsAsyncSupported(),
+                            kDefaultDBusTimeout, callback, &in_args);
+        }
+      }
+    }
+
+    void UnmonitorImplName(const std::string &name) {
+      // Don't monitor owner names.
+      if (name[0] == ':') return;
+      owner_names_.UnmonitorName(name);
+    }
+
+    void NameOwnerChanged(const char *name, const char *old_owner,
+                          const char *new_owner) {
+      // Don't monitor owner names.
+      if (name[0] == ':') return;
+      // Just set the name's owner to the new one.
+      // If the name is not monitored, nothing will be done.
+      owner_names_.SetNameOwner(name, new_owner);
+    }
+
+    void EmitSignalMessage(DBusMessage *message) {
+      const char *sender = dbus_message_get_sender(message);
+      const char *path = dbus_message_get_path(message);
+      const char *interface = dbus_message_get_interface(message);
+      const char *member = dbus_message_get_member(message);
+      // path, interface and member are mandatory according to dbus spec.
+      ASSERT(path);
+      ASSERT(interface);
+      ASSERT(member);
+      // sender is optional according to dbus spec.
+      if (!sender) sender = "";
+
+      StringVector names;
+      // sender is always the unique bus name if it's available.
+      owner_names_.GetOwnerNames(sender, &names);
+      // Some proxies may bound to the unique name directly.
+      if (sender[0])
+        names.push_back(sender);
+
+      for (StringVector::iterator it = names.begin(); it != names.end(); ++it) {
+        std::string tri_name = GetTriName(*it, path, interface);
+        ProxyMap::iterator proxy_it = proxies_.find(tri_name);
+        if (proxy_it != proxies_.end()) {
+          DLOG("Emit signal %s on proxy %s", member, tri_name.c_str());
+          proxy_it->second->EmitSignal(message);
+        }
+      }
+    }
+
+    static std::string GetTriName(const std::string &name,
+                                  const std::string &path,
+                                  const std::string &interface) {
+      std::string tri_name;
+      tri_name.append(name);
+      tri_name.append("|");
+      tri_name.append(path);
+      tri_name.append("|");
+      tri_name.append(interface);
+      return tri_name;
+    }
+
+    static DBusHandlerResult BusFilter(DBusConnection *bus,
+                                       DBusMessage *message,
+                                       void *user_data) {
+      if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+      Manager *manager = reinterpret_cast<Manager *>(user_data);
+      ASSERT(bus == manager->bus_);
+      ASSERT(!manager->destroying_);
+
+      DLOG("BusFilter(%s): sender:%s path:%s interface:%s member:%s",
+           manager->GetTypeName(), dbus_message_get_sender(message),
+           dbus_message_get_path(message),
+           dbus_message_get_interface(message),
+           dbus_message_get_member(message));
+
+      if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL,
+                                 "Disconnected")) {
+        DLOG("Disconnected signal received for bus: %d", manager->type_);
+        // bus is disconnected, destroy the manager.
+        manager->Destroy();
+      } else {
+        // Handles NameOwnerChanged signal internally.
+        if (dbus_message_is_signal(message, DBUS_INTERFACE_DBUS,
+                                   "NameOwnerChanged")) {
+          // Owner has been changed for a specified name, all proxies associated
+          // to the name must be destroyed.
+          const char *name;
+          const char *prev_owner;
+          const char *new_owner;
+          DBusError error;
+          dbus_error_init(&error);
+          if (dbus_message_get_args(message, &error,
+                                    DBUS_TYPE_STRING, &name,
+                                    DBUS_TYPE_STRING, &prev_owner,
+                                    DBUS_TYPE_STRING, &new_owner,
+                                    DBUS_TYPE_INVALID)) {
+            manager->NameOwnerChanged(name, prev_owner, new_owner);
+          }
+          dbus_error_free(&error);
+        }
+
+        // Forwards the signal to existing proxies.
+        manager->EmitSignalMessage(message);
+      }
+
+      // Give others a chance to handle the signals.
+      return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+    typedef std::map<std::string, Impl *> ProxyMap;
+    ProxyMap proxies_;
+    OwnerNamesCache owner_names_;
+
+    DBusBusType type_;
+    DBusConnection *bus_;
+    DBusMainLoopClosure *main_loop_closure_;
+
+    // Special proxy to retrieve a name's owner.
+    Impl *bus_proxy_;
+    bool destroying_;
+  };
+
  public:
-  Impl(DBusProxy* owner, DBusConnection* connection,
-       MainLoopInterface *mainloop,
-       const char* name, const char* path, const char* interface)
-    : owner_(owner),
-      connection_(connection),
-      main_loop_(mainloop),
-      initialized_(false) {
-    if (name) name_ = name;
-    if (path) path_ = path;
-    if (interface) interface_ = interface;
-    AddFilter();
-#ifdef _DEBUG
-    initialized_ = true;
-    GetRemoteMethodsAndSignals();
-#endif
+  Impl(Manager *manager, const std::string &name, const std::string &path,
+       const std::string &interface)
+    : manager_(manager),
+      name_(name),
+      path_(path),
+      interface_(interface),
+      refcount_(1),
+      call_id_counter_(1) {
   }
   ~Impl() {
-    RemoveFilter();
-    for (SignalSlotMap::iterator it = signal_slots_.begin();
-         it != signal_slots_.end(); ++it)
-      delete it->second;
-    for (MethodSlotMap::iterator it = method_slots_.begin();
-         it != method_slots_.end(); ++it)
-      delete it->second;
-    for (TimeoutMap::iterator it = timeouts_.begin();
-         it != timeouts_.end(); ++it)
-      main_loop_->RemoveWatch(it->first);
+    CancelAllPendingCalls();
+  }
+
+  std::string GetName() const { return name_; }
+  std::string GetPath() const { return path_; }
+  std::string GetInterface() const { return interface_; }
+
+  std::string GetMatchRule() const {
+    return StringPrintf("type='signal',sender='%s',path='%s',interface='%s'",
+                        name_.c_str(), path_.c_str(), interface_.c_str());
+  }
+
+  void Ref() {
+    ++refcount_;
+  }
+
+  void Unref() {
+    ASSERT(refcount_ > 0);
+    --refcount_;
+    if (refcount_ <= 0) {
+      // If manager is still available, then let manager to delete this proxy,
+      // otherwise just delete this to avoid memory leak.
+      if (manager_)
+        manager_->DeleteImpl(this);
+      else
+        delete this;
+    }
+  }
+
+  void DetachFromManager() {
+    // The manager has been destroyed.
+    manager_ = NULL;
+  }
+
+  bool Initialize() {
+    methods_.clear();
+    signals_.clear();
+    properties_.clear();
+    interfaces_.clear();
+    children_.clear();
+    CancelAllPendingCalls();
+
+    DBusConnection *bus = GetBus();
+    if (bus && PingPeer(bus)) {
+      Introspect(bus);
+      return true;
+    }
+    return false;
+  }
+
+  void CancelAllPendingCalls() {
+    PendingCallMap::iterator it = pending_calls_.begin();
+    for (; it != pending_calls_.end(); ++it) {
+      dbus_pending_call_cancel(it->second);
+      dbus_pending_call_unref(it->second);
+    }
+    pending_calls_.clear();
+  }
+
+  int CallMethod(const std::string &method, bool sync, int timeout,
+                 ResultCallback *callback,
+                 MessageType first_arg_type, va_list *args) {
+    Arguments in_args;
+    if (DBusMarshaller::ValistAdaptor(&in_args, first_arg_type, args))
+      return CallMethod(method, sync, timeout, callback, &in_args);
+    delete callback;
+    return 0;
+  }
+
+  int CallMethod(const std::string &method, bool sync, int timeout,
+                 ResultCallback *callback, Arguments *in_args) {
+    Arguments out_args;
+    MethodSignalPrototypeMap::iterator it = methods_.find(method);
+    if (it != methods_.end()) {
+      // Validate input arguments number and type.
+      if (!ValidateArguments(it->second.in_args, in_args,
+                             "method", method.c_str())) {
+        CallAndFreeResultCallback(callback, out_args, false);
+        return 0;
+      }
+    }
+
+    DBusConnection *bus = GetBus();
+    if (bus) {
+      sync = (sync || !manager_->IsAsyncSupported());
+      if (sync) {
+        // Generate a new call id for sync all.
+        int call_id = NewCallId();
+        bool ret = CallMethodSync(bus, interface_.c_str(), method.c_str(),
+                                  *in_args, &out_args, timeout);
+        // Only validate return values when caller cares about them
+        // (callback is not NULL).
+        if (ret && it != methods_.end() && callback) {
+          // Validate return values.
+          ret = ValidateArguments(it->second.out_args, &out_args,
+                                  "method", method.c_str());
+        }
+        if (!ret) {
+          DLOG("Failed to call method %s of %s|%s|%s synchronously.",
+               method.c_str(), name_.c_str(), path_.c_str(),
+               interface_.c_str());
+        }
+        CallAndFreeResultCallback(callback, out_args, ret);
+        return ret ? call_id : false;
+      } else {
+        return CallMethodAsync(bus, interface_.c_str(), method.c_str(),
+                               *in_args, callback, timeout);
+      }
+    }
+    DLOG("Failed to call method %s of %s|%s|%s",
+         method.c_str(), name_.c_str(), path_.c_str(), interface_.c_str());
+    CallAndFreeResultCallback(callback, out_args, false);
+    return 0;
+  }
+
+  bool CancelMethodCall(int index) {
+    PendingCallMap::iterator it = pending_calls_.find(index);
+    if (it != pending_calls_.end()) {
+      dbus_pending_call_cancel(it->second);
+      dbus_pending_call_unref(it->second);
+      pending_calls_.erase(it);
+      return true;
+    }
+    return false;
+  }
+
+  bool IsMethodCallPending(int index) {
+    return pending_calls_.find(index) != pending_calls_.end();
+  }
+
+  bool GetMethodInfo(const std::string &method,
+                     int *argc, Variant::Type **arg_types,
+                     int *retc, Variant::Type **ret_types) {
+    if (argc) *argc = 0;
+    if (arg_types) *arg_types = NULL;
+    if (retc) *retc = 0;
+    if (ret_types) *ret_types = NULL;
+    MethodSignalPrototypeMap::iterator it = methods_.find(method);
+    if (it != methods_.end()) {
+      // input arguments.
+      if (it->second.in_args.size()) {
+        if (argc) {
+          *argc = static_cast<int>(it->second.in_args.size());
+          if (arg_types && *argc > 0) {
+            *arg_types = new Variant::Type[*argc];
+            for (int i = 0; i < *argc; ++i) {
+              (*arg_types)[i] =
+                  GetVariantTypeFromSignature(it->second.in_args[i].signature);
+            }
+          }
+        }
+      }
+      // output arguments.
+      if (it->second.out_args.size()) {
+        if (retc) {
+          *retc = static_cast<int>(it->second.out_args.size());
+          if (ret_types && *retc > 0) {
+            *ret_types = new Variant::Type[*retc];
+            for (int i = 0; i < *retc; ++i) {
+              (*ret_types)[i] =
+                  GetVariantTypeFromSignature(it->second.out_args[i].signature);
+            }
+          }
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  bool EnumerateMethods(Slot1<bool, const std::string &> *callback) {
+    ASSERT(callback);
+    bool ret = true;
+    MethodSignalPrototypeMap::iterator it = methods_.begin();
+    for (; ret && it != methods_.end(); ++it) {
+      ret = (*callback)(it->first);
+    }
+    delete callback;
+    return ret;
+  }
+
+  ResultVariant GetProperty(const std::string &property) {
+    Variant::Type expect_type = Variant::TYPE_VARIANT;
+    PropertyPrototypeMap::iterator it = properties_.find(property);
+    if (it != properties_.end()) {
+      if ((it->second.access & PROP_READ) == 0) {
+        DLOG("Property %s of %s|%s|%s is write only", property.c_str(),
+             name_.c_str(), path_.c_str(), interface_.c_str());
+        return ResultVariant();
+      }
+      expect_type = GetVariantTypeFromSignature(it->second.signature);
+    }
+
+    DBusConnection *bus = GetBus();
+    if (bus) {
+      Arguments in_args;
+      // See http://dbus.freedesktop.org/doc/dbus-specification.html
+      // org.freedesktop.DBus.Properties interface
+      in_args.push_back(Argument(Variant(interface_)));
+      in_args.push_back(Argument(Variant(property)));
+      Arguments out_args;
+      if (CallMethodSync(bus, DBUS_INTERFACE_PROPERTIES, "Get", in_args,
+                         &out_args, kDefaultDBusTimeout)) {
+        if (out_args.size() > 0) {
+          if (expect_type != Variant::TYPE_VARIANT &&
+              out_args[0].value.v().type() != expect_type) {
+            DLOG("Type mismatch of property %s of %s|%s|%s, "
+                 "expect:%d actual:%d", property.c_str(),
+                 name_.c_str(), path_.c_str(), interface_.c_str(),
+                 expect_type, out_args[0].value.v().type());
+            return ResultVariant();
+          }
+          return out_args[0].value;
+        }
+      }
+    }
+    DLOG("Failed to get property %s of %s|%s|%s", property.c_str(),
+         name_.c_str(), path_.c_str(), interface_.c_str());
+    return ResultVariant();
+  }
+
+  bool SetProperty(const std::string &property, const Variant &value) {
+    Arguments in_args;
+    // See http://dbus.freedesktop.org/doc/dbus-specification.html
+    // org.freedesktop.DBus.Properties interface
+    in_args.push_back(Argument(Variant(interface_)));
+    in_args.push_back(Argument(Variant(property)));
+    in_args.push_back(Argument(value));
+    PropertyPrototypeMap::iterator it = properties_.find(property);
+    if (it != properties_.end()) {
+      if ((it->second.access & PROP_WRITE) == 0) {
+        DLOG("Property %s of %s|%s|%s is read only", property.c_str(),
+             name_.c_str(), path_.c_str(), interface_.c_str());
+        return false;
+      }
+      Variant::Type type = GetVariantTypeFromSignature(it->second.signature);
+      if (type != Variant::TYPE_VARIANT && type != value.type()) {
+        DLOG("Type mismatch of property %s of %s|%s|%s, expect:%d actual:%d",
+             property.c_str(), name_.c_str(), path_.c_str(), interface_.c_str(),
+             type, value.type());
+        return false;
+      }
+      // Update value argument's signature.
+      in_args[2].signature = it->second.signature;
+    } else {
+      DLOG("Unknown property %s of %s|%s|%s, set anyway.", property.c_str(),
+           name_.c_str(), path_.c_str(), interface_.c_str());
+    }
+    DBusConnection *bus = GetBus();
+    if (bus) {
+      // No need to wait for reply.
+      return SendMessage(bus, DBUS_INTERFACE_PROPERTIES, "Set",
+                         in_args, NULL, -1);
+    }
+    DLOG("Failed to set property %s of %s|%s|%s", property.c_str(),
+         name_.c_str(), path_.c_str(), interface_.c_str());
+    return false;
+  }
+
+  PropertyAccess GetPropertyInfo(const std::string &property,
+                                 Variant::Type *type) {
+    if (type) *type = Variant::TYPE_VOID;
+    PropertyPrototypeMap::iterator it = properties_.find(property);
+    if (it != properties_.end()) {
+      if (type)
+        *type = GetVariantTypeFromSignature(it->second.signature);
+      return it->second.access;
+    }
+    return PROP_UNKNOWN;
+  }
+
+  bool EnumerateProperties(Slot1<bool, const std::string &> *callback) {
+    ASSERT(callback);
+    bool ret = true;
+    PropertyPrototypeMap::iterator it = properties_.begin();
+    for (; ret && it != properties_.end(); ++it) {
+      ret = (*callback)(it->first);
+    }
+    delete callback;
+    return ret;
+  }
+
+  Connection *ConnectOnSignalEmit(
+      Slot3<void, const std::string &, int, const Variant *> *callback) {
+    return on_signal_emit_signal_.Connect(callback);
+  }
+
+  bool GetSignalInfo(const std::string &signal,
+                     int *argc, Variant::Type **arg_types) {
+    if (argc) *argc = 0;
+    if (arg_types) *arg_types = NULL;
+    MethodSignalPrototypeMap::iterator it = signals_.find(signal);
+    if (it != signals_.end()) {
+      if (it->second.out_args.size()) {
+        if (argc) {
+          *argc = static_cast<int>(it->second.out_args.size());
+          if (arg_types && *argc > 0) {
+            *arg_types = new Variant::Type[*argc];
+            for (int i = 0; i < *argc; ++i) {
+              (*arg_types)[i] =
+                  GetVariantTypeFromSignature(it->second.out_args[i].signature);
+            }
+          }
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  bool EnumerateSignals(Slot1<bool, const std::string &> *callback) {
+    ASSERT(callback);
+    bool ret = true;
+    MethodSignalPrototypeMap::iterator it = signals_.begin();
+    for (; ret && it != signals_.end(); ++it) {
+      ret = (*callback)(it->first);
+    }
+    delete callback;
+    return ret;
+  }
+
+  DBusProxy *NewChildProxy(const std::string &child,
+                           const std::string &interface) {
+    if (manager_ && child.length() && interface.length() && child[0] != '/') {
+      std::string child_path = path_ + "/" + child;
+      // It's not necessary to check if the interface is available or not,
+      // because many dbus objects have no introspect data.
+      DLOG("New %s dbus proxy: %s|%s|%s", manager_->GetTypeName(),
+           name_.c_str(), child_path.c_str(), interface.c_str());
+      Impl *impl = manager_->NewImpl(name_, child_path, interface);
+      if (impl) {
+        DBusProxy *proxy = new DBusProxy();
+        proxy->impl_ = impl;
+        return proxy;
+      }
+    }
+    DLOG("Failed to create dbus proxy: %s|%s/%s|%s",
+         name_.c_str(), path_.c_str(), child.c_str(), interface.c_str());
+    return NULL;
+  }
+
+  bool EnumerateChildren(Slot1<bool, const std::string &> *callback) {
+    ASSERT(callback);
+    bool ret = true;
+    StringVector::iterator it = children_.begin();
+    for (; ret && it != children_.end(); ++it) {
+      ret = (*callback)(*it);
+    }
+    delete callback;
+    return ret;
+  }
+
+  DBusProxy *NewInterfaceProxy(const std::string &interface) {
+    if (manager_ && interface.length()) {
+      // It's not necessary to check if the interface is available or not,
+      // because many dbus objects have no introspect data.
+      DLOG("New %s dbus proxy: %s|%s|%s", manager_->GetTypeName(),
+           name_.c_str(), path_.c_str(), interface.c_str());
+      Impl *impl = manager_->NewImpl(name_, path_, interface);
+      if (impl) {
+        DBusProxy *proxy = new DBusProxy();
+        proxy->impl_ = impl;
+        return proxy;
+      }
+    }
+    DLOG("Failed to create dbus proxy: %s|%s|%s",
+         name_.c_str(), path_.c_str(), interface.c_str());
+    return NULL;
+  }
+
+  bool EnumerateInterfaces(Slot1<bool, const std::string &> *callback) {
+    ASSERT(callback);
+    bool ret = true;
+    StringVector::iterator it = interfaces_.begin();
+    for (; ret && it != interfaces_.end(); ++it) {
+      ret = (*callback)(*it);
+    }
+    delete callback;
+    return ret;
+  }
+
+  void EmitSignal(DBusMessage *message) {
+    const char *member = dbus_message_get_member(message);
+    Arguments out_args;
+    DBusDemarshaller demarshaller(message);
+    if (demarshaller.GetArguments(&out_args)) {
+      MethodSignalPrototypeMap::iterator it = signals_.find(member);
+      if (it != signals_.end()) {
+        // It's a registered signal, validate the argument types.
+        if (!ValidateArguments(it->second.out_args, &out_args,
+                               "signal", member)) {
+          return;
+        }
+      } else {
+        DLOG("Unknown signal received: %s, emit anyway", member);
+      }
+      Variant *vars = NULL;
+      if (out_args.size()) {
+        vars = new Variant[out_args.size()];
+        for (size_t i = 0; i < out_args.size(); ++i)
+          vars[i] = out_args[i].value.v();
+      }
+      on_signal_emit_signal_(member, static_cast<int>(out_args.size()), vars);
+      delete[] vars;
+    } else {
+      DLOG("Failed to demarshal args of signal %s", member);
+    }
   }
 
  public:
-  bool Timeout(int watch_id);
-  bool Call(const char* method, bool sync, int timeout,
-            MessageType first_arg_type, va_list *args,
-            ResultCallback *callback);
-  bool Call(const char* method, bool sync, int timeout,
-            Arguments *in_arguments,
-            ResultCallback *callback);
-  void ConnectToSignal(const char *signal, Slot0<void>* dbus_signal_slot);
-  bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot);
-  bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot);
-
- private:
-  class MethodSlot : public Slot {
-   public:
-    MethodSlot(DBusProxy *proxy, const Prototype &prototype) :
-        proxy_(proxy), prototype_(prototype) {
-      arg_types_ = new Variant::Type[prototype_.in_args.size()];
-      std::size_t i = 0;
-      for (; i < prototype_.in_args.size(); ++i)
-        arg_types_[i] =
-            DBusTypeToVariantType(prototype_.in_args[i].signature.c_str());
-    }
-    ~MethodSlot() {
-      delete [] arg_types_;
-    }
-    virtual ResultVariant Call(ScriptableInterface *,
-                               int argc, const Variant argv[]) const {
-      return_values_.clear();
-      bool ret = proxy_->Call(prototype_.name.c_str(), true, -1, argv, argc,
-                              NewSlot(this, &MethodSlot::GetReturnValue));
-      if (!ret) return ResultVariant();
-      return MergeArguments();
-    }
-    virtual bool HasMetadata() const {
-      return true;
-    }
-    virtual int GetArgCount() const {
-      return static_cast<int>(prototype_.in_args.size());
-    }
-    virtual const Variant::Type* GetArgTypes() const {
-      return arg_types_;
-    }
-    virtual bool operator==(const Slot &another) const {
-      return down_cast<const MethodSlot*>(&another)->prototype_.name ==
-          prototype_.name;
-    }
-   private:
-    bool GetReturnValue(int id, const Variant &value) const {
-      return_values_.push_back(ResultVariant(value));
-      return true;
-    }
-    ResultVariant MergeArguments() const {
-      if (return_values_.size() == 0) return ResultVariant(Variant(true));
-      if (return_values_.size() == 1) return return_values_[0];
-      return ResultVariant(
-          Variant(ScriptableArray::Create(return_values_.begin(),
-                                          return_values_.end())));
-    }
-    Variant::Type DBusTypeToVariantType(const char *s) const {
-      switch (*s) {
-        case 'y':
-        case 'n':
-        case 'q':
-        case 'i':
-        case 'u':
-        case 'x':
-        case 't':
-          return Variant::TYPE_INT64;
-        case 'b':
-          return Variant::TYPE_BOOL;
-        case 'd':
-          return Variant::TYPE_DOUBLE;
-        case 's':
-          return Variant::TYPE_STRING;
-        case 'a':
-        case '(':
-        case '{':
-        case 'v':
-          return Variant::TYPE_SCRIPTABLE;
-        default:
-          LOG("Invalid DBus type: %s.", s);
+  static DBusProxy* NewSystemProxy(const std::string &name,
+                                   const std::string &path,
+                                   const std::string &interface) {
+    if (name.length() && path.length() && interface.length()) {
+      DLOG("New system dbus proxy: %s|%s|%s",
+           name.c_str(), path.c_str(), interface.c_str());
+      Impl *impl = system_bus_.NewImpl(name, path, interface);
+      if (impl) {
+        DBusProxy *proxy = new DBusProxy();
+        proxy->impl_ = impl;
+        return proxy;
       }
-      return Variant::TYPE_VOID;
     }
-    DBusProxy *proxy_;
-    Prototype prototype_;
-    Variant::Type *arg_types_;
-    mutable std::vector<ResultVariant> return_values_;
-  };
-  static DBusHandlerResult MessageFilter(DBusConnection *connection,
-                                         DBusMessage *message,
-                                         void *user_data);
-  std::string MatchRule() const;
-  void AddFilter() {
-    dbus_connection_add_filter(connection_, MessageFilter, this, NULL);
-    dbus_bus_add_match(connection_, MatchRule().c_str(), NULL);
-  }
-  void RemoveFilter() {
-    dbus_bus_remove_match(connection_, MatchRule().c_str(), NULL);
-    dbus_connection_remove_filter(connection_, MessageFilter, this);
+    DLOG("Failed to create system dbus proxy: %s|%s|%s",
+         name.c_str(), path.c_str(), interface.c_str());
+    return NULL;
   }
 
-  PrototypeVector::iterator FindMethod(const char *method_name);
-  bool InvokeMethodCallback(DBusMessage *message, ResultCallback *callback);
-  bool ConvertToArguments(const char *method,
-                          Arguments *in, Arguments *out,
-                          MessageType first_arg_type,
-                          va_list *args);
-  bool CheckMethodArgsValidity(const char *name,
-                               Arguments *in_args,
-                               PrototypeVector::iterator *iter,
-                               bool *number_dismatch);
+  static DBusProxy* NewSessionProxy(const std::string &name,
+                                    const std::string &path,
+                                    const std::string &interface) {
+    if (name.length() && path.length() && interface.length()) {
+      DLOG("New session dbus proxy: %s|%s|%s",
+           name.c_str(), path.c_str(), interface.c_str());
+      Impl *impl = session_bus_.NewImpl(name, path, interface);
+      if (impl) {
+        DBusProxy *proxy = new DBusProxy();
+        proxy->impl_ = impl;
+        return proxy;
+      }
+    }
+    DLOG("Failed to create session dbus proxy: %s|%s|%s",
+         name.c_str(), path.c_str(), interface.c_str());
+    return NULL;
+  }
 
-  bool GetRemoteMethodsAndSignals();
-  bool ParseOneMethodNode(DOMElementInterface* node);
-  bool ParseOneSignalNode(DOMElementInterface* node);
  private:
-  DBusProxy *owner_;
-  DBusConnection *connection_;
-  MainLoopInterface *main_loop_;
-  bool initialized_;
+  // function_type and function_name are for debug purpose.
+  bool ValidateArguments(const ArgPrototypeVector &expect_args,
+                         Arguments *real_args,
+                         const char *function_type,
+                         const char *function_name) {
+    if (expect_args.size() != real_args->size()) {
+      DLOG("Arg number mismatch of %s %s of %s|%s|%s, "
+           "expect:%zu actual:%zu", function_type, function_name,
+           name_.c_str(), path_.c_str(), interface_.c_str(),
+           expect_args.size(), real_args->size());
+      return false;
+    }
+    for (size_t i = 0; i < expect_args.size(); ++i) {
+      Variant::Type type =
+          GetVariantTypeFromSignature(expect_args[i].signature);
+      if (type != Variant::TYPE_VARIANT &&
+          type != (*real_args)[i].value.v().type()) {
+        DLOG("Type mismatch of arg %s of %s %s of %s|%s|%s, "
+             "expect:%d actual:%d", expect_args[i].name.c_str(),
+             function_type, function_name, name_.c_str(), path_.c_str(),
+             interface_.c_str(), type, (*real_args)[i].value.v().type());
+        return false;
+      }
+      // Update type signature of real argument, to meed expectation.
+      (*real_args)[i].signature = expect_args[i].signature;
+    }
+    return true;
+  }
+
+  DBusConnection *GetBus() {
+    if (manager_) {
+      DBusConnection *bus = manager_->Get();
+      if (!bus) {
+        DLOG("Failed to get dbus for proxy %s|%s|%s",
+             name_.c_str(), path_.c_str(), interface_.c_str());
+      }
+      return bus;
+    } else {
+      DLOG("Proxy %s|%s|%s has been detached from dbus.",
+           name_.c_str(), path_.c_str(), interface_.c_str());
+    }
+    return NULL;
+  }
+
+  // Sends a message to remote object, if no reply is required, pass NULL to
+  // pending_return parameter.
+  bool SendMessage(DBusConnection *bus, const char *interface,
+                   const char *method, const Arguments &in_args,
+                   DBusPendingCall **pending_return, int timeout) {
+    if (pending_return)
+      *pending_return = NULL;
+
+    DBusMessage *message =
+        dbus_message_new_method_call(name_.c_str(), path_.c_str(),
+                                     interface, method);
+    if (!message) {
+      DLOG("Failed to create message to %s|%s|%s|%s",
+           name_.c_str(), path_.c_str(), interface, method);
+      return false;
+    }
+
+    DBusMarshaller marshaller(message);
+    if (!marshaller.AppendArguments(in_args)) {
+      DLOG("Failed to marshal arguments for message to %s|%s|%s|%s",
+           name_.c_str(), path_.c_str(), interface, method);
+      dbus_message_unref(message);
+      return false;
+    }
+
+    bool ret = false;
+    if (pending_return) {
+      ret = dbus_connection_send_with_reply(bus, message, pending_return,
+                                            timeout);
+      if (!ret && *pending_return) {
+        dbus_pending_call_unref(*pending_return);
+        *pending_return = NULL;
+      } else if (*pending_return == NULL) {
+        DLOG("DBus connection has been disconnected.");
+        ret = false;
+      }
+    } else {
+      ret = dbus_connection_send(bus, message, NULL);
+    }
+    if (!ret) {
+      DLOG("Failed to send message to %s|%s|%s|%s",
+           name_.c_str(), path_.c_str(), interface, method);
+    } else {
+      dbus_connection_flush(bus);
+    }
+    dbus_message_unref(message);
+    return ret;
+  }
+
+  // Retrieves reply message from a pending call.
+  // Returns true if a valid reply message is retrieved, the reply arguments
+  // will be stored in out_args if it's not NULL.
+  bool RetrieveReplyMessage(DBusPendingCall *pending_return,
+                            Arguments *out_args) {
+    bool ret = false;
+    DBusError error;
+    dbus_error_init(&error);
+    dbus_pending_call_block(pending_return);
+    DBusMessage *reply = dbus_pending_call_steal_reply(pending_return);
+    if (reply) {
+      if (!dbus_set_error_from_message(&error, reply)) {
+        if (out_args) {
+          DBusDemarshaller demarshaller(reply);
+          ret = demarshaller.GetArguments(out_args);
+        } else {
+          ret = true;
+        }
+      }
+      dbus_message_unref(reply);
+    }
+    if (!ret) {
+      if (dbus_error_is_set(&error))
+        DLOG("Failed to retrieve reply from %s|%s, error: %s, %s",
+             name_.c_str(), path_.c_str(), error.name, error.message);
+      else
+        DLOG("Failed to retrieve reply from %s|%s",
+             name_.c_str(), path_.c_str());
+    }
+    dbus_error_free(&error);
+    return ret;
+  }
+
+  bool CallMethodSync(DBusConnection *bus, const char *interface,
+                      const char *method, const Arguments &in_args,
+                      Arguments *out_args, int timeout) {
+    DLOG("Call method synchronously: %s|%s|%s|%s",
+         name_.c_str(), path_.c_str(), interface, method);
+
+    DBusPendingCall *pending_return = NULL;
+    bool ret = SendMessage(bus, interface, method, in_args,
+                           &pending_return, timeout);
+    if (ret)
+      ret = RetrieveReplyMessage(pending_return, out_args);
+
+    if (pending_return)
+      dbus_pending_call_unref(pending_return);
+
+    return ret;
+  }
+
+  struct PendingCallClosure {
+    Impl *impl;
+    int call_id;
+    std::string method;
+    ResultCallback *callback;
+  };
+
+  static void PendingCallClosureFree(void *data) {
+    PendingCallClosure *closure = reinterpret_cast<PendingCallClosure *>(data);
+    ASSERT(closure);
+    if (closure) {
+      DLOG("Free PendingCallClosure: %d, %s|%s", closure->call_id,
+           closure->impl->name_.c_str(), closure->impl->path_.c_str());
+      delete closure->callback;
+      delete closure;
+    }
+  }
+
+  static void PendingCallNotify(DBusPendingCall *pending, void *data) {
+    PendingCallClosure *closure = reinterpret_cast<PendingCallClosure *>(data);
+    ASSERT(closure);
+    if (closure) {
+      DLOG("Pending call returned: %d, %s|%s", closure->call_id,
+           closure->impl->name_.c_str(), closure->impl->path_.c_str());
+      Impl *impl = closure->impl;
+      if (closure->callback) {
+        Arguments out_args;
+        bool ret = impl->RetrieveReplyMessage(pending, &out_args);
+        if (ret) {
+          MethodSignalPrototypeMap::iterator it =
+              impl->methods_.find(closure->method);
+          if (it != closure->impl->methods_.end()) {
+            // Validate return values.
+            ret = impl->ValidateArguments(it->second.out_args, &out_args,
+                                          "method", closure->method.c_str());
+          }
+        }
+        CallResultCallback(closure->callback, out_args, ret);
+      }
+      // Remove this pending call from impl's pending call map.
+      closure->impl->pending_calls_.erase(closure->call_id);
+    }
+    dbus_pending_call_unref(pending);
+  }
+
+  static void CallResultCallback(ResultCallback *callback,
+                                 const Arguments &args,
+                                 bool success) {
+    if(args.size() && success) {
+      Arguments::const_iterator it = args.begin();
+      for (int count = 0; it != args.end(); ++it, ++count)
+        if (!(*callback)(count, it->value.v()))
+          break;
+    } else {
+      (*callback)(success ? 0 : -1, Variant());
+    }
+  }
+
+  static void CallAndFreeResultCallback(ResultCallback *callback,
+                                        const Arguments &args,
+                                        bool success) {
+    if (callback)
+      CallResultCallback(callback, args, success);
+    delete callback;
+  }
+
+  int NewCallId() {
+    int call_id = call_id_counter_++;
+    if (call_id_counter_ <= 0)
+      call_id_counter_ = 1;
+    return call_id;
+  }
+
+  // Returns call id, 0 means failed.
+  int CallMethodAsync(DBusConnection *bus, const char *interface,
+                      const char *method, const Arguments &in_args,
+                      ResultCallback *callback, int timeout) {
+    DLOG("Call method asynchronously: %s|%s|%s|%s",
+         name_.c_str(), path_.c_str(), interface, method);
+
+    DBusPendingCall *pending = NULL;
+    bool ret = SendMessage(bus, interface, method, in_args,
+                           &pending, timeout);
+    if (ret && pending) {
+      PendingCallClosure *closure = new PendingCallClosure;
+      closure->impl = this;
+      closure->call_id = NewCallId();
+      closure->method = method;
+      closure->callback = callback;
+      dbus_pending_call_set_notify(pending, PendingCallNotify,
+                                   closure, PendingCallClosureFree);
+      pending_calls_[closure->call_id] = pending;
+      DLOG("Succeeded: pending call id: %d", closure->call_id);
+      return closure->call_id;
+    }
+
+    delete callback;
+    if (pending)
+      dbus_pending_call_unref(pending);
+
+    DLOG("Asynchronous call Failed: %s|%s|%s|%s",
+         name_.c_str(), path_.c_str(), interface, method);
+    return 0;
+  }
+
+  bool PingPeer(DBusConnection *bus) {
+    // DBus service itself doesn't support PEER interface.
+    if (name_ == DBUS_SERVICE_DBUS)
+      return true;
+    Arguments in_args;
+    return CallMethodSync(bus, DBUS_INTERFACE_PEER, "Ping",
+                          in_args, NULL, kDefaultDBusTimeout);
+  }
+
+  // See:
+  // http://dbus.freedesktop.org/doc/dbus-specification.html
+  // Section: Introspection Data Format
+  bool Introspect(DBusConnection *bus) {
+    DLOG("Introspect dbus object: %s|%s", name_.c_str(), path_.c_str());
+    XMLParserInterface *xml_parser = GetXMLParser();
+    ASSERT(xml_parser);
+
+    Arguments in_args;
+    Arguments out_args;
+    if (!CallMethodSync(bus, DBUS_INTERFACE_INTROSPECTABLE, "Introspect",
+                       in_args, &out_args, kDefaultDBusTimeout)) {
+      DLOG("Failed to get introspect xml from %s|%s",
+           name_.c_str(), path_.c_str());
+      return false;
+    }
+    std::string xml;
+    if (out_args.size() < 1 || !out_args[0].value.v().ConvertToString(&xml)) {
+      DLOG("Invalid introspect xml data got from %s|%s",
+           name_.c_str(), path_.c_str());
+      return false;
+    }
+
+    DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
+    domdoc->Ref();
+    std::string filename =
+        StringPrintf("%s|%s/Introspect.xml", name_.c_str(), path_.c_str());
+    if (!xml_parser->ParseContentIntoDOM(xml, NULL, filename.c_str(), NULL,
+                                         NULL, kEncodingFallback, domdoc,
+                                         NULL, NULL)) {
+      DLOG("Failed to parse introspect xml content of %s|%s:\n%s",
+           name_.c_str(), path_.c_str(), xml.c_str());
+      domdoc->Unref();
+      return false;
+    }
+
+    DOMElementInterface *root_node = domdoc->GetDocumentElement();
+    if (!root_node) {
+      DLOG("Failed to get root node, %s|%s:\n%s",
+           name_.c_str(), path_.c_str(), xml.c_str());
+      domdoc->Unref();
+      return false;
+    }
+    std::string tag_name = root_node->GetTagName();
+    std::string name_attr = root_node->GetAttribute("name");
+    if (tag_name != "node" || !(name_attr.empty() || name_attr == path_)) {
+      DLOG("Invalid root node, %s|%s:\n%s",
+           name_.c_str(), path_.c_str(), xml.c_str());
+      domdoc->Unref();
+      return false;
+    }
+
+    bool result = true;
+    DOMNodeInterface *node = root_node->GetFirstChild();
+    for (; node && result; node = node->GetNextSibling()) {
+      tag_name = node->GetNodeName();
+      if (node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE) {
+        DLOG("Invalid root sub node: %s", tag_name.c_str());
+        continue;
+      }
+      DOMElementInterface *elm = down_cast<DOMElementInterface *>(node);
+      if (tag_name == "interface") {
+        result = ParseInterfaceNode(elm);
+      } else if (tag_name == "node") {
+        result = ParseChildNode(elm);
+      }
+    }
+    domdoc->Unref();
+    if (!result)
+      DLOG("Failed to introspect %s|%s", name_.c_str(), path_.c_str());
+#ifdef _DEBUG
+    else
+      DLOG("Introspect result:\n%s", PrintProxyInfo().c_str());
+#endif
+    return result;
+  }
+
+  bool ParseInterfaceNode(DOMElementInterface *interface_node) {
+    std::string name_attr = interface_node->GetAttribute("name");
+    if (std::find(interfaces_.begin(), interfaces_.end(), name_attr) ==
+        interfaces_.end()) {
+      DLOG("Found interface for %s|%s: %s",
+           name_.c_str(), path_.c_str(), name_attr.c_str());
+      interfaces_.push_back(name_attr);
+    }
+
+    // If it's not self interface, just return.
+    if (name_attr != interface_)
+      return true;
+
+    bool result = true;
+    DOMNodeInterface *node = interface_node->GetFirstChild();
+    for (; node && result; node = node->GetNextSibling()) {
+      std::string tag_name = node->GetNodeName();
+      if (node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE) {
+        DLOG("Invalid interface sub node: %s", tag_name.c_str());
+        continue;
+      }
+      DOMElementInterface *elm = down_cast<DOMElementInterface *>(node);
+      if (tag_name == "method") {
+        result = ParseMethodSignalNode(elm, true);
+      } else if (tag_name == "signal") {
+        result = ParseMethodSignalNode(elm, false);
+      } else if (tag_name == "property") {
+        result = ParsePropertyNode(elm);
+      }
+    }
+    return result;
+  }
+
+  bool ParseChildNode(DOMElementInterface *node) {
+    std::string name_attr = node->GetAttribute("name");
+    // Child node can't have absolute path.
+    if (name_attr.length() && name_attr[0] =='/')
+      return false;
+    if (name_attr.empty())
+      name_attr = StringPrintf("child_%zu", children_.size());
+    children_.push_back(name_attr);
+    return true;
+  }
+
+  bool ParseMethodSignalNode(DOMElementInterface *node, bool is_method) {
+    std::string name_attr = node->GetAttribute("name");
+    if (name_attr.empty()) {
+      DLOG("Ignore anonymous %s node.", is_method ? "method" : "signal");
+      return true;
+    }
+
+    MethodSignalPrototype proto;
+    DOMNodeInterface *sub_node = node->GetFirstChild();
+    for (; sub_node; sub_node = sub_node->GetNextSibling()) {
+      std::string tag_name = sub_node->GetNodeName();
+      if (sub_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE) {
+        DLOG("Invalid %s sub node: %s",
+             is_method ? "method" : "signal", tag_name.c_str());
+        continue;
+      }
+      DOMElementInterface *elm = down_cast<DOMElementInterface *>(sub_node);
+      if (tag_name == "arg") {
+        ArgPrototype arg_proto;
+        bool is_in;
+        if (ParseArgNode(elm, &arg_proto, &is_in)) {
+          if (is_method && is_in)
+            proto.in_args.push_back(arg_proto);
+          else
+            proto.out_args.push_back(arg_proto);
+        }
+      }
+    }
+
+    if (is_method)
+      methods_[name_attr] = proto;
+    else
+      signals_[name_attr] = proto;
+
+    return true;
+  }
+
+  bool ParsePropertyNode(DOMElementInterface *node) {
+    std::string name_attr = node->GetAttribute("name");
+    std::string type_attr = node->GetAttribute("type");
+    std::string access_attr = node->GetAttribute("access");
+    if (name_attr.length() && type_attr.length() && access_attr.length()) {
+      PropertyPrototype proto;
+      if (access_attr == "read")
+        proto.access = PROP_READ;
+      else if (access_attr == "write")
+        proto.access = PROP_WRITE;
+      else if (access_attr == "readwrite")
+        proto.access = PROP_READ_WRITE;
+      else
+        proto.access = PROP_UNKNOWN;
+
+      if (proto.access != PROP_UNKNOWN) {
+        proto.signature = type_attr;
+        properties_[name_attr] = proto;
+      }
+    }
+    return true;
+  }
+
+  bool ParseArgNode(DOMElementInterface *arg_node, ArgPrototype *proto,
+                    bool *is_in) {
+    std::string name_attr = arg_node->GetAttribute("name");
+    std::string type_attr = arg_node->GetAttribute("type");
+    std::string dir_attr = arg_node->GetAttribute("direction");
+    proto->name = name_attr;
+    proto->signature = type_attr;
+    *is_in = (dir_attr.empty() || dir_attr == "in");
+    return type_attr.length() && (*is_in || dir_attr == "out");
+  }
+
+#ifdef _DEBUG
+  std::string PrintProxyInfo() {
+    std::string info;
+    info = StringPrintf("%s|%s|%s:\n",
+                        name_.c_str(), path_.c_str(), interface_.c_str());
+    StringAppendPrintf(&info, "Methods:\n");
+    MethodSignalPrototypeMap::iterator it = methods_.begin();
+    for (; it != methods_.end(); ++it) {
+      StringAppendPrintf(&info, "  %s:\n", it->first.c_str());
+      StringAppendPrintf(&info, "     in :");
+      ArgPrototypeVector::iterator ait = it->second.in_args.begin();
+      ArgPrototypeVector::iterator aend = it->second.in_args.end();
+      for (; ait != aend; ++ait) {
+        StringAppendPrintf(&info, " %s:%s",
+                           ait->name.c_str(), ait->signature.c_str());
+      }
+      StringAppendPrintf(&info, "\n    out :");
+      ait = it->second.out_args.begin();
+      aend = it->second.out_args.end();
+      for (; ait != aend; ++ait) {
+        StringAppendPrintf(&info, " %s:%s",
+                           ait->name.c_str(), ait->signature.c_str());
+      }
+      info.append("\n");
+    }
+    StringAppendPrintf(&info, "Signals:\n");
+    it = signals_.begin();
+    for (; it != signals_.end(); ++it) {
+      StringAppendPrintf(&info, "  %s:", it->first.c_str());
+      ArgPrototypeVector::iterator ait = it->second.out_args.begin();
+      ArgPrototypeVector::iterator aend = it->second.out_args.end();
+      for (; ait != aend; ++ait) {
+        StringAppendPrintf(&info, " %s:%s",
+                           ait->name.c_str(), ait->signature.c_str());
+      }
+      info.append("\n");
+    }
+    StringAppendPrintf(&info, "Properties:\n");
+    PropertyPrototypeMap::iterator pit = properties_.begin();
+    for (; pit != properties_.end(); ++pit) {
+      StringAppendPrintf(&info, "  %s: type:%s dir:%d\n",
+                         pit->first.c_str(), pit->second.signature.c_str(),
+                         pit->second.access);
+    }
+    StringAppendPrintf(&info, "Interfaces:\n");
+    StringVector::iterator sit = interfaces_.begin();
+    for(; sit != interfaces_.end(); ++sit) {
+      StringAppendPrintf(&info, "  %s\n", sit->c_str());
+    }
+    StringAppendPrintf(&info, "Children:\n");
+    sit = children_.begin();
+    for(; sit != children_.end(); ++sit) {
+      StringAppendPrintf(&info, "  %s\n", sit->c_str());
+    }
+    return info;
+  }
+#endif
+
+ private:
+  Manager *manager_;
 
   std::string name_;
   std::string path_;
   std::string interface_;
 
-  PrototypeVector method_calls_;
-  PrototypeVector signals_;
+  int refcount_;
+  int call_id_counter_;
+  PendingCallMap pending_calls_;
 
-  typedef std::map<std::string, Slot0<void>*> SignalSlotMap;
-  SignalSlotMap signal_slots_;
-  typedef std::map<uint32_t, ResultCallback*> MethodSlotMap;
-  MethodSlotMap method_slots_;
-  typedef std::map<int, uint32_t> TimeoutMap;
-  TimeoutMap timeouts_;
+  MethodSignalPrototypeMap methods_;
+  MethodSignalPrototypeMap signals_;
+  PropertyPrototypeMap properties_;
+  StringVector interfaces_;
+  StringVector children_;
+
+  Signal3<void, const std::string &, int, const Variant *>
+      on_signal_emit_signal_;
+
+ private:
+  static Manager system_bus_;
+  static Manager session_bus_;
 };
 
-bool DBusProxy::Impl::Timeout(int watch_id) {
-  TimeoutMap::iterator it = timeouts_.find(watch_id);
-  if (it != timeouts_.end()) {
-    uint32_t id = it->second;
-    MethodSlotMap::iterator slot_iter = method_slots_.find(id);
-    if (slot_iter != method_slots_.end()) {
-      delete slot_iter->second;
-      method_slots_.erase(slot_iter);
-    }
-    timeouts_.erase(it);
-  }
-  return true;
+DBusProxy::Impl::Manager DBusProxy::Impl::system_bus_(DBUS_BUS_SYSTEM);
+DBusProxy::Impl::Manager DBusProxy::Impl::session_bus_(DBUS_BUS_SESSION);
+
+DBusProxy::DBusProxy() : impl_(NULL) {
 }
-
-PrototypeVector::iterator DBusProxy::Impl::FindMethod(const char *method_name) {
-  if (!method_name) return method_calls_.end();
-  for (PrototypeVector::iterator it = method_calls_.begin();
-       it != method_calls_.end(); ++it)
-    if (it->name == method_name) return it;
-  return method_calls_.end();
-}
-
-bool DBusProxy::Impl::CheckMethodArgsValidity(const char *name,
-                                              Arguments *in_args,
-                                              PrototypeVector::iterator *it,
-                                              bool *number_dismatch) {
-  ASSERT(in_args);
-  *number_dismatch = false;
-  *it = FindMethod(name);
-  if (*it == method_calls_.end()) return false;
-  bool ret = true;
-  if (in_args->size() != (*it)->in_args.size()) {
-    *number_dismatch = true;
-    return false;
-  }
-  for (std::size_t i = 0; i < in_args->size(); ++i)
-    if (in_args->at(i) != (*it)->in_args[i]) {
-      in_args->at(i).signature = (*it)->in_args[i].signature;
-      ret = false;
-    }
-  return ret;
-}
-
-bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Ref();
-  bool result = false;
-  const char* str = NULL;
-  DBusMessage *message = dbus_message_new_method_call(name_.c_str(),
-                                                      path_.c_str(),
-                                                      kIntrospectInterface,
-                                                      kIntrospectMethod);
-  DBusError error;
-  dbus_error_init(&error);
-  DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection_,
-                                                                 message,
-                                                                 -1,
-                                                                 &error);
-  if (reply) {
-    DBusMessageIter iter;
-    dbus_message_iter_init(reply, &iter);
-    dbus_message_iter_get_basic(&iter, &str);
-    dbus_message_unref(reply);
-    // DLOG("xml:\n%s", str);
-    if (xml_parser->ParseContentIntoDOM(str, NULL, "Introspect.xml", NULL,
-                                        NULL, kEncodingFallback,
-                                        domdoc, NULL, NULL)) {
-      DOMNodeInterface *root_node = domdoc->GetDocumentElement();
-      if (!root_node || root_node->GetNodeName() != "node") {
-        LOG("No node named 'node', invalid XML returned.");
-        goto exit;
-      }
-      method_calls_.clear();
-      signals_.clear();
-      for (DOMNodeInterface *interface_node = root_node->GetFirstChild();
-           interface_node; interface_node = interface_node->GetNextSibling()) {
-        if (interface_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE ||
-            interface_node->GetNodeName() != "interface") {
-          // DLOG("meanless xml note, name: %s",
-          //      interface_node->GetNodeName().c_str());
-          continue;
-        }
-        DOMElementInterface *element =
-            down_cast<DOMElementInterface*>(interface_node);
-        if (element->GetAttribute("name") != interface_)
-          continue;
-        for (DOMNodeInterface *sub_node = interface_node->GetFirstChild();
-             sub_node; sub_node = sub_node->GetNextSibling()) {
-          if (sub_node->GetNodeType() == DOMNodeInterface::ELEMENT_NODE &&
-              !ParseOneMethodNode(down_cast<DOMElementInterface*>(sub_node)) &&
-              !ParseOneSignalNode(down_cast<DOMElementInterface*>(sub_node)))
-            LOG("Failed to parse one node, node type: %s",
-                sub_node->GetNodeName().c_str());
-        }
-      }
-      result = true;
-    }
-  } else {
-    LOG("%s: %s", error.name, error.message);
-  }
-exit:
-  domdoc->Unref();
-  dbus_error_free(&error);
-  return result;
-}
-
-bool DBusProxy::Impl::ParseOneSignalNode(DOMElementInterface* node) {
-  if (node->GetNodeName() != "signal") return false;
-  std::string name = node->GetAttribute("name");
-  if (name.empty()) return false;
-  Prototype signal(name.c_str());
-  for (DOMNodeInterface* sub_node = node->GetFirstChild();
-       sub_node; sub_node = sub_node->GetNextSibling()) {
-    if (sub_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE ||
-        sub_node->GetNodeName() != "arg")
-      continue;
-    node = down_cast<DOMElementInterface*>(sub_node);
-    name = node->GetAttribute("name");
-    std::string type = node->GetAttribute("type");
-    if (type.empty()) return false;
-    signal.out_args.push_back(Argument(name.c_str(), type.c_str()));
-  }
-  signals_.push_back(signal);
-  return true;
-}
-
-bool DBusProxy::Impl::ParseOneMethodNode(DOMElementInterface* node) {
-  if (node->GetNodeName() != "method") return false;
-  std::string name = node->GetAttribute("name");
-  if (name.empty()) return false;
-  Prototype method(name.c_str());
-  for (DOMNodeInterface* sub_node = node->GetFirstChild();
-       sub_node; sub_node = sub_node->GetNextSibling()) {
-    if (sub_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE ||
-        sub_node->GetNodeName() != "arg")
-      continue;
-    node = down_cast<DOMElementInterface*>(sub_node);
-    name = node->GetAttribute("name");
-    std::string type = node->GetAttribute("type");
-    if (type.empty()) return false;
-    Argument arg(name.c_str(), type.c_str());
-    std::string direction = node->GetAttribute("direction");
-    if (direction.empty()) return false;
-    if (direction == "out") {
-      method.out_args.push_back(arg);
-    } else if (direction == "in") {
-      method.in_args.push_back(arg);
-    } else {
-      LOG("Direction is missing or invalid: *%s*", direction.c_str());
-      return false;
-    }
-  }
-  method_calls_.push_back(method);
-  return true;
-}
-
-DBusHandlerResult DBusProxy::Impl::MessageFilter(DBusConnection *connection,
-                                                 DBusMessage *message,
-                                                 void *user_data) {
-  DLOG("Get message, type %d, sender: %s, path: %s, interface: %s, member: %s",
-       dbus_message_get_type(message), dbus_message_get_sender(message),
-       dbus_message_get_path(message), dbus_message_get_interface(message),
-       dbus_message_get_member(message));
-  Impl *this_p = reinterpret_cast<Impl*>(user_data);
-  switch (dbus_message_get_type(message)) {
-    case DBUS_MESSAGE_TYPE_SIGNAL:
-      for (SignalSlotMap::iterator it = this_p->signal_slots_.begin();
-           it != this_p->signal_slots_.end(); ++it) {
-        if (dbus_message_is_signal(message,
-                                   this_p->interface_.c_str(),
-                                   it->first.c_str())) {
-          ASSERT(it->second);
-          (*it->second)();
-        }
-      }
-      break;
-    case DBUS_MESSAGE_TYPE_METHOD_RETURN:
-      {
-        dbus_uint32_t serial = dbus_message_get_reply_serial(message);
-        DLOG("serial of reply: %d", serial);
-        MethodSlotMap::iterator it = this_p->method_slots_.find(serial);
-        if (it == this_p->method_slots_.end()) {
-          LOG("No slot registered to handle this reply.");
-        } else {
-          this_p->InvokeMethodCallback(message, it->second);
-          delete it->second;
-          this_p->method_slots_.erase(it);
-        }
-        return DBUS_HANDLER_RESULT_HANDLED;
-      }
-    default:
-      DLOG("other message type: %d", dbus_message_get_type(message));
-  }
-  // This signal is globaly useful, do not return other value
-  // to stop other client listening this signal.
-  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-}
-
-bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
-                           Arguments *in_arguments,
-                           ResultCallback *callback) {
-  ASSERT(method && *method != '\0');
-  PrototypeVector::iterator it;
-  bool number_dismatch;
-  if (!CheckMethodArgsValidity(method, in_arguments, &it, &number_dismatch)) {
-    if (it == method_calls_.end()) {
-      DLOG("no method %s registered by Introspectable interface.", method);
-    } else if (number_dismatch) {
-      LOG("Arg number dismatch for method %s", method);
-      return false;
-    } else {
-      LOG("Arguments for %s dismatch with the prototyp by "
-          "Introspectable interface.", method);
-      ASSERT(false);
-    }
-  }
-  DBusMessage *message = dbus_message_new_method_call(name_.c_str(),
-                                                      path_.c_str(),
-                                                      interface_.c_str(),
-                                                      method);
-  DBusMarshaller marshaller(message);
-  if (!marshaller.AppendArguments(*in_arguments)) {
-    LOG("Failed to marshal DBus message.");
-    dbus_message_unref(message);
-    return false;
-  }
-  if (!callback) {
-    DLOG("no output argument interested, do not collect pending result.");
-    dbus_connection_send(connection_, message, NULL);
-    dbus_connection_flush(connection_);
-    return true;
-  }
-
-  /* when no main loop attached, the async call will be changed to sync one. */
-  if (sync || !main_loop_) {
-    DBusError error;
-    dbus_error_init(&error);
-    DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection_,
-                                                                   message,
-                                                                   timeout,
-                                                                   &error);
-    bool ret = false;
-    if (!reply || dbus_error_is_set(&error)) {
-      LOG("%s: %s", error.name, error.message);
-    } else {
-      ret = InvokeMethodCallback(reply, callback);
-    }
-    dbus_error_free(&error);
-    dbus_message_unref(message);
-    delete callback;
-    if (reply) dbus_message_unref(reply);
-    return ret;
-  } else {
-    dbus_uint32_t serial = 0;
-    dbus_connection_send(connection_, message, &serial);
-    MethodSlotMap::iterator it = method_slots_.find(serial);
-    if (it != method_slots_.end()) {
-      delete it->second;
-      it->second = callback;
-    } else {
-      method_slots_[serial] = callback;
-      int id = main_loop_->AddTimeoutWatch(timeout, new WatchCallbackSlot(
-          NewSlot(this, &Impl::Timeout)));
-      timeouts_[id] = serial;
-    }
-    if (message) dbus_message_unref(message);
-    return true;
-  }
-  return true;
-}
-
-bool DBusProxy::Impl::InvokeMethodCallback(DBusMessage *reply,
-                                           ResultCallback *callback) {
-  Arguments out;
-  DBusDemarshaller demarshaller(reply);
-  bool ret = demarshaller.GetArguments(&out);
-  if (ret) {
-    bool keep_work = true;
-    for (std::size_t i = 0; i < out.size() && keep_work; ++i)
-      keep_work = (*callback)(static_cast<int>(i), out[i].value.v());
-  }
-  return ret;
-}
-
-bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
-                           MessageType first_arg_type, va_list *args,
-                           ResultCallback *callback) {
-  Arguments in;
-  bool result = false;
-  if (!DBusMarshaller::ValistAdaptor(&in, first_arg_type, args))
-    goto exit;
-  first_arg_type = static_cast<MessageType>(va_arg(*args, int));
-  result = Call(method, sync, timeout, &in, callback);
-exit:
-  return result;
-}
-
-void DBusProxy::Impl::ConnectToSignal(const char *signal,
-                                      Slot0<void> *dbus_signal_slot) {
-  ASSERT(signal);
-  if (!signal || !dbus_signal_slot) return;
-  SignalSlotMap::iterator iter = signal_slots_.find(signal);
-  if (iter != signal_slots_.end() && iter->second) {
-    delete iter->second;
-    iter->second = dbus_signal_slot;
-  } else {
-    signal_slots_[signal] = dbus_signal_slot;
-  }
-}
-
-inline std::string DBusProxy::Impl::MatchRule() const {
-  if (name_[0] == ':') {
-    return StringPrintf("type='signal',sender='%s',path='%s',interface='%s'",
-                        name_.c_str(), path_.c_str(), interface_.c_str());
-  } else {
-    return StringPrintf("type='signal',path='%s',interface='%s'",
-                        path_.c_str(), interface_.c_str());
-  }
-  return "";
-}
-
-bool DBusProxy::Impl::EnumerateMethods(Slot2<bool,
-                                       const char*, Slot*> *slot) {
-  ASSERT(slot);
-  if (!initialized_) {
-    GetRemoteMethodsAndSignals();
-    initialized_ = true;
-  }
-  for (PrototypeVector::const_iterator it = method_calls_.begin();
-       it != method_calls_.end(); ++it) {
-    MethodSlot *method_slot = new MethodSlot(owner_, *it);
-    if (!(*slot)(it->name.c_str(), method_slot)) {
-      delete slot;
-      return false;
-    }
-  }
-  delete slot;
-  return true;
-}
-
-bool DBusProxy::Impl::EnumerateSignals(Slot2<bool,
-                                       const char*, Slot*> *slot) {
-  if (!initialized_) {
-    GetRemoteMethodsAndSignals();
-    initialized_ = true;
-  }
-  return true;
-}
-
-DBusProxy::DBusProxy(DBusConnection* connection,
-                     MainLoopInterface *mainloop,
-                     const char* name,
-                     const char* path,
-                     const char* interface) : impl_(NULL) {
-  if (connection) {
-    impl_ = new Impl(this, connection, mainloop, name, path, interface);
-    DLOG("create proxy for %s|%s|%s", name, path, interface);
-  }
-}
-
 DBusProxy::~DBusProxy() {
-  delete impl_;
+  impl_->Unref();
 }
-
-bool DBusProxy::Call(const char* method, bool sync, int timeout,
-                     ResultCallback *callback,
-                     MessageType first_arg_type,
-                         ...) {
-  if (!impl_) return false;
-
+std::string DBusProxy::GetName() const {
+  return impl_->GetName();
+}
+std::string DBusProxy::GetPath() const {
+  return impl_->GetPath();
+}
+std::string DBusProxy::GetInterface() const {
+  return impl_->GetInterface();
+}
+int DBusProxy::CallMethod(const std::string &method, bool sync, int timeout,
+                          ResultCallback *callback,
+                          MessageType first_arg_type, ...) {
   va_list args;
   va_start(args, first_arg_type);
-  bool ret = impl_->Call(method, sync, timeout, first_arg_type, &args, callback);
+  int ret = impl_->CallMethod(method, sync, timeout, callback,
+                              first_arg_type, &args);
   va_end(args);
   return ret;
 }
-
-bool DBusProxy::Call(const char* method, bool sync, int timeout,
-                     const Variant *in_arguments, size_t count,
-                     ResultCallback *callback) {
-  if (!impl_) return false;
+int DBusProxy::CallMethod(const std::string &method, bool sync, int timeout,
+                          ResultCallback *callback,
+                          int argc, const Variant *argv) {
+  ASSERT(argc == 0 || argv);
   Arguments in_args;
-  VariantListToArguments(in_arguments, count, &in_args);
-  return impl_->Call(method, sync, timeout, &in_args, callback);
-}
-
-void DBusProxy::ConnectToSignal(const char* signal,
-                                Slot0<void>* dbus_signal_slot) {
-  if (!impl_) return;
-
-  impl_->ConnectToSignal(signal, dbus_signal_slot);
-}
-
-bool DBusProxy::EnumerateMethods(Slot2<bool, const char*, Slot*> *slot) const {
-  if (!impl_) {
-    delete slot;
-    return false;
+  if (argc > 0 && argv) {
+    for (int i = 0; i < argc; ++i)
+      in_args.push_back(Argument(argv[i]));
   }
-  return impl_->EnumerateMethods(slot);
+  return impl_->CallMethod(method, sync, timeout, callback, &in_args);
 }
-
-bool DBusProxy::EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const {
-  if (!impl_) {
-    delete slot;
-    return false;
-  }
-  return impl_->EnumerateSignals(slot);
+bool DBusProxy::CancelMethodCall(int index) {
+  return impl_->CancelMethodCall(index);
+}
+bool DBusProxy::IsMethodCallPending(int index) const {
+  return impl_->IsMethodCallPending(index);
+}
+bool DBusProxy::GetMethodInfo(const std::string &method,
+                              int *argc, Variant::Type **arg_types,
+                              int *retc, Variant::Type **ret_types) {
+  return impl_->GetMethodInfo(method, argc, arg_types, retc, ret_types);
+}
+bool DBusProxy::EnumerateMethods(Slot1<bool, const std::string &> *callback) {
+  return impl_->EnumerateMethods(callback);
+}
+ResultVariant DBusProxy::GetProperty(const std::string &property) {
+  return impl_->GetProperty(property);
+}
+bool DBusProxy::SetProperty(const std::string &property, const Variant &value) {
+  return impl_->SetProperty(property, value);
+}
+DBusProxy::PropertyAccess DBusProxy::GetPropertyInfo(
+    const std::string &property, Variant::Type *type) {
+  return impl_->GetPropertyInfo(property, type);
+}
+bool DBusProxy::EnumerateProperties(
+    Slot1<bool, const std::string &> *callback) {
+  return impl_->EnumerateProperties(callback);
+}
+Connection* DBusProxy::ConnectOnSignalEmit(
+    Slot3<void, const std::string &, int, const Variant *> *callback) {
+  return impl_->ConnectOnSignalEmit(callback);
+}
+bool DBusProxy::GetSignalInfo(const std::string &signal, int *argc,
+                              Variant::Type **arg_types) {
+  return impl_->GetSignalInfo(signal, argc, arg_types);
+}
+bool DBusProxy::EnumerateSignals(Slot1<bool, const std::string &> *callback) {
+  return impl_->EnumerateSignals(callback);
+}
+DBusProxy* DBusProxy::NewChildProxy(const std::string &path,
+                                    const std::string &interface) {
+  return impl_->NewChildProxy(path, interface);
+}
+bool DBusProxy::EnumerateChildren(Slot1<bool, const std::string &> *callback) {
+  return impl_->EnumerateChildren(callback);
+}
+DBusProxy* DBusProxy::NewInterfaceProxy(const std::string &interface) {
+  return impl_->NewInterfaceProxy(interface);
+}
+bool DBusProxy::EnumerateInterfaces(
+    Slot1<bool, const std::string &> *callback) {
+  return impl_->EnumerateInterfaces(callback);
+}
+DBusProxy* DBusProxy::NewSystemProxy(const std::string &name,
+                                     const std::string &path,
+                                     const std::string &interface) {
+  return DBusProxy::Impl::NewSystemProxy(name, path, interface);
+}
+DBusProxy* DBusProxy::NewSessionProxy(const std::string &name,
+                                      const std::string &path,
+                                      const std::string &interface) {
+  return DBusProxy::Impl::NewSessionProxy(name, path, interface);
 }
 
 }  // namespace dbus

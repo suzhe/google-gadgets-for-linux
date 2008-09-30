@@ -16,9 +16,7 @@
 
 #include "npapi_container.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include <algorithm>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -66,7 +64,10 @@ class NPContainer::Impl {
                     PluginSymbol *symbols)
         : handle_(handle), mime_types_(mime_types), symbols_(symbols),
           good_plugin_(true), reference_(0) {
-      ASSERT(handle_ && !mime_types.empty() || symbols);
+      // FIXME: what's the correct logic?
+      // Original code:
+      // ASSERT(handle_ && !mime_types.empty() || symbols);
+      ASSERT(handle_ && !mime_types.empty() && symbols);
 
       // Initialize the plugin, get functions exported by the plugin.
       NPNetscapeFuncs container_funcs;

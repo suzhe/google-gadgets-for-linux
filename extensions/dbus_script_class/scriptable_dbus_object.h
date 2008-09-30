@@ -20,20 +20,21 @@
 #include <ggadget/common.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/dbus/dbus_proxy.h>
 
 namespace ggadget {
-
-class MainLoopInterface;
-
 namespace dbus {
-
-class DBusProxy;
 
 class ScriptableDBusObject : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xe45aa627937b466b, ScriptableInterface);
   ScriptableDBusObject(DBusProxy *proxy);
   virtual ~ScriptableDBusObject();
+
+ protected:
+  virtual void DoRegister();
+  virtual void DoClassRegister();
+
  private:
   class Impl;
   Impl *impl_;

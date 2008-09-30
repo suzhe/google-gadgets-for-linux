@@ -23,17 +23,15 @@ namespace framework {
 namespace linux_system {
 
 Network::Network()
-  : last_active_interface_(-1),
-    factory_(GetGlobalMainLoop()) {
-  DBusProxy *proxy = factory_.NewSystemProxy(kHalDBusName,
-                                             kHalObjectManager,
-                                             kHalInterfaceManager,
-                                             false);
+  : last_active_interface_(-1) {
+  DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
+                                               kHalObjectManager,
+                                               kHalInterfaceManager);
   DBusStringArrayReceiver receiver(&interfaces_);
-  if (!proxy->Call(kHalMethodFindDeviceByCapability, true, -1,
-                   receiver.NewSlot(),
-                   MESSAGE_TYPE_STRING, kHalCapabilityNet,
-                   MESSAGE_TYPE_INVALID)) {
+  if (!proxy->CallMethod(kHalMethodFindDeviceByCapability, true,
+                         kDefaultDBusTimeout, receiver.NewSlot(),
+                         MESSAGE_TYPE_STRING, kHalCapabilityNet,
+                         MESSAGE_TYPE_INVALID)) {
     DLOG("Get devices failed.");
     interfaces_.clear();
     last_active_interface_ = -2;
@@ -104,10 +102,9 @@ DBusProxy *Network::GetInterfaceProxy(int i) {
   if (static_cast<size_t>(i) >= proxies_.size())
     return NULL;
   if (proxies_[i] == NULL) {
-    proxies_[i] = factory_.NewSystemProxy(kHalDBusName,
-                                          interfaces_[i].c_str(),
-                                          kHalInterfaceDevice,
-                                          false);
+    proxies_[i] = DBusProxy::NewSystemProxy(kHalDBusName,
+                                            interfaces_[i].c_str(),
+                                            kHalInterfaceDevice);
   }
   return proxies_[i];
 }
@@ -137,10 +134,10 @@ std::string Network::GetInterfacePropertyString(int i, const char *property) {
   ASSERT(proxy);
 
   DBusStringReceiver receiver;
-  proxy->Call(kHalMethodGetProperty, true, -1,
-              receiver.NewSlot(),
-              MESSAGE_TYPE_STRING, property,
-              MESSAGE_TYPE_INVALID);
+  proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                    receiver.NewSlot(),
+                    MESSAGE_TYPE_STRING, property,
+                    MESSAGE_TYPE_INVALID);
   return receiver.GetValue();
 }
 
@@ -149,10 +146,10 @@ bool Network::IsInterfaceUp(int i) {
   ASSERT(proxy);
 
   DBusBooleanReceiver receiver;
-  if (proxy->Call(kHalMethodGetProperty, true, -1,
-              receiver.NewSlot(),
-              MESSAGE_TYPE_STRING, kHalPropNetInterfaceUp,
-              MESSAGE_TYPE_INVALID)) {
+  if (proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
+                        receiver.NewSlot(),
+                        MESSAGE_TYPE_STRING, kHalPropNetInterfaceUp,
+                        MESSAGE_TYPE_INVALID)) {
     return receiver.GetValue();
   }
 

@@ -35,13 +35,16 @@ namespace ggadget {
 
 typedef Signal4<std::string, LogLevel, const char *, int,
                 const std::string &> LogSignal;
-
-// Note: because these global objects may be destructed before other
-// global objects, don't call LOG from destructors of other global objects.
-static LogSignal g_global_log_signal;
 typedef std::map<void *, LogSignal *> ContextSignalMap;
-static ContextSignalMap g_context_log_signals;
-static std::vector<void *> g_log_context_stack;
+
+static bool g_log_destroyed = false;
+struct LogGlobalData {
+  ~LogGlobalData() { g_log_destroyed = true; }
+  LogSignal global_signal;
+  ContextSignalMap context_signals;
+  std::vector<void *> context_stack;
+};
+static LogGlobalData g_log;
 
 LogHelper::LogHelper(LogLevel level, const char *file, int line)
     : level_(level), file_(file), line_(line) {
@@ -53,19 +56,23 @@ static void DoLog(LogLevel level, const char *file, int line,
   if (in_logger) return;
 
   in_logger = true;
-  std::string new_message;
-  void *context = g_log_context_stack.empty() ?
-                  NULL : g_log_context_stack.back();
-  ContextSignalMap::const_iterator it = g_context_log_signals.find(context);
-  if (it != g_context_log_signals.end())
-    new_message = (*it->second)(level, file, line, message);
-  else
-    new_message = message;
+  if (!g_log_destroyed) {
+    std::string new_message;
+    void *context = g_log.context_stack.empty() ?
+                    NULL : g_log.context_stack.back();
+    ContextSignalMap::const_iterator it = g_log.context_signals.find(context);
+    if (it != g_log.context_signals.end())
+      new_message = (*it->second)(level, file, line, message);
+    else
+      new_message = message;
 
-  if (g_global_log_signal.HasActiveConnections()) {
-    g_global_log_signal(level, file, line, new_message);
+    if (g_log.global_signal.HasActiveConnections()) {
+      g_log.global_signal(level, file, line, new_message);
+    } else {
+      printf("%s:%d: %s\n", file, line, new_message.c_str());
+    }
   } else {
-    printf("%s:%d: %s\n", file, line, new_message.c_str());
+    printf("%s:%d: %s\n", file, line, message.c_str());
   }
   in_logger = false;
 }
@@ -99,7 +106,7 @@ void LogHelper::operator()(const char *format, ...) {
   va_end(ap);
 
   MainLoopInterface *main_loop = GetGlobalMainLoop();
-  if (!main_loop || main_loop->IsMainThread()) {
+  if (g_log_destroyed || !main_loop || main_loop->IsMainThread()) {
     DoLog(level_, file_, line_, message);
   } else {
     main_loop->AddTimeoutWatch(0, new LogTask(level_, file_, line_, message));
@@ -107,43 +114,53 @@ void LogHelper::operator()(const char *format, ...) {
 }
 
 ScopedLogContext::ScopedLogContext(void *context) {
-  g_log_context_stack.push_back(context);
+  if (!g_log_destroyed)
+    g_log.context_stack.push_back(context);
 }
 
 ScopedLogContext::~ScopedLogContext() {
-  g_log_context_stack.pop_back();
+  if (!g_log_destroyed)
+    g_log.context_stack.pop_back();
 }
 
 void PushLogContext(void *context) {
-  g_log_context_stack.push_back(context);
+  if (!g_log_destroyed)
+    g_log.context_stack.push_back(context);
 }
 
 void PopLogContext(void *log_context) {
-  ASSERT(log_context == g_log_context_stack.back());
-  g_log_context_stack.pop_back();
+  if (!g_log_destroyed) {
+    ASSERT(log_context == g_log.context_stack.back());
+    g_log.context_stack.pop_back();
+  }
 }
 
 Connection *ConnectGlobalLogListener(LogListener *listener) {
-  return g_global_log_signal.Connect(listener);
+  return g_log_destroyed ? NULL : g_log.global_signal.Connect(listener);
 }
 
 Connection *ConnectContextLogListener(void *context, LogListener *listener) {
-  ContextSignalMap::const_iterator it = g_context_log_signals.find(context);
-  LogSignal *signal;
-  if (it == g_context_log_signals.end()) {
-    signal = new LogSignal();
-    g_context_log_signals[context] = signal;
-  } else {
-    signal = it->second;
+  if (!g_log_destroyed) {
+    ContextSignalMap::const_iterator it = g_log.context_signals.find(context);
+    LogSignal *signal;
+    if (it == g_log.context_signals.end()) {
+      signal = new LogSignal();
+      g_log.context_signals[context] = signal;
+    } else {
+      signal = it->second;
+    }
+    return signal->Connect(listener);
   }
-  return signal->Connect(listener);
+  return NULL;
 }
 
 void RemoveLogContext(void *context) {
-  ContextSignalMap::iterator it = g_context_log_signals.find(context);
-  if (it != g_context_log_signals.end()) {
-    delete it->second;
-    g_context_log_signals.erase(it);
+  if (!g_log_destroyed) {
+    ContextSignalMap::iterator it = g_log.context_signals.find(context);
+    if (it != g_log.context_signals.end()) {
+      delete it->second;
+      g_log.context_signals.erase(it);
+    }
   }
 }
 
