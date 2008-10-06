@@ -29,9 +29,7 @@ class CheckBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xe53dbec04fe34ea3, BasicElement);
 
-  CheckBoxElement(BasicElement *parent, View *view,
-                  const char *name,
-                  bool is_checkbox);
+  CheckBoxElement(View *view, const char *name, bool is_checkbox);
   virtual ~CheckBoxElement();
 
  protected:
@@ -91,10 +89,8 @@ class CheckBoxElement : public BasicElement {
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  public:
-  static BasicElement *CreateCheckBoxInstance(BasicElement *parent,
-                                              View *view, const char *name);
-  static BasicElement *CreateRadioInstance(BasicElement *parent,
-                                           View *view, const char *name);
+  static BasicElement *CreateCheckBoxInstance(View *view, const char *name);
+  static BasicElement *CreateRadioInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

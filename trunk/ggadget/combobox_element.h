@@ -28,7 +28,7 @@ class ComboBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x848a2f5e84144915, BasicElement);
 
-  ComboBoxElement(BasicElement *parent, View *view, const char *name);
+  ComboBoxElement(View *view, const char *name);
   virtual ~ComboBoxElement();
 
  protected:
@@ -72,8 +72,16 @@ class ComboBoxElement : public BasicElement {
 
   EditElementBase *GetEdit();
   const EditElementBase *GetEdit() const;
-  ListBoxElement *GetListBox();
-  const ListBoxElement *GetListBox() const;
+  ListBoxElement *GetDroplist();
+  const ListBoxElement *GetDroplist() const;
+
+  /**
+   * Gets or sets the background texture of the item under the mouse cursor.
+   * Comboboxes have no itemSelectedColor. itemOverColor is for both mouse
+   * over color and item selected with the keyboard or by program.
+   */
+  Variant GetItemOverColor() const;
+  void SetItemOverColor(const Variant &color);
 
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
@@ -90,15 +98,17 @@ class ComboBoxElement : public BasicElement {
 
   virtual double GetPixelHeight() const;
 
+  virtual bool IsTabStop() const;
+
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  virtual EventResult HandleOtherEvent(const Event &event);
 
  public:
   virtual bool IsChildInVisibleArea(const BasicElement *child) const;

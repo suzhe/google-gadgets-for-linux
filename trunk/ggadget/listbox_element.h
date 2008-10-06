@@ -28,8 +28,7 @@ class ListBoxElement : public DivElement {
  public:
   DEFINE_CLASS_ID(0x7ed919e76c7e400a, DivElement);
 
-  ListBoxElement(BasicElement *parent, View *view,
-                 const char *tag_name, const char *name);
+  ListBoxElement(View *view, const char *tag_name, const char *name);
   virtual ~ListBoxElement();
 
  protected:
@@ -37,14 +36,8 @@ class ListBoxElement : public DivElement {
 
  public:
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
-
   void ScrollToSelectedItem();
-
-  //void FireOnChangeEvent();
-
-  virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
-                                   BasicElement **fired_element,
-                                   BasicElement **in_element);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual void Layout();
 
  public:
@@ -90,7 +83,9 @@ class ListBoxElement : public DivElement {
   Variant GetItemHeight() const;
   void SetItemHeight(const Variant &height);
 
-  /** Gets or sets the background texture of the item under the mouse cursor. */
+  /**
+   * Gets or sets the background texture of the item under the mouse cursor.
+   */
   Variant GetItemOverColor() const;
   const Texture *GetItemOverTexture() const;
   void SetItemOverColor(const Variant &color);
@@ -140,10 +135,7 @@ class ListBoxElement : public DivElement {
   const ItemElement *FindItemByString(const char *str) const;
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
-
-  friend class ComboBoxElement;
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ListBoxElement);

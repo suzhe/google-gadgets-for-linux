@@ -272,11 +272,11 @@ class GtkWindowedFlashElement::Impl {
   bool initialized_;
 };
 
-GtkWindowedFlashElement::GtkWindowedFlashElement(BasicElement *parent, View *view,
-                                 const char *name)
-    : BasicElement(parent, view, "flash", name, false),
+GtkWindowedFlashElement::GtkWindowedFlashElement(GtkFlashElement *parent,
+                                                 View *view, const char *name)
+    : BasicElement(view, "flash", name, false),
       impl_(new Impl(this)) {
-  DoRegister();
+  SetParentElement(parent);
   SetRelativeX(0);
   SetRelativeY(0);
   SetRelativeWidth(1.0);
@@ -286,21 +286,6 @@ GtkWindowedFlashElement::GtkWindowedFlashElement(BasicElement *parent, View *vie
 GtkWindowedFlashElement::~GtkWindowedFlashElement() {
   delete impl_;
   impl_ = NULL;
-}
-
-BasicElement *GtkWindowedFlashElement::CreateInstance(BasicElement *parent, View *view,
-                                              const char *name) {
-  if (!parent || !parent->IsInstanceOf(GtkFlashElement::CLASS_ID)) {
-    LOGE("GtkWindowedFlashElement can only be used by GtkFlashElement.");
-    return NULL;
-  }
-  GtkWindowedFlashElement *flash =
-      new GtkWindowedFlashElement(parent, view, name);
-  if (!flash->impl_->initialized_) {
-    delete flash;
-    return NULL;
-  }
-  return flash;
 }
 
 void GtkWindowedFlashElement::DoRegister() {

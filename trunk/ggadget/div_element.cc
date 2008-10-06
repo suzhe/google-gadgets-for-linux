@@ -42,14 +42,13 @@ class DivElement::Impl {
   BackgroundMode background_mode_;
 };
 
-DivElement::DivElement(BasicElement *parent, View *view, const char *name)
-    : ScrollingElement(parent, view, "div", name, true),
+DivElement::DivElement(View *view, const char *name)
+    : ScrollingElement(view, "div", name, true),
       impl_(new Impl(this)) {
 }
 
-DivElement::DivElement(BasicElement *parent, View *view,
-                       const char *tag_name, const char *name)
-    : ScrollingElement(parent, view, tag_name, name, true),
+DivElement::DivElement(View *view, const char *tag_name, const char *name)
+    : ScrollingElement(view, tag_name, name, true),
       impl_(new Impl(this)) {
 }
 
@@ -138,9 +137,8 @@ void DivElement::SetBackgroundMode(BackgroundMode mode) {
   }
 }
 
-BasicElement *DivElement::CreateInstance(BasicElement *parent, View *view,
-                                         const char *name) {
-  return new DivElement(parent, view, name);
+BasicElement *DivElement::CreateInstance(View *view, const char *name) {
+  return new DivElement(view, name);
 }
 
 EventResult DivElement::HandleKeyEvent(const KeyboardEvent &event) {

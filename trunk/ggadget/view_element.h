@@ -33,8 +33,7 @@ class ViewElement : public BasicElement {
    * If no_transparent is true, then the ViewElement will never return
    * HT_TRANSPARENT hittest value.
    */
-  ViewElement(BasicElement *parent, View *parent_view,
-              View *child_view, bool no_transparent);
+  ViewElement(View *parent_view, View *child_view, bool no_transparent);
   virtual ~ViewElement();
 
   void SetChildView(View *child_view);

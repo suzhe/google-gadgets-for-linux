@@ -90,6 +90,7 @@ class Elements::Impl {
 
   bool InsertElementInternal(BasicElement *element,
                              const BasicElement *before) {
+    element->SetParentElement(owner_);
     if (view_->OnElementAdd(element)) {
       element->QueueDraw();
       if (before) {
@@ -139,16 +140,19 @@ class Elements::Impl {
       }
     }
 
-    if (element->GetIndex() != kInvalidIndex) {
-      // Detach the element from its original parent.
+    if (element->GetIndex() == kInvalidIndex) {
+      if (element->GetParentElement()) {
+        LOG("Inner child can't be moved.");
+        return false;
+      }
+    } else {
       BasicElement *parent = element->GetParentElement();
+      // Detach the element from its original parent.
       Elements *elements = parent ?
                            parent->GetChildren() : view_->GetChildren();
       elements->impl_->RemoveElementInternal(element);
     }
 
-    // Reparent and insert the element.
-    element->SetParentElement(owner_);
     return InsertElementInternal(element, before);
   }
 
@@ -160,7 +164,7 @@ class Elements::Impl {
     if (before && !IsChild(before))
       return NULL;
 
-    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
+    BasicElement *e = factory_->CreateElement(tag_name, view_, name);
     if (e == NULL)
       return NULL;
     return InsertElementInternal(e, before) ? e : NULL;

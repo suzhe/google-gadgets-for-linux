@@ -40,11 +40,14 @@ class ObjectElement::Impl {
       LOG("Object already had a classId: %s", classid_.c_str());
     } else {
       object_ = view_->GetElementFactory()->CreateElement(
-          classid.c_str(), owner_, view_, owner_->GetName().c_str());
+          classid.c_str(), view_, owner_->GetName().c_str());
       if (!object_) {
         LOG("Failed to get the object with classid: %s.", classid.c_str());
         return;
       }
+      object_->SetParentElement(owner_);
+      // Trigger property registration.
+      object_->GetProperty("");
       classid_ = classid;
     }
   }
@@ -56,8 +59,8 @@ class ObjectElement::Impl {
   std::string classid_;
 };
 
-ObjectElement::ObjectElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "object", name, false),
+ObjectElement::ObjectElement(View *view, const char *name)
+    : BasicElement(view, "object", name, false),
       impl_(new Impl(this, view)) {
 }
 
@@ -72,9 +75,8 @@ void ObjectElement::DoClassRegister() {
                    NewSlot(&ObjectElement::SetObjectClassId));
 }
 
-BasicElement *ObjectElement::CreateInstance(BasicElement *parent, View *view,
-                                            const char *name) {
-  return new ObjectElement(parent, view, name);
+BasicElement *ObjectElement::CreateInstance(View *view, const char *name) {
+  return new ObjectElement(view, name);
 }
 
 BasicElement *ObjectElement::GetObject() {

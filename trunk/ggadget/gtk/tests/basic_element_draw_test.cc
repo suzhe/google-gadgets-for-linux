@@ -45,8 +45,8 @@ class ViewHostWithGraphics : public MockedViewHost {
 
 class Muffin : public BasicElement {
  public:
-  Muffin(BasicElement *parent, View *view, const char *name)
-      : BasicElement(parent, view, "muffin", name, true) {
+  Muffin(View *view, const char *name)
+      : BasicElement(view, "muffin", name, true) {
   }
 
   virtual ~Muffin() {
@@ -60,16 +60,15 @@ class Muffin : public BasicElement {
 
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, BasicElement)
 
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name) {
-    return new Muffin(parent, view, name);
+  static BasicElement *CreateInstance(View *view, const char *name) {
+    return new Muffin(view, name);
   }
 };
 
 class Pie : public BasicElement {
  public:
-  Pie(BasicElement *parent, View *view, const char *name)
-      : BasicElement(parent, view, "pie", name, false), color_(0., 0., 0.) {
+  Pie(View *view, const char *name)
+      : BasicElement(view, "pie", name, false), color_(0., 0., 0.) {
   }
 
   virtual ~Pie() {
@@ -85,9 +84,8 @@ class Pie : public BasicElement {
 
   DEFINE_CLASS_ID(0x829defac5bbe11dc, BasicElement)
 
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name) {
-    return new Pie(parent, view, name);
+  static BasicElement *CreateInstance(View *view, const char *name) {
+    return new Pie(view, name);
   }
 
  private:
@@ -99,7 +97,7 @@ TEST(BasicElementTest, ElementsDraw) {
   ViewHostWithGraphics *view_host_ =
       new ViewHostWithGraphics(ViewHostInterface::VIEW_HOST_MAIN);
   View view(view_host_, NULL, g_factory, NULL);
-  Muffin m(NULL, &view, NULL);
+  Muffin m(&view, NULL);
   Pie *p = NULL;
 
   m.SetPixelWidth(200.);

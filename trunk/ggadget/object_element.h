@@ -26,11 +26,11 @@ class ObjectElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x5b128d3ef8da40e8, BasicElement);
 
-  ObjectElement(BasicElement *parent, View *view, const char *name);
+  ObjectElement(View *view, const char *name);
   virtual ~ObjectElement();
 
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
+
  public:
   /**
    * This class can not expose the real object to scripts, and so can not have

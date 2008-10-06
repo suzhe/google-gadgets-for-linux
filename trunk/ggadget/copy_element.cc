@@ -139,8 +139,8 @@ class CopyElement::Impl {
   bool frozen_;
 };
 
-CopyElement::CopyElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "copy", name, false),
+CopyElement::CopyElement(View *view, const char *name)
+    : BasicElement(view, "copy", name, false),
       impl_(new Impl(this)) {
 }
 
@@ -238,9 +238,8 @@ bool CopyElement::HasOpaqueBackground() const {
   return false;
 }
 
-BasicElement *CopyElement::CreateInstance(BasicElement *parent, View *view,
-                                         const char *name) {
-  return new CopyElement(parent, view, name);
+BasicElement *CopyElement::CreateInstance(View *view, const char *name) {
+  return new CopyElement(view, name);
 }
 
 double CopyElement::GetSrcWidth() const {

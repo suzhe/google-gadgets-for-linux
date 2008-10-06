@@ -23,16 +23,15 @@
 namespace ggadget {
 namespace gtk {
 
+class GtkFlashElement;
+
 class GtkWindowedFlashElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xed12e94863ac3d86, BasicElement);
 
-  GtkWindowedFlashElement(BasicElement *parent, View *view, const char *name);
+  GtkWindowedFlashElement(GtkFlashElement *parent,
+                          View *view, const char *name);
   virtual ~GtkWindowedFlashElement();
-
- public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
 
  protected:
   virtual void DoRegister();

@@ -185,9 +185,8 @@ class CheckBoxElement::Impl {
   EventSignal onchange_event_;
 };
 
-CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
-                                 const char *name, bool is_checkbox)
-    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
+CheckBoxElement::CheckBoxElement(View *view, const char *name, bool is_checkbox)
+    : BasicElement(view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
 }
@@ -459,16 +458,14 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   *height = std::max(image_height, text_height);
 }
 
-BasicElement *CheckBoxElement::CreateCheckBoxInstance(BasicElement *parent,
-                                                      View *view,
+BasicElement *CheckBoxElement::CreateCheckBoxInstance(View *view,
                                                       const char *name) {
-  return new CheckBoxElement(parent, view, name, true);
+  return new CheckBoxElement(view, name, true);
 }
 
-BasicElement *CheckBoxElement::CreateRadioInstance(BasicElement *parent,
-                                                   View *view,
+BasicElement *CheckBoxElement::CreateRadioInstance(View *view,
                                                    const char *name) {
-  return new CheckBoxElement(parent, view, name, false);
+  return new CheckBoxElement(view, name, false);
 }
 
 } // namespace ggadget

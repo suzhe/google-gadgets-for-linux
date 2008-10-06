@@ -46,10 +46,10 @@ class ElementsTest : public testing::Test {
         new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
         NULL, factory_, NULL);
     view_elements_ = view_->GetChildren();
-    muffin_ = new Muffin(NULL, view_, NULL);
+    muffin_ = new Muffin(view_, NULL);
     elements_ = muffin_->GetChildren();
 
-    another_muffin_ = new Muffin(NULL, view_, NULL);
+    another_muffin_ = new Muffin(view_, NULL);
     another_elements_ = another_muffin_->GetChildren();
   }
 
@@ -337,7 +337,7 @@ TEST_F(ElementsTest, TestInvalidInsert) {
   ggadget::View *view1 = new ggadget::View(
       new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
       NULL, factory_, NULL);
-  ggadget::BasicElement *e_another_view = new Muffin(NULL, view1, NULL);
+  ggadget::BasicElement *e_another_view = new Muffin(view1, NULL);
   ASSERT_FALSE(elements_->AppendElement(e_another_view));
   ASSERT_FALSE(view_elements_->AppendElement(e_another_view));
   delete e_another_view;

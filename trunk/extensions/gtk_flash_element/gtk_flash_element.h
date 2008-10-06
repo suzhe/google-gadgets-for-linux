@@ -29,12 +29,11 @@ class GtkFlashElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xdc04f82152b34c05, BasicElement);
 
-  GtkFlashElement(BasicElement *parent, View *view, const char *name);
+  GtkFlashElement(View *view, const char *name);
   virtual ~GtkFlashElement();
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoRegister();

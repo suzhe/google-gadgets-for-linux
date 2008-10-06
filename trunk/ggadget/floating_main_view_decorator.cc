@@ -68,9 +68,9 @@ class FloatingMainViewDecorator::Impl {
     : owner_(owner),
       show_decorator_(false),
       transparent_(transparent_background),
-      background_(new ImgElement(NULL, owner, NULL)),
-      resize_border_(new DivElement(NULL, owner, NULL)),
-      zoom_corner_(new DivElement(NULL, owner, NULL)) {
+      background_(new ImgElement(owner, NULL)),
+      resize_border_(new DivElement(owner, NULL)),
+      zoom_corner_(new DivElement(owner, NULL)) {
     background_->SetSrc(Variant(transparent_ ? kVDMainBackgroundTransparent :
                                 kVDMainBackground));
     background_->SetOpacity(transparent_ ? 1 : kVDMainBackgroundOpacity);
@@ -82,8 +82,7 @@ class FloatingMainViewDecorator::Impl {
 
     // Setup resize borders.
     for (size_t i = 0; i < NUMBER_OF_RESIZE_BORDERS; ++i) {
-      BasicElement *elm =
-          new BasicElement(resize_border_, owner, NULL, NULL, false);
+      BasicElement *elm = new BasicElement(owner, NULL, NULL, false);
       const ResizeBorderInfo *info = &kResizeBordersInfo[i];
       elm->SetRelativeX(info->x);
       elm->SetRelativeY(info->y);
@@ -106,7 +105,7 @@ class FloatingMainViewDecorator::Impl {
     owner->InsertDecoratorElement(resize_border_, false);
 
     // Setup zoom corner
-    ImgElement *corner_img = new ImgElement(zoom_corner_, owner, NULL);
+    ImgElement *corner_img = new ImgElement(owner, NULL);
     corner_img->SetSrc(Variant(kVDBottomRightCorner));
     corner_img->SetVisible(true);
     corner_img->SetEnabled(false);

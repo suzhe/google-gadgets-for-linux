@@ -102,10 +102,10 @@ class ViewElement::Impl {
   Connection *onopen_connection_;
 };
 
-ViewElement::ViewElement(BasicElement *parent, View *parent_view,
-                         View *child_view, bool no_transparent)
+ViewElement::ViewElement(View *parent_view, View *child_view,
+                         bool no_transparent)
   // Only 1 child so no need to involve Elements here.
-  : BasicElement(parent, parent_view, "view", NULL, false),
+  : BasicElement(parent_view, "view", NULL, false),
     impl_(new Impl(this, no_transparent)) {
   SetEnabled(true);
   SetChildView(child_view);

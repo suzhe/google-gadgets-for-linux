@@ -27,12 +27,10 @@ class ItemElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x93a09b61fb8a4fda, BasicElement);
 
-  ItemElement(BasicElement *parent, View *view,
-              const char *tag_name, const char *name);
+  ItemElement(View *view, const char *tag_name, const char *name);
   virtual ~ItemElement();
 
  protected:
-  virtual void DoRegister();
   virtual void DoClassRegister();
 
  public:
@@ -70,18 +68,17 @@ class ItemElement : public BasicElement {
   bool AddLabelWithText(const char *text);
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
   /** For backward compatibility of listitem. */
-  static BasicElement *CreateListItemInstance(BasicElement *parent, View *view,
-                                              const char *name);
+  static BasicElement *CreateListItemInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
   virtual void GetDefaultPosition(double *x, double *y) const;
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
  public:
   virtual bool HasOpaqueBackground() const;

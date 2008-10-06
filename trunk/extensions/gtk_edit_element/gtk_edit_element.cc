@@ -58,8 +58,8 @@ static const int kDefaultEditElementWidth = 60;
 static const int kDefaultEditElementHeight = 16;
 static const Color kDefaultBackgroundColor(1, 1, 1);
 
-GtkEditElement::GtkEditElement(BasicElement *parent, View *view, const char *name)
-    : EditElementBase(parent, view, name),
+GtkEditElement::GtkEditElement(View *view, const char *name)
+    : EditElementBase(view, name),
       impl_(new GtkEditImpl(this, ggadget::GetGlobalMainLoop(),
                             kDefaultEditElementWidth,
                             kDefaultEditElementHeight)) {
@@ -268,10 +268,8 @@ void GtkEditElement::OnScrolled() {
   impl_->ScrollTo(GetScrollYPosition());
 }
 
-BasicElement *GtkEditElement::CreateInstance(BasicElement *parent,
-                                             View *view,
-                                             const char *name) {
-  return new GtkEditElement(parent, view, name);
+BasicElement *GtkEditElement::CreateInstance(View *view, const char *name) {
+  return new GtkEditElement(view, name);
 }
 
 } // namespace gtk

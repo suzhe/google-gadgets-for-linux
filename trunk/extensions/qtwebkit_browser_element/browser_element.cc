@@ -43,9 +43,8 @@
 namespace ggadget {
 namespace qt {
 
-BrowserElement::BrowserElement(BasicElement *parent, View *view,
-                               const char *name)
-    : BasicElement(parent, view, "browser", name, true),
+BrowserElement::BrowserElement(View *view, const char *name)
+    : BasicElement(view, "browser", name, true),
       impl_(new Impl(this)) {
 }
 
@@ -92,9 +91,8 @@ void BrowserElement::Layout() {
 void BrowserElement::DoDraw(CanvasInterface *canvas) {
 }
 
-BasicElement *BrowserElement::CreateInstance(BasicElement *parent, View *view,
-                                             const char *name) {
-  return new BrowserElement(parent, view, name);
+BasicElement *BrowserElement::CreateInstance(View *view, const char *name) {
+  return new BrowserElement(view, name);
 }
 
 } // namespace gtkmoz

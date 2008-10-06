@@ -161,6 +161,49 @@ class ListBoxElement::Impl {
     return NULL;
   }
 
+  int GetSelectedIndex() {
+    const Elements *elements = owner_->GetChildren();
+    size_t childcount = elements->GetCount();
+    for (size_t i = 0; i < childcount; i++) {
+      const BasicElement *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        const ItemElement *item = down_cast<const ItemElement *>(child);
+        if (item->IsSelected())
+          return static_cast<int>(i);
+      } else {
+        LOG(kErrorItemExpected);
+      }
+    }
+
+    return selected_index_ >= 0 ? selected_index_ : -1;
+  }
+
+  void SetSelectedIndex(int index) {
+    if (index == -1) {
+      selected_index_ = -1;
+      SetSelectedItem(NULL);
+      return;
+    }
+
+    BasicElement *item =
+        owner_->GetChildren()->GetItemByIndex(static_cast<size_t>(index));
+    if (!item) {
+      // Only occurs when initializing from XML, selectedIndex is set before
+      // items are added.
+      if (selected_index_ == -2) {
+        // Mark selection as pending.
+        selected_index_ = index;
+      }
+      return;
+    }
+
+    if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
+      SetSelectedItem(down_cast<ItemElement *>(item));
+    } else {
+      LOG(kErrorItemExpected);
+    }
+  }
+
   ItemElement *GetSelectedItem() {
     Elements *elements = owner_->GetChildren();
     size_t childcount = elements->GetCount();
@@ -176,6 +219,45 @@ class ListBoxElement::Impl {
       }
     }
     return NULL;
+  }
+
+  void SetSelectedItem(ItemElement *item) {
+    bool changed = ClearSelection(item);
+    if (item && !item->IsSelected()) {
+      item->SetSelected(true);
+      pending_scroll_ = 2;
+      owner_->QueueDraw();
+      changed = true;
+    }
+
+    if (changed)
+      FireOnChangeEvent();
+  }
+
+  void ShiftSelection(int distance, bool wrap) {
+    int count = static_cast<int>(owner_->GetChildren()->GetCount());
+    if (count == 0)
+      return;
+
+    int index = GetSelectedIndex();
+    if (index >= 0) {
+      index += distance;
+      if (wrap) {
+        index %= count;
+        if (index < 0)
+          index += count;
+      } else {
+        index = std::max(0, std::min(count - 1, index));
+      }
+    } else {
+      index = 0;
+    }
+    SetSelectedIndex(index);
+  }
+
+  int GetPageItemCount() {
+    return static_cast<int>(owner_->GetPixelHeight() /
+                            owner_->GetItemPixelHeight());
   }
 
   // Update scroll to show the currently selected item. Item rotation will
@@ -233,9 +315,9 @@ class ListBoxElement::Impl {
   int pending_scroll_;
 };
 
-ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
+ListBoxElement::ListBoxElement(View *view,
                                const char *tag_name, const char *name)
-    : DivElement(parent, view, tag_name, name),
+    : DivElement(view, tag_name, name),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
 }
@@ -299,14 +381,35 @@ Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }
 
-EventResult ListBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
-                                         BasicElement **fired_element,
-                                         BasicElement **in_element) {
-  // Interecept mouse wheel events from Item elements and send to Div
-  // directly to enable wheel scrolling.
-  bool wheel = (event.GetType() == Event::EVENT_MOUSE_WHEEL);
-  return DivElement::OnMouseEvent(event, wheel ? true : direct,
-                                  fired_element, in_element);
+EventResult ListBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
+  EventResult result = EVENT_RESULT_UNHANDLED;
+  if (event.GetType() == Event::EVENT_KEY_DOWN) {
+    result = EVENT_RESULT_HANDLED;
+    switch (event.GetKeyCode()) {
+      case KeyboardEvent::KEY_UP:
+        impl_->ShiftSelection(-1, true);
+        break;
+      case KeyboardEvent::KEY_DOWN:
+        impl_->ShiftSelection(1, true);
+        break;
+      case KeyboardEvent::KEY_PAGE_UP:
+        impl_->ShiftSelection(-impl_->GetPageItemCount(), false);
+        break;
+      case KeyboardEvent::KEY_PAGE_DOWN:
+        impl_->ShiftSelection(impl_->GetPageItemCount(), false);
+        break;
+      case KeyboardEvent::KEY_HOME:
+        SetSelectedIndex(0);
+        break;
+      case KeyboardEvent::KEY_END:
+        SetSelectedIndex(static_cast<int>(GetChildren()->GetCount()) - 1);
+        break;
+      default:
+        result = EVENT_RESULT_UNHANDLED;
+        break;
+    }
+  }
+  return result;
 }
 
 Variant ListBoxElement::GetItemWidth() const {
@@ -490,45 +593,11 @@ void ListBoxElement::SetMultiSelect(bool multiselect) {
 }
 
 int ListBoxElement::GetSelectedIndex() const {
-  const Elements *elements = GetChildren();
-  size_t childcount = elements->GetCount();
-  for (size_t i = 0; i < childcount; i++) {
-    const BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      const ItemElement *item = down_cast<const ItemElement *>(child);
-      if (item->IsSelected()) {
-        return static_cast<int>(i);
-      }
-    } else {
-      LOG(kErrorItemExpected);
-    }
-  }
-
-  if (impl_->selected_index_ >= 0) {
-    return impl_->selected_index_;
-  }
-
-  return -1;
+  return impl_->GetSelectedIndex();
 }
 
 void ListBoxElement::SetSelectedIndex(int index) {
-  BasicElement *item =
-      GetChildren()->GetItemByIndex(static_cast<size_t>(index));
-  if (!item) {
-    // Only occurs when initializing from XML, selectedIndex is set before
-    // items are added.
-    if (impl_->selected_index_ == -2) {
-      // Mark selection as pending.
-      impl_->selected_index_ = index;
-    }
-    return;
-  }
-
-  if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
-    SetSelectedItem(down_cast<ItemElement *>(item));
-  } else {
-    LOG(kErrorItemExpected);
-  }
+  impl_->SetSelectedIndex(index);
 }
 
 ItemElement *ListBoxElement::GetSelectedItem() {
@@ -540,24 +609,12 @@ const ItemElement *ListBoxElement::GetSelectedItem() const {
 }
 
 void ListBoxElement::SetSelectedItem(ItemElement *item) {
-  bool changed = impl_->ClearSelection(item);
-  if (item && !item->IsSelected()) {
-    item->SetSelected(true);
-    impl_->pending_scroll_ = 2;
-    QueueDraw();
-    changed = true;
-  }
-
-  if (changed) {
-    impl_->FireOnChangeEvent();
-  }
+  impl_->SetSelectedItem(item);
 }
 
 void ListBoxElement::ClearSelection() {
-  bool changed = impl_->ClearSelection(NULL);
-  if (changed) {
+  if (impl_->ClearSelection(NULL))
     impl_->FireOnChangeEvent();
-  }
 }
 
 void ListBoxElement::AppendSelection(ItemElement *item) {
@@ -702,9 +759,8 @@ const ItemElement *ListBoxElement::FindItemByString(const char *str) const {
   return impl_->FindItemByString(str);
 }
 
-BasicElement *ListBoxElement::CreateInstance(BasicElement *parent, View *view,
-                                             const char *name) {
-  return new ListBoxElement(parent, view, "listbox", name);
+BasicElement *ListBoxElement::CreateInstance(View *view, const char *name) {
+  return new ListBoxElement(view, "listbox", name);
 }
 
 } // namespace ggadget

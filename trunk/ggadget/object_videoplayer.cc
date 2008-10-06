@@ -184,16 +184,20 @@ class ObjectVideoPlayer::Impl {
     // must be) the parent of the video element, otherwise, video element has
     // no way to know the size of area in which the video is shown.
     video_element_ = down_cast<VideoElementBase *>(
-        view_->GetElementFactory()->CreateElement("video", owner_,
-                                                  view_, "video"));
+        view_->GetElementFactory()->CreateElement("video", view_, "video"));
     if (!video_element_) {
       return;
     }
 
+    video_element_->SetParentElement(owner_);
     video_element_->ConnectOnStateChangeEvent(NewSlot(this,
                                                       &Impl::OnStateChange));
     video_element_->ConnectOnMediaChangeEvent(NewSlot(this,
                                                       &Impl::OnMediaChange));
+    video_element_->SetRelativeX(0);
+    video_element_->SetRelativeY(0);
+    video_element_->SetRelativeWidth(1.0);
+    video_element_->SetRelativeHeight(1.0);
   }
 
   void DoRegister() {
@@ -546,25 +550,12 @@ class ObjectVideoPlayer::Impl {
   EventSignal on_player_docked_state_change_event_;
 };
 
-ObjectVideoPlayer::ObjectVideoPlayer(BasicElement *parent, View *view,
-                                     const char *tag_name, const char *name,
-                                     bool children)
-    : BasicElement(parent, view, tag_name, name, children) {
-  if (!parent || !parent->IsInstanceOf(ObjectElement::CLASS_ID)) {
-    LOGE("Video player object can only be used with (i.e. hosted by) object"
-         "element.");
-    return;
-  }
-
+ObjectVideoPlayer::ObjectVideoPlayer(View *view, const char *name)
+    : BasicElement(view, "object", name, false) {
   impl_ = new Impl(this, view);
   if (!impl_->video_element_)
     return;
 
-  // We must call DoRegister here so that the object element can know
-  // which properties we have before it can create us.
-  // Also, we should set our default relative size, otherwise the object
-  // element doesn't know our size.
-  DoRegister();
   SetRelativeX(0);
   SetRelativeY(0);
   SetRelativeWidth(1.0);
@@ -575,11 +566,8 @@ ObjectVideoPlayer::~ObjectVideoPlayer() {
   delete impl_;
 }
 
-BasicElement *ObjectVideoPlayer::CreateInstance(BasicElement *parent,
-                                                View *view,
-                                                const char *name) {
-  ObjectVideoPlayer *self = new ObjectVideoPlayer(parent, view,
-                                                  "object", name, false);
+BasicElement *ObjectVideoPlayer::CreateInstance(View *view, const char *name) {
+  ObjectVideoPlayer *self = new ObjectVideoPlayer(view, name);
   if (!self->impl_->video_element_) {
     delete self;
     return NULL;

@@ -37,13 +37,11 @@ class GstVideoElement: public VideoElementBase {
  public:
   DEFINE_CLASS_ID(0xc67e3d7bbc7283a9, VideoElementBase);
 
-  GstVideoElement(BasicElement *parent, View *view, const char *name);
+  GstVideoElement(View *view, const char *name);
   virtual ~GstVideoElement();
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent,
-                                      View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
   virtual bool IsAvailable(const std::string& name);
 

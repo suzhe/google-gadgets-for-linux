@@ -200,9 +200,8 @@ class ProgressBarElement::Impl {
   bool default_rendering_;
 };
 
-ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
-                                       const char *name)
-    : BasicElement(parent, view, "progressbar", name, false),
+ProgressBarElement::ProgressBarElement(View *view, const char *name)
+    : BasicElement(view, "progressbar", name, false),
       impl_(new Impl(this)) {
 }
 
@@ -477,10 +476,9 @@ void ProgressBarElement::SetDefaultRendering(bool default_rendering) {
   }
 }
 
-BasicElement *ProgressBarElement::CreateInstance(BasicElement *parent,
-                                                 View *view,
+BasicElement *ProgressBarElement::CreateInstance(View *view,
                                                  const char *name) {
-  return new ProgressBarElement(parent, view, name);
+  return new ProgressBarElement(view, name);
 }
 
 EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {

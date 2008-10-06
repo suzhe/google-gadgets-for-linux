@@ -23,8 +23,8 @@
 
 class Muffin : public ggadget::BasicElement {
  public:
-  Muffin(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "muffin", name, true) {
+  Muffin(ggadget::View *view, const char *name)
+      : ggadget::BasicElement(view, "muffin", name, true) {
   }
 
   virtual ~Muffin() {
@@ -36,17 +36,16 @@ class Muffin : public ggadget::BasicElement {
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
 
  public:
-  static ggadget::BasicElement *CreateInstance(ggadget::BasicElement *parent,
-                                               ggadget::View *view,
+  static ggadget::BasicElement *CreateInstance(ggadget::View *view,
                                                const char *name) {
-    return new Muffin(parent, view, name);
+    return new Muffin(view, name);
   }
 };
 
 class Pie : public ggadget::BasicElement {
  public:
-  Pie(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "pie", name, true) {
+  Pie(ggadget::View *view, const char *name)
+      : ggadget::BasicElement(view, "pie", name, true) {
   }
 
   virtual ~Pie() {
@@ -58,10 +57,9 @@ class Pie : public ggadget::BasicElement {
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
 
  public:
-  static ggadget::BasicElement *CreateInstance(ggadget::BasicElement *parent,
-                                               ggadget::View *view,
+  static ggadget::BasicElement *CreateInstance(ggadget::View *view,
                                                const char *name) {
-    return new Pie(parent, view, name);
+    return new Pie(view, name);
   }
 };
 

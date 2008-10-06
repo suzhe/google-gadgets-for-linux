@@ -75,11 +75,11 @@ class  MainViewDecoratorBase::Impl {
       decorator_show_hide_timer_(0),
       decorator_show_timeout_(kVDShowTimeout),
       decorator_hide_timeout_(kVDHideTimeout),
-      buttons_div_(new DivElement(NULL, owner, NULL)),
+      buttons_div_(new DivElement(owner, NULL)),
       minimized_bkgnd_(show_minimized_background ?
-                       (new ImgElement(NULL, owner, NULL)) : NULL),
-      minimized_icon_(new ImgElement(NULL, owner, NULL)),
-      minimized_caption_(new LabelElement(NULL, owner, NULL)),
+                       (new ImgElement(owner, NULL)) : NULL),
+      minimized_icon_(new ImgElement(owner, NULL)),
+      minimized_caption_(new LabelElement(owner, NULL)),
       minimized_icon_visiable_(true),
       minimized_caption_visiable_(true),
       original_child_view_(NULL),
@@ -135,7 +135,7 @@ class  MainViewDecoratorBase::Impl {
 
     Elements *elements = buttons_div_->GetChildren();
     for (size_t i = 0; i < MainViewDecoratorBase::NUMBER_OF_BUTTONS; ++i) {
-      ButtonElement *button = new ButtonElement(buttons_div_, owner_, NULL);
+      ButtonElement *button = new ButtonElement(owner_, NULL);
       button->SetTooltip(GM_(kButtonsInfo[i].tooltip));
       button->SetImage(Variant(kButtonsInfo[i].normal));
       button->SetOverImage(Variant(kButtonsInfo[i].over));
