@@ -440,7 +440,10 @@ class SideBarGtkHost::Impl {
     ViewHostInterface *old = main_view->SwitchViewHost(new_host);
     // DisplayTarget and undock event will be set in OnMainViewEndMove();
     // FIXME: How to make sure the browser element can reparent correctly?
-    if (old) old->Destroy();
+    if (old) {
+      CopyMinimizedState(old, new_host);
+      old->Destroy();
+    }
 
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
                          (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
@@ -835,6 +838,17 @@ class SideBarGtkHost::Impl {
       info->details = NULL;
     }
   }
+  void CopyMinimizedState(ViewHostInterface *from, ViewHostInterface *to) {
+    DecoratedViewHost *from_dvh = static_cast<DecoratedViewHost*>(from);
+    DecoratedViewHost *to_dvh = static_cast<DecoratedViewHost*>(to);
+    MainViewDecoratorBase *from_vd =
+        static_cast<MainViewDecoratorBase*>(from_dvh->GetViewDecorator());
+    MainViewDecoratorBase *to_vd =
+        static_cast<MainViewDecoratorBase*>(to_dvh->GetViewDecorator());
+    DLOG("From is %s", from_vd->IsMinimized()? "false":"true");
+    DLOG("To is %s", to_vd->IsMinimized()? "false":"true");
+    to_vd->SetMinimized(from_vd->IsMinimized());
+  }
 
   // Handle undock event triggered by clicking undock menu item.
   // Only for docked main view.
@@ -859,7 +873,10 @@ class SideBarGtkHost::Impl {
     // host.
     view->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    if (old) old->Destroy();
+    if (old) {
+      CopyMinimizedState(old, new_host);
+      old->Destroy();
+    }
 
     info->floating->ShowView(false, 0, NULL);
     // Move the floating gadget to the center of the monitor, if the gadget
@@ -894,7 +911,10 @@ class SideBarGtkHost::Impl {
     // host.
     view->OnOtherEvent(SimpleEvent(Event::EVENT_DOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-    if (old) old->Destroy();
+    if (old) {
+      CopyMinimizedState(old, new_host);
+      old->Destroy();
+    }
     new_host->ShowView(false, 0, NULL);
     info->floating = NULL;
   }
