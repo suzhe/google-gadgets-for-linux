@@ -30,7 +30,7 @@ class GtkEditElement : public EditElementBase {
  public:
   DEFINE_CLASS_ID(0xc321ec8aeb4142c4, EditElementBase);
 
-  GtkEditElement(BasicElement *parent, View *view, const char *name);
+  GtkEditElement(View *view, const char *name);
   virtual ~GtkEditElement();
 
   virtual void Layout();
@@ -69,8 +69,7 @@ class GtkEditElement : public EditElementBase {
   virtual void SetAlign(CanvasInterface::Alignment align);
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

@@ -347,9 +347,8 @@ class ScrollBarElement::Impl {
   EventSignal onchange_event_;
 };
 
-ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
-                                   const char *name)
-  : BasicElement(parent, view, "scrollbar", name, false),
+ScrollBarElement::ScrollBarElement(View *view, const char *name)
+  : BasicElement(view, "scrollbar", name, false),
     impl_(new Impl(this)) {
   SetEnabled(true);
 }
@@ -567,7 +566,7 @@ Variant ScrollBarElement::GetRightOverImage() const {
 }
 
 void ScrollBarElement::SetRightOverImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_RIGHT_OVER, 
+  impl_->LoadImage(img, IMAGE_RIGHT_OVER,
                    impl_->right_state_ == STATE_OVER);
 }
 
@@ -610,11 +609,10 @@ void ScrollBarElement::SetDefaultRendering(bool default_rendering) {
   }
 }
 
-BasicElement *ScrollBarElement::CreateInstance(BasicElement *parent,
-                                               View *view, const char *name) {
+BasicElement *ScrollBarElement::CreateInstance(View *view, const char *name) {
   // Keep backward compatibility, default not to use grippy unless it is set
   // by the gadget.
-  return new ScrollBarElement(parent, view, name);
+  return new ScrollBarElement(view, name);
 }
 
 EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {

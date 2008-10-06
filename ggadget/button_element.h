@@ -36,7 +36,7 @@ class ButtonElement : public BasicElement {
     ICON_BOTTOM
   };
 
-  ButtonElement(BasicElement *parent, View *view, const char *name);
+  ButtonElement(View *view, const char *name);
   virtual ~ButtonElement();
 
  protected:
@@ -87,8 +87,7 @@ class ButtonElement : public BasicElement {
   void SetDefaultRendering(bool default_rendering);
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

@@ -44,7 +44,8 @@ class ScrollingElement::Impl {
 
   void CreateScrollBar() {
     if (!scrollbar_) {
-      scrollbar_ = new ScrollBarElement(owner_, owner_->GetView(), "");
+      scrollbar_ = new ScrollBarElement(owner_->GetView(), "");
+      scrollbar_->SetParentElement(owner_);
       scrollbar_->SetPixelHeight(owner_->GetPixelHeight());
       scrollbar_->SetPixelWidth(12); // width of default images
       scrollbar_->SetEnabled(true);
@@ -53,8 +54,10 @@ class ScrollingElement::Impl {
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
       scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
-      scrollbar_->ConnectOnFocusInEvent(NewSlot(this,
-                                                &Impl::OnScrollBarFocusIn));
+      // When user clicks the scroll bar, let the view give focus to
+      // this element.
+      scrollbar_->ConnectOnFocusInEvent(
+          NewSlot(implicit_cast<BasicElement *>(owner_), &BasicElement::Focus));
       // Inform the view of this scrollbar to let the view handle mouse
       // grabbing and mouse over/out logics of the scrollbar.
       owner_->GetView()->OnElementAdd(scrollbar_);
@@ -104,11 +107,6 @@ class ScrollingElement::Impl {
     owner_->QueueDraw();
   }
 
-  void OnScrollBarFocusIn() {
-    // When user clicks the scroll bar, let the view give focus to this element.
-    owner_->Focus();
-  }
-
   void MarkRedraw() {
     if (scrollbar_)
       scrollbar_->MarkRedraw();
@@ -121,10 +119,9 @@ class ScrollingElement::Impl {
   EventSignal on_scrolled_event_;
 };
 
-ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
-                                   const char *tag_name, const char *name,
-                                   bool children)
-    : BasicElement(parent, view, tag_name, name, children),
+ScrollingElement::ScrollingElement(View *view, const char *tag_name,
+                                   const char *name, bool children)
+    : BasicElement(view, tag_name, name, children),
       impl_(new Impl(this)) {
 }
 
@@ -253,16 +250,15 @@ EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
     }
   }
 
-  return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
-}
-
-EventResult ScrollingElement::HandleMouseEvent(const MouseEvent &event) {
-  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
-    if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
-      return impl_->scrollbar_->HandleMouseEvent(event);
-    }
+  ElementHolder self_holder(this);
+  EventResult result = BasicElement::OnMouseEvent(event, direct,
+                                                  fired_element, in_element);
+  if (result == EVENT_RESULT_UNHANDLED &&
+      event.GetType() == Event::EVENT_MOUSE_WHEEL &&
+      impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
+    return impl_->scrollbar_->HandleMouseEvent(event);
   }
-  return EVENT_RESULT_UNHANDLED;
+  return result;
 }
 
 void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,

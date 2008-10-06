@@ -28,7 +28,7 @@ class AnchorElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x50ef5c291807400c, BasicElement);
 
-  AnchorElement(BasicElement *parent, View *view, const char *name);
+  AnchorElement(View *view, const char *name);
   virtual ~AnchorElement();
 
  protected:
@@ -51,8 +51,7 @@ class AnchorElement : public BasicElement {
   const TextFrame *GetTextFrame() const;
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

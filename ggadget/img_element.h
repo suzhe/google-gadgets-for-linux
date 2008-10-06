@@ -26,7 +26,7 @@ class ImgElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x95b5791e157d4373, BasicElement);
 
-  ImgElement(BasicElement *parent, View *view, const char *name);
+  ImgElement(View *view, const char *name);
   virtual ~ImgElement();
 
  protected:
@@ -80,8 +80,7 @@ class ImgElement : public BasicElement {
   void SetSrcSize(double width, double height);
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

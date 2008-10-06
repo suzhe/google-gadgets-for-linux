@@ -68,14 +68,14 @@ class FramedViewDecoratorBase::Impl {
  public:
   Impl(FramedViewDecoratorBase *owner)
     : owner_(owner),
-      frame_(new DivElement(NULL, owner, NULL)),
-      top_(new ImgElement(frame_, owner, NULL)),
-      background_(new ImgElement(frame_, owner, NULL)),
-      bottom_(new ImgElement(frame_, owner, NULL)),
-      caption_(new LabelElement(frame_, owner, NULL)),
-      close_button_(new ButtonElement(frame_, owner, NULL)),
-      action_div_(new DivElement(frame_, owner, NULL)),
-      resize_border_(new DivElement(NULL, owner, NULL)) {
+      frame_(new DivElement(owner, NULL)),
+      top_(new ImgElement(owner, NULL)),
+      background_(new ImgElement(owner, NULL)),
+      bottom_(new ImgElement(owner, NULL)),
+      caption_(new LabelElement(owner, NULL)),
+      close_button_(new ButtonElement(owner, NULL)),
+      action_div_(new DivElement(owner, NULL)),
+      resize_border_(new DivElement(owner, NULL)) {
     frame_->GetChildren()->InsertElement(top_, NULL);
     frame_->GetChildren()->InsertElement(background_, NULL);
     frame_->GetChildren()->InsertElement(bottom_, NULL);
@@ -113,8 +113,7 @@ class FramedViewDecoratorBase::Impl {
 
     // Setup resize borders.
     for (size_t i = 0; i < NUMBER_OF_RESIZE_BORDERS; ++i) {
-      BasicElement *elm =
-          new BasicElement(resize_border_, owner, NULL, NULL, false);
+      BasicElement *elm = new BasicElement(owner, NULL, NULL, false);
       const ResizeBorderInfo *info = &kResizeBordersInfo[i];
       elm->SetRelativeX(info->x);
       elm->SetRelativeY(info->y);

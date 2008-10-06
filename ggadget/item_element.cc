@@ -30,14 +30,10 @@ namespace ggadget {
 
 class ItemElement::Impl {
  public:
-  Impl(BasicElement *parent)
-    : parent_(NULL), selected_(false), mouseover_(false),
-      drawoverlay_(true), background_(NULL) {
-    if (parent->IsInstanceOf(ListBoxElement::CLASS_ID)) {
-      parent_ = down_cast<ListBoxElement *>(parent);
-    } else {
-      LOG("Item element is not contained inside a parent of the correct type.");
-    }
+  Impl(ItemElement *owner)
+      : owner_(owner),
+        selected_(false), mouseover_(false),
+        drawoverlay_(true), background_(NULL) {
   }
 
   ~Impl() {
@@ -45,33 +41,49 @@ class ItemElement::Impl {
     background_ = NULL;
   }
 
-  bool IsInsideComboBox() const {
-    return parent_ && parent_->GetParentElement() &&
-        parent_->GetParentElement()->IsInstanceOf(ComboBoxElement::CLASS_ID);
+  ListBoxElement *GetListBox() {
+    BasicElement *parent = owner_->GetParentElement();
+    if (parent && parent->IsInstanceOf(ListBoxElement::CLASS_ID))
+      return down_cast<ListBoxElement *>(parent);
+    LOG("Item element is not contained inside a parent of the correct type.");
+    return NULL;
   }
 
-  ListBoxElement *parent_;
+  ComboBoxElement *GetComboBox() {
+    ListBoxElement *listbox = GetListBox();
+    if (!listbox)
+      return NULL;
+
+    BasicElement *grandparent = listbox->GetParentElement();
+    if (grandparent && grandparent->IsInstanceOf(ComboBoxElement::CLASS_ID))
+      return down_cast<ComboBoxElement *>(grandparent);
+    return NULL;
+  }
+
+  ScriptableInterface *GetScriptableParent() {
+    ComboBoxElement *combobox = GetComboBox();
+    if (combobox)
+      return combobox;
+    BasicElement *parent = owner_->GetParentElement();
+    return parent ? parent : owner_->GetView()->GetScriptable();
+  }
+
+  ItemElement *owner_;
   bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
 };
 
-ItemElement::ItemElement(BasicElement *parent, View *view,
-                         const char *tagname, const char *name)
-    : BasicElement(parent, view, tagname, name, true),
-      impl_(new Impl(parent)) {
+ItemElement::ItemElement(View *view, const char *tagname, const char *name)
+    : BasicElement(view, tagname, name, true),
+      impl_(new Impl(this)) {
   SetEnabled(true);
-}
-
-void ItemElement::DoRegister() {
-  BasicElement::DoRegister();
-  if (impl_->IsInsideComboBox()) {
-    // This Item is in a combobox, so override BasicElement constant.
-    RegisterConstant("parentElement", impl_->parent_->GetParentElement());
-  }
 }
 
 void ItemElement::DoClassRegister() {
   BasicElement::DoClassRegister();
+  RegisterProperty("parentElement",
+                   NewSlot(&Impl::GetScriptableParent, &ItemElement::impl_),
+                   NULL);
   RegisterProperty("background",
                    NewSlot(&ItemElement::GetBackground),
                    NewSlot(&ItemElement::SetBackground));
@@ -97,28 +109,23 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
     impl_->background_->Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
   }
 
-  if (impl_->drawoverlay_ && (impl_->selected_ || impl_->mouseover_)) {
-    if (impl_->parent_) {
-      const Texture *overlay;
-      if (impl_->selected_) {
-        overlay = impl_->parent_->GetItemSelectedTexture();
-      } else {
-        overlay = impl_->parent_->GetItemOverTexture();
-      }
-      if (overlay) {
-        overlay->Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
-      }
-    }
+  ListBoxElement *listbox = impl_->GetListBox();
+  if (impl_->drawoverlay_ && listbox) {
+    const Texture *overlay = NULL;
+    if (impl_->selected_)
+      overlay = listbox->GetItemSelectedTexture();
+    if (!overlay && impl_->mouseover_)
+      overlay = listbox->GetItemOverTexture();
+    if (overlay)
+      overlay->Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
   }
 
   DrawChildren(canvas);
 
-  if (impl_->drawoverlay_ && impl_->parent_->HasItemSeparator()) {
-    const Texture *item_separator = impl_->parent_->GetItemSeparatorTexture();
-    if (item_separator) {
-      item_separator->Draw(canvas, 0, GetPixelHeight() - 2,
-                           GetPixelWidth(), 2);
-    }
+  if (impl_->drawoverlay_ && listbox->HasItemSeparator()) {
+    const Texture *item_separator = listbox->GetItemSeparatorTexture();
+    if (item_separator)
+      item_separator->Draw(canvas, 0, GetPixelHeight() - 2, GetPixelWidth(), 2);
   }
 }
 
@@ -199,21 +206,20 @@ bool ItemElement::AddLabelWithText(const char *text) {
   return false;
 }
 
-BasicElement *ItemElement::CreateInstance(BasicElement *parent, View *view,
-                                          const char *name) {
-  return new ItemElement(parent, view, "item", name);
+BasicElement *ItemElement::CreateInstance(View *view, const char *name) {
+  return new ItemElement(view, "item", name);
 }
 
-BasicElement *ItemElement::CreateListItemInstance(BasicElement *parent,
-                                                  View *view,
+BasicElement *ItemElement::CreateListItemInstance(View *view,
                                                   const char *name) {
-  return new ItemElement(parent, view, "listitem", name);
+  return new ItemElement(view, "listitem", name);
 }
 
 void ItemElement::GetDefaultSize(double *width, double *height) const {
-  if (impl_->parent_) {
-    *width  = impl_->parent_->GetItemPixelWidth();
-    *height = impl_->parent_->GetItemPixelHeight();
+  ListBoxElement *listbox = impl_->GetListBox();
+  if (listbox) {
+    *width  = listbox->GetItemPixelWidth();
+    *height = listbox->GetItemPixelHeight();
   } else {
     *width = *height = 0;
   }
@@ -227,39 +233,49 @@ void ItemElement::GetDefaultPosition(double *x, double *y) const {
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
-   case Event::EVENT_MOUSE_CLICK:
-     if (impl_->parent_) {
-       ElementHolder self_holder(this);
-       // Need to invoke selection through parent, since
-       // parent knows about multiselect status.
-       if (event.GetModifier() & Event::MOD_SHIFT) {
-         impl_->parent_->SelectRange(this);
-       } else if (event.GetModifier() & Event::MOD_CONTROL) {
-         impl_->parent_->AppendSelection(this);
-       } else {
-         impl_->parent_->SetSelectedItem(this);
-       }
+    case Event::EVENT_MOUSE_CLICK: {
+      ListBoxElement *listbox = impl_->GetListBox();
+      if (listbox) {
+        ElementHolder self_holder(this);
+        // Need to invoke selection through parent, since
+        // parent knows about multiselect status.
+        if (event.GetModifier() & Event::MOD_SHIFT) {
+          listbox->SelectRange(this);
+        } else if (event.GetModifier() & Event::MOD_CONTROL) {
+          listbox->AppendSelection(this);
+        } else {
+          listbox->SetSelectedItem(this);
+        }
 
-       // If inside combobox, turn off droplist on click.
-       if (self_holder.Get() && impl_->IsInsideComboBox() &&
-           impl_->parent_->GetParentElement() == GetView()->GetPopupElement()) {
-         GetView()->SetPopupElement(NULL);
-       }
-     }
-    break;
-   case Event::EVENT_MOUSE_OUT:
-    impl_->mouseover_ = false;
-    QueueDraw();
-    break;
-   case Event::EVENT_MOUSE_OVER:
-    impl_->mouseover_ = true;
-    QueueDraw();
-    break;
-   default:
-    result = EVENT_RESULT_UNHANDLED;
-    break;
+        // If inside combobox, turn off droplist on click.
+        if (self_holder.Get()) {
+          ComboBoxElement *combobox = impl_->GetComboBox();
+          if (combobox) {
+            combobox->SetDroplistVisible(false);
+            combobox->Focus();
+          }
+        }
+      }
+      break;
+    }
+    case Event::EVENT_MOUSE_OUT:
+      impl_->mouseover_ = false;
+      QueueDraw();
+      break;
+    case Event::EVENT_MOUSE_OVER:
+      impl_->mouseover_ = true;
+      QueueDraw();
+      break;
+    default:
+      result = EVENT_RESULT_UNHANDLED;
+      break;
   }
   return result;
+}
+
+EventResult ItemElement::HandleKeyEvent(const KeyboardEvent &event) {
+  ListBoxElement *listbox = impl_->GetListBox();
+  return listbox ? listbox->HandleKeyEvent(event) : EVENT_RESULT_UNHANDLED;
 }
 
 bool ItemElement::HasOpaqueBackground() const {

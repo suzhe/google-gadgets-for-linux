@@ -69,7 +69,7 @@ class DockedMainViewDecorator::Impl {
         owner_->GetChildren()->RemoveElement(resize_borders_[i]);
         resize_borders_[i] = NULL;
       } else if (visibles[i] && !resize_borders_[i]) {
-        resize_borders_[i] = new ImgElement(NULL, owner_, NULL);
+        resize_borders_[i] = new ImgElement(owner_, NULL);
         resize_borders_[i]->SetStretchMiddle(true);
         resize_borders_[i]->SetVisible(false);
         resize_borders_[i]->SetEnabled(false);

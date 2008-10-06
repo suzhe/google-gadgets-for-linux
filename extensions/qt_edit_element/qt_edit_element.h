@@ -34,7 +34,7 @@ class QtEditElement : public EditElementBase {
  public:
   DEFINE_CLASS_ID(0xea8a5426cb544282, EditElementBase);
 
-  QtEditElement(BasicElement *parent, View *view, const char *name);
+  QtEditElement(View *view, const char *name);
   virtual ~QtEditElement();
 
   virtual void Layout();
@@ -72,8 +72,7 @@ class QtEditElement : public EditElementBase {
   virtual void SetAlign(CanvasInterface::Alignment align);
 
  public:
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

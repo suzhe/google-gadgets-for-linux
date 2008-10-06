@@ -40,15 +40,13 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
  public:
   /**
    * Constructor.
-   *
-   * @param parent The parent element.
    * @param view The View which this element belongs to.
    * @param tag_name Type name of this element, must be static const string.
    * @param name Name of this element.
-   * @param children If this element can have children elements.
+   * @param allow_children If this element can have children elements.
    */
-  BasicElement(BasicElement *parent, View *view,
-               const char *tag_name, const char *name, bool children);
+  BasicElement(View *view, const char *tag_name, const char *name,
+               bool allow_children);
   virtual ~BasicElement();
 
  protected:
@@ -94,7 +92,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
   /**
    * Sets the parent element.
-   * Only for @c Elements class which knows how to keep integrity.
+   * Only for @c Elements class or who knows how to keep integrity.
    */
   void SetParentElement(BasicElement *parent);
 

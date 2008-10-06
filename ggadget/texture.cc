@@ -65,7 +65,7 @@ class Texture::Impl {
         canvas->PushState();
         canvas->MultiplyOpacity(opacity_);
       }
-      canvas->DrawFilledRect(x, x, width, height, color_);
+      canvas->DrawFilledRect(x, y, width, height, color_);
       if (opacity_ != 1.0)
         canvas->PopState();
     }

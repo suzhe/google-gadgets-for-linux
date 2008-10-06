@@ -60,8 +60,8 @@ class ViewDecoratorBase::Impl {
       child_resizable_(ViewInterface::RESIZABLE_TRUE),
       option_prefix_(option_prefix),
       owner_(owner),
-      view_element_(new ViewElement(NULL, owner, NULL, false)),
-      snapshot_(new CopyElement(NULL, owner, NULL)) {
+      view_element_(new ViewElement(owner, NULL, false)),
+      snapshot_(new CopyElement(owner, NULL)) {
     view_element_->SetVisible(true);
     snapshot_->SetVisible(false);
     owner->GetChildren()->InsertElement(view_element_, NULL);
@@ -573,7 +573,7 @@ void ViewDecoratorBase::AddZoomMenuItem(MenuInterface *menu) const {
   // other menu items.
   if (!has_checked)
     flags[0] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
-  
+
   int priority =  MenuInterface::MENU_ITEM_PRI_DECORATOR;
   MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
   for (int i = 0; i < kNumZoomMenuItems; ++i) {

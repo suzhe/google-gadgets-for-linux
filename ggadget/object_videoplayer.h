@@ -37,12 +37,10 @@ class View;
 class ObjectVideoPlayer : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x8D5F2E792816428F, BasicElement);
-  ObjectVideoPlayer(BasicElement *parent, View *view,
-                    const char *tag_name, const char *name, bool children);
+  ObjectVideoPlayer(View *view, const char *name);
   virtual ~ObjectVideoPlayer();
 
-  static BasicElement *CreateInstance(BasicElement *parent, View *view,
-                                      const char *name);
+  static BasicElement *CreateInstance(View *view, const char *name);
 
   void Layout();
 

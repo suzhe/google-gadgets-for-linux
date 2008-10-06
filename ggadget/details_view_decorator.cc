@@ -94,7 +94,7 @@ bool DetailsViewDecorator::ShowDecoratedView(
       SetCaptionClickable(true);
     }
     if (flags & DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) {
-      ButtonElement *negative_button = new ButtonElement(NULL, this, NULL);
+      ButtonElement *negative_button = new ButtonElement(this, NULL);
       negative_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
       negative_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
       negative_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
@@ -107,7 +107,7 @@ bool DetailsViewDecorator::ShowDecoratedView(
       AddActionElement(negative_button);
     }
     if (flags & DETAILS_VIEW_FLAG_REMOVE_BUTTON) {
-      ButtonElement *remove_button = new ButtonElement(NULL, this, NULL);
+      ButtonElement *remove_button = new ButtonElement(this, NULL);
       remove_button->SetImage(Variant(kVDDetailsButtonBkgndNormal));
       remove_button->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
       remove_button->SetDownImage(Variant(kVDDetailsButtonBkgndClick));

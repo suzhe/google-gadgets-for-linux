@@ -19,7 +19,6 @@
 #include "basic_element.h"
 #include "canvas_interface.h"
 #include "elements.h"
-#include "object_videoplayer.h"
 #include "scriptable_event.h"
 #include "signals.h"
 #include "view.h"
@@ -45,18 +44,10 @@ class VideoElementBase::Impl {
   EventSignal on_media_change_event_;
 };
 
-VideoElementBase::VideoElementBase(BasicElement *parent, View *view,
-                                   const char *tag_name, const char *name,
-                                   bool children)
-    : BasicElement(parent, view, tag_name, name, children),
+VideoElementBase::VideoElementBase(View *view, const char *tag_name,
+                                   const char *name)
+    : BasicElement(view, tag_name, name, false),
       impl_(new Impl) {
-  // When hosted by an object element, map the size to the parent's size.
-  if (parent && parent->IsInstanceOf(ObjectVideoPlayer::CLASS_ID)) {
-    SetRelativeX(0);
-    SetRelativeY(0);
-    SetRelativeWidth(1.0);
-    SetRelativeHeight(1.0);
-  }
 }
 
 VideoElementBase::~VideoElementBase() {

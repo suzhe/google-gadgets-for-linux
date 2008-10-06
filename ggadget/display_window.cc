@@ -131,7 +131,7 @@ class DisplayWindow::Impl {
       }
       if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        return Variant(GetListBoxItems(combobox->GetListBox()));
+        return Variant(GetListBoxItems(combobox->GetDroplist()));
       }
       if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
         EditElementBase *edit = down_cast<EditElementBase *>(element_);
@@ -173,7 +173,7 @@ class DisplayWindow::Impl {
             SetListBoxItems(down_cast<ListBoxElement *>(element_), array);
           } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
             SetListBoxItems(
-                down_cast<ComboBoxElement *>(element_)->GetListBox(), array);
+                down_cast<ComboBoxElement *>(element_)->GetDroplist(), array);
           } else {
             invalid = true;
           }
@@ -244,7 +244,7 @@ class DisplayWindow::Impl {
       }
       if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        return Variant(GetListBoxValue(combobox->GetListBox()));
+        return Variant(GetListBoxValue(combobox->GetDroplist()));
       }
       // For others it is the displayed text.
       return GetText();
@@ -270,7 +270,7 @@ class DisplayWindow::Impl {
         valid = SetListBoxValue(down_cast<ListBoxElement *>(element_), value);
       } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        valid = SetListBoxValue(combobox->GetListBox(), value);
+        valid = SetListBoxValue(combobox->GetDroplist(), value);
       } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
         bool value_bool;
         if (value.ConvertToBool(&value_bool)) {
@@ -396,8 +396,8 @@ class DisplayWindow::Impl {
             ComboBoxElement *element = down_cast<ComboBoxElement *>(
                 elements->AppendElement("combobox", ctrl_id));
             element->SetType(ComboBoxElement::COMBO_DROPLIST);
-            element->GetListBox()->SetItemWidth(Variant("100%"));
-            element->GetListBox()->SetItemHeight(Variant(kListItemHeight));
+            element->GetDroplist()->SetItemWidth(Variant("100%"));
+            element->GetDroplist()->SetItemHeight(Variant(kListItemHeight));
             element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));

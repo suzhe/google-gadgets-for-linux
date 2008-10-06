@@ -91,9 +91,8 @@ static const char *tag_strings[] = {
 
 static int g_video_element_count = 0;
 
-GstVideoElement::GstVideoElement(BasicElement *parent, View *view,
-                                 const char *name)
-    : VideoElementBase(parent, view, "video", name, false),
+GstVideoElement::GstVideoElement(View *view, const char *name)
+    : VideoElementBase(view, "video", name),
       geometry_initialized_(false),
       playbin_(NULL),
       receive_image_handler_(NULL),
@@ -209,9 +208,8 @@ GstVideoElement::~GstVideoElement() {
     gst_deinit();
 }
 
-BasicElement *GstVideoElement::CreateInstance(BasicElement *parent, View *view,
-                                              const char *name) {
-  return new GstVideoElement(parent, view, name);
+BasicElement *GstVideoElement::CreateInstance(View *view, const char *name) {
+  return new GstVideoElement(view, name);
 }
 
 bool GstVideoElement::IsAvailable(const std::string &name) {

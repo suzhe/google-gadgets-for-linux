@@ -758,9 +758,8 @@ class ContentAreaElement::Impl {
   Color background_color_, mouseover_color_, mousedown_color_;
 };
 
-ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
-                                       const char *name)
-    : ScrollingElement(parent, view, "contentarea", name, false),
+ContentAreaElement::ContentAreaElement(View *view, const char *name)
+    : ScrollingElement(view, "contentarea", name, false),
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);
@@ -934,10 +933,8 @@ EventResult ContentAreaElement::HandleMouseEvent(const MouseEvent &event) {
          ScrollingElement::HandleMouseEvent(event) : result;
 }
 
-BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
-                                                 View *view,
-                                                 const char *name) {
-  return new ContentAreaElement(parent, view, name);
+BasicElement *ContentAreaElement::CreateInstance(View *view, const char *name) {
+  return new ContentAreaElement(view, name);
 }
 
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {

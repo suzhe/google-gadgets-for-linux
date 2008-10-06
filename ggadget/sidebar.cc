@@ -50,7 +50,7 @@ class SideBar::Impl : public View {
    public:
     SideBarViewHost(SideBar::Impl *owner, size_t index)
       : owner_(owner),
-        view_element_(new ViewElement(owner->main_div_, owner, NULL, true)),
+        view_element_(new ViewElement(owner, NULL, true)),
         initial_index_(index) {
       view_element_->SetVisible(false);
       owner_->InsertViewElement(index, view_element_);
@@ -412,7 +412,7 @@ class SideBar::Impl : public View {
   void InsertPlaceholder(size_t index, double height) {
     // only one null element is allowed
     if (!null_element_) {
-      null_element_ = new ViewElement(main_div_, this, NULL, true);
+      null_element_ = new ViewElement(this, NULL, true);
     }
     null_element_->SetPixelHeight(height);
     InsertViewElement(index, null_element_);
@@ -449,7 +449,7 @@ class SideBar::Impl : public View {
   }
 
   void SetupUI() {
-    ImgElement *background = new ImgElement(NULL, this, NULL);
+    ImgElement *background = new ImgElement(this, NULL);
     GetChildren()->InsertElement(background, NULL);
     background->SetSrc(Variant(kVDMainBackground));
     background->SetStretchMiddle(true);
@@ -460,32 +460,32 @@ class SideBar::Impl : public View {
     background->SetRelativeHeight(1);
     background->EnableCanvasCache(true);
 
-    top_div_ = new DivElement(NULL, this, NULL);
+    top_div_ = new DivElement(this, NULL);
     GetChildren()->InsertElement(top_div_, NULL);
     top_div_->SetPixelX(kBorderWidth);
     top_div_->SetPixelY(kBorderWidth);
 
-    ImgElement *icon = new ImgElement(top_div_, this, NULL);
+    ImgElement *icon = new ImgElement(this, NULL);
     top_div_->GetChildren()->InsertElement(icon, NULL);
     icon->SetSrc(Variant(kSideBarGoogleIcon));
     icon->SetPixelX(0);
     icon->SetPixelY(0);
 
-    DivElement *button_div = new DivElement(top_div_, this, NULL);
+    DivElement *button_div = new DivElement(this, NULL);
     top_div_->GetChildren()->InsertElement(button_div, NULL);
     button_div->SetRelativePinX(1);
     button_div->SetRelativeX(1);
     button_div->SetPixelY(0);
     button_div->SetRelativeHeight(1);
 
-    add_gadget_button_ = new ButtonElement(button_div, this, NULL);
+    add_gadget_button_ = new ButtonElement(this, NULL);
     button_div->GetChildren()->InsertElement(add_gadget_button_, NULL);
     add_gadget_button_->SetImage(Variant(kSBButtonAddUp));
     add_gadget_button_->SetDownImage(Variant(kSBButtonAddDown));
     add_gadget_button_->SetOverImage(Variant(kSBButtonAddOver));
     add_gadget_button_->SetTooltip(GM_("SIDEBAR_ADD_GADGETS_TOOLTIP"));
 
-    menu_button_ = new ButtonElement(button_div, this, NULL);
+    menu_button_ = new ButtonElement(this, NULL);
     button_div->GetChildren()->InsertElement(menu_button_, NULL);
     menu_button_->SetImage(Variant(kSBButtonMenuUp));
     menu_button_->SetDownImage(Variant(kSBButtonMenuDown));
@@ -493,7 +493,7 @@ class SideBar::Impl : public View {
     menu_button_->SetTooltip(GM_("SIDEBAR_MENU_BUTTON_TOOLTIP"));
     menu_button_->ConnectOnClickEvent(NewSlot(this, &Impl::OnMenuButtonClick));
 
-    close_button_ = new ButtonElement(button_div, this, NULL);
+    close_button_ = new ButtonElement(this, NULL);
     button_div->GetChildren()->InsertElement(close_button_, NULL);
     close_button_->SetImage(Variant(kSBButtonMinimizeUp));
     close_button_->SetDownImage(Variant(kSBButtonMinimizeDown));
@@ -503,7 +503,7 @@ class SideBar::Impl : public View {
     Elements *buttons = button_div->GetChildren();
     double max_button_height = 0;
     double buttons_width = 0;
-    for (int i = 0; i < 3; ++i) {
+    for (size_t i = 0; i < 3; ++i) {
       BasicElement *button = buttons->GetItemByIndex(i);
       button->Layout();
       button->SetRelativePinY(0.5);
@@ -515,7 +515,7 @@ class SideBar::Impl : public View {
     button_div->SetPixelWidth(buttons_width);
     top_div_->SetPixelHeight(std::max(icon->GetSrcHeight(), max_button_height));
 
-    main_div_ = new DivElement(NULL, this, NULL);
+    main_div_ = new DivElement(this, NULL);
     GetChildren()->InsertElement(main_div_, NULL);
     main_div_->SetPixelX(kBorderWidth);
     main_div_->SetPixelY(top_div_->GetPixelY() + top_div_->GetPixelHeight());

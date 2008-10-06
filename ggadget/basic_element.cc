@@ -41,11 +41,11 @@ namespace ggadget {
 
 class BasicElement::Impl {
  public:
-  Impl(BasicElement *parent, View *view, const char *tag_name, const char *name,
-       bool children, BasicElement *owner)
-      : parent_(parent),
+  Impl(View *view, const char *tag_name, const char *name,
+       bool allow_children, BasicElement *owner)
+      : parent_(NULL),
         owner_(owner),
-        children_(children ?
+        children_(allow_children ?
                   new Elements(view->GetElementFactory(), owner, view) :
                   NULL),
         view_(view),
@@ -81,8 +81,6 @@ class BasicElement::Impl {
         content_changed_(false),
         draw_queued_(false),
         designer_mode_(false) {
-    if (parent)
-      ASSERT(parent->GetView() == view);
   }
 
   ~Impl() {
@@ -1087,10 +1085,9 @@ static const char *kFlipNames[] = {
   "none", "horizontal", "vertical", "both",
 };
 
-BasicElement::BasicElement(BasicElement *parent, View *view,
-                           const char *tag_name, const char *name,
-                           bool children)
-    : impl_(new Impl(parent, view, tag_name, name, children, this)) {
+BasicElement::BasicElement(View *view, const char *tag_name, const char *name,
+                           bool allow_children)
+    : impl_(new Impl(view, tag_name, name, allow_children, this)) {
 }
 
 void BasicElement::DoRegister() {

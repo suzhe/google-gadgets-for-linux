@@ -312,7 +312,7 @@ class KeyboardEvent : public Event {
   void SetModifier(int m) { modifier_ = m; }
 
  private:
-  int key_code_;
+  unsigned int key_code_;
   int modifier_;
 };
 

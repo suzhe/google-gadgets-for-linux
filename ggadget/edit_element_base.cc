@@ -56,8 +56,8 @@ class EditElementBase::Impl {
   EventSignal onchange_event_;
 };
 
-EditElementBase::EditElementBase(BasicElement *parent, View *view, const char *name)
-    : ScrollingElement(parent, view, "edit", name, false),
+EditElementBase::EditElementBase(View *view, const char *name)
+    : ScrollingElement(view, "edit", name, false),
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);

@@ -64,9 +64,7 @@ class VideoElementBase : public BasicElement {
   static const int kMaxVolume = 0;
 
  public:
-  VideoElementBase(BasicElement *parent, View *view,
-                   const char *tag_name, const char *name,
-                   bool children);
+  VideoElementBase(View *view, const char *tag_name, const char *name);
   virtual ~VideoElementBase();
 
   // Standard gadget APIs.

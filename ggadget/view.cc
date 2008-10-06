@@ -708,17 +708,19 @@ class View::Impl {
     BasicElement *parent = current->GetParentElement();
     Elements *elements = parent ? parent->GetChildren() : &children_;
     size_t index = current->GetIndex();
-    if (index + 1 < elements->GetCount()) {
-      BasicElement *result =
-          GetFirstFocusInTree(elements->GetItemByIndex(index + 1));
-      if (result)
-        return result;
+    if (index != kInvalidIndex) {
+      for (size_t i = index + 1; i < elements->GetCount(); i++) {
+        BasicElement *result = GetFirstFocusInTree(elements->GetItemByIndex(i));
+        if (result)
+          return result;
+      }
     }
     // All next siblings and their children are not focusable, up to the parent.
     if (parent)
       return GetNextFocusElement(parent);
 
     // Now at the top level, wrap back to the first element.
+    ASSERT(index != kInvalidIndex); // Otherwise it should have a parent.
     for (size_t i = 0; i <= index; i++) {
       BasicElement *result = GetFirstFocusInTree(children_.GetItemByIndex(i));
       if (result)
@@ -732,11 +734,13 @@ class View::Impl {
     BasicElement *parent = current->GetParentElement();
     Elements *elements = parent ? parent->GetChildren() : &children_;
     size_t index = current->GetIndex();
-    if (index > 0) {
-      BasicElement *result =
-          GetLastFocusInTree(elements->GetItemByIndex(index - 1));
-      if (result)
-        return result;
+    if (index != kInvalidIndex) {
+      for (size_t i = index; i > 0; i--) {
+        BasicElement *result = GetLastFocusInTree(
+            elements->GetItemByIndex(i - 1));
+        if (result)
+          return result;
+      }
     }
     // All previous siblings and their children are not focusable, up to the
     // parent.
@@ -744,6 +748,7 @@ class View::Impl {
       return GetPreviousFocusElement(parent);
 
     // Now at the top level, wrap back to the last element.
+    ASSERT(index != kInvalidIndex); // Otherwise it should have a parent.
     for (size_t i = children_.GetCount(); i > index; i--) {
       BasicElement *result =
           GetLastFocusInTree(children_.GetItemByIndex(i - 1));
@@ -936,11 +941,29 @@ class View::Impl {
 #endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
-        if (!focused_element_.Get())
+        if (!focused_element_.Get()) {
           SetFocusToFirstElement();
+        } else if (focused_element_.Get()->IsReallyEnabled()) {
+          // Restore focus to the original focused element if it is still there.
+          if (focused_element_.Get()->OnOtherEvent(SimpleEvent(
+              Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
+            focused_element_.Reset(NULL);
+            SetFocusToFirstElement();
+          }
+        } else {
+          focused_element_.Get()->OnOtherEvent(SimpleEvent(
+              Event::EVENT_FOCUS_OUT));
+          focused_element_.Reset(NULL);
+          SetFocusToFirstElement();
+        }
         break;
       case Event::EVENT_FOCUS_OUT:
-        SetFocus(NULL);
+        if (focused_element_.Get()) {
+          focused_element_.Get()->OnOtherEvent(SimpleEvent(
+              Event::EVENT_FOCUS_OUT));
+          // Don't clear focused_element_ so that when the focus come back
+          // to this view, we can restore the focus to the element.
+        }
         break;
       case Event::EVENT_CANCEL:
         FireEvent(&scriptable_event, oncancel_event_);
@@ -1457,21 +1480,24 @@ class View::Impl {
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
     if (!graphics_) return NULL;
 
-    Variant::Type type = src.type();
-    if (type == Variant::TYPE_STRING) {
-      const char *filename = VariantValue<const char*>()(src);
-      FileManagerInterface *fm = owner_->GetFileManager();
-      return image_cache_.LoadImage(graphics_, fm, filename, is_mask);
-    } else if (type == Variant::TYPE_SCRIPTABLE) {
-      const ScriptableBinaryData *binary =
-          VariantValue<const ScriptableBinaryData *>()(src);
-      if (binary)
-        return graphics_->NewImage("", binary->data(), is_mask);
-    } else {
-      LOG("Unsupported type of image src: '%s'", src.Print().c_str());
-      DLOG("src=%s", src.Print().c_str());
+    switch (src.type()) {
+      case Variant::TYPE_STRING: {
+        const char *filename = VariantValue<const char*>()(src);
+        FileManagerInterface *fm = owner_->GetFileManager();
+        return image_cache_.LoadImage(graphics_, fm, filename, is_mask);
+      }
+      case Variant::TYPE_SCRIPTABLE: {
+        const ScriptableBinaryData *binary =
+            VariantValue<const ScriptableBinaryData *>()(src);
+        return binary ? graphics_->NewImage("", binary->data(), is_mask) : NULL;
+      }
+      case Variant::TYPE_VOID:
+        return NULL;
+      default:
+        LOG("Unsupported type of image src: '%s'", src.Print().c_str());
+        DLOG("src=%s", src.Print().c_str());
+        return NULL;
     }
-    return NULL;
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {

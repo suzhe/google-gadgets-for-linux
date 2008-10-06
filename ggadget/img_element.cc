@@ -74,8 +74,8 @@ class ImgElement::Impl {
   bool stretch_middle_;
 };
 
-ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "img", name, false),
+ImgElement::ImgElement(View *view, const char *name)
+    : BasicElement(view, "img", name, false),
       impl_(new Impl) {
 }
 
@@ -267,9 +267,8 @@ bool ImgElement::HasOpaqueBackground() const {
   return image ? image->IsFullyOpaque() : false;
 }
 
-BasicElement *ImgElement::CreateInstance(BasicElement *parent, View *view,
-                                         const char *name) {
-  return new ImgElement(parent, view, name);
+BasicElement *ImgElement::CreateInstance(View *view, const char *name) {
+  return new ImgElement(view, name);
 }
 
 

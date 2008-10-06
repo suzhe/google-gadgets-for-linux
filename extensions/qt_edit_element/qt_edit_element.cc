@@ -79,8 +79,8 @@ static void SetCursorSelection(QTextCursor *cur, int start, int end) {
   cur->setPosition(end, QTextCursor::KeepAnchor);
 }
 
-QtEditElement::QtEditElement(BasicElement *parent, View *view, const char *name)
-    : EditElementBase(parent, view, name),
+QtEditElement::QtEditElement(View *view, const char *name)
+    : EditElementBase(view, name),
       cursor_(NULL),
       multiline_(false),
       bold_(false),
@@ -624,10 +624,8 @@ void QtEditElement::OnScrolled() {
   }
 }
 
-BasicElement *QtEditElement::CreateInstance(BasicElement *parent,
-                                             View *view,
-                                             const char *name) {
-  return new QtEditElement(parent, view, name);
+BasicElement *QtEditElement::CreateInstance(View *view, const char *name) {
+  return new QtEditElement(view, name);
 }
 
 void QtEditElement::MoveCursor(QTextCursor::MoveOperation op, int count,

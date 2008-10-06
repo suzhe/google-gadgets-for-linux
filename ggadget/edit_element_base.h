@@ -35,7 +35,7 @@ class EditElementBase : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0x6C5D2E793806428F, ScrollingElement);
 
-  EditElementBase(BasicElement *parent, View *view, const char *name);
+  EditElementBase(View *view, const char *name);
   virtual ~EditElementBase();
 
  protected:

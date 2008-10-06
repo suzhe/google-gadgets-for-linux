@@ -33,8 +33,6 @@
 #define Finalize gtk_flash_element_LTX_Finalize
 #define RegisterElementExtension gtk_flash_element_LTX_RegisterElementExtension
 
-#define WINDOWED_FLASH "window_flash"
-
 extern "C" {
   bool Initialize() {
     LOGI("Initialize gtk_flash_element extension.");
@@ -47,10 +45,6 @@ extern "C" {
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
     if (factory) {
-      LOGI("Register gtk_windowed_flash_element extension, using name %s.",
-           WINDOWED_FLASH);
-      factory->RegisterElementClass(
-          WINDOWED_FLASH, &ggadget::gtk::GtkWindowedFlashElement::CreateInstance);
       LOGI("Register gtk_flash_element extension, using name \"flash\".");
       factory->RegisterElementClass(
           "flash", &ggadget::gtk::GtkFlashElement::CreateInstance);
@@ -93,8 +87,8 @@ class GtkFlashElement::Impl {
         LOGW("Plugin doesn't support windowless mode.");
         // The plugin doesn't support windowless, turn to window mode flash
         // element. The child element will create a new plugin instance.
-        flash_element_ = view->GetElementFactory()->CreateElement(
-            WINDOWED_FLASH, owner_, view, owner->GetName().c_str());
+        flash_element_ = new GtkWindowedFlashElement(owner_, view,
+                                                     owner_->GetName().c_str());
         if (flash_element_)
           LOGW("Use window mode instead.");
         else
@@ -261,9 +255,8 @@ class GtkFlashElement::Impl {
   bool focused_;
 };
 
-GtkFlashElement::GtkFlashElement(BasicElement *parent, View *view,
-                                 const char *name)
-    : BasicElement(parent, view, "flash", name, false),
+GtkFlashElement::GtkFlashElement(View *view, const char *name)
+    : BasicElement(view, "flash", name, false),
       impl_(new Impl(this, view)) {
 }
 
@@ -271,9 +264,8 @@ GtkFlashElement::~GtkFlashElement() {
   delete impl_;
 }
 
-BasicElement *GtkFlashElement::CreateInstance(BasicElement *parent, View *view,
-                                              const char *name) {
-  return new GtkFlashElement(parent, view, name);
+BasicElement *GtkFlashElement::CreateInstance(View *view, const char *name) {
+  return new GtkFlashElement(view, name);
 }
 
 void GtkFlashElement::DoRegister() {
@@ -288,11 +280,12 @@ void GtkFlashElement::DoRegister() {
       if (impl_->scriptable_plugin_)
         RegisterConstant("movie", impl_->scriptable_plugin_);
     }
-  } else if (!impl_->flash_element_) {
-    LOGW("Flash player plugin is not initialized.");
+  } else if (impl_->flash_element_) {
+    // Trigger property registration.
+    impl_->flash_element_->GetProperty("");
+  } else {
+    LOG("Flash player plugin is not initialized.");
   }
-  // else, the window flash element should register the above
-  // properties for us.
 }
 
 void GtkFlashElement::Layout() {

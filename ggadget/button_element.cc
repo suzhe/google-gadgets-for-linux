@@ -110,8 +110,8 @@ class ButtonElement::Impl {
   IconPosition icon_position_;
 };
 
-ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "button", name, false),
+ButtonElement::ButtonElement(View *view, const char *name)
+    : BasicElement(view, "button", name, false),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
 }
@@ -310,9 +310,8 @@ const TextFrame *ButtonElement::GetTextFrame() const {
   return &impl_->text_;
 }
 
-BasicElement *ButtonElement::CreateInstance(BasicElement *parent, View *view,
-                                            const char *name) {
-  return new ButtonElement(parent, view, name);
+BasicElement *ButtonElement::CreateInstance(View *view, const char *name) {
+  return new ButtonElement(view, name);
 }
 
 EventResult ButtonElement::HandleMouseEvent(const MouseEvent &event) {
