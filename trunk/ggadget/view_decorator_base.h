@@ -112,6 +112,12 @@ class ViewDecoratorBase : public View {
   /** Sets tooltip required by child view. */
   void SetChildViewTooltip(const char *tooltip);
 
+  /** Sets the option prefix **/
+  void SetOptionPrefix(const char *option_prefix);
+
+  /** Gets the option prefix **/
+  std::string GetOptionPrefix();
+
   /**
    * Gets the size of child view.
    *

@@ -63,8 +63,7 @@ class  MainViewDecoratorBase::Impl {
     void (Impl::*handler)(void);
   };
 
-  Impl(MainViewDecoratorBase *owner, const char *option_prefix,
-       bool show_minimized_background)
+  Impl(MainViewDecoratorBase *owner, bool show_minimized_background)
     : owner_(owner),
       minimized_(false),
       popped_out_(false),
@@ -83,8 +82,7 @@ class  MainViewDecoratorBase::Impl {
       minimized_icon_visiable_(true),
       minimized_caption_visiable_(true),
       original_child_view_(NULL),
-      plugin_flags_connection_(NULL),
-      option_prefix_(option_prefix) {
+      plugin_flags_connection_(NULL) {
   }
 
   void InitDecorator() {
@@ -283,13 +281,17 @@ class  MainViewDecoratorBase::Impl {
   void SaveMinimizedState() {
     Gadget *gadget = owner_->GetGadget();
     // If option prefix is NULL, then means host don't want to save the state.
-    if (gadget && option_prefix_ && *option_prefix_) {
+    std::string option_prefix = owner_->GetOptionPrefix();
+    if (gadget && !option_prefix.empty()) {
       OptionsInterface *opt = gadget->GetOptions();
-      opt->PutInternalValue("main_view_minimized", Variant(minimized_));
-      opt->PutInternalValue("main_view_minimized_icon_visible",
-                            Variant(minimized_icon_visiable_));
-      opt->PutInternalValue("main_view_minimized_caption_visible",
-                            Variant(minimized_caption_visiable_));
+      opt->PutInternalValue((option_prefix + "_minimized").c_str(),
+                            Variant(minimized_));
+      opt->PutInternalValue(
+          (option_prefix + "_minimized_icon_visible").c_str(),
+          Variant(minimized_icon_visiable_));
+      opt->PutInternalValue(
+          (option_prefix + "_minimized_caption_visible").c_str(),
+          Variant(minimized_caption_visiable_));
       DLOG("Save main view minimized state for gadget %d: %s",
            gadget->GetInstanceID(), minimized_ ? "true" : "false");
     }
@@ -297,18 +299,20 @@ class  MainViewDecoratorBase::Impl {
 
   void LoadMinimizedState() {
     Gadget *gadget = owner_->GetGadget();
-    if (gadget && option_prefix_ && *option_prefix_) {
+    std::string prefix = owner_->GetOptionPrefix();
+    if (gadget && !prefix.empty()) {
       OptionsInterface *opt = gadget->GetOptions();
 
-      Variant var = opt->GetInternalValue("main_view_minimized");
+      Variant var = opt->GetInternalValue((prefix + "_minimized").c_str());
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimized(VariantValue<bool>()(var));
       
-      var = opt->GetInternalValue("main_view_minimized_icon_visible");
+      var = opt->GetInternalValue((prefix + "_minimized_icon_visible").c_str());
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimizedIconVisible(VariantValue<bool>()(var));
 
-      var = opt->GetInternalValue("main_view_minimized_caption_visible");
+      var = opt->GetInternalValue(
+          (prefix + "_minimized_caption_visible").c_str());
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimizedCaptionVisible(VariantValue<bool>()(var));
     }
@@ -358,8 +362,6 @@ class  MainViewDecoratorBase::Impl {
 
   View *original_child_view_;
   Connection *plugin_flags_connection_;
-
-  const char *option_prefix_;
 
   Signal0<void> on_popin_signal_;;
   Signal0<void> on_popout_signal_;;
@@ -412,7 +414,7 @@ MainViewDecoratorBase::MainViewDecoratorBase(ViewHostInterface *host,
                                              bool allow_y_margin,
                                              bool show_minimized_background)
   : ViewDecoratorBase(host, option_prefix, allow_x_margin, allow_y_margin),
-    impl_(new Impl(this, option_prefix, show_minimized_background)) {
+    impl_(new Impl(this, show_minimized_background)) {
   impl_->InitDecorator();
 }
 

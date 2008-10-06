@@ -58,7 +58,6 @@ class ViewDecoratorBase::Impl {
       child_frozen_(false),
       child_visible_(true),
       child_resizable_(ViewInterface::RESIZABLE_TRUE),
-      option_prefix_(option_prefix),
       owner_(owner),
       view_element_(new ViewElement(owner, NULL, false)),
       snapshot_(new CopyElement(owner, NULL)) {
@@ -66,6 +65,8 @@ class ViewDecoratorBase::Impl {
     snapshot_->SetVisible(false);
     owner->GetChildren()->InsertElement(view_element_, NULL);
     owner->GetChildren()->InsertElement(snapshot_, NULL);
+    if (option_prefix)
+      option_prefix_ = option_prefix;
   }
 
   void GetClientSize(double *width, double *height) {
@@ -204,7 +205,7 @@ class ViewDecoratorBase::Impl {
   bool child_frozen_;
   bool child_visible_;
   ViewInterface::ResizableMode child_resizable_;
-  const char *option_prefix_;
+  std::string option_prefix_;
   ViewDecoratorBase *owner_;
   ViewElement *view_element_;
   CopyElement *snapshot_;
@@ -277,9 +278,9 @@ void ViewDecoratorBase::UpdateViewSize() {
 
 bool ViewDecoratorBase::LoadChildViewSize() {
   Gadget *gadget = GetGadget();
-  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
-    std::string option_prefix(impl_->option_prefix_);
+  if (gadget && !impl_->option_prefix_.empty()) {
     OptionsInterface *opt = gadget->GetOptions();
+    std::string option_prefix(impl_->option_prefix_);
     Variant vw =
         opt->GetInternalValue((option_prefix + "_width").c_str());
     Variant vh =
@@ -319,7 +320,7 @@ bool ViewDecoratorBase::LoadChildViewSize() {
 
 bool ViewDecoratorBase::SaveChildViewSize() const {
   Gadget *gadget = GetGadget();
-  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
+  if (gadget && !impl_->option_prefix_.empty()) {
     std::string option_prefix(impl_->option_prefix_);
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue((option_prefix + "_width").c_str(),
@@ -391,6 +392,17 @@ void ViewDecoratorBase::SetChildViewTooltip(const char *tooltip) {
   impl_->view_element_->SetTooltip(tooltip);
   // Make sure the tooltip is updated immediately.
   SetTooltip(tooltip);
+}
+
+void ViewDecoratorBase::SetOptionPrefix(const char *option_prefix) {
+  if (option_prefix)
+    impl_->option_prefix_ = option_prefix;
+  else
+    impl_->option_prefix_ = "";
+}
+
+std::string ViewDecoratorBase::GetOptionPrefix() {
+  return impl_->option_prefix_;
 }
 
 void ViewDecoratorBase::GetChildViewSize(double *width, double *height) const {

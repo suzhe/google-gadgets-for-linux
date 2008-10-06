@@ -605,14 +605,18 @@ void JSScriptContext::MaybeGC(JSContext *cx) {
   uint32 last_bytes = rt->gcLastBytes;
   if ((bytes > 8192 && bytes / 4 > last_bytes) ||
       now - last_gc_time_ > kMaxGCInterval) {
+#if 0
     DLOG("GC Triggered: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
          "gcMaxMallocBytes=%u", bytes, last_bytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
+#endif
     JS_GC(cx);
     last_gc_time_ = now;
+#if 0
     DLOG("GC Finished: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
          "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
+#endif
   }
 }
 
