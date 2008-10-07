@@ -114,9 +114,18 @@ class ViewDecoratorBase : public View {
 
   /** Sets the option prefix **/
   void SetOptionPrefix(const char *option_prefix);
-
+  
   /** Gets the option prefix **/
-  std::string GetOptionPrefix();
+  std::string GetOptionPrefix() const;
+
+  /** Checks if options are available **/
+  bool HasOptions() const;
+
+  /** Gets value of an option **/
+  Variant GetOption(const std::string &name) const;
+
+  /** Sets value of an option **/
+  void SetOption(const std::string &name, Variant value) const;
 
   /**
    * Gets the size of child view.
