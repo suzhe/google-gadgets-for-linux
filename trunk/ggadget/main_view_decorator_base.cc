@@ -304,19 +304,21 @@ class  MainViewDecoratorBase::Impl {
       OptionsInterface *opt = gadget->GetOptions();
 
       Variant var = opt->GetInternalValue((prefix + "_minimized").c_str());
+      Variant var1 = opt->GetInternalValue((prefix + "_minimized_icon_visible").c_str());
+      Variant var2 = opt->GetInternalValue(
+          (prefix + "_minimized_caption_visible").c_str());
+
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimized(VariantValue<bool>()(var));
       
-      var = opt->GetInternalValue((prefix + "_minimized_icon_visible").c_str());
-      if (var.type() == Variant::TYPE_BOOL)
-        owner_->SetMinimizedIconVisible(VariantValue<bool>()(var));
+      if (var1.type() == Variant::TYPE_BOOL)
+        owner_->SetMinimizedIconVisible(VariantValue<bool>()(var1));
 
-      var = opt->GetInternalValue(
-          (prefix + "_minimized_caption_visible").c_str());
-      if (var.type() == Variant::TYPE_BOOL)
-        owner_->SetMinimizedCaptionVisible(VariantValue<bool>()(var));
+      if (var2.type() == Variant::TYPE_BOOL)
+        owner_->SetMinimizedCaptionVisible(VariantValue<bool>()(var2));
     }
   }
+
   void CollapseExpandMenuCallback(const char *) {
     owner_->SetMinimized(!owner_->IsMinimized());
   }
