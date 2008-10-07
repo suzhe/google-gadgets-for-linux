@@ -79,8 +79,8 @@ class  MainViewDecoratorBase::Impl {
                        (new ImgElement(owner, NULL)) : NULL),
       minimized_icon_(new ImgElement(owner, NULL)),
       minimized_caption_(new LabelElement(owner, NULL)),
-      minimized_icon_visiable_(true),
-      minimized_caption_visiable_(true),
+      minimized_icon_visible_(true),
+      minimized_caption_visible_(true),
       original_child_view_(NULL),
       plugin_flags_connection_(NULL) {
   }
@@ -267,8 +267,8 @@ class  MainViewDecoratorBase::Impl {
     SaveMinimizedState();
     if (minimized_bkgnd_)
       minimized_bkgnd_->SetVisible(minimized_);
-    minimized_icon_->SetVisible(minimized_ && minimized_icon_visiable_);
-    minimized_caption_->SetVisible(minimized_ && minimized_caption_visiable_);
+    minimized_icon_->SetVisible(minimized_ && minimized_icon_visible_);
+    minimized_caption_->SetVisible(minimized_ && minimized_caption_visible_);
 
     View *child = owner_->GetChildView();
     if (child) {
@@ -281,10 +281,10 @@ class  MainViewDecoratorBase::Impl {
   void SaveMinimizedState() {
     if (owner_->HasOptions()) {
       owner_->SetOption("minimized", Variant(minimized_));
-      owner_->SetOption("minimized_icon_visiable",
-                        Variant(minimized_icon_visiable_));
-      owner_->SetOption("minimized_caption_visiable",
-                        Variant(minimized_caption_visiable_));
+      owner_->SetOption("minimized_icon_visible",
+                        Variant(minimized_icon_visible_));
+      owner_->SetOption("minimized_caption_visible",
+                        Variant(minimized_caption_visible_));
       DLOG("Save main view minimized state for gadget %d: %s",
            owner_->GetGadget()->GetInstanceID(),
            minimized_ ? "true" : "false");
@@ -294,8 +294,8 @@ class  MainViewDecoratorBase::Impl {
   void LoadMinimizedState() {
     if (owner_->HasOptions()) {
       Variant var = owner_->GetOption("minimized");
-      Variant var1 = owner_->GetOption("minimized_icon_visiable");
-      Variant var2 = owner_->GetOption("minimized_caption_visiable");
+      Variant var1 = owner_->GetOption("minimized_icon_visible");
+      Variant var2 = owner_->GetOption("minimized_caption_visible");
 
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimized(VariantValue<bool>()(var));
@@ -348,8 +348,8 @@ class  MainViewDecoratorBase::Impl {
   ImgElement *minimized_bkgnd_;
   ImgElement *minimized_icon_;
   LabelElement *minimized_caption_;
-  bool minimized_icon_visiable_;
-  bool minimized_caption_visiable_;
+  bool minimized_icon_visible_;
+  bool minimized_caption_visible_;
 
   View *original_child_view_;
   Connection *plugin_flags_connection_;
@@ -448,11 +448,11 @@ bool MainViewDecoratorBase::IsButtonBoxVisible() const {
 }
 
 void MainViewDecoratorBase::SetMinimizedIconVisible(bool visible) {
-  if (visible != impl_->minimized_icon_visiable_) {
-    impl_->minimized_icon_visiable_ = visible;
+  if (visible != impl_->minimized_icon_visible_) {
+    impl_->minimized_icon_visible_ = visible;
     impl_->minimized_icon_->SetVisible(visible && impl_->minimized_);
 
-    if (!visible && !impl_->minimized_caption_visiable_) {
+    if (!visible && !impl_->minimized_caption_visible_) {
       SetMinimizedCaptionVisible(true);
     } else {
       DoLayout();
@@ -462,15 +462,15 @@ void MainViewDecoratorBase::SetMinimizedIconVisible(bool visible) {
 }
 
 bool MainViewDecoratorBase::IsMinimizedIconVisible() const {
-  return impl_->minimized_icon_visiable_;
+  return impl_->minimized_icon_visible_;
 }
 
 void MainViewDecoratorBase::SetMinimizedCaptionVisible(bool visible) {
-  if (visible != impl_->minimized_caption_visiable_) {
-    impl_->minimized_caption_visiable_ = visible;
+  if (visible != impl_->minimized_caption_visible_) {
+    impl_->minimized_caption_visible_ = visible;
     impl_->minimized_caption_->SetVisible(visible && impl_->minimized_);
 
-    if (!visible && !impl_->minimized_icon_visiable_) {
+    if (!visible && !impl_->minimized_icon_visible_) {
       SetMinimizedIconVisible(true);
     } else {
       impl_->SaveMinimizedState();
@@ -480,7 +480,7 @@ void MainViewDecoratorBase::SetMinimizedCaptionVisible(bool visible) {
 }
 
 bool MainViewDecoratorBase::IsMinimizedCaptionVisible() const {
-  return impl_->minimized_caption_visiable_;
+  return impl_->minimized_caption_visible_;
 }
 
 void MainViewDecoratorBase::SetButtonBoxPosition(ButtonBoxPosition position) {
@@ -728,13 +728,13 @@ void MainViewDecoratorBase::DoLayout() {
     // pixel height is fixed.
   }
 
-  if (impl_->minimized_icon_visiable_) {
+  if (impl_->minimized_icon_visible_) {
     impl_->minimized_icon_->SetPixelX(left + kVDMainIconMarginH);
     impl_->minimized_icon_->SetPixelY(client_center);
     left += kVDMainIconMarginH*2 + impl_->minimized_icon_->GetPixelWidth();
   }
 
-  if (impl_->minimized_caption_visiable_) {
+  if (impl_->minimized_caption_visible_) {
     impl_->minimized_caption_->SetPixelX(left);
     impl_->minimized_caption_->SetPixelY(client_center);
     impl_->minimized_caption_->SetPixelWidth(
