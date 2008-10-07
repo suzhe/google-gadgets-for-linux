@@ -277,16 +277,10 @@ void ViewDecoratorBase::UpdateViewSize() {
 }
 
 bool ViewDecoratorBase::LoadChildViewSize() {
-  Gadget *gadget = GetGadget();
-  if (gadget && !impl_->option_prefix_.empty()) {
-    OptionsInterface *opt = gadget->GetOptions();
-    std::string option_prefix(impl_->option_prefix_);
-    Variant vw =
-        opt->GetInternalValue((option_prefix + "_width").c_str());
-    Variant vh =
-        opt->GetInternalValue((option_prefix + "_height").c_str());
-    Variant vs =
-        opt->GetInternalValue((option_prefix + "_scale").c_str());
+  if (HasOptions()) {
+    Variant vw = GetOption("width");
+    Variant vh = GetOption("height");
+    Variant vs = GetOption("scale");
 
     if (vs.type() == Variant::TYPE_DOUBLE) {
       impl_->view_element_->SetScale(VariantValue<double>()(vs));
@@ -307,8 +301,9 @@ bool ViewDecoratorBase::LoadChildViewSize() {
       if (impl_->view_element_->OnSizing(&width, &height))
         impl_->view_element_->SetSize(width, height);
     }
+
     DLOG("LoadChildViewSize(%d): w:%.0lf h:%.0lf s: %.2lf",
-         gadget->GetInstanceID(),
+         GetGadget()->GetInstanceID(),
          impl_->view_element_->GetPixelWidth(),
          impl_->view_element_->GetPixelHeight(),
          impl_->view_element_->GetScale());
@@ -319,18 +314,13 @@ bool ViewDecoratorBase::LoadChildViewSize() {
 }
 
 bool ViewDecoratorBase::SaveChildViewSize() const {
-  Gadget *gadget = GetGadget();
-  if (gadget && !impl_->option_prefix_.empty()) {
-    std::string option_prefix(impl_->option_prefix_);
-    OptionsInterface *opt = gadget->GetOptions();
-    opt->PutInternalValue((option_prefix + "_width").c_str(),
-                          Variant(impl_->view_element_->GetPixelWidth()));
-    opt->PutInternalValue((option_prefix + "_height").c_str(),
-                          Variant(impl_->view_element_->GetPixelHeight()));
-    opt->PutInternalValue((option_prefix + "_scale").c_str(),
-                          Variant(impl_->view_element_->GetScale()));
+  if (HasOptions()) {
+    SetOption("width", Variant(impl_->view_element_->GetPixelWidth()));
+    SetOption("height", Variant(impl_->view_element_->GetPixelHeight()));
+    SetOption("scale", Variant(impl_->view_element_->GetScale()));
+
     DLOG("SaveChildViewSize(%d): w:%.0lf h:%.0lf s: %.2lf",
-         gadget->GetInstanceID(),
+         GetGadget()->GetInstanceID(),
          impl_->view_element_->GetPixelWidth(),
          impl_->view_element_->GetPixelHeight(),
          impl_->view_element_->GetScale());
@@ -401,8 +391,34 @@ void ViewDecoratorBase::SetOptionPrefix(const char *option_prefix) {
     impl_->option_prefix_ = "";
 }
 
-std::string ViewDecoratorBase::GetOptionPrefix() {
+std::string ViewDecoratorBase::GetOptionPrefix() const {
   return impl_->option_prefix_;
+}
+
+bool ViewDecoratorBase::HasOptions() const {
+  Gadget *gadget = GetGadget();
+  if (gadget && !impl_->option_prefix_.empty())
+    return true;
+  else
+    return false;
+}
+
+Variant ViewDecoratorBase::GetOption(const std::string &name) const {
+  Gadget *gadget = GetGadget();
+  if (gadget && !impl_->option_prefix_.empty()) {
+    OptionsInterface *opt = gadget->GetOptions();
+    return opt->GetInternalValue((impl_->option_prefix_ + "_" + name).c_str());
+  } else {
+    return Variant();
+  }
+}
+void ViewDecoratorBase::SetOption(const std::string &name,
+                                  Variant value) const {
+  Gadget *gadget = GetGadget();
+  if (gadget && !impl_->option_prefix_.empty()) {
+    OptionsInterface *opt = gadget->GetOptions();
+    opt->PutInternalValue((impl_->option_prefix_ + "_" + name).c_str(), value);
+  }
 }
 
 void ViewDecoratorBase::GetChildViewSize(double *width, double *height) const {

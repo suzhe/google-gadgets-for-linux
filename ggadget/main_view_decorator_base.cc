@@ -279,34 +279,23 @@ class  MainViewDecoratorBase::Impl {
   }
 
   void SaveMinimizedState() {
-    Gadget *gadget = owner_->GetGadget();
-    // If option prefix is NULL, then means host don't want to save the state.
-    std::string option_prefix = owner_->GetOptionPrefix();
-    if (gadget && !option_prefix.empty()) {
-      OptionsInterface *opt = gadget->GetOptions();
-      opt->PutInternalValue((option_prefix + "_minimized").c_str(),
-                            Variant(minimized_));
-      opt->PutInternalValue(
-          (option_prefix + "_minimized_icon_visible").c_str(),
-          Variant(minimized_icon_visiable_));
-      opt->PutInternalValue(
-          (option_prefix + "_minimized_caption_visible").c_str(),
-          Variant(minimized_caption_visiable_));
+    if (owner_->HasOptions()) {
+      owner_->SetOption("minimized", Variant(minimized_));
+      owner_->SetOption("minimized_icon_visiable",
+                        Variant(minimized_icon_visiable_));
+      owner_->SetOption("minimized_caption_visiable",
+                        Variant(minimized_caption_visiable_));
       DLOG("Save main view minimized state for gadget %d: %s",
-           gadget->GetInstanceID(), minimized_ ? "true" : "false");
+           owner_->GetGadget()->GetInstanceID(),
+           minimized_ ? "true" : "false");
     }
   }
 
   void LoadMinimizedState() {
-    Gadget *gadget = owner_->GetGadget();
-    std::string prefix = owner_->GetOptionPrefix();
-    if (gadget && !prefix.empty()) {
-      OptionsInterface *opt = gadget->GetOptions();
-
-      Variant var = opt->GetInternalValue((prefix + "_minimized").c_str());
-      Variant var1 = opt->GetInternalValue((prefix + "_minimized_icon_visible").c_str());
-      Variant var2 = opt->GetInternalValue(
-          (prefix + "_minimized_caption_visible").c_str());
+    if (owner_->HasOptions()) {
+      Variant var = owner_->GetOption("minimized");
+      Variant var1 = owner_->GetOption("minimized_icon_visiable");
+      Variant var2 = owner_->GetOption("minimized_caption_visiable");
 
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimized(VariantValue<bool>()(var));
