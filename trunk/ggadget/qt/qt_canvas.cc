@@ -222,6 +222,17 @@ class QtCanvas::Impl {
     doc->setDefaultTextOption(option);
   }
 
+  QString ElidedText(const QString &str, const FontInterface *f,
+                     double width, Trimming trimming) {
+    const QtFont *qtfont = down_cast<const QtFont*>(f);
+    QFont font = *qtfont->GetQFont();
+    QFontMetrics fm(font);
+    Qt::TextElideMode mode =
+        trimming == TRIMMING_PATH_ELLIPSIS ? Qt::ElideMiddle : Qt::ElideRight;
+
+    return fm.elidedText(str, mode, width);
+  }
+
   bool DrawText(double x, double y, double width, double height,
                 const char *text, const FontInterface *f,
                 const Color &c, Alignment align, VAlignment valign,
@@ -245,17 +256,21 @@ class QtCanvas::Impl {
     }
     // Handle trimming
     double text_width = doc.documentLayout()->documentSize().width();
-    if (trimming != TRIMMING_NONE
-        && (text_height > height || text_width > width)) {
-      double ypos = height - 8;
-      if ((text_flags & TEXT_FLAGS_WORDWRAP) == 0)
-        ypos = 8;
-      int pos = doc.documentLayout()->hitTest(
-          QPointF(width, ypos), Qt::FuzzyHit);
-      if (pos >= 4 && pos < qt_text.length()) {
-        qt_text.chop(qt_text.length() - pos + 3);
-        qt_text.append("...");
-        doc.setPlainText(qt_text);
+    if (trimming != TRIMMING_NONE) {
+      if (text_width > width && !(text_flags & TEXT_FLAGS_WORDWRAP)) {
+        doc.setPlainText(ElidedText(qt_text, f, width, trimming));
+      } else if (text_height > height && (text_flags & TEXT_FLAGS_WORDWRAP)) {
+        double ypos = height - 8;
+        if (ypos < 0) ypos = 0;
+        int pos = doc.documentLayout()->hitTest(
+            QPointF(width, ypos), Qt::FuzzyHit);
+        if (pos >= 4 && pos < qt_text.length()) {
+          qt_text.chop(qt_text.length() - pos + 3);
+          qt_text.append("...");
+          doc.setPlainText(qt_text);
+        } else if (pos < 4) {
+          doc.setPlainText("...");
+        }
       }
     }
 
