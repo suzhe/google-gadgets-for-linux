@@ -6,10 +6,11 @@ Ever since the beginning of Google Gadgets for Linux, the developers of GGL have
 
 = Screenshots =
 
-First of all, sweet screenshots. The first one shows four gadgets running on plasma desktop. The second one shows the same four gadgets running on plasma's panel.
+First of all, sweet screenshots. The first one shows four gadgets running on plasma desktop. The second one shows the same four gadgets running on plasma's vertical panel. The third one shows three gadgets running on plasma's horizontal panel.
 
 http://google-gadgets-for-linux.googlecode.com/svn/images/ggl-plasma-floating.jpg
 http://google-gadgets-for-linux.googlecode.com/svn/images/ggl-plasma-panel.jpg
+http://google-gadgets-for-linux.googlecode.com/svn/images/ggl-plasma-horizon-panel.jpg
 
 = Where can I get it =
 
