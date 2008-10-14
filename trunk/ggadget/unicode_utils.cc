@@ -366,6 +366,22 @@ size_t GetUTF8CharLength(const char *src) {
          0;
 }
 
+size_t GetUTF8CharsLength(const char *pos, size_t char_count, size_t limit) {
+  size_t p = 0;
+  for (size_t i = 0; i < char_count && p < limit; ++i) {
+    p += GetUTF8CharLength(pos + p);
+  }
+  return p;
+}
+
+size_t GetUTF8StringCharCount(const char *src, size_t bytes) {
+  size_t c = 0;
+  while (c < bytes) {
+    c += GetUTF8CharLength(src + c);
+  }
+  return c;
+}
+
 bool IsLegalUTF8Char(const char *src, size_t length) {
   if (!src || !length) return false;
 

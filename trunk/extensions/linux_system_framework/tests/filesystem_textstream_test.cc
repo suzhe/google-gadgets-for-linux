@@ -17,464 +17,207 @@
 #include <cstdio>
 #include <cstdlib>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <unittest/gtest.h>
+#include <locale.h>
 #include "../file_system.h"
 
 using namespace ggadget;
 using namespace ggadget::framework;
 using namespace ggadget::framework::linux_system;
 
-static const char *kTestDir = "/tmp/GGL_FileSystem_Test";
+TEST(FileSystem, OpenTextFile) {
+  FileSystem filesystem;
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
 
-class TextStreamTest : public testing::Test {
- protected:
-  virtual void SetUp() {
-    system("rm -R /tmp/GGL_FileSystem_Test");
-    system("touch /tmp/GGL_FileSystem_Test");
-    system("echo -n \"line1\nline2\nline3\n\" > /tmp/GGL_FileSystem_Test");
-    text_ = filesystem_.CreateTextFile(kTestDir, false, false);
-  }
+  mkdir("/tmp/GGL_FileSystem_Test", 0700);
+  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  fclose(file);
 
-  virtual void TearDown() {
-    if (text_) {
-      text_->Close();
-      text_->Destroy();
-      text_ = NULL;
-    }
-    system("rm /tmp/GGL_FileSystem_Test");
-  }
+  // Opens an existing file for reading.
+  TextStreamInterface *ti =
+      filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                              IO_MODE_READING,
+                              false,
+                              TRISTATE_USE_DEFAULT);
+  ASSERT_TRUE(ti != NULL);
+  ti->Close();
+  ti->Destroy();
 
-  FileSystem filesystem_;
-  TextStreamInterface *text_;
-};
+  // Opens a non-existing file for reading.
+  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file2.cc",
+                               IO_MODE_READING,
+                               false,
+                               TRISTATE_USE_DEFAULT);
+  ASSERT_TRUE(ti == NULL);
 
-// GGL_FileSystem_Test constructor of class File
-TEST_F(TextStreamTest, TextStream_1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->ReadAll());
+  // Opens a non-existing file for reading and create it.
+  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file2.cc",
+                               IO_MODE_READING,
+                               true,
+                               TRISTATE_USE_DEFAULT);
+  ASSERT_TRUE(ti != NULL);
+  ti->Close();
+  ti->Destroy();
+
+  // Opens an existing file for writing.
+  ti = filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                                 false,
+                                 false);
+  ASSERT_TRUE(ti == NULL);
+
+  // Opens an existing file for writing.
+  ti = filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                                 true,
+                                 false);
+  ASSERT_TRUE(ti != NULL);
+  ti->Close();
+  ti->Destroy();
+
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
 }
 
-// GGL_FileSystem_Test method GetPath
-TEST_F(TextStreamTest, GetLine1) {
-  EXPECT_TRUE(text_ != NULL);
-  // GGL_FileSystem_Test init line number
-  EXPECT_EQ(1, text_->GetLine());
+TEST(FileSystem, Read) {
+  FileSystem filesystem;
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+
+  mkdir("/tmp/GGL_FileSystem_Test", 0700);
+  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  char data[] =
+      "this is a test\n"
+      "\xe4\xb8\xad\xe6\x96\x87\n"
+      "another test\r\n"
+      "\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97";
+
+  fwrite(data, 1, sizeof(data) - 1, file);
+  fclose(file);
+
+  // Opens an existing file for reading.
+  TextStreamInterface *ti =
+      filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                              IO_MODE_READING,
+                              false,
+                              TRISTATE_USE_DEFAULT);
+  ASSERT_TRUE(ti != NULL);
+
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  EXPECT_EQ("this ", ti->Read(5));
+  EXPECT_FALSE(ti->IsAtEndOfLine());
+  EXPECT_FALSE(ti->IsAtEndOfStream());
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(6, ti->GetColumn());
+  EXPECT_EQ("is a test", ti->Read(9));
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(15, ti->GetColumn());
+  EXPECT_TRUE(ti->IsAtEndOfLine());
+  EXPECT_FALSE(ti->IsAtEndOfStream());
+  ti->Skip(1);
+  EXPECT_EQ(2, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  EXPECT_EQ("\xe4\xb8\xad", ti->Read(1));
+  EXPECT_EQ(2, ti->GetLine());
+  EXPECT_EQ(2, ti->GetColumn());
+  EXPECT_EQ("\xe6\x96\x87", ti->ReadLine());
+  EXPECT_EQ(3, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  ti->SkipLine();
+  EXPECT_EQ(4, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+  EXPECT_EQ("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97",
+            ti->Read(1000));
+  EXPECT_FALSE(ti->IsAtEndOfLine());
+  EXPECT_TRUE(ti->IsAtEndOfStream());
+  EXPECT_EQ(4, ti->GetLine());
+  EXPECT_EQ(6, ti->GetColumn());
+
+  ti->Close();
+  ti->Destroy();
+
+  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                               IO_MODE_READING,
+                               false,
+                               TRISTATE_USE_DEFAULT);
+  ASSERT_TRUE(ti != NULL);
+  EXPECT_EQ(
+      "this is a test\n"
+      "\xe4\xb8\xad\xe6\x96\x87\n"
+      "another test\n"
+      "\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97",
+      ti->ReadAll());
+  EXPECT_EQ(4, ti->GetLine());
+  EXPECT_EQ(6, ti->GetColumn());
+
+  ti->Close();
+  ti->Destroy();
+
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
 }
 
-// GGL_FileSystem_Test method GetPath
-TEST_F(TextStreamTest, GetLine2) {
-  EXPECT_TRUE(text_ != NULL);
+TEST(FileSystem, Write) {
+  FileSystem filesystem;
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
 
-  text_->SkipLine();
-  EXPECT_EQ(2, text_->GetLine());
+  mkdir("/tmp/GGL_FileSystem_Test", 0700);
+  // Opens an existing file for reading.
+  TextStreamInterface *ti =
+      filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+                              true,
+                              false);
+  ASSERT_TRUE(ti != NULL);
 
-  text_->SkipLine();
-  text_->SkipLine();
-  EXPECT_EQ(4, text_->GetLine());
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  ti->Write("this ");
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(6, ti->GetColumn());
+  ti->Write("is a test");
+  EXPECT_EQ(1, ti->GetLine());
+  EXPECT_EQ(15, ti->GetColumn());
+  ti->WriteBlankLines(1);
+  EXPECT_EQ(2, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  ti->Write("\xe4\xb8\xad");
+  EXPECT_EQ(2, ti->GetLine());
+  EXPECT_EQ(2, ti->GetColumn());
+  ti->WriteLine("\xe6\x96\x87");
+  EXPECT_EQ(3, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+
+  ti->WriteBlankLines(1);
+  EXPECT_EQ(4, ti->GetLine());
+  EXPECT_EQ(1, ti->GetColumn());
+  ti->Write("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97");
+  EXPECT_EQ(4, ti->GetLine());
+  EXPECT_EQ(6, ti->GetColumn());
+
+  ti->Close();
+  ti->Destroy();
+
+  char buffer[1024];
+  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "rb");
+  size_t size = fread(buffer, 1, sizeof(buffer), file);
+  EXPECT_EQ(
+      "this is a test\n"
+      "\xe4\xb8\xad\xe6\x96\x87\n"
+      "\n"
+      "\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97",
+      std::string(buffer, size));
+  fclose(file);
+
+  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
 }
-
-// GGL_FileSystem_Test method GetColumn
-TEST_F(TextStreamTest, GetColumn1) {
-  EXPECT_TRUE(text_ != NULL);
-  // GGL_FileSystem_Test init column number
-  EXPECT_EQ(1, text_->GetColumn());
-}
-
-// GGL_FileSystem_Test method GetColumn
-TEST_F(TextStreamTest, GetColumn2) {
-  EXPECT_TRUE(text_ != NULL);
-
-  text_->Skip(1);
-  EXPECT_EQ(2, text_->GetColumn());
-
-  text_->Skip(2);
-  EXPECT_EQ(4, text_->GetColumn());
-}
-
-
-// GGL_FileSystem_Test method IsAtEndOfStream
-TEST_F(TextStreamTest, IsAtEndOfStream1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_FALSE(text_->IsAtEndOfStream());
-}
-
-// GGL_FileSystem_Test method IsAtEndOfStream
-TEST_F(TextStreamTest, IsAtEndOfStream2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(3);
-  EXPECT_FALSE(text_->IsAtEndOfStream());
-  text_->SkipLine();
-  EXPECT_FALSE(text_->IsAtEndOfStream());
-}
-
-// GGL_FileSystem_Test method IsAtEndOfStream
-TEST_F(TextStreamTest, IsAtEndOfStream3) {
-  EXPECT_TRUE(text_ != NULL);
-
-  text_->ReadAll();
-  EXPECT_TRUE(text_->IsAtEndOfStream());
-}
-
-
-// GGL_FileSystem_Test method IsAtEndOfLine
-TEST_F(TextStreamTest, IsAtEndOfLine1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_FALSE(text_->IsAtEndOfLine());
-}
-
-// GGL_FileSystem_Test method IsAtEndOfLine
-TEST_F(TextStreamTest, IsAtEndOfLine2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(3);
-  EXPECT_FALSE(text_->IsAtEndOfLine());
-  text_->SkipLine();
-  EXPECT_FALSE(text_->IsAtEndOfLine());
-}
-
-// GGL_FileSystem_Test method IsAtEndOfLine
-TEST_F(TextStreamTest, IsAtEndOfLine3) {
-  EXPECT_TRUE(text_ != NULL);
-
-  text_->ReadAll();
-  EXPECT_TRUE(text_->IsAtEndOfLine());
-}
-
-// GGL_FileSystem_Test method IsAtEndOfLine
-TEST_F(TextStreamTest, IsAtEndOfLine4) {
-  EXPECT_TRUE(text_ != NULL);
-
-  text_->Skip(5);
-  EXPECT_TRUE(text_->IsAtEndOfLine());
-}
-
-
-// GGL_FileSystem_Test method Read
-TEST_F(TextStreamTest, Read1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("l", text_->Read(1));
-  EXPECT_EQ("ine1", text_->Read(4));
-  EXPECT_EQ("\n", text_->Read(1));
-}
-
-// GGL_FileSystem_Test method Read
-TEST_F(TextStreamTest, Read2) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->Read(100));
-}
-
-// GGL_FileSystem_Test method Read with invalid input argument
-TEST_F(TextStreamTest, Read_Failure_1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("", text_->Read(-1));
-}
-
-// GGL_FileSystem_Test method Read with invalid input argument
-TEST_F(TextStreamTest, Read_Failure_2) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("", text_->Read(0));
-}
-
-
-// GGL_FileSystem_Test method ReadLine
-TEST_F(TextStreamTest, ReadLine1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\n", text_->ReadLine());
-  EXPECT_EQ("line2\n", text_->ReadLine());
-  EXPECT_EQ("line3\n", text_->ReadLine());
-}
-
-// GGL_FileSystem_Test method ReadLine
-TEST_F(TextStreamTest, ReadLine2) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\n", text_->ReadLine());
-  EXPECT_EQ("line2\n", text_->ReadLine());
-  EXPECT_EQ("line3\n", text_->ReadLine());
-  EXPECT_EQ("", text_->ReadLine());
-  EXPECT_EQ("", text_->ReadLine());
-}
-
-
-// GGL_FileSystem_Test method ReadAll
-TEST_F(TextStreamTest, ReadAll1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method ReadAll
-TEST_F(TextStreamTest, ReadAll2) {
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile("/tmp/no_existing_file", false, false);
-  EXPECT_TRUE(text != NULL);
-  EXPECT_EQ("", text->ReadAll());
-  text->Close();
-  text->Destroy();
-  system("rm /tmp/no_existing_file");
-}
-
-
-// GGL_FileSystem_Test method Write
-TEST_F(TextStreamTest, Write1) {
-  system("rm -R /tmp/file.cc");
-  TextStreamInterface *text =
-      filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  text->Write("new content");
-  text->Close();
-  text->Destroy();
-
-  text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  EXPECT_EQ("new content", text->ReadAll());
-  text->Close();
-  text->Destroy();
-  system("rm -R /tmp/file.cc");
-}
-
-// GGL_FileSystem_Test method Write
-TEST_F(TextStreamTest, Write2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Write("new content");
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("new", text->Read(3));
-  text->Close();
-  text->Destroy();
-}
-
-// GGL_FileSystem_Test method Write with NULL argument
-TEST_F(TextStreamTest, Write_Failure_1) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Write(NULL);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-}
-
-
-// GGL_FileSystem_Test method WriteLine
-TEST_F(TextStreamTest, WriteLine1) {
-  system("rm -R /tmp/file.cc");
-  TextStreamInterface *text =
-      filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  text->WriteLine("new content");
-  text->Close();
-  text->Destroy();
-
-  text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  EXPECT_EQ("new content\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-  system("rm -R /tmp/file.cc");
-}
-
-// GGL_FileSystem_Test method WriteLine
-TEST_F(TextStreamTest, WriteLine2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteLine("new\n");
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("new\n", text->Read(4));
-  text->Close();
-  text->Destroy();
-}
-
-// GGL_FileSystem_Test method WriteLine with NULL argument
-TEST_F(TextStreamTest, WriteLine_Failure_1) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteLine(NULL);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-}
-
-// GGL_FileSystem_Test method WriteLine with empty string argument
-TEST_F(TextStreamTest, WriteLine_Failure_2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteLine(NULL);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-}
-
-
-// GGL_FileSystem_Test method WriteBlankLines
-TEST_F(TextStreamTest, WriteBlankLines1) {
-  system("rm -R /tmp/file.cc");
-  TextStreamInterface *text =
-      filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  text->WriteBlankLines(1);
-  text->Close();
-  text->Destroy();
-
-  text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  EXPECT_EQ("\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-  system("rm -R /tmp/file.cc");
-}
-
-TEST_F(TextStreamTest, WriteBlankLines1_) {
-  system("rm -R /tmp/file.cc");
-  TextStreamInterface *text =
-      filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  text->WriteBlankLines(3);
-  text->Close();
-  text->Destroy();
-
-  text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
-  EXPECT_TRUE(text != NULL);
-  EXPECT_EQ("\n\n\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-  system("rm -R /tmp/file.cc");
-}
-
-// GGL_FileSystem_Test method WriteBlankLines
-TEST_F(TextStreamTest, WriteBlankLines2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteBlankLines(2);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("\n\n", text->Read(2));
-  text->Close();
-  text->Destroy();
-}
-
-// GGL_FileSystem_Test method WriteBlankLines with invalid argument
-TEST_F(TextStreamTest, WriteBlankLines_Failure_1) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteBlankLines(-1);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-}
-
-// GGL_FileSystem_Test method WriteBlankLines with empty string argument
-TEST_F(TextStreamTest, WriteBlankLines_Failure_2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->WriteBlankLines(0);
-  text_->Close();
-
-  TextStreamInterface *text =
-    filesystem_.CreateTextFile(kTestDir, false, false);
-  ASSERT_TRUE(text != NULL);
-  EXPECT_EQ("line1\nline2\nline3\n", text->ReadAll());
-  text->Close();
-  text->Destroy();
-}
-
-
-// GGL_FileSystem_Test method Skip
-TEST_F(TextStreamTest, Skip1) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(1);
-  EXPECT_EQ("ine1", text_->Read(4));
-  text_->Skip(2);
-  EXPECT_EQ("ne2\n", text_->Read(4));
-}
-
-// GGL_FileSystem_Test method Skip
-TEST_F(TextStreamTest, Skip1_) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(3);
-  EXPECT_EQ("e1\nline2\nline3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method Skip
-TEST_F(TextStreamTest, Skip2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(0);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method Skip with invalid input argument
-TEST_F(TextStreamTest, Skip_Failure_1) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(-1);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method Skip with invalid input argument
-TEST_F(TextStreamTest, Skip_Failure_2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->Skip(-100);
-  EXPECT_EQ("line1\nline2\nline3\n", text_->ReadAll());
-}
-
-
-// GGL_FileSystem_Test method SkipLine
-TEST_F(TextStreamTest, SkipLine1) {
-  EXPECT_TRUE(text_ != NULL);
-  EXPECT_EQ("line1\n", text_->ReadLine());
-  text_->SkipLine();
-  EXPECT_EQ("line3\n", text_->ReadLine());
-}
-
-// GGL_FileSystem_Test method SkipLine
-TEST_F(TextStreamTest, SkipLine2) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->SkipLine();
-  EXPECT_EQ("line2\nline3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method SkipLine
-TEST_F(TextStreamTest, SkipLine3) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->SkipLine();
-  text_->SkipLine();
-  EXPECT_EQ("line3\n", text_->ReadAll());
-}
-
-// GGL_FileSystem_Test method SkipLine
-TEST_F(TextStreamTest, SkipLine4) {
-  EXPECT_TRUE(text_ != NULL);
-  text_->SkipLine();
-  text_->SkipLine();
-  text_->SkipLine();
-  text_->SkipLine();
-  EXPECT_EQ("", text_->ReadAll());
-}
-
-
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
-
+  setlocale(LC_ALL, "en_US.UTF-8");
   return RUN_ALL_TESTS();
 }
