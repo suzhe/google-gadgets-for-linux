@@ -195,6 +195,24 @@ size_t ConvertStringUTF32ToUTF16(const UTF32String &src, UTF16String *dest);
 size_t GetUTF8CharLength(const char *src);
 
 /**
+ * Gets the length of a utf8 string.
+ *
+ * @param pos the starting point of the string.
+ * @param char_count the characters contained in the utf8 string.
+ * @return the length of the utf8 string in bytes.
+ */
+size_t GetUTF8CharsLength(const char *pos, size_t char_count, size_t limit);
+
+/**
+ * Gets the character count of a utf8 string.
+ *
+ * @param src the starting point of the string.
+ * @param bytes the total bytes of the string.
+ * @return the character count of the utf8 string.
+ */
+size_t GetUTF8StringCharCount(const char *src, size_t bytes);
+
+/**
  * Checks if a utf8 char sequence valid.
  *
  * @param src the source utf8 char sequence to be checked.

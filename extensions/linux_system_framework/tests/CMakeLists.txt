@@ -33,9 +33,8 @@ MACRO(UNIT_TEST TEST_NAME)
 ENDMACRO(UNIT_TEST TEST_NAME)
 
 UNIT_TEST(filesystem_test)
-# TODO: temporarily disasbled.
-# UNIT_TEST(filesystem_folder_test)
-# UNIT_TEST(filesystem_file_test)
+UNIT_TEST(filesystem_folder_test)
+UNIT_TEST(filesystem_file_test)
 UNIT_TEST(filesystem_textstream_test)
 UNIT_TEST(machine_test)
 UNIT_TEST(memory_test)

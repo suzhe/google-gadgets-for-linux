@@ -16,14 +16,17 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <string>
-#include <sys/time.h>
-#include <sys/stat.h>
 #include <dirent.h>
-#include <vector>
-#include <iterator>
 #include <errno.h>
+#include <fcntl.h>
 #include <glob.h>
+#include <iterator>
+#include <string>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <vector>
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/xdg/utilities.h"
@@ -35,6 +38,7 @@ namespace framework {
 namespace linux_system {
 
 static const size_t kBlockSize = 8192;
+static const size_t kMaxFileSize = 1024 * 1024;
 
 // utility function for replace all char1 to char2
 static void ReplaceAll(std::string *str_ptr,
@@ -43,6 +47,41 @@ static void ReplaceAll(std::string *str_ptr,
   for (size_t i = 0; i < str_ptr->size(); ++i)
     if ((*str_ptr)[i] == char1)
       (*str_ptr)[i] = char2;
+}
+
+void FixCRLF(std::string *data) {
+  ASSERT(data);
+  size_t position = 0;
+  bool in_cr = false;
+  for (size_t i = 0; i < data->size(); ++i) {
+    if (in_cr) {
+      switch ((*data)[i]) {
+        case '\n':
+          (*data)[position++] = '\n';
+          break;
+        default:
+          (*data)[position++] = '\n';
+          (*data)[position++] = (*data)[i];
+          break;
+      }
+      in_cr = false;
+    } else {
+      switch ((*data)[i]) {
+        case '\r':
+          in_cr = true;
+          break;
+        default:
+          if (i != position) {
+            (*data)[position] = (*data)[i];
+          }
+          ++position;
+          break;
+      }
+    }
+  }
+  if (in_cr)
+    (*data)[position++] = '\n';
+  data->resize(position);
 }
 
 // utility function for initializing the file path
@@ -367,6 +406,192 @@ static int64_t GetFolderSize(const char *filename) {
   return size;
 }
 
+class TextStream : public TextStreamInterface {
+ public:
+  explicit TextStream(int fd, IOMode mode, bool unicode)
+      : fd_(fd),
+        mode_(mode),
+        line_(-1),
+        col_(-1),
+        readingptr_(0) {
+    if (fd_ != -1) {
+      line_ = 1;
+      col_ = 1;
+    }
+  }
+  ~TextStream() {
+    Close();
+  }
+
+  bool Init() {
+    if (mode_ == IO_MODE_READING) {
+      scoped_ptr<char>buffer(new char[kMaxFileSize]);
+      ssize_t size = read(fd_, buffer.get(), kMaxFileSize - 1);
+      if (size == -1)
+        return false;
+      if (size == 0)
+        return true;
+      buffer.get()[size] = '\0';
+      if (!ConvertLocaleStringToUTF8(buffer.get(), &content_)) {
+        if (!DetectAndConvertStreamToUTF8(std::string(buffer.get(), size),
+                                          &content_,
+                                          &encoding_))
+          return false;
+      }
+      FixCRLF(&content_);
+    }
+    return true;
+  }
+
+  virtual void Destroy() { delete this; }
+
+ public:
+  virtual int GetLine() {
+    return line_;
+  }
+  virtual int GetColumn() {
+    return col_;
+  }
+
+  virtual bool IsAtEndOfStream() {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return true;
+    return readingptr_ >= content_.size();
+  }
+  virtual bool IsAtEndOfLine() {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return true;
+    return content_[readingptr_] == '\n';
+  }
+  virtual std::string Read(int characters) {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return std::string();
+
+    size_t size = GetUTF8CharsLength(&content_[readingptr_],
+                                     characters,
+                                     content_.size() - readingptr_);
+    std::string result = content_.substr(readingptr_, size);
+    readingptr_ += size;
+    UpdatePosition(result);
+    return result;
+  }
+
+  virtual std::string ReadLine() {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return std::string();
+
+    std::string result;
+    std::string::size_type position = content_.find('\n', readingptr_);
+    if (position == std::string::npos) {
+      result = content_.substr(readingptr_);
+      readingptr_ = content_.size();
+      UpdatePosition(result);
+    } else {
+      result = content_.substr(readingptr_, position - readingptr_);
+      readingptr_ = position + 1;
+      col_ = 1;
+      ++line_;
+    }
+    return result;
+  }
+  virtual std::string ReadAll() {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return std::string();
+
+    std::string result;
+    result = content_.substr(readingptr_);
+    readingptr_ = content_.size();
+    UpdatePosition(result);
+    return result;
+  }
+
+  virtual void Write(const std::string &text) {
+    // FIXME: should throw exception in this situation.
+    if (mode_ == IO_MODE_READING)
+      return;
+
+    std::string copy = text;
+    FixCRLF(&copy);
+    WriteString(copy);
+    UpdatePosition(copy);
+  }
+  virtual void WriteLine(const std::string &text) {
+    // FIXME: should throw exception in this situation.
+    if (mode_ == IO_MODE_READING)
+      return;
+
+    Write(text);
+    Write("\n");
+  }
+  virtual void WriteBlankLines(int lines) {
+    // FIXME: should throw exception in this situation.
+    if (mode_ == IO_MODE_READING)
+      return;
+
+    for (int i = 0; i < lines; ++i)
+      Write("\n");
+  }
+
+  virtual void Skip(int characters) {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return;
+    Read(characters);
+  }
+  virtual void SkipLine() {
+    // FIXME: should throw exception in this situation.
+    if (mode_ != IO_MODE_READING)
+      return;
+    ReadLine();
+  }
+
+  virtual void Close() {
+    if (fd_ == -1)
+      return;
+    if (fd_ > STDERR_FILENO) {
+      close(fd_);
+    }
+    fd_ = -1;
+  }
+
+ private:
+  void UpdatePosition(const std::string &character) {
+    size_t position = 0;
+    while (position < character.size()) {
+      if (character[position] == '\n') {
+        col_ = 1;
+        ++line_;
+        ++position;
+      } else {
+        position += GetUTF8CharLength(&character[position]);
+        ++col_;
+      }
+    }
+  }
+
+  bool WriteString(const std::string &data) {
+    std::string buffer;
+    if (ConvertUTF8ToLocaleString(data.c_str(), &buffer)) {
+      write(fd_, buffer.c_str(), buffer.size());
+    }
+    return true;
+  }
+
+ private:
+  int fd_;
+  IOMode mode_;
+  size_t line_;
+  size_t col_;
+  std::string content_;
+  std::string encoding_;
+  size_t readingptr_;
+};
+
 static TextStreamInterface *OpenTextFile(const char *filename,
                                          IOMode mode,
                                          bool create,
@@ -375,7 +600,43 @@ static TextStreamInterface *OpenTextFile(const char *filename,
   ASSERT(filename);
   ASSERT(*filename);
 
-  // XXX:
+  int flags = 0;
+
+  switch (mode) {
+  case IO_MODE_READING:
+    flags = O_RDONLY;
+    break;
+  case IO_MODE_APPENDING:
+    flags = O_APPEND | O_WRONLY;
+    break;
+  case IO_MODE_WRITING:
+    flags = O_TRUNC | O_WRONLY;
+    break;
+  default:
+    ASSERT(false);
+    break;
+  }
+
+  if (create) {
+    flags |= O_CREAT;
+  }
+
+  if (!overwrite) {
+    flags |= O_EXCL;
+  }
+
+  int fd = open(filename, flags, S_IRUSR | S_IWUSR);
+  if (fd == -1)
+    return NULL;
+
+  TextStream *stream = new TextStream(fd, mode, format == TRISTATE_TRUE);
+  if (stream) {
+    if (stream->Init()) {
+      return stream;
+    }
+    stream->Destroy();
+  }
+
   return NULL;
 }
 
@@ -1101,208 +1362,6 @@ FolderInterface *Folders::GetItem() {
   return new Folder(current_folder_.c_str());
 }
 
-class TextStream : public TextStreamInterface {
- public:
-  explicit TextStream(const char *filename) {
-    fp_ = fopen(filename, "r+b");
-    column_ = line_ = 1;
-  }
-
-  TextStream(StandardStreamType type) {
-    switch (type) {
-      case STD_STREAM_IN: fp_ = stdin; break;
-      case STD_STREAM_OUT: fp_ = stdout; break;
-      case STD_STREAM_ERR: fp_ = stderr; break;
-    }
-  }
-
-  ~TextStream() {
-    if (fp_) {
-      fclose(fp_);
-      fp_ = NULL;
-    }
-  }
-
-  virtual void Destroy() { delete this; }
-
- public:
-  virtual int GetLine() {
-    if (!fp_)
-      return 0;
-    return line_;
-  }
-
-  virtual int GetColumn() {
-    if (!fp_)
-      return 0;
-    return column_;
-  }
-
-  virtual bool IsAtEndOfStream() {
-    if (!fp_)
-      return true;
-    return feof(fp_);
-  }
-
-  virtual bool IsAtEndOfLine() {
-    if (!fp_)
-      return true;
-    if (IsAtEndOfStream())
-      return true;
-
-    bool result = '\n' == fgetc(fp_);
-    if (!fseek(fp_, -1, SEEK_CUR))
-      return result;
-    return false;
-  }
-
-  virtual std::string Read(int characters) {
-    if (characters <= 0)
-      return "";
-
-    if (!fp_)
-      return "";
-
-    char buffer[characters + 1];
-    std::string result("");
-
-    while (result.size() < (size_t) characters) {
-      // since fgets reads at most size - 1 characters,
-      // so characters + 1 is used here.
-      if (!fgets(buffer, characters + 1, fp_)) {
-        if (feof(fp_))
-          // if end of stream
-          return result;
-
-        // otherwise, error occurs when reading
-        return "";
-      }
-      result = result + std::string(buffer);
-    }
-
-    // update member variable line_ and column_
-    UpdateLineAndColumn(result.c_str());
-
-    return result;
-  }
-
-  virtual std::string ReadLine() {
-    if (!fp_)
-      return "";
-
-    int ch = 0;
-    std::string result = "";
-    while ((ch = fgetc(fp_)) != EOF) {
-      result.append(1, ch);
-      if ('\n' == ch)
-        break;
-    }
-
-    // update member variable line_ and column_
-    line_ ++;
-    column_ = 1;
-
-    return result;
-  }
-
-  virtual std::string ReadAll() {
-    if (!fp_)
-      return "";
-
-    int ch = 0;
-    std::string result = "";
-    while ((ch = fgetc(fp_)) != EOF) {
-      result.append(1, ch);
-
-      // update member variable line_ and column_
-      if (ch == '\n')
-        line_ ++, column_ = 1;
-      else
-        column_ ++;
-    }
-
-    return result;
-  }
-
-  virtual void Write(const char *text) {
-    if (!fp_ || !text || !*text)
-      return;
-
-    fputs(text, fp_);
-
-    // update member variable line_ and column_
-    UpdateLineAndColumn(text);
-  }
-
-  virtual void WriteLine(const char *text) {
-    if (!fp_ || !text || !*text)
-      return;
-
-    Write(text);
-    Write("\n");
-
-    // update member variable line_ and column_
-    line_ ++, column_ = 1;
-  }
-
-  virtual void WriteBlankLines(int lines) {
-    if (lines <= 0)
-      return;
-
-    for (int i = 0; i < lines; ++i) {
-      Write("\n");
-    }
-
-    // update member variable line_ and column_
-    if (lines > 0)
-      line_ += lines, column_ = 1;
-  }
-
-  virtual void Skip(int characters) {
-    Read(characters);
-  }
-
-  virtual void SkipLine() {
-    ReadLine();
-  }
-
-  virtual void Close() {
-    if (fp_) {
-      fclose(fp_);
-      fp_ = NULL;
-    }
-  }
-
- private:
-  void UpdateLineAndColumn(const char *str) {
-    if (!str)
-      return;
-
-    size_t length = strlen(str);
-    if (!length)
-      return;
-
-    // update member variable line_ and column_
-    bool col_flag = false;
-    for (size_t i = 1; i <= length; ++i) {
-      if (str[length - i] == '\n') {
-        line_ ++;
-        if (col_flag)
-          continue;
-        column_ = static_cast<int>(i);
-        col_flag = true;
-      } else {
-        if (!col_flag)
-          column_ ++;
-      }
-    }
-  }
-
- private:
-  FILE *fp_;
-  int column_, line_;
-};
-
 // Implementation of FileSystem
 FileSystem::FileSystem() {
 }
@@ -1744,11 +1803,24 @@ TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
 
 TextStreamInterface *
 FileSystem::GetStandardStream(StandardStreamType type, bool unicode) {
-  if (type != STD_STREAM_IN &&
-      type != STD_STREAM_OUT &&
-      type != STD_STREAM_ERR)
+  TextStream *stream = NULL;
+  switch (type) {
+  case STD_STREAM_IN:
+    stream = new TextStream(STDIN_FILENO, IO_MODE_READING, unicode);
+    break;
+  case STD_STREAM_OUT:
+    stream = new TextStream(STDOUT_FILENO, IO_MODE_WRITING, unicode);
+    break;
+  case STD_STREAM_ERR:
+    stream = new TextStream(STDERR_FILENO, IO_MODE_WRITING, unicode);
+  default:
     return NULL;
-  return new TextStream(type);
+  }
+  if (!stream->Init()) {
+    stream->Destroy();
+    return NULL;
+  }
+  return stream;
 }
 
 std::string FileSystem::GetFileVersion(const char *filename) {

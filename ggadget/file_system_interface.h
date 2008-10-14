@@ -321,9 +321,9 @@ class TextStreamInterface {
   /** Read the entire stream into a string. */
   virtual std::string ReadAll() = 0;
   /** Write a string to the stream. */
-  virtual void Write(const char *text) = 0;
+  virtual void Write(const std::string &text) = 0;
   /** Write a string and an end of line to the stream. */
-  virtual void WriteLine(const char *text) = 0;
+  virtual void WriteLine(const std::string &text) = 0;
   /** Write a number of blank lines to the stream. */
   virtual void WriteBlankLines(int lines) = 0;
   /** Skip a specific number of characters. */
