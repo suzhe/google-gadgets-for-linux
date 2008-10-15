@@ -408,7 +408,7 @@ static int64_t GetFolderSize(const char *filename) {
 
 class TextStream : public TextStreamInterface {
  public:
-  explicit TextStream(int fd, IOMode mode, bool unicode)
+  TextStream(int fd, IOMode mode, bool unicode)
       : fd_(fd),
         mode_(mode),
         line_(-1),
@@ -585,8 +585,8 @@ class TextStream : public TextStreamInterface {
  private:
   int fd_;
   IOMode mode_;
-  size_t line_;
-  size_t col_;
+  int line_;
+  int col_;
   std::string content_;
   std::string encoding_;
   size_t readingptr_;
