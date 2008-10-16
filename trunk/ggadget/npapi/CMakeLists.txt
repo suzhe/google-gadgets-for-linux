@@ -12,29 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-if GGL_BUILD_GTK_FLASH_ELEMENT
+APPLY_CONFIG(X11)
+APPLY_CONFIG(XT)
 
-INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+SET(SRCS
+  npapi_plugin.cc
+  npapi_plugin_script.cc
+  npapi_utils.cc
+)
 
-extension_LTLIBRARIES	= gtk-flash-element.la
-extensiondir		= $(GGL_MODULE_DIR)
+ADD_SUBDIRECTORY(tests)
 
-gtk_flash_element_la_SOURCES = \
-			       gtk_flash_element.cc
+ADD_LIBRARY(ggadget-npapi${GGL_EPOCH} SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-npapi${GGL_EPOCH}
+  ggadget${GGL_EPOCH}
+  ${X11_LIBRARIES}
+  ${XT_LIBRARIES}
+)
+OUTPUT_LIBRARY(ggadget-npapi${GGL_EPOCH})
 
-gtk_flash_element_la_CXXFLAGS = \
-				$(DEFAULT_COMPILE_FLAGS)
+INSTALL(FILES
+  npapi_plugin.h
+  DESTINATION ${GGL_INCLUDE_DIR}/ggadget/npapi COMPONENT Devel)
 
-gtk_flash_element_la_CPPFLAGS = \
-				$(PREDEFINED_MACROS)
-
-gtk_flash_element_la_LIBADD = \
-			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-
-gtk_flash_element_la_LDFLAGS = \
-			       -avoid-version \
-			       -module
-
-endif
+INSTALL_PKG_CONFIG(libggadget-npapi)

@@ -227,6 +227,29 @@ bool ReadFileContents(const char *path, std::string *content) {
   return true;
 }
 
+bool WriteFileContents(const char *path, const std::string &content) {
+  if (!path || !*path)
+    return false;
+
+  FILE *out_fp = fopen(path, "w");
+  if (!out_fp) {
+    DLOG("Can't open file %s for writing: %s", path, strerror(errno));
+    return false;
+  }
+
+  bool result = true;
+  if (fwrite(content.c_str(), content.size(), 1, out_fp) != 1) {
+    result = false;
+    LOG("Error when writing to file %s: %s", path, strerror(errno));
+  }
+  // fclose() is placed first to ensure it's always called.
+  result = (fclose(out_fp) == 0 && result);
+
+  if (!result)
+    unlink(path);
+  return result;
+}
+
 std::string NormalizeFilePath(const char *path) {
   if (!path || !*path)
     return std::string("");
@@ -512,7 +535,7 @@ bool CopyFile(const char *src, const char *dest) {
   }
 
   fclose(in_fp);
-  fclose(out_fp);
+  result = (fclose(out_fp) == 0 && result);
 
   if (!result)
     unlink(dest);

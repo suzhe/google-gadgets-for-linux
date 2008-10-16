@@ -44,7 +44,7 @@ class BrowserElement : public BasicElement {
   void SetContentType(const char *content_type);
 
   /** Sets the content displayed in this element. */
-  void SetContent(const JSONString &content);
+  void SetContent(const std::string &content);
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

@@ -79,7 +79,7 @@ void BrowserElement::SetContentType(const char *content_type) {
                          "text/html";
 }
 
-void BrowserElement::SetContent(const JSONString &content) {
+void BrowserElement::SetContent(const std::string &content) {
   impl_->SetContent(content);
 }
 

@@ -2349,7 +2349,8 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
       unsigned short status = 0;
       XMLHttpRequestInterface::ExceptionCode code =
           http_request_->GetStatus(&status);
-      if (code != XMLHttpRequestInterface::NO_ERR || status != 200) {
+      if (code != XMLHttpRequestInterface::NO_ERR || status != 200 ||
+          !http_request_->IsSuccessful()) {
         parse_error_.SetCode(1);
       } else {
         DOMDocumentInterface *response_xml = NULL;

@@ -104,6 +104,16 @@ bool EnsureDirectories(const char *path);
 bool ReadFileContents(const char *path, std::string *content);
 
 /**
+ * Write memory data into a file.
+ *
+ * @param path the path of a directory. Normally it should be a absolute path,
+ *     but relative path is also supported.
+ * @param data the data to be written.
+ * @return true if success.
+ */
+bool WriteFileContents(const char *path, const std::string &content);
+
+/**
  * Gets the current working directory.
  *
  * @return the absolute path of the current working directory.

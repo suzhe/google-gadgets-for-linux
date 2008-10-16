@@ -39,8 +39,10 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
                                   const char *name, const char *value,
                                   const char *tag_name) {
   Variant prototype;
-  if (scriptable->GetPropertyInfo(name, &prototype) !=
-      ScriptableInterface::PROPERTY_NORMAL) {
+  ScriptableInterface::PropertyType prop_type =
+      scriptable->GetPropertyInfo(name, &prototype);
+  if (prop_type != ScriptableInterface::PROPERTY_NORMAL &&
+      prop_type != ScriptableInterface::PROPERTY_DYNAMIC) {
     LOG("%s:%d:%d Can't set property %s for %s", filename, row, column,
         name, tag_name);
     return;
@@ -187,7 +189,7 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
           SetScriptableProperty(object, script_context, filename,
                                 attr->GetRow(), attr->GetColumn(),
                                 property_name.c_str(), attr->GetValue().c_str(),
-                                tag_name.c_str());
+                                (tag_name + "." + object_name).c_str());
           continue;
         }
       }

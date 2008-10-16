@@ -48,6 +48,7 @@ VideoElementBase::VideoElementBase(View *view, const char *tag_name,
                                    const char *name)
     : BasicElement(view, tag_name, name, false),
       impl_(new Impl) {
+  SetEnabled(true);
 }
 
 VideoElementBase::~VideoElementBase() {

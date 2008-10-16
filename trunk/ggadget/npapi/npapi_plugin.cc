@@ -19,1290 +19,967 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <X11/Xlib.h>
-
 #include <vector>
 #include <cmath>
-#include <fstream>
-#include <sstream>
 
-#include <ggadget/main_loop_interface.h>
-#include <ggadget/xml_http_request_interface.h>
+#include <ggadget/basic_element.h>
 #include <ggadget/gadget.h>
-#include <ggadget/view.h>
-#include <ggadget/scoped_ptr.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/math_utils.h>
+#include <ggadget/permissions.h>
+#include <ggadget/signals.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/system_utils.h>
+#include <ggadget/view.h>
+#include <ggadget/xml_http_request_interface.h>
 
-#include "npapi_impl.h"
 #include "npapi_plugin_script.h"
+#include "npapi_utils.h"
+
+#ifdef MOZ_X11
+#include <X11/Xlib.h>
+#include <X11/Intrinsic.h>
+#endif
 
 namespace ggadget {
 namespace npapi {
 
-#define NOT_IMPLEMENTED() \
-  LOGW("Unimplemented function %s at line %d\n", __func__, __LINE__)
+const char *kFirefox3UserAgent = "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
+                                 "Gecko/20080724 Firefox/3.0.1";
 
-#define FF3_USERAGENT_ID \
-  "Mozilla/5.0 (X11; U; Linux i686 (x86_64); en-US; rv:1.9.0.1) " \
-  "Gecko/2008072401 Minefield/3.0.1"
-
-static const char *kHttpURLPrefix = "http://";
-static const char *kHttpsURLPrefix = "https://";
-static const char *kLocalURLPrefix = "file://";
-
-static const int kStreamCallbackTimeout = 20;
-
-class NPPlugin::Impl {
+class Plugin::Impl {
  public:
-  class StreamHost : public WatchCallbackInterface {
+  static const int kStreamCallbackInterval = 50;
+  static const int kCheckQueueDrawInterval = 100;
+
+  // Writes a block of data to the plugin stream asynchronously if the plugin
+  // can't receive the whole data at once.
+  class StreamWriter : public WatchCallbackInterface {
    public:
-    StreamHost(Impl *owner, NPStream *stream,
-               XMLHttpRequestInterface *http_request)
-        : instance_(owner->instance_), plugin_funcs_(owner->plugin_funcs_),
-          mime_type_(owner->mime_type_.c_str()),
-          stream_(stream), invalid_stream_(true),
-          http_request_(http_request),
-          file_opened_(false), offset_(0) {
-      // If it's a local stream, http_request must be NULL.
-      if (!http_request_) {
-        if (!InitStream())
-          return;
-        ASSERT(strncmp(stream->url, kLocalURLPrefix,
-                       strlen(kLocalURLPrefix)) == 0);
-        path_ = stream->url + strlen(kLocalURLPrefix);
-        if (stype_ == NP_NORMAL) {
-          file_.open(path_.c_str());
-          if (!file_)
-            return;
-          file_opened_ = true;
+    StreamWriter(Impl *owner, const std::string &url,
+                 const std::string &mime_type, const std::string &headers,
+                 const std::string &data, void *notify_data)
+        : owner_(owner), plugin_funcs_(&owner->library_info_->plugin_funcs),
+          stream_(NULL), stream_type_(NP_NORMAL),
+          // These fields hold string data to live during the stream's life.
+          url_(url), mime_type_(mime_type), headers_(headers),
+          data_(data), offset_(0),
+          watch_id_(0), idle_count_(0),
+          on_owner_destroy_connection_(owner_->on_destroy_.Connect(
+              NewSlot(this, &StreamWriter::OnOwnerDestroy))) {
+      if (!plugin_funcs_->writeready || !plugin_funcs_->write ||
+          !plugin_funcs_->newstream)
+        return;
+
+      // NPAPI uses int32/uint32 for data size.
+      // Limit data size to prevent overflow.
+      if (data.size() >= (1U << 31))
+        return;
+
+      stream_ = new NPStream;
+      memset(stream_, 0, sizeof(NPStream));
+      stream_->ndata = owner;
+      stream_->url = url_.c_str();
+      stream_->headers = headers_.c_str();
+      stream_->end = static_cast<uint32>(data.size());
+      stream_->notifyData = notify_data;
+      char *mime_type_copy = strdup(mime_type_.c_str());
+      NPError err = plugin_funcs_->newstream(&owner->instance_, mime_type_copy,
+                                             stream_, false, &stream_type_);
+      free(mime_type_copy);
+      if (err == NPERR_NO_ERROR) {
+        switch (stream_type_) {
+          case NP_NORMAL:
+            break;
+          case NP_ASFILEONLY:
+          case NP_ASFILE: {
+            if (plugin_funcs_->asfile) {
+              std::string temp_name = owner->GetTempFileName();
+              if (!temp_name.empty() &&
+                  WriteFileContents(temp_name.c_str(), data)) {
+                plugin_funcs_->asfile(&owner->instance_, stream_,
+                                      temp_name.c_str());
+              }
+            }
+            DestroyStream(NPRES_DONE);
+            break;
+          }
+          case NP_SEEK:
+            LOG("Plugin needs NP_SEEK stream type which is not supported.");
+            DestroyStream(NPRES_USER_BREAK);
+            break;
         }
       } else {
-        if (http_request_->GetReadyState() != XMLHttpRequestInterface::DONE)
-          return;
-        // The stream has been downloaded.
-        if ((http_request_->GetResponseBody(&data_) !=
-             XMLHttpRequestInterface::NO_ERR) || data_.empty()) {
-          LOGE("Failed to download stream %s", stream_->url);
-          return;
-        }
-        if (!InitStream())
-          return;
-        if (stype_ == NP_ASFILEONLY || stype_ == NP_ASFILE) {
-          // If the mode is AsFileOnly or AsFile, we save the data into a
-          // local file, and will use pass the file path to plugin directly
-          // without any reading.
-          static size_t suffix = 0;
-          std::stringstream str;
-          str << "/tmp/tmp_flash_" << suffix << ".swf";
-          path_ = str.str();
-          suffix++;
-        } else {
-          // Will read data from the data string directly.
-          ASSERT(stype_ == NP_NORMAL);
-        }
+        DestroyStream(NPRES_DONE);
       }
-      invalid_stream_ = false;
+
+      // First call NPP_Write immediately, and schedule timer only if some
+      // data is left.
+      if (stream_ && Call(NULL, 0)) {
+        watch_id_ = GetGlobalMainLoop()->AddTimeoutWatch(
+            kStreamCallbackInterval, this);
+      }
     }
 
-    ~StreamHost() {
-      if (file_opened_)
-        file_.close();
-      if (plugin_funcs_->destroystream)
-        plugin_funcs_->destroystream(instance_, stream_, NPRES_DONE);
-      delete stream_;
+    ~StreamWriter() {
+      on_owner_destroy_connection_->Disconnect();
+      DestroyStream(NPRES_DONE);
+    }
+
+    void OnOwnerDestroy() {
+      GetGlobalMainLoop()->RemoveWatch(watch_id_);
+    }
+
+    void DestroyStream(NPReason reason) {
+      if (stream_ && plugin_funcs_->destroystream) {
+        plugin_funcs_->destroystream(&owner_->instance_, stream_, reason);
+        delete stream_;
+      }
     }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (invalid_stream_ || !plugin_funcs_)
+      if (!stream_)
         return false;
 
-      // There are four ways to pass data to the plugin:
-      // 1. Local file && NP_NORMAL mode:
-      //    Read from the local file, and use NPP_Write to pass the data.
-      // 3. Http stream && NP_NORMAL mode:
-      //    Using the data string directly and NPP_Write to pass the data.
-      // 2. Local file && (NP_ASFILEONLY or NP_ASFILE) mode:
-      //    Pass the local file path to the plugin using NPP_StreamAsFile.
-      // 4. Http stream && (NP_ASFILEONLY or NP_ASFILE) mode:
-      //    Save the data to a local tmp file, and pass the file path to plugin
-      //    using NPP_StreamAsFile.
-      if (stype_ == NP_NORMAL || stype_ == 0) {
-        if (!plugin_funcs_->writeready || !plugin_funcs_->write)
-          return false;
-        int32 len = plugin_funcs_->writeready(instance_, stream_);
+      while (offset_ < data_.size()) {
+        int32 len = plugin_funcs_->writeready(&owner_->instance_, stream_);
         if (len <= 0) {
-          // Plugin doesn't need data this time, but it doesn't mean the stream
-          // is not needed any more.
+          if (++idle_count_ > 5000 / kStreamCallbackInterval) {
+            LOG("Timeout to write to stream");
+            DestroyStream(NPRES_USER_BREAK);
+            return false;
+          }
+          // Plugin doesn't need data this time. Try again later.
           return true;
         }
 
-        char *buf;
-        scoped_array<char> proxy_buf;
-        if (http_request_) {
-          ASSERT(!data_.empty());
-          if (offset_ >= data_.size())
-            return false;
-          buf = const_cast<char *>(data_.data()) + offset_;
-          if (data_.size() < offset_ + len)
-            len = data_.size() - offset_;
-        } else if (!file_.eof()) {
-          proxy_buf.reset(new char[len]);
-          len = static_cast<int32>(file_.read(proxy_buf.get(), len).gcount());
-          if (file_.bad())
-            return false;
-          buf = proxy_buf.get();
-        } else {
-          return false;
-        }
-
-        int32 consumed = plugin_funcs_->write(instance_, stream_,
-                                              offset_, len, buf);
+        idle_count_ = 0;
+        if (data_.size() < offset_ + len)
+          len = static_cast<int32>(data_.size() - offset_);
+        int32 consumed = plugin_funcs_->write(&owner_->instance_, stream_,
+                                              static_cast<int32>(offset_), len,
+                                              // This gets a non-const pointer.
+                                              &data_[offset_]);
         // Error occurs.
-        if (consumed < 0) {
+        if (consumed < 0)
           return false;
-        }
-        if (consumed != len && !http_request_) {
-          file_.seekg(consumed - len, std::ios::cur);
-        }
-
         offset_ += consumed;
-        return true;
-      } else if (stype_ == NP_ASFILEONLY || stype_ == NP_ASFILE) {
-        if (!plugin_funcs_->asfile || path_.empty())
-          return false;
-        plugin_funcs_->asfile(instance_, stream_, path_.c_str());
-        // The whole file has been pass over to the plugin, no need to
-        // keep this timeout watch anymore.
       }
       return false;
     }
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       delete this;
-    }
-
-   private:
-    bool InitStream() {
-      if (stream_ && plugin_funcs_ &&
-          plugin_funcs_->newstream &&
-          plugin_funcs_->newstream(instance_, const_cast<char *>(mime_type_),
-                                   stream_, false, &stype_) == NPERR_NO_ERROR) {
-        if (stype_ != NP_SEEK) {
-          return true;
-        }
-        LOGE("Plugin needs NP_SEEK stream mode which is not supported.");
-      }
-      return false;
-    }
-
-    NPP instance_;
-    NPPluginFuncs *plugin_funcs_;
-    const char *mime_type_;
-    NPStream *stream_;
-    bool invalid_stream_;
-    XMLHttpRequestInterface *http_request_;
-    uint16 stype_;
-    std::string data_;
-    std::string path_;
-    bool file_opened_;
-    std::ifstream file_;
-    size_t offset_;
-  };
-
-  class XMLHttpRequestSlot : public Slot0<void> {
-   public:
-    XMLHttpRequestSlot(Impl *owner, NPStream *stream,
-                       XMLHttpRequestInterface *http_request,
-                       bool notify, void *notify_data)
-        : owner_(owner), stream_(stream),
-          http_request_(http_request),
-          notify_(notify), notify_data_(notify_data) {
-    }
-
-    virtual ResultVariant Call(ScriptableInterface *object,
-                               int argc, const Variant argv[]) const {
-      XMLHttpRequestInterface::State state = http_request_->GetReadyState();
-      if (state == XMLHttpRequestInterface::HEADERS_RECEIVED)
-        http_request_->GetAllResponseHeaders(&stream_->headers);
-      else if (state == XMLHttpRequestInterface::DONE)
-        owner_->OnStreamReady(stream_, http_request_, notify_, notify_data_);
-      return ResultVariant(Variant());
-    }
-
-   private:
-    virtual bool operator==(const Slot &another) const {
-      return false;
     }
 
     Impl *owner_;
+    NPPluginFuncs *plugin_funcs_;
     NPStream *stream_;
-    XMLHttpRequestInterface *http_request_;
-    bool notify_;
-    void *notify_data_;
+    uint16 stream_type_;
+    std::string url_, mime_type_, headers_, data_;
+    size_t offset_;
+    int watch_id_;
+    int idle_count_;
+    Connection *on_owner_destroy_connection_;
   };
 
-  class GetURLCallback : public WatchCallbackInterface {
+  // This class prevents too frequent plugin queue draws.
+  class QueueDrawChecker : public WatchCallbackInterface {
    public:
-    GetURLCallback(Impl *owner, const char *url, bool use_browser,
-                   bool notify, void *notify_data)
-        : owner_(owner), url_(url), use_browser_(use_browser),
-          notify_(notify), notify_data_(notify_data) {
+    QueueDrawChecker(Impl *owner) : owner_(owner) {
     }
-
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (notify_ && !owner_->plugin_funcs_->urlnotify)
-        return false;
-      bool ret = NPRES_NETWORK_ERR;
-      if (owner_->in_user_interaction_) {
-        View *view= owner_->element_->GetView();
-        bool old = view->GetGadget()->SetInUserInteraction(true);
-        if (use_browser_) {
-          // Load the URL in a new blank unnamed browser window.
-          if (owner_->element_) {
-            if (view->OpenURL(url_.c_str()))
-              ret = NPERR_NO_ERROR;
-            if (ret == NPERR_NO_ERROR && notify_)
-              owner_->plugin_funcs_->urlnotify(owner_->instance_, url_.c_str(),
-                                               NPRES_DONE, notify_data_);
-          }
-        } else {
-          ret = owner_->SetURL(url_.c_str(), notify_, notify_data_);
-        }
-        view->GetGadget()->SetInUserInteraction(old);
-        owner_->in_user_interaction_ = false;
-      } else {
-        // Just notify the plugin that the user breaks the stream.
-        // Don't return ERROR because we don't want that the plugin may fail to
-        // continue just because we forbid its unsafe GetURL request. Returning
-        // DONE may cause the plugin to do extra work for the stream which we
-        // forbid. Both are not expected.
-        ret = NPERR_NO_ERROR;
-        if (notify_)
-          owner_->plugin_funcs_->urlnotify(owner_->instance_, url_.c_str(),
-                                           NPRES_USER_BREAK, notify_data_);
-        LOGW("Warning: the plugin sends GetURL request without user's claim.");
-        // TODO:
-        // For windowed mode, user's actions in the window, such as button click
-        // and key press will be pass to the window(or socket window) directly,
-        // but not through our view. So in_user_interaction will always be
-        // false even user clicks on the window. This means, for window mode,
-        // GetURL always fails. This should be fixed in future.
-        if (owner_->plugin_window_type_ == WindowTypeWindowed)
-          LOGW("GetURL request is not supported under window mode currently.");
+      if (owner_->pending_queue_draw_) {
+        owner_->pending_queue_draw_ = false;
+        owner_->element_->QueueDraw();
+        owner_->last_queue_draw_time_ = main_loop->GetCurrentTime();
       }
-
-      if (ret != NPERR_NO_ERROR && notify_) {
-        // Stream fails due to problems with network, disk I/O, lack of memory,
-        // or other problems.
-        if (owner_->plugin_funcs_ && owner_->plugin_funcs_->urlnotify)
-          owner_->plugin_funcs_->urlnotify(owner_->instance_, url_.c_str(),
-                                           NPRES_NETWORK_ERR, notify_data_);
-      }
-      return false;
+      return true;
     }
-
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       delete this;
     }
+    Impl *owner_;
+  };
 
-   private:
+  class XMLHttpRequestCallback {
+   public:
+    XMLHttpRequestCallback(Impl *owner, const std::string &url,
+                           XMLHttpRequestInterface *http_request,
+                           bool notify, void *notify_data)
+        : owner_(owner), url_(url),
+          http_request_(http_request),
+          notify_(notify), notify_data_(notify_data),
+          on_owner_destroy_connection_(owner->on_destroy_.Connect(
+              NewSlot(this, &XMLHttpRequestCallback::OnOwnerDestroy))),
+          on_state_change_connection_(http_request->ConnectOnReadyStateChange(
+              NewSlot(this, &XMLHttpRequestCallback::OnStateChange))) {
+    }
+
+    ~XMLHttpRequestCallback() {
+      on_owner_destroy_connection_->Disconnect();
+      on_state_change_connection_->Disconnect();
+    }
+
+    void OnOwnerDestroy() {
+      http_request_->Abort();
+      // Then OnStateChange() will be called and this object will be deleted.
+    }
+
+    std::string GetHeaders() {
+      const char *headers_ptr = NULL;
+      http_request_->GetAllResponseHeaders(&headers_ptr);
+      std::string result;
+      if (headers_ptr) {
+        // Remove all '\r's according to NPAPI's requirement.
+        while (*headers_ptr) {
+          if (*headers_ptr != '\r')
+            result += *headers_ptr;
+        }
+      }
+      return result;
+    }
+
+    void OnStateChange() {
+      std::string headers;
+      if (http_request_->GetReadyState() == XMLHttpRequestInterface::DONE) {
+        unsigned short status = 0;
+        if (http_request_->IsSuccessful() &&
+            http_request_->GetStatus(&status) ==
+                XMLHttpRequestInterface::NO_ERR &&
+            status == 200) {
+          const char *mime_type = NULL;
+          const char *response = NULL;
+          size_t response_size = 0;
+          http_request_->GetResponseHeader("Content-Type", &mime_type);
+          http_request_->GetResponseBody(&response, &response_size);
+          std::string response_str;
+          if (response)
+            response_str.assign(response, response_size);
+          owner_->OnStreamReady(url_,
+                                mime_type ? owner_->mime_type_ : mime_type,
+                                headers, response_str,
+                                notify_, notify_data_);
+        } else {
+          owner_->OnStreamError(url_, notify_, notify_data_, NPRES_NETWORK_ERR);
+        }
+        delete this;
+      }
+    }
+
     Impl *owner_;
     std::string url_;
-    bool use_browser_;
+    XMLHttpRequestInterface *http_request_;
     bool notify_;
     void *notify_data_;
+    Connection *on_owner_destroy_connection_;
+    Connection *on_state_change_connection_;
   };
 
-  Impl(const std::string &mime_type, BasicElement *element,
-       const std::string &name, const std::string &description,
-       NPP instance, NPPluginFuncs *plugin_funcs,
-       bool xembed, ToolkitType toolkit)
-    : mime_type_(mime_type), element_(element),
-      name_(name), description_(description),
-      instance_(instance), plugin_funcs_(plugin_funcs), plugin_root_(NULL),
-      window_(NULL), display_(NULL),
-      host_xembed_(xembed), host_toolkit_(toolkit),
-      plugin_window_type_(WindowTypeWindowed),
-      transparent_(false),
-      in_user_interaction_(false) {
-    ASSERT(instance_ && plugin_funcs_);
+  Impl(const char *mime_type, BasicElement *element,
+       PluginLibraryInfo *library_info, const NPWindow &window,
+       const StringMap &parameters)
+      : mime_type_(mime_type),
+        element_(element),
+        library_info_(library_info),
+        plugin_root_(NULL),
+        window_(window),
+        windowless_(false), transparent_(false),
+        init_error_(NPERR_GENERIC_ERROR),
+        temp_file_seq_(0),
+        queue_draw_checker_timer_(GetGlobalMainLoop()->AddTimeoutWatch(
+            kCheckQueueDrawInterval, new QueueDrawChecker(this))),
+        pending_queue_draw_(false),
+        last_queue_draw_time_(0) {
+    ASSERT(library_info);
+    memset(&instance_, 0, sizeof(instance_));
+    instance_.ndata = this;
+    if (library_info->plugin_funcs.newp) {
+      // NPP_NewUPP require non-const parameters.
+      char **argn = NULL;
+      char **argv = NULL;
+      size_t argc = parameters.size();
+      if (argc) {
+        argn = new char *[argc];
+        argv = new char *[argc];
+        StringMap::const_iterator it = parameters.begin();
+        for (size_t i = 0; i < argc; ++it, ++i) {
+          argn[i] = strdup(it->first.c_str());
+          argv[i] = strdup(it->second.c_str());
+        }
+      }
+      init_error_ = library_info->plugin_funcs.newp(
+          const_cast<NPMIMEType>(mime_type), &instance_, NP_EMBED,
+          static_cast<int16>(argc), argn, argv, NULL);
+      for (size_t i = 0; i < argc; i++) {
+        free(argn[i]);
+        free(argv[i]);
+      }
+      delete [] argn;
+      delete [] argv;
+    }
+
+    if (!windowless_)
+      SetWindow(window);
+    // Otherwise the caller should handle the change of windowless state.
   }
 
   ~Impl() {
+    if (!temp_dir_.empty())
+      RemoveDirectory(temp_dir_.c_str());
     if (plugin_root_)
-      delete plugin_root_;
-    for (size_t i = 0; i < watch_ids_.size(); i++)
-      GetGlobalMainLoop()->RemoveWatch(watch_ids_[i]);
+      plugin_root_->Unref();
+    on_destroy_();
+    GetGlobalMainLoop()->RemoveWatch(queue_draw_checker_timer_);
+
+    if (library_info_->plugin_funcs.destroy) {
+      NPError ret = library_info_->plugin_funcs.destroy(&instance_, NULL);
+      if (ret != NPERR_NO_ERROR)
+        LOG("Failed to destroy plugin instance - nperror code %d.", ret);
+    }
+    ReleasePluginLibrary(library_info_);
   }
 
-  bool SetWindow(Window *window) {
-    if (!window || window->type_ != plugin_window_type_) {
-      if (window) {
-        LOGE("Window types don't match (type passed in: %d, "
-             "while plugin's type: %d", window->type_, plugin_window_type_);
-      }
-      return false;
-    }
+  bool SetWindow(const NPWindow &window) {
     // Host must have set the window info struct.
-    if (!window->ws_info_)
+    if (!window.ws_info)
       return false;
-    window->ws_info_->type_ = NP_SETWINDOW;
-    if (window->type_ == WindowTypeWindowed) {
-      if (plugin_funcs_->getvalue == NULL)
-        return false;
-      PRBool needs_xembed;
-      NPError error = plugin_funcs_->getvalue(instance_,
-                                              NPPVpluginNeedsXEmbed,
-                                              (void *)&needs_xembed);
-      // Currently we only support xembed when windowed mode is used.
-      if (error != NPERR_NO_ERROR || host_xembed_ != needs_xembed)
-        return false;
-    }
-    if (plugin_funcs_->setwindow != NULL &&
-        plugin_funcs_->setwindow(instance_,
-                                 reinterpret_cast<NPWindow *>(window)) ==
-        NPERR_NO_ERROR) {
-      window_ = window;
-      dirty_rect_.left_ = dirty_rect_.top_ = 0;
-      dirty_rect_.right_ = window_->width_;
-      dirty_rect_.bottom_ = window_->height_;
-      return true;
+    if (windowless_ != (window.type == NPWindowTypeDrawable)) {
+      LOG("Window types don't match (passed in: %s, "
+          "while plugin's type: %s)",
+          window.type == NPWindowTypeDrawable ? "windowless" : "windowed",
+          windowless_ ? "windowless" : "windowed");
+      return false;
     }
 
+    NPWindow window_tmp = window;
+    if (library_info_->plugin_funcs.setwindow &&
+        library_info_->plugin_funcs.setwindow(&instance_, &window_tmp) ==
+            NPERR_NO_ERROR) {
+      window_ = window_tmp;
+      return true;
+    }
     return false;
   }
 
-  bool SetURL(const char *url) {
-    return SetURL(url, false, NULL);
-  }
-
-  bool SetURL(const char *url, bool notify, void *notify_data) {
-    if (!url || !*url)
+  bool HandleEvent(void *event) {
+    if (!library_info_->plugin_funcs.event)
       return false;
-
-    NPStream *stream = new NPStream;
-    memset(stream, 0, sizeof(NPStream));
-    stream->ndata = this;
-    stream->url = url;
-
-    // Currently, we only support local files and http/https streams.
-    // For http/https streams, use xmlhttprequest to download it.
-    if (strncasecmp(url, kHttpURLPrefix, strlen(kHttpURLPrefix)) == 0 ||
-        strncasecmp(url, kHttpsURLPrefix, strlen(kHttpsURLPrefix)) == 0) {
-      XMLHttpRequestInterface *http_request =
-          GetXMLHttpRequestFactory()->CreateXMLHttpRequest(0, NULL);
-      http_request->ConnectOnReadyStateChange(new XMLHttpRequestSlot(
-          this, stream, http_request, notify, notify_data));
-      // Don't free http_request ourselves as we are using async mode and the
-      // internal thread will free the object itself.
-      if ((http_request->Open("Get", url, true, NULL, NULL) !=
-           XMLHttpRequestInterface::NO_ERR) ||
-          (http_request->Send(NULL, 0) != XMLHttpRequestInterface::NO_ERR)) {
-        LOGE("Failed to download the http stream: %s", url);
-        return false;
-      }
-      return true;
-    } else if (strncasecmp(url, kLocalURLPrefix, strlen(kLocalURLPrefix)) == 0) {
-      const char *path = url + strlen(kLocalURLPrefix);
-      struct stat fstat;
-      if (stat(path, &fstat) != 0) {
-        LOGE("Local file %s doesn't exist.", path);
-        return false;
-      }
-      stream->end = fstat.st_size;
-      stream->lastmodified = fstat.st_mtime;
-      OnStreamReady(stream, NULL, notify, notify_data);
-      return true;
-    } else {
-      LOGE("The protocal of URL %s is not supported.", url);
-      return false;
-    }
-  }
-
-  EventResult HandleEvent(XEvent &event) {
-    // Set coordinate fields for GraphicsExpose event.
-    if (event.type == GraphicsExpose) {
-      XGraphicsExposeEvent &expose = event.xgraphicsexpose;
-      // Area to redraw, note to add the offset of x, y.
-      expose.x = window_->x_ + dirty_rect_.left_;
-      expose.y = window_->y_ + dirty_rect_.top_;
-      expose.width = dirty_rect_.right_ - dirty_rect_.left_;
-      expose.height = dirty_rect_.bottom_ - dirty_rect_.top_;
-      // For transparent mode, the invalid area of drawable must be cleared
-      // before the plugin draws on it.
-      if (transparent_) {
-        // If display or drawable changes, create a new graphics context.
-        if (!(drawable_ == expose.drawable && display_ == expose.display)) {
-          drawable_ = expose.drawable;
-          display_ = expose.display;
-          XGCValues value = { GXset, };
-          gc_ = XCreateGC(display_, drawable_, GCFunction, &value);
-        }
-        // Clear the invalid area. It's host's responsibility to clear the
-        // background of the drawable.
-        XFillRectangle(display_, drawable_, gc_, expose.x, expose.y,
-                       expose.width, expose.height);
-      }
-      // Information not set:
-      expose.count = 0;
-      expose.serial = 0;
-      expose.send_event = false;
-      expose.major_code = 0;
-      expose.minor_code = 0;
-    } else if (event.type == ButtonPress || event.type == KeyPress) {
-      in_user_interaction_ = true;
-    }
-    bool handled = false;
-    if (plugin_funcs_ && plugin_funcs_->event) {
-      handled = plugin_funcs_->event(instance_, &event);
-    }
-    return handled ? EVENT_RESULT_HANDLED : EVENT_RESULT_UNHANDLED;
+    return library_info_->plugin_funcs.event(&instance_, event);
   }
 
   ScriptableInterface *GetScriptablePlugin() {
     if (!plugin_root_) {
       NPObject *plugin_root;
-      if (plugin_funcs_->getvalue != NULL &&
-          plugin_funcs_->getvalue(instance_, NPPVpluginScriptableNPObject,
-                                  &plugin_root) == NPERR_NO_ERROR) {
-        if (plugin_root) {
-          plugin_root_ = new NPPluginObject(instance_, plugin_root);
-          return plugin_root_;
-        }
+      if (library_info_->plugin_funcs.getvalue != NULL &&
+          library_info_->plugin_funcs.getvalue(
+              &instance_, NPPVpluginScriptableNPObject, &plugin_root) ==
+              NPERR_NO_ERROR &&
+          plugin_root) {
+        plugin_root_ = new ScriptableNPObject(plugin_root);
+        plugin_root_->Ref();
+        return plugin_root_;
       }
       return NULL;
     }
     return plugin_root_;
   }
 
-  void OnStreamReady(NPStream *stream, XMLHttpRequestInterface *http_request,
+  void OnStreamReady(const std::string &url, const std::string &mime_type,
+                     const std::string &headers, const std::string &data,
                      bool notify, void *notify_data) {
-    if (notify && plugin_funcs_ && plugin_funcs_->urlnotify) {
-      plugin_funcs_->urlnotify(instance_, stream->url, NPRES_DONE, notify_data);
+    if (notify && library_info_->plugin_funcs.urlnotify) {
+      library_info_->plugin_funcs.urlnotify(&instance_, url.c_str(),
+                                            NPRES_DONE, notify_data);
     }
-    StreamHost *stream_host = new StreamHost(this, stream, http_request);
-    watch_ids_.push_back(GetGlobalMainLoop()->
-                         AddTimeoutWatch(kStreamCallbackTimeout, stream_host));
+
+    StreamWriter *writer = new StreamWriter(this, url, mime_type,
+                                            headers, data, notify_data);
+    if (writer->watch_id_ == 0) {
+      // The writer encountered errors or has finished its task.
+      delete writer;
+    }
   }
 
-  // TODO:
-  // URL passed in by plugin may be a javascript request, such as "javascript:
-  // object.subobject", to get browse-side object. But currently, we don't need
-  // to support this. Only normal url request is effective.
-  NPError GetURLHelper(const char *url, const char *target,
-                       bool notify, void *notify_data) {
-    bool use_browser;
+  void OnStreamError(const std::string &url, bool notify, void *notify_data,
+                     NPReason reason) {
+    if (notify && library_info_->plugin_funcs.urlnotify) {
+      library_info_->plugin_funcs.urlnotify(&instance_, url.c_str(),
+                                            reason, notify_data);
+    }
+  }
+
+  NPError HandleURL(const char *method, const char *url, const char *target,
+                    const std::string &post_data,
+                    bool notify, void *notify_data) {
     if (!url || !*url)
+      return NPERR_INVALID_PARAM;
+    if (notify && !library_info_->plugin_funcs.urlnotify)
+      return NPERR_INVALID_PARAM;
+
+    Gadget *gadget = element_->GetView()->GetGadget();
+    if (!gadget)
       return NPERR_GENERIC_ERROR;
-    // Target is not specified, deliver the new stream into the plugin instance.
-    if (!target) {
-      use_browser = false;
-    } else if (strncmp(target, "_blank", 6) == 0 ||
-               strncmp(target, "_new", 4) == 0) {
-      use_browser = true;
-    } else {
-      // It's not allowed to loading the URL into the same area the plugin
-      // instance occupies, which will destroy the current plugin instance.
-      return NPERR_GENERIC_ERROR;
+
+    if (target) {
+      // Let the gadget allow this OpenURL gracefully.
+      bool old_interaction = gadget->SetInUserInteraction(true);
+      gadget->OpenURL(url);
+      gadget->SetInUserInteraction(old_interaction);
+      // Mozilla also doesn't send notification if target is not NULL.
+      return NPERR_NO_ERROR;
     }
 
-    // When user is not in interaction, GetURL will fail. But we don't check
-    // the condition here, because NPN_GetURL and NPN_GetURLNotify should always
-    // return NO_ERROR state immediately unless the parameters passed in are
-    // incorrect. Expecially, if GetURLNotify is used, plugin may wait for the
-    // result asynchronously, returning directly may cause unexpected effect
-    // on the current stream.
+    std::string file_path = IsAbsolutePath(url) ? url : GetFileNameFromURL(url);
+    if (!file_path.empty()) {
+      if (!gadget->GetPermissions()->IsRequiredAndGranted(
+          Permissions::FILE_READ)) {
+        OnStreamError(url, notify, notify_data, NPRES_USER_BREAK);
+        LOG("The gadget doesn't permit the plugin to read local files.");
+        return NPERR_GENERIC_ERROR;
+      }
 
-    GetURLCallback *callback = new GetURLCallback(this, url, use_browser,
-                                                  notify, notify_data);
-    watch_ids_.push_back(GetGlobalMainLoop()->AddTimeoutWatch(0, callback));
+      std::string content;
+      if (!ReadFileContents(file_path.c_str(), &content)) {
+        OnStreamError(url, notify, notify_data, NPRES_NETWORK_ERR);
+        return NPERR_FILE_NOT_FOUND;
+      }
+      OnStreamReady(url, mime_type_, "", content, notify, notify_data);
+    } else {
+      XMLHttpRequestInterface *request = gadget->CreateXMLHttpRequest();
+      if (!request) {
+        OnStreamError(url, notify, notify_data, NPRES_USER_BREAK);
+        return NPERR_GENERIC_ERROR;
+      }
+      request->Ref();
+      // The following object will add itself as the listener of the request.
+      XMLHttpRequestCallback *callback = new XMLHttpRequestCallback(
+          this, url, request, notify, notify_data);
+      if (request->Open(method, url, true, NULL, NULL) !=
+              XMLHttpRequestInterface::NO_ERR ||
+          request->Send(NULL) != XMLHttpRequestInterface::NO_ERR) {
+        delete callback;
+        OnStreamError(url, notify, notify_data, NPRES_NETWORK_ERR);
+      }
+      request->Unref();
+    }
     return NPERR_NO_ERROR;
   }
 
-  /*==============================================================
-   *       Native Browser-side NPAPIs -- called by plugin
-   *============================================================*/
+  void InvalidateRect(NPRect *invalid_rect) {
+    if (!invalid_rect)
+      return;
+    // The current plugins seems always invalid the whole rect.
+    // Otherwise we need to consider the zoom factor of the view.
+    uint64_t time = GetGlobalMainLoop()->GetCurrentTime();
+    if (last_queue_draw_time_ + kCheckQueueDrawInterval < time) {
+      element_->QueueDraw();
+      last_queue_draw_time_ = time;
+      pending_queue_draw_ = false;
+    } else {
+      // The QueueDrawChecker will call the queue draw after some time.
+      pending_queue_draw_ = true;
+    }
+  }
 
-  static NPError NPN_RequestRead(NPStream* stream, NPByteRange* rangeList) {
-    if (stream && stream->ndata) {
-      Impl *impl = static_cast<Impl *>(stream->ndata);
-      return impl->_NPN_RequestRead(stream, rangeList);
+  void ForceRedraw() {
+    element_->MarkRedraw();
+  }
+
+  std::string GetTempFileName() {
+    if (temp_dir_.empty())
+      CreateTempDirectory("ggl-np-", &temp_dir_);
+    if (temp_dir_.empty())
+      return std::string();
+    std::string file_name = StringPrintf("t%d", ++temp_file_seq_);
+    return BuildFilePath(temp_dir_.c_str(), file_name.c_str());
+  }
+
+  static NPError HandleURL(NPP instance, const char *method, const char *url,
+                           const char *target, const std::string &post_data,
+                           bool notify, void *notify_data) {
+    ENSURE_MAIN_THREAD(NPERR_INVALID_PARAM);
+    if (instance && instance->ndata) {
+      Impl *impl = static_cast<Impl *>(instance->ndata);
+      return impl->HandleURL(method, url, target, post_data,
+                             notify, notify_data);
     }
     return NPERR_INVALID_PARAM;
   }
 
-  NPError NPN_GetURL(const char* url, const char* target) {
-    return GetURLHelper(url, target, false, NULL);
+  static NPError NPN_GetURL(NPP instance, const char *url, const char *target) {
+    return HandleURL(instance, "GET", url, target, "", false, NULL);
   }
 
-  NPError NPN_GetURLNotify(const char* url, const char* target,
-                           void *notify_data) {
-    return GetURLHelper(url, target, true, notify_data);
+  static NPError NPN_GetURLNotify(NPP instance, const char *url,
+                                  const char *target, void *notify_data) {
+    return HandleURL(instance, "GET", url, target, "", true, notify_data);
   }
 
-  NPError NPN_PostURL(const char* url, const char* target,
-                      uint32 len, const char* buf, NPBool file) {
+  static NPError HandlePostURL(NPP instance, const char *url,
+                               const char *target, uint32 len, const char *buf,
+                               NPBool file, bool notify, void *notify_data) {
+    if (!buf)
+      return NPERR_INVALID_PARAM;
+
+    std::string post_data;
+    if (file) {
+      std::string file_name(buf, len);
+      if (!ReadFileContents(file_name.c_str(), &post_data)) {
+        LOG("Failed to read file: %s", file_name.c_str());
+        return NPERR_GENERIC_ERROR;
+      }
+    } else {
+      post_data.assign(buf, len);
+    }
+    return HandleURL(instance, "POST", url, target, post_data,
+                     notify, notify_data);
+  }
+
+  static NPError NPN_PostURL(NPP instance, const char *url, const char *target,
+                             uint32 len, const char *buf, NPBool file) {
+    return HandlePostURL(instance, url, target, len, buf, file, false, NULL);
+  }
+
+  static NPError NPN_PostURLNotify(NPP instance, const char *url,
+                                   const char *target,
+                                   uint32 len, const char *buf,
+                                   NPBool file, void *notify_data) {
+    return HandlePostURL(instance, url, target, len, buf, file,
+                         true, notify_data);
+  }
+
+  static NPError NPN_RequestRead(NPStream *stream, NPByteRange *rangeList) {
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
   }
 
-  NPError NPN_PostURLNotify(const char* url, const char* target,
-                            uint32 len, const char* buf, NPBool file,
-                            void* notifyData) {
-    NOT_IMPLEMENTED();
-    return NPERR_GENERIC_ERROR;
-  }
-
-  NPError _NPN_RequestRead(NPStream* stream, NPByteRange* rangeList) {
-    NOT_IMPLEMENTED();
-    return NPERR_GENERIC_ERROR;
-  }
-
-  NPError NPN_NewStream(NPMIMEType type, const char* target,
-                        NPStream** stream) {
+  static NPError NPN_NewStream(NPP instance, NPMIMEType type,
+                               const char *target, NPStream **stream) {
     // Plugin-produced stream is not supported.
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
   }
 
-  int32  NPN_Write(NPStream* stream, int32 len, void* buffer) {
+  static int32 NPN_Write(NPP instance, NPStream *stream,
+                         int32 len, void *buffer) {
+    NOT_IMPLEMENTED();
+    return -1;
+  }
+
+  static NPError NPN_DestroyStream(NPP instance, NPStream *stream,
+                                   NPReason reason) {
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
   }
 
-  NPError NPN_DestroyStream(NPStream* stream, NPReason reason) {
+  static void NPN_Status(NPP instance, const char *message) {
+    ENSURE_MAIN_THREAD_VOID();
+    if (instance && instance->ndata) {
+      Impl *impl = static_cast<Impl *>(instance->ndata);
+      impl->on_new_message_handler_(message);
+    }
+  }
+
+  static const char *NPN_UserAgent(NPP instance) {
+    CHECK_MAIN_THREAD();
+    // Returns the same UserAgent string with firefox-3.0.1.
+    // When wmode transparent/opaque is used, flash player 10 beta 2 plugin for
+    // Linux first try to detect browser's user agent string, and if the string
+    // is not one of those it expects, it will turn to window mode, no matter
+    // whether browser-side support windowless mode or not.
+    return kFirefox3UserAgent;
+  }
+
+  static uint32 NPN_MemFlush(uint32 size) {
+    CHECK_MAIN_THREAD();
+    return 0;
+  }
+
+  static void NPN_ReloadPlugins(NPBool reloadPages) {
+    // We don't provide any plugin-in with the authority that can reload
+    // all plug-ins in the plugins directory.
     NOT_IMPLEMENTED();
-    return NPERR_GENERIC_ERROR;
   }
 
-  void NPN_Status(const char* message) {
-    on_new_message_handler_(message);
+  static JRIEnv *NPN_GetJavaEnv(void) {
+    NOT_IMPLEMENTED();
+    return NULL;
   }
 
-  NPError NPN_GetValue(NPNVariable variable, void *value) {
+  static jref NPN_GetJavaPeer(NPP instance) {
+    NOT_IMPLEMENTED();
+    return NULL;
+  }
+
+  static NPError NPN_GetValue(NPP instance, NPNVariable variable, void *value) {
+    // This function may be called before any instance is constructed.
+    ENSURE_MAIN_THREAD(NPERR_INVALID_PARAM);
     switch (variable) {
       case NPNVjavascriptEnabledBool:
-        *(bool*)value = true;
+        *static_cast<NPBool *>(value) = true;
+        break;
       case NPNVSupportsXEmbedBool:
-        *(bool*)value = host_xembed_;
+        *static_cast<NPBool *>(value) = true;
         break;
       case NPNVToolkit:
-        *(NPNToolkitType *)value = (NPNToolkitType)host_toolkit_;
+        // This value is only applicable for GTK.
+        *static_cast<NPNToolkitType *>(value) = NPNVGtk2;
         break;
       case NPNVisOfflineBool:
       case NPNVasdEnabledBool:
-        *(bool*)value = false;
+        *static_cast<NPBool *>(value) = false;
         break;
-#if NP_VERSION_MAJOR > 0 || NP_VERSION_MINOR >= 19
       case NPNVSupportsWindowless:
-        *(bool*)value = true;
+        *static_cast<NPBool *>(value) = true;
+        break;
+#ifdef MOZ_X11
+      case NPNVxDisplay:
+        *static_cast<Display **>(value) = display_;
+        DLOG("NPN_GetValue NPNVxDisplay: %p", display_);
+        break;
+      case NPNVxtAppContext:
+        if (!display_)
+          return NPERR_GENERIC_ERROR;
+        *static_cast<XtAppContext *>(value) =
+            XtDisplayToApplicationContext(display_);
         break;
 #endif
-      case NPNVxDisplay:
-      case NPNVxtAppContext:
       case NPNVserviceManager:
       case NPNVDOMElement:
       case NPNVPluginElementNPObject:
-      // TODO:
-      // This variable is for popup window/menu purpose when windowless mode is
-      // used. We must provide a parent window for the plugin to show popups if
-      // we want to support.
+        // TODO: This variable is for popup window/menu purpose when
+        // windowless mode is used. We must provide a parent window for
+        // the plugin to show popups if we want to support.
       case NPNVnetscapeWindow:
       case NPNVWindowNPObject:
       default:
-        LOGW("NPNVariable %d is not supported.", variable);
+        LOG("NPNVariable %d is not supported.", variable);
         return NPERR_GENERIC_ERROR;
     }
     return NPERR_NO_ERROR;
   }
 
-  NPError NPN_SetValue(NPPVariable variable, void *value) {
-    switch (variable) {
-      case NPPVpluginWindowBool:
-        plugin_window_type_ = value ? WindowTypeWindowed : WindowTypeWindowless;
-        return NPERR_NO_ERROR;
-      case NPPVpluginTransparentBool:
-        transparent_ = value ? true : false;
-        return NPERR_NO_ERROR;
-      case NPPVjavascriptPushCallerBool:
-      case NPPVpluginKeepLibraryInMemory:
-      default:
+  static NPError NPN_SetValue(NPP instance, NPPVariable variable, void *value) {
+    ENSURE_MAIN_THREAD(NPERR_INVALID_PARAM);
+    if (instance && instance->ndata) {
+      Impl *impl = static_cast<Impl *>(instance->ndata);
+      switch (variable) {
+        case NPPVpluginWindowBool:
+          impl->windowless_ = !value;
           break;
+        case NPPVpluginTransparentBool:
+          impl->transparent_ = value ? true : false;
+          break;
+        case NPPVjavascriptPushCallerBool:
+        case NPPVpluginKeepLibraryInMemory:
+        default:
+          LOG("NPNVariable %d is not supported.", variable);
+          return NPERR_GENERIC_ERROR;
+      }
+      return NPERR_NO_ERROR;
     }
-    return NPERR_GENERIC_ERROR;
+    return NPERR_INVALID_PARAM;
   }
 
-  void NPN_InvalidateRect(NPRect *invalidRect) {
-    if (!invalidRect)
-      return;
-    dirty_rect_ = *reinterpret_cast<ClipRect *>(invalidRect);
-    // If right or bottom is zero or out of range, refresh the whole area.
-    if (dirty_rect_.right_ == 0 || dirty_rect_.right_ > window_->width_ ||
-        dirty_rect_.bottom_ == 0 || dirty_rect_.bottom_ > window_->height_) {
-      dirty_rect_.left_ = 0;
-      dirty_rect_.top_ = 0;
-      dirty_rect_.right_ = window_->width_;
-      dirty_rect_.bottom_ = window_->height_;
-    }
-    if (element_) {
-      // Note to add the offset of x, y.
-      element_->QueueDrawRect(Rectangle(window_->x_ + dirty_rect_.left_,
-                                        window_->y_ + dirty_rect_.top_,
-                                        dirty_rect_.right_ - dirty_rect_.left_,
-                                        dirty_rect_.bottom_ -dirty_rect_.top_));
+  static void NPN_InvalidateRect(NPP instance, NPRect *invalid_rect) {
+    ENSURE_MAIN_THREAD_VOID();
+    if (instance && instance->ndata) {
+      Impl *impl = static_cast<Impl *>(instance->ndata);
+      impl->InvalidateRect(invalid_rect);
     }
   }
 
-  void NPN_ForceRedraw() {
-    XEvent event;
-    event.type = GraphicsExpose;
-    event.xgraphicsexpose.drawable = drawable_;
-    event.xgraphicsexpose.display = display_;
-    HandleEvent(event);
+  static void NPN_InvalidateRegion(NPP instance, NPRegion invalidRegion) {
+    NOT_IMPLEMENTED();
+  }
+
+  static void NPN_ForceRedraw(NPP instance) {
+    ENSURE_MAIN_THREAD_VOID();
+    if (instance && instance->ndata) {
+      Impl *impl = static_cast<Impl *>(instance->ndata);
+      impl->ForceRedraw();
+    }
+  }
+
+  static void NPN_GetStringIdentifiers(const NPUTF8 **names,
+                                       int32_t name_count,
+                                       NPIdentifier *identifiers) {
+    ENSURE_MAIN_THREAD_VOID();
+    for (int32_t i = 0; i < name_count; i++)
+      identifiers[i] = GetStringIdentifier(names[i]);
+  }
+
+  static bool NPN_Invoke(NPP npp, NPObject *npobj, NPIdentifier method_name,
+                         const NPVariant *args, uint32_t arg_count,
+                         NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->invoke &&
+           npobj->_class->invoke(npobj, method_name, args, arg_count, result);
+  }
+
+  static bool NPN_InvokeDefault(NPP npp, NPObject *npobj,
+                                const NPVariant *args, uint32_t arg_count,
+                                NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->invokeDefault &&
+           npobj->_class->invokeDefault(npobj, args, arg_count, result);
+  }
+
+  static bool NPN_Evaluate(NPP npp, NPObject *npobj, NPString *script,
+                           NPVariant *result) {
+    NOT_IMPLEMENTED();
+    return false;
+  }
+
+  static bool NPN_GetProperty(NPP npp, NPObject *npobj,
+                              NPIdentifier property_name, NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->getProperty &&
+           npobj->_class->getProperty(npobj, property_name, result);
+  }
+
+  static bool NPN_SetProperty(NPP npp, NPObject *npobj,
+                              NPIdentifier property_name,
+                              const NPVariant *value) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->setProperty &&
+           npobj->_class->setProperty(npobj, property_name, value);
+  }
+
+  static bool NPN_RemoveProperty(NPP npp, NPObject *npobj,
+                                 NPIdentifier property_name) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->removeProperty &&
+           npobj->_class->removeProperty(npobj, property_name);
+  }
+
+  static bool NPN_HasProperty(NPP npp, NPObject *npobj,
+                              NPIdentifier property_name) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->hasProperty &&
+           npobj->_class->hasProperty(npobj, property_name);
+  }
+
+  static bool NPN_HasMethod(NPP npp, NPObject *npobj,
+                            NPIdentifier method_name) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->hasMethod &&
+           npobj->_class->hasMethod(npobj, method_name);
+  }
+
+  static void NPN_SetException(NPObject *npobj, const NPUTF8 *message) {
+    NOT_IMPLEMENTED();
+  }
+
+  static bool NPN_PushPopupsEnabledState(NPP instance, NPBool enabled) {
+    NOT_IMPLEMENTED();
+    return false;
+  }
+
+  static bool NPN_PopPopupsEnabledState(NPP instance) {
+    NOT_IMPLEMENTED();
+    return false;
+  }
+
+  static bool NPN_Enumerate(NPP npp, NPObject *npobj,
+                            NPIdentifier **identifiers, uint32_t *count) {
+    ENSURE_MAIN_THREAD(false);
+    return npobj && npobj->_class && npobj->_class->enumerate &&
+           npobj->_class->enumerate(npobj, identifiers, count);
+  }
+
+  class AsyncCall : public WatchCallbackInterface {
+   public:
+    AsyncCall(void (*func)(void *), void *user_data)
+        : func_(func), user_data_(user_data) { }
+    virtual bool Call(MainLoopInterface *mainloop, int watch_id) {
+      (*func_)(user_data_);
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *mainloop, int watch_id) {
+      delete this;
+    }
+   private:
+    void (*func_)(void *);
+    void *user_data_;
+  };
+
+  // According to NPAPI specification, plugins should perform appropriate
+  // synchronization with the code in their NPP_Destroy routine to avoid
+  // incorrect execution and memory leaks caused by the race conditions
+  // between calling this function and termination of the plugin instance.
+  static void NPN_PluginThreadAsyncCall(NPP instance, void (*func)(void *),
+                                        void *user_data) {
+    if (GetGlobalMainLoop()->IsMainThread())
+      DLOG("NPN_PluginThreadAsyncCall called from the non-main thread.");
+    else
+      DLOG("NPN_PluginThreadAsyncCall called from the main thread.");
+    GetGlobalMainLoop()->AddTimeoutWatch(0, new AsyncCall(func, user_data));
+  }
+
+  static bool NPN_Construct(NPP npp, NPObject *npobj,
+                            const NPVariant *args, uint32_t argc,
+                            NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    return npp && npobj && npobj->_class && npobj->_class->construct &&
+           npobj->_class->construct(npobj, args, argc, result);
   }
 
   std::string mime_type_;
   BasicElement *element_;
-  std::string name_;
-  std::string description_;
-  NPP instance_;
-  NPPluginFuncs *plugin_funcs_;
-  NPPluginObject *plugin_root_;
-
-  Window *window_;
-  Display *display_;
-  Drawable drawable_;
-  GC gc_;
-  bool host_xembed_;
-  ToolkitType host_toolkit_;
-  WindowType plugin_window_type_;
+  PluginLibraryInfo *library_info_;
+  NPP_t instance_;
+  ScriptableNPObject *plugin_root_;
+  NPWindow window_;
+  bool windowless_;
   bool transparent_;
-  bool in_user_interaction_;
-  ClipRect dirty_rect_;
+  NPError init_error_;
+  std::string temp_dir_;
+  int temp_file_seq_;
 
-  std::vector<int> watch_ids_;
   Signal1<void, const char *> on_new_message_handler_;
+  Signal0<void> on_destroy_;
+  static const NPNetscapeFuncs kContainerFuncs;
+#ifdef MOZ_X11
+  // Stores the XDisplay pointer to make it available during plugin library
+  // initialization. nspluginwrapper requires this.
+  static Display *display_;
+#endif
+
+  int queue_draw_checker_timer_;
+  bool pending_queue_draw_;
+  uint64_t last_queue_draw_time_;
 };
 
-NPPlugin::NPPlugin(const std::string &mime_type, BasicElement *element,
-                   const std::string &name, const std::string &description,
-                   void *instance, void *plugin_funcs,
-                   bool xembed, ToolkitType toolkit)
-    : impl_(new Impl(mime_type, element,
-                     name, description,
-                     reinterpret_cast<NPP>(instance),
-                     reinterpret_cast<NPPluginFuncs *>(plugin_funcs),
-                     xembed, toolkit)) {
-  // Cannot call plugin functions here as we have not created the new plugin
-  // instance. See how NPContainer create NPPlugin object.
+const NPNetscapeFuncs Plugin::Impl::kContainerFuncs = {
+  static_cast<uint16>(sizeof(NPNetscapeFuncs)),
+  static_cast<uint16>((NP_VERSION_MAJOR << 8) + NP_VERSION_MINOR),
+  NPN_GetURL,
+  NPN_PostURL,
+  NPN_RequestRead,
+  NPN_NewStream,
+  NPN_Write,
+  NPN_DestroyStream,
+  NPN_Status,
+  NPN_UserAgent,
+  MemAlloc,
+  MemFree,
+  NPN_MemFlush,
+  NPN_ReloadPlugins,
+  NPN_GetJavaEnv,
+  NPN_GetJavaPeer,
+  NPN_GetURLNotify,
+  NPN_PostURLNotify,
+  NPN_GetValue,
+  NPN_SetValue,
+  NPN_InvalidateRect,
+  NPN_InvalidateRegion,
+  NPN_ForceRedraw,
+  GetStringIdentifier,
+  NPN_GetStringIdentifiers,
+  GetIntIdentifier,
+  IdentifierIsString,
+  UTF8FromIdentifier,
+  IntFromIdentifier,
+  CreateNPObject,
+  RetainNPObject,
+  ReleaseNPObject,
+  NPN_Invoke,
+  NPN_InvokeDefault,
+  NPN_Evaluate,
+  NPN_GetProperty,
+  NPN_SetProperty,
+  NPN_RemoveProperty,
+  NPN_HasProperty,
+  NPN_HasMethod,
+  ReleaseNPVariant,
+  NPN_SetException,
+  NPN_PushPopupsEnabledState,
+  NPN_PopPopupsEnabledState,
+  NPN_Enumerate,
+  NPN_PluginThreadAsyncCall,
+  NPN_Construct,
+};
+
+#ifdef MOZ_X11
+Display *Plugin::Impl::display_ = NULL;
+#endif
+
+Plugin::Plugin() : impl_(NULL) {
+  // impl_ should be set in Plugin::Create().
 }
 
-NPPlugin::~NPPlugin() {
+Plugin::~Plugin() {
   delete impl_;
 }
 
-std::string NPPlugin::GetDescription() {
-  return impl_->description_;
+void Plugin::Destroy() {
+  delete this;
 }
 
-WindowType NPPlugin::GetWindowType() {
-  return impl_->plugin_window_type_;
+std::string Plugin::GetName() const {
+  return impl_->library_info_->name;
 }
 
-bool NPPlugin::SetWindow(Window *window) {
+std::string Plugin::GetDescription() const {
+  return impl_->library_info_->description;
+}
+
+bool Plugin::IsWindowless() const {
+  return impl_->windowless_;
+}
+
+bool Plugin::SetWindow(const NPWindow &window) {
   return impl_->SetWindow(window);
 }
 
-bool NPPlugin::SetURL(const char *url) {
-  return impl_->SetURL(url);
-}
-
-bool NPPlugin::IsTransparent() {
+bool Plugin::IsTransparent() const {
   return impl_->transparent_;
 }
 
-EventResult NPPlugin::HandleEvent(XEvent event) {
+bool Plugin::HandleEvent(void *event) {
   return impl_->HandleEvent(event);
 }
 
-Connection *NPPlugin::ConnectOnNewMessage(Slot1<void, const char *> *handler) {
+void Plugin::SetSrc(const char *src) {
+  // Start the initial data stream.
+  impl_->HandleURL("GET", src, NULL, "", false, NULL);
+}
+
+Connection *Plugin::ConnectOnNewMessage(Slot1<void, const char *> *handler) {
   return impl_->on_new_message_handler_.Connect(handler);
 }
 
-ScriptableInterface *NPPlugin::GetScriptablePlugin() {
+ScriptableInterface *Plugin::GetScriptablePlugin() {
   return impl_->GetScriptablePlugin();
 }
 
-/*============================================================
- *             Implementation of class NPAPIImpl.
- *==========================================================*/
-
-static const int kPluginCallbackTimeout = 100; // ms
-class PluginCallback : public WatchCallbackInterface {
- public:
-  typedef void (*PluginCallbackType)(void*);
-  PluginCallback(PluginCallbackType func, void *user_data)
-      : func_(func), user_data_(user_data) { }
-  virtual bool Call(MainLoopInterface *mainloop, int watch_id) {
-    (*func_)(user_data_);
-    return false;
-  }
-  virtual void OnRemove(MainLoopInterface *mainloop, int watch_id) {
-    delete this;
-  }
- private:
-  PluginCallbackType func_;
-  void *user_data_;
-};
-
-static bool IsMainThread() {
-  return GetGlobalMainLoop()->IsMainThread();
-}
-
-void NPAPIImpl::InitContainerFuncs(NPNetscapeFuncs *container_funcs) {
-  if (!container_funcs)
-    return;
-
-  memset(container_funcs, 0, sizeof(*container_funcs));
-  container_funcs->size = sizeof(*container_funcs);
-  container_funcs->version = (NP_VERSION_MAJOR << 8) + NP_VERSION_MINOR;
-
-  // Browser-side NPAPIs.
-  container_funcs->geturl = NewNPN_GetURLProc(NPN_GetURL);
-  container_funcs->posturl = NewNPN_PostURLProc(NPN_PostURL);
-  container_funcs->requestread = NewNPN_RequestReadProc(NPN_RequestRead);
-  container_funcs->newstream = NewNPN_NewStreamProc(NPN_NewStream);
-  container_funcs->write = NewNPN_WriteProc(NPN_Write);
-  container_funcs->destroystream = NewNPN_DestroyStreamProc(NPN_DestroyStream);
-  container_funcs->status = NewNPN_StatusProc(NPN_Status);
-  container_funcs->uagent = NewNPN_UserAgentProc(NPN_UserAgent);
-  container_funcs->memalloc = NewNPN_MemAllocProc(NPN_MemAlloc);
-  container_funcs->memfree = NewNPN_MemFreeProc(NPN_MemFree);
-  container_funcs->memflush = NewNPN_MemFlushProc(NPN_MemFlush);
-  container_funcs->reloadplugins = NewNPN_ReloadPluginsProc(NPN_ReloadPlugins);
-  container_funcs->getJavaEnv = NewNPN_GetJavaEnvProc(NPN_GetJavaEnv);
-  container_funcs->getJavaPeer = NewNPN_GetJavaPeerProc(NPN_GetJavaPeer);
-  container_funcs->geturlnotify = NewNPN_GetURLNotifyProc(NPN_GetURLNotify);
-  container_funcs->posturlnotify = NewNPN_PostURLNotifyProc(NPN_PostURLNotify);
-  container_funcs->getvalue = NewNPN_GetValueProc(NPN_GetValue);
-  container_funcs->setvalue = NewNPN_SetValueProc(NPN_SetValue);
-  container_funcs->invalidaterect = NewNPN_InvalidateRectProc(NPN_InvalidateRect);
-  container_funcs->invalidateregion = NewNPN_InvalidateRegionProc(NPN_InvalidateRegion);
-  container_funcs->forceredraw = NewNPN_ForceRedrawProc(NPN_ForceRedraw);
-  container_funcs->pushpopupsenabledstate = NewNPN_PushPopupsEnabledStateProc(NPN_PushPopupsEnabledState);
-  container_funcs->poppopupsenabledstate = NewNPN_PopPopupsEnabledStateProc(NPN_PopPopupsEnabledState);
-#ifdef NPVERS_HAS_PLUGIN_THREAD_ASYNC_CALL
-  container_funcs->pluginthreadasynccall = NewNPN_PluginThreadAsyncCallProc(NPN_PluginThreadAsyncCall);
+Plugin *Plugin::Create(const char *mime_type, BasicElement *element,
+                       const NPWindow &window, const StringMap &parameters) {
+#ifdef MOZ_X11
+  // Set it early because it may be used during library initialization.
+  if (!Impl::display_ && window.ws_info)
+    Impl::display_ = static_cast<NPSetWindowCallbackStruct *>(
+        window.ws_info)->display;
 #endif
+  PluginLibraryInfo *library_info = GetPluginLibrary(mime_type,
+                                                     &Impl::kContainerFuncs);
+  if (!library_info)
+    return NULL;
 
-  // npruntime APIs.
-  container_funcs->getstringidentifier = NewNPN_GetStringIdentifierProc(NPN_GetStringIdentifier);
-  container_funcs->getstringidentifiers = NewNPN_GetStringIdentifiersProc(NPN_GetStringIdentifiers);
-  container_funcs->getintidentifier = NewNPN_GetIntIdentifierProc(NPN_GetIntIdentifier);
-  container_funcs->identifierisstring = NewNPN_IdentifierIsStringProc(NPN_IdentifierIsString);
-  container_funcs->utf8fromidentifier = NewNPN_UTF8FromIdentifierProc(NPN_UTF8FromIdentifier);
-  container_funcs->intfromidentifier = NewNPN_IntFromIdentifierProc(NPN_IntFromIdentifier);
-  container_funcs->createobject = NewNPN_CreateObjectProc(NPN_CreateObject);
-  container_funcs->retainobject = NewNPN_RetainObjectProc(NPN_RetainObject);
-  container_funcs->releaseobject = NewNPN_ReleaseObjectProc(NPN_ReleaseObject);
-  container_funcs->invoke = NewNPN_InvokeProc(NPN_Invoke);
-  container_funcs->invokeDefault = NewNPN_InvokeDefaultProc(NPN_InvokeDefault);
-  container_funcs->evaluate = NewNPN_EvaluateProc(NPN_Evaluate);
-  container_funcs->getproperty = NewNPN_GetPropertyProc(NPN_GetProperty);
-  container_funcs->setproperty = NewNPN_SetPropertyProc(NPN_SetProperty);
-  container_funcs->removeproperty = NewNPN_RemovePropertyProc(NPN_RemoveProperty);
-  container_funcs->hasproperty = NewNPN_HasPropertyProc(NPN_HasProperty);
-  container_funcs->hasmethod = NewNPN_HasMethodProc(NPN_HasMethod);
-  container_funcs->releasevariantvalue = NewNPN_ReleaseVariantValueProc(NPN_ReleaseVariantValue);
-  container_funcs->setexception = NewNPN_SetExceptionProc(NPN_SetException);
-#ifdef NPVERS_HAS_NPOBJECT_ENUM
-  container_funcs->enumerate = NewNPN_EnumerateProc(NPN_Enumerate);
-  container_funcs->construct = NewNPN_ConstructProc(NPN_Construct);
-#endif
-}
+  Plugin *plugin = new Plugin();
+  plugin->impl_ = new Plugin::Impl(mime_type, element, library_info, window,
+                                   parameters);
 
-NPError NPAPIImpl::NPN_GetURLNotify(NPP instance,
-                                    const char* url, const char* target,
-                                    void* notifyData) {
-  if (!IsMainThread()) {
-    LOGE("NPN_GetURLNotify called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_GetURLNotify(url, target, notifyData);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-NPError NPAPIImpl::NPN_GetURL(NPP instance,
-                              const char* url, const char* target) {
-  if (!IsMainThread()) {
-    LOGE("NPN_GetURL called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_GetURL(url, target);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-NPError NPAPIImpl::NPN_PostURL(NPP instance,
-                               const char* url, const char* target,
-                               uint32 len, const char* buf, NPBool file) {
-  if (!IsMainThread()) {
-    LOGE("NPN_PostURL called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_PostURL(url, target, len, buf, file);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-NPError NPAPIImpl::NPN_PostURLNotify(NPP instance,
-                                     const char* url, const char* target,
-                                     uint32 len, const char* buf, NPBool file,
-                                     void* notifyData) {
-  if (!IsMainThread()) {
-    LOGE("NPN_PostURLNotify called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_PostURLNotify(url, target, len, buf, file,
-                                            notifyData);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-NPError NPAPIImpl::NPN_RequestRead(NPStream* stream, NPByteRange* rangeList) {
-  if (!IsMainThread()) {
-    LOGE("NPN_RequestRead called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  return NPPlugin::Impl::NPN_RequestRead(stream, rangeList);
-}
-
-NPError NPAPIImpl::NPN_NewStream(NPP instance, NPMIMEType type,
-                                 const char* target, NPStream** stream) {
-  if (!IsMainThread()) {
-    LOGE("NPN_NewStream called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_NewStream(type, target, stream);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-int32 NPAPIImpl::NPN_Write(NPP instance, NPStream* stream,
-                           int32 len, void* buffer) {
-  if (!IsMainThread()) {
-    LOGE("NPN_Write called from the wrong thread.\n");
-    return -1;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_Write(stream, len, buffer);
-  }
-  return -1;
-}
-
-NPError NPAPIImpl::NPN_DestroyStream(NPP instance, NPStream* stream,
-                                     NPReason reason) {
-  if (!IsMainThread()) {
-    LOGE("NPN_DestroyStream called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_DestroyStream(stream, reason);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-void NPAPIImpl::NPN_Status(NPP instance, const char* message) {
-  if (!IsMainThread()) {
-    LOGE("NPN_Status called from the wrong thread.\n");
-    return;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    plugin->impl_->NPN_Status(message);
-  }
-}
-
-const char *NPAPIImpl::NPN_UserAgent(NPP instance) {
-  if (!IsMainThread()) {
-    LOGE("NPN_UserAgent called from the wrong thread.\n");
+  if (plugin->impl_->init_error_ != NPERR_NO_ERROR) {
+    plugin->Destroy();
     return NULL;
   }
-  // Returns the same UserAgent string with firefox-3.0.1.
-  // When wmode transparent/opaque is used, flash player 10 beta 2 plugin for
-  // Linux first try to detect browser's user agent string, and if the string
-  // is not one of those it expects, it will turn to window mode, no matter
-  // whether browser-side support windowless mode or not.
-  return FF3_USERAGENT_ID;
-}
 
-void *NPAPIImpl::NPN_MemAlloc(uint32 size) {
-  if (!IsMainThread()) {
-    LOGW("NPN_MemAlloc called from the wrong thread.\n");
-  }
-  return new char[size];
+  return plugin;
 }
-
-void NPAPIImpl::NPN_MemFree(void* ptr) {
-  if (!IsMainThread()) {
-    LOGW("NPN_MemFree called from the wrong thread.\n");
-  }
-  delete[] reinterpret_cast<char*>(ptr);
-}
-
-uint32 NPAPIImpl::NPN_MemFlush(uint32 size) {
-  if (!IsMainThread()) {
-    LOGW("NPN_MemFlush called from the wrong thread.\n");
-  }
-  return 0;
-}
-
-void NPAPIImpl::NPN_ReloadPlugins(NPBool reloadPages) {
-  // We don't provide any plugin-in with the authority that can reload
-  // all plug-ins in the plugins directory.
-  NOT_IMPLEMENTED();
-}
-
-JRIEnv* NPAPIImpl::NPN_GetJavaEnv(void) {
-  NOT_IMPLEMENTED();
-  return NULL;
-}
-
-jref NPAPIImpl::NPN_GetJavaPeer(NPP instance) {
-  NOT_IMPLEMENTED();
-  return NULL;
-}
-
-NPError NPAPIImpl::NPN_GetValue(NPP instance,
-                                NPNVariable variable, void *value) {
-  if (!IsMainThread()) {
-    LOGE("NPN_GetValue called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if(instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_GetValue(variable, value);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-NPError NPAPIImpl::NPN_SetValue(NPP instance,
-                                NPPVariable variable, void *value) {
-  if (!IsMainThread()) {
-    LOGE("NPN_SetValue called from the wrong thread.\n");
-    return NPERR_INVALID_PARAM;
-  }
-  if(instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    return plugin->impl_->NPN_SetValue(variable, value);
-  }
-  return NPERR_INVALID_PARAM;
-}
-
-void NPAPIImpl::NPN_InvalidateRect(NPP instance, NPRect *invalidRect) {
-  if (!IsMainThread()) {
-    LOGE("NPN_InvalidateRect called from the wrong thread.\n");
-    return;
-  }
-  if(instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    plugin->impl_->NPN_InvalidateRect(invalidRect);
-  }
-}
-
-void NPAPIImpl::NPN_InvalidateRegion(NPP instance, NPRegion invalidRegion) {
-  NOT_IMPLEMENTED();
-}
-
-void NPAPIImpl::NPN_ForceRedraw(NPP instance) {
-  if (!IsMainThread()) {
-    LOGE("NPN_ForceRedraw called from the wrong thread.\n");
-    return;
-  }
-  if (instance && instance->ndata) {
-    NPPlugin *plugin = static_cast<NPPlugin *>(instance->ndata);
-    plugin->impl_->NPN_ForceRedraw();
-  }
-}
-
-void NPAPIImpl::NPN_PushPopupsEnabledState(NPP instance, NPBool enabled) {
-  NOT_IMPLEMENTED();
-}
-
-void NPAPIImpl::NPN_PopPopupsEnabledState(NPP instance) {
-  NOT_IMPLEMENTED();
-}
-
-// According to npapi specification, plugins should perform appropriate
-// synchronization with the code in their NPP_Destroy routine to avoid
-// incorrect execution and memory leaks caused by the race conditions
-// between calling this function and termination of the plugin instance.
-void NPAPIImpl::NPN_PluginThreadAsyncCall(NPP instance, void (*func) (void *),
-                                          void *userData) {
-  if (!IsMainThread())
-    LOGI("NPN_PluginThreadAsyncCall called from the main thread.\n");
-  else
-    LOGI("NPN_PluginThreadAsyncCall called from the non-main thread.\n");
-  GetGlobalMainLoop()->AddTimeoutWatch(kPluginCallbackTimeout,
-                                       new PluginCallback(func, userData));
-}
-
-void NPAPIImpl::NPN_ReleaseVariantValue(NPVariant *variant) {
-  if (!IsMainThread())
-    LOGW("NPN_ReleaseVariantValue called from the wrong thread.\n");
-  switch (variant->type) {
-    case NPVariantType_String:
-      {
-        NPString *s = &NPVARIANT_TO_STRING(*variant);
-        if (s->utf8characters)
-          delete s->utf8characters;
-        break;
-      }
-    case NPVariantType_Object:
-      {
-        NPObject *npobj = NPVARIANT_TO_OBJECT(*variant);
-        if (npobj)
-          NPN_ReleaseObject(npobj);
-        break;
-      }
-    default:
-      break;
-  }
-}
-
-NPIdentifier NPAPIImpl::NPN_GetStringIdentifier(const NPUTF8 *name) {
-  if (!IsMainThread())
-    LOGW("NPN_GetStringIdentifier called from the wrong thread.\n");
-  if (!name)
-    return NULL;
-  // Use the same allocation function (i.e. new) with NPN_MemAlloc,
-  // as the plugin may use NPN_MemFree to free NPIdentifier.
-  return (new _NPIdentifier(_NPIdentifier::TYPE_STRING, name));
-}
-
-void NPAPIImpl::NPN_GetStringIdentifiers(const NPUTF8 **names,
-                                         int32_t nameCount,
-                                         NPIdentifier *identifiers) {
-  if (!IsMainThread())
-    LOGW("NPN_GetStringIdentifiers called from the wrong thread.\n");
-  for (int32_t i = 0; i < nameCount; i++) {
-    identifiers[i] = NPN_GetStringIdentifier(names[i]);
-  }
-}
-
-NPIdentifier NPAPIImpl::NPN_GetIntIdentifier(int32_t intid) {
-  if (!IsMainThread())
-    LOGW("NPN_GetIntIdentifier called from the wrong thread.\n");
-  return (new _NPIdentifier(_NPIdentifier::TYPE_INT, intid));
-}
-
-bool NPAPIImpl::NPN_IdentifierIsString(NPIdentifier identifier) {
-  if (!IsMainThread())
-    LOGW("NPN_IdentifierIsString called from the wrong thread.\n");
-  if (!identifier)
-    return false;
-  return identifier->type_ == _NPIdentifier::TYPE_STRING;
-}
-
-NPUTF8 *NPAPIImpl::NPN_UTF8FromIdentifier(NPIdentifier identifier) {
-  if (!IsMainThread())
-    LOGW("NPN_UTF8FromIdentifier called from the wrong thread.\n");
-  if (!identifier || identifier->type_ != _NPIdentifier::TYPE_STRING)
-    return NULL;
-  size_t size = identifier->name_.size();
-  NPUTF8 *buf = reinterpret_cast<NPUTF8 *>(NPN_MemAlloc(size + 1));
-  buf[size] = '\0';
-  identifier->name_.copy(buf, size);
-  return buf;
-}
-
-int32_t NPAPIImpl::NPN_IntFromIdentifier(NPIdentifier identifier) {
-  if (!IsMainThread())
-    LOGW("NPN_IntFromIdentifier called from the wrong thread.\n");
-  if (!identifier || identifier->type_ != _NPIdentifier::TYPE_INT)
-    return -1; // The behaviour is undefined by NPAPI.
-  return identifier->intid_;
-}
-
-NPObject *NPAPIImpl::NPN_CreateObject(NPP npp, NPClass *aClass) {
-  if (!IsMainThread())
-    LOGW("NPN_CreateObject called from the wrong thread.\n");
-  if (!aClass)
-    return NULL;
-  NPObject *obj;
-  if (aClass->allocate) {
-    obj = aClass->allocate(npp, aClass);
-  } else {
-    obj = new NPObject;
-    obj->_class = aClass;
-  }
-  obj->referenceCount = 1;
-  return obj;
-}
-
-NPObject *NPAPIImpl::NPN_RetainObject(NPObject *npobj) {
-  if (!IsMainThread())
-    LOGW("NPN_RetainObject called from the wrong thread.\n");
-  if (npobj)
-    npobj->referenceCount++;
-  return npobj;
-}
-
-void NPAPIImpl::NPN_ReleaseObject(NPObject *npobj) {
-  if (!IsMainThread())
-    LOGW("NPN_ReleaseObject called from the wrong thread.\n");
-  if (npobj) {
-    if (--npobj->referenceCount == 0) {
-      if (npobj->_class->deallocate) {
-        npobj->_class->deallocate(npobj);
-      } else {
-        if (npobj->_class->invalidate)
-          npobj->_class->invalidate(npobj);
-        delete npobj;
-      }
-    }
-  }
-}
-
-bool NPAPIImpl::NPN_Invoke(NPP npp, NPObject *npobj, NPIdentifier methodName,
-                           const NPVariant *args, uint32_t argCount,
-                           NPVariant *result) {
-  if (!IsMainThread()) {
-    LOGE("NPN_Invoke called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->invoke) {
-    return npobj->_class->invoke(npobj, methodName, args, argCount, result);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_InvokeDefault(NPP npp, NPObject *npobj,
-                                  const NPVariant *args, uint32_t argCount,
-                                  NPVariant *result) {
-  if (!IsMainThread()) {
-    LOGE("NPN_InvokeDefault called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->invokeDefault) {
-    return npobj->_class->invokeDefault(npobj, args, argCount, result);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_Evaluate(NPP npp, NPObject *npobj, NPString *script,
-                             NPVariant *result) {
-  NOT_IMPLEMENTED();
-  return false;
-}
-
-bool NPAPIImpl::NPN_GetProperty(NPP npp,
-                                NPObject *npobj, NPIdentifier propertyName,
-                                NPVariant *result) {
-  if (!IsMainThread()) {
-    LOGE("NPN_GetProperty called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->getProperty) {
-    return npobj->_class->getProperty(npobj, propertyName, result);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_SetProperty(NPP npp, NPObject *npobj,
-                                NPIdentifier propertyName,
-                                const NPVariant *value) {
-  if (!IsMainThread()) {
-    LOGE("NPN_SetProperty called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->setProperty) {
-    return npobj->_class->setProperty(npobj, propertyName, value);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_RemoveProperty(NPP npp, NPObject *npobj,
-                                   NPIdentifier propertyName) {
-  if (!IsMainThread()) {
-    LOGE("NPN_RemoveProperty called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->removeProperty) {
-    return npobj->_class->removeProperty(npobj, propertyName);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_HasProperty(NPP npp,
-                            NPObject *npobj, NPIdentifier propertyName) {
-  if (!IsMainThread()) {
-    LOGE("NPN_HasProperty called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->hasProperty) {
-    return npobj->_class->hasProperty(npobj, propertyName);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_HasMethod(NPP npp,
-                              NPObject *npobj, NPIdentifier methodName) {
-  if (!IsMainThread()) {
-    LOGE("NPN_HasMethod called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->hasMethod) {
-    return npobj->_class->hasMethod(npobj, methodName);
-  }
-  return false;
-}
-
-void NPAPIImpl::NPN_SetException(NPObject *npobj, const NPUTF8 *message) {
-  NOT_IMPLEMENTED();
-}
-
-#ifdef NPVERS_HAS_NPOBJECT_ENUM
-bool NPAPIImpl::NPN_Enumerate(NPP npp, NPObject *npobj,
-                          NPIdentifier **identifier, uint32_t *count) {
-  if (!IsMainThread()) {
-    LOGE("NPN_Enumerate called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->enumerate) {
-    return npobj->_class->enumerate(npobj,
-                                    reinterpret_cast<void ***>(identifier),
-                                    count);
-  }
-  return false;
-}
-
-bool NPAPIImpl::NPN_Construct(NPP npp, NPObject *npobj,
-                              const NPVariant *args, uint32_t argCount,
-                              NPVariant *result) {
-  if (!IsMainThread()) {
-    LOGE("NPN_Construct called from the wrong thread.\n");
-    return false;
-  }
-  if (npp && npobj && npobj->_class && npobj->_class->construct) {
-    return npobj->_class->construct(npobj, args, argCount, result);
-  }
-  return false;
-}
-#endif
 
 } // namespace npapi
 } // namespace ggadget

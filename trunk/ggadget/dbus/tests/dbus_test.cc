@@ -17,6 +17,7 @@ limitations under the License.
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <dbus/dbus.h>
 
 #include "ggadget/dbus/dbus_proxy.h"
@@ -432,5 +433,6 @@ int main(int argc, char **argv) {
   DLOG("client start");
   int result = RUN_ALL_TESTS();
   KillServer();
+  sleep(1); // Ensure the server quits.
   return result;
 }

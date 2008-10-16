@@ -22,17 +22,17 @@ SUBDIRS= . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= npapi_impl.h \
+noinst_HEADERS		= npapi_wrapper.h \
+			  npapi_utils.h \
 			  npapi_plugin_script.h
 
 npapiincludedir		= $(GGL_INCLUDE_DIR)/ggadget/npapi
-npapiinclude_HEADERS	= npapi_container.h \
-			  npapi_plugin.h
+npapiinclude_HEADERS	= npapi_plugin.h
 
 lib_LTLIBRARIES		= libggadget-npapi@GGL_EPOCH@.la
 
 libggadget_npapi@GGL_EPOCH@_la_SOURCES = \
-			  npapi_container.cc \
+			  npapi_utils.cc \
 			  npapi_plugin.cc \
 			  npapi_plugin_script.cc
 

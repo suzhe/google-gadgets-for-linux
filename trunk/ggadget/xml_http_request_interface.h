@@ -81,6 +81,15 @@ class XMLHttpRequestInterface : public ScriptableInterface {
 
   /** Convenient alternative of GetResponseBody(const char **, size_t *). */
   virtual ExceptionCode GetResponseBody(std::string *result) = 0;
+
+  /**
+   * XMLHttpRequest spec lacks the ability to check if a request is
+   * successful. The status only indicates the status value got from the
+   * header. This function checks if a request is successful at the network
+   * level. It has no relation to the HTTP status (e.g. a successful request
+   * may also return 505 status.)
+   */
+  virtual bool IsSuccessful() = 0;
 };
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)

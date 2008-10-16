@@ -391,6 +391,12 @@ std::string EncodeJavaScriptString(const UTF16Char *source) {
   return dest;
 }
 
+std::string EncodeJavaScriptString(const std::string &source) {
+  UTF16String utf16;
+  ConvertStringUTF8ToUTF16(source, &utf16);
+  return EncodeJavaScriptString(utf16.c_str());
+}
+
 bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right) {
   std::string::size_type pos = source.find(separator);

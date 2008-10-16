@@ -12,47 +12,6 @@
 
 namespace ggadget {
 namespace qt {
-// This function is only used to decode the HTML/Text content sent in CONTENT.
-// We can't use JSONDecode because the script context is not available now.
-
-static bool DecodeJSONString(const char *json_string, UTF16String *result) {
-  if (!json_string || *json_string != '"')
-    return false;
-  while (*++json_string != '"') {
-    if (*json_string == '\0') {
-      // Unterminated JSON string.
-      return false;
-    }
-    if (*json_string == '\\') {
-      switch (*++json_string) {
-        case 'b': result->push_back('\b'); break;
-        case 'f': result->push_back('\f'); break;
-        case 'n': result->push_back('\n'); break;
-        case 'r': result->push_back('\r'); break;
-        case 't': result->push_back('\t'); break;
-        case 'u': {
-          UTF16Char unichar = 0;
-          for (int i = 1; i <= 4; i++) {
-            int c = json_string[i];
-            if (c >= '0' && c <= '9') c -= '0';
-            else if (c >= 'A' && c <= 'F') c = c - 'A' + 10;
-            else if (c >= 'a' && c <= 'f') c = c - 'a' + 10;
-            else return false;
-            unichar = static_cast<UTF16Char>((unichar << 4) + c);
-          }
-          result->push_back(unichar);
-          json_string += 4;
-          break;
-        }
-        case '\0': return false;
-        default: result->push_back(*json_string); break;
-      }
-    } else {
-      result->push_back(*json_string);
-    }
-  }
-  return true;
-}
 
 //class BrowserElement::Impl;
 
@@ -115,18 +74,28 @@ class BrowserElement::Impl {
     : owner_(owner),
       parent_(NULL),
       child_(new WebView(this)),
-      content_type_("text/html") {
-    owner_->GetView()->ConnectOnMinimizeEvent(
-        NewSlot(this, &Impl::OnViewMinimized));
-    owner_->GetView()->ConnectOnRestoreEvent(
-        NewSlot(this, &Impl::OnViewRestored));
-    owner_->GetView()->ConnectOnPopOutEvent(
-        NewSlot(this, &Impl::OnViewChanged));
-    owner_->GetView()->ConnectOnPopInEvent(
-        NewSlot(this, &Impl::OnViewChanged));
+      content_type_("text/html"),
+      minimized_connection_(owner->GetView()->ConnectOnMinimizeEvent(
+          NewSlot(this, &Impl::OnViewMinimized))),
+      restored_connection_(owner->GetView()->ConnectOnRestoreEvent(
+          NewSlot(this, &Impl::OnViewRestored))),
+      popout_connection_(owner->GetView()->ConnectOnPopOutEvent(
+          NewSlot(this, &Impl::OnViewChanged))),
+      popin_connection_(owner->GetView()->ConnectOnPopInEvent(
+          NewSlot(this, &Impl::OnViewChanged))),
+      dock_connection_(owner->GetView()->ConnectOnDockEvent(
+          NewSlot(this, &Impl::OnViewChanged))),
+      undock_connection_(owner->GetView()->ConnectOnUndockEvent(
+          NewSlot(this, &Impl::OnViewChanged))) {
   }
 
   ~Impl() {
+    minimized_connection_->Disconnect();
+    restored_connection_->Disconnect();
+    popout_connection_->Disconnect();
+    popin_connection_->Disconnect();
+    dock_connection_->Disconnect();
+    undock_connection_->Disconnect();
     DLOG("delete browser_element: webview %p, parent %p", child_, parent_);
     if (parent_) {
       parent_->SetChild(NULL);
@@ -184,18 +153,9 @@ class BrowserElement::Impl {
     child_->move(x, y);
   }
 
-  void SetContent(const JSONString &content) {
-    UTF16String utf16str;
-    if (!DecodeJSONString(content.value.c_str(), &utf16str)) {
-      LOG("Invalid content for browser");
-      return;
-    }
-
-    std::string utf8str = "";
-    ConvertStringUTF16ToUTF8(utf16str.c_str(), utf16str.length(), &utf8str);
-
+  void SetContent(const std::string &content) {
     // DLOG("Content: %s", utf8str.c_str());
-    child_->setContent(utf8str.c_str());
+    child_->setContent(content.c_str());
   }
 
   void OnViewMinimized() {
@@ -223,6 +183,9 @@ class BrowserElement::Impl {
   Signal2<void, JSONString, JSONString> set_property_signal_;
   Signal2<JSONString, JSONString, ScriptableArray *> callback_signal_;
   Signal1<bool, const std::string &> open_url_signal_;
+  Connection *minimized_connection_, *restored_connection_,
+             *popout_connection_, *popin_connection_,
+             *dock_connection_, *undock_connection_;
 };
 
 QWebPage *WebPage::createWindow(
