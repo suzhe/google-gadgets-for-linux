@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <locale.h>
 #include <pwd.h>
+#include <ggadget/file_manager_factory.h>
 #include "system_utils.h"
 #include "string_utils.h"
 #include "common.h"
@@ -536,6 +537,37 @@ std::string GetFullPathOfSystemCommand(const char *command) {
       return path;
   }
   return "";
+}
+
+static std::string GetSystemGadgetPathInResourceDir(const char *resource_dir,
+                                                    const char *basename) {
+  std::string path;
+  FileManagerInterface *file_manager = GetGlobalFileManager();
+  path = BuildFilePath(resource_dir, basename, NULL) + kGadgetFileSuffix;
+  if (file_manager->FileExists(path.c_str(), NULL) &&
+      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
+    return file_manager->GetFullPath(path.c_str());
+
+  path = BuildFilePath(resource_dir, basename, NULL);
+  if (file_manager->FileExists(path.c_str(), NULL) &&
+      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
+    return file_manager->GetFullPath(path.c_str());
+
+  return std::string();
+}
+
+std::string GetSystemGadgetPath(const char *basename) {
+  std::string result;
+#ifdef _DEBUG
+  // Try current directory first in debug mode, to ease in place build/debug.
+  result = GetSystemGadgetPathInResourceDir(".", basename);
+  if (!result.empty())
+    return result;
+#endif
+#ifdef GGL_RESOURCE_DIR
+  result = GetSystemGadgetPathInResourceDir(GGL_RESOURCE_DIR, basename);
+#endif
+  return result;
 }
 
 }  // namespace ggadget

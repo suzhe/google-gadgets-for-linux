@@ -179,6 +179,16 @@ bool CopyFile(const char *src, const char *dest);
  */
 std::string GetFullPathOfSystemCommand(const char *command);
 
+/**
+ * Get the path of a gadget which was pre-installed into the system.
+ * Such as the path of rss_gadget.gg, etc.
+ *
+ * @param basename of the gadget, without ".gg" suffix.
+ * @return the full path of the gadget, or an empty string if the gadget is
+ *     not available.
+ */
+std::string GetSystemGadgetPath(const char *basename);
+
 } // namespace ggadget
 
 #endif // GGADGET_SYSTEM_UTILS_H__
