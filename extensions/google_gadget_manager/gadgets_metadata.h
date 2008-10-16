@@ -157,16 +157,6 @@ class GadgetsMetadata {
   DISALLOW_EVIL_CONSTRUCTORS(GadgetsMetadata);
 };
 
-/**
- * Get the path of a gadget which was pre-installed into the system.
- * Such as the path of rss_gadget.gg, etc.
- *
- * @param basename of the gadget, without ".gg" suffix.
- * @return the full path of the gadget, or an empty string if the gadget is
- *     not available.
- */
-std::string GetSystemGadgetPath(const char *basename);
-
 } // namespace google
 } // namespace ggadget
 
