@@ -26,10 +26,6 @@
     <id>c507b492-fcaf-4c6e-bc1c-43ba18faddd2</id>
     <copyright></copyright><authorEmail></authorEmail>
   </about>
-  <install>
-    <object name="gadget-browser-script-utils"
-      src="gadget-browser-script-utils.so"/>
-  </install>
   <permissions>
     <allaccess/>
   </permissions>

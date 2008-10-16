@@ -55,7 +55,6 @@ if GGL_HAVE_ZIP
 install-data-hook:
 	(cd $(DESTDIR)$(GGL_RESOURCE_DIR)/google-gadget-browser; \
 	 $(ZIP) -r -u ../google-gadget-browser.gg \
-	 	gadget-browser-script-utils.so \
 		$(GADGET_BROWSER_FILES) )
 	rm -fr $(DESTDIR)$(GGL_RESOURCE_DIR)/google-gadget-browser
 endif

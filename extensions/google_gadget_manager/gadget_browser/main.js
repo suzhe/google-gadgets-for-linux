@@ -13,8 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-
-function view_onopen() {
+function init() {
   if (LoadMetadata()) {
     UpdateLanguageBox();
     main_ui.visible = true;
@@ -32,6 +31,13 @@ function view_onopen() {
     };
     gadgetBrowserUtils.updateMetadata(true);
   }
+}
+
+function view_onopen() {
+  // We do the init in timer because gadgetBrowserUtils is not ready when
+  // gadget is created and will be registered by c++ code right after the
+  // gadget is created.
+  setTimeout(function() { init(); }, 0);
 }
 
 function view_onclose() {
