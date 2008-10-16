@@ -43,13 +43,6 @@ class GadgetManagerInterface {
   virtual void Init() = 0;
 
   /**
-   * Returns impl-specific data. Because a @c GadgetManagerInterface impl can
-   * only be got from @c GetGadgetManager(), some impl-specific caller can
-   * use this method to check if the returned instance is the one expected.
-   */
-  virtual const char *GetImplTag() = 0;
-
-  /**
    * Creates an new instance of a gadget specified by the file path. Used to
    * open a gadget located in local file system.
    * @param file location of a gadget file. The location can be a full path of

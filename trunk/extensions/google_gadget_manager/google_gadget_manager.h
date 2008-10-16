@@ -23,7 +23,7 @@
 #include <vector>
 #include <ggadget/common.h>
 #include <ggadget/signals.h>
-#include "google_gadget_manager_interface.h"
+#include <ggadget/gadget_manager_interface.h>
 #include "gadgets_metadata.h"
 
 namespace ggadget {
@@ -165,14 +165,13 @@ const char kGoogleGadgetBrowserOptionsName[] = "google-gadget-browser";
  * very important for proper server-side operation. Please do *NOT* disable
  * or remove them.
  */
-class GoogleGadgetManager : public GoogleGadgetManagerInterface {
+class GoogleGadgetManager : public GadgetManagerInterface {
  public:
   GoogleGadgetManager();
   virtual ~GoogleGadgetManager();
 
  public: // interface methods.
   virtual void Init();
-  virtual const char *GetImplTag();
   virtual int NewGadgetInstanceFromFile(const char *file);
   virtual bool RemoveGadgetInstance(int instance_id);
   virtual std::string GetGadgetInstanceOptionsName(int instance_id);
@@ -190,8 +189,6 @@ class GoogleGadgetManager : public GoogleGadgetManagerInterface {
   virtual Connection *ConnectOnNewGadgetInstance(Slot1<bool, int> *callback);
   virtual Connection *ConnectOnRemoveGadgetInstance(Slot1<void, int> *callback);
   virtual Connection *ConnectOnUpdateGadgetInstance(Slot1<void, int> *callback);
-  virtual bool RegisterGadgetBrowserScriptUtils(
-      ScriptContextInterface *script_context);
 
  public: // methods for unittest.
   /**

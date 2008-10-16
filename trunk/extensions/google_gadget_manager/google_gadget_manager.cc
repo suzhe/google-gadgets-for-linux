@@ -145,10 +145,6 @@ bool GoogleGadgetManager::OnFreeMetadataTimer(int timer) {
   return true;
 }
 
-const char *GoogleGadgetManager::GetImplTag() {
-  return kGoogleGadgetManagerTag;
-}
-
 void GoogleGadgetManager::ScheduleNextUpdate() {
   if (last_try_time_ == 0) {
     global_options_->GetValue(kLastTryTimeOption).
@@ -969,24 +965,22 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
       return gadget_manager_->SaveGadget(gadget_id, data->data());
     return false;
   }
-
+  static bool Register(GoogleGadgetManager *manager,
+                       ScriptContextInterface *script_context) {
+    ASSERT(script_context);
+    if (script_context) {
+      GadgetBrowserScriptUtils *utils = new GadgetBrowserScriptUtils(manager);
+      if (!script_context->AssignFromNative(NULL, NULL, "gadgetBrowserUtils",
+                                            Variant(utils))) {
+        LOG("Failed to register gadgetBrowserUtils.");
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
   GoogleGadgetManager *gadget_manager_;
 };
-
-bool GoogleGadgetManager::RegisterGadgetBrowserScriptUtils(
-    ScriptContextInterface *script_context) {
-  ASSERT(script_context);
-  if (script_context) {
-    GadgetBrowserScriptUtils *utils = new GadgetBrowserScriptUtils(this);
-    if (!script_context->AssignFromNative(NULL, NULL, "gadgetBrowserUtils",
-                                          Variant(utils))) {
-      LOG("Failed to register gadgetBrowserUtils.");
-      return false;
-    }
-    return true;
-  }
-  return false;
-}
 
 void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   if (!browser_gadget_) {
@@ -1000,8 +994,10 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
                    permissions, Gadget::DEBUG_CONSOLE_DISABLED);
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
-      browser_gadget_->GetMainView()->ConnectOnCloseEvent(
+      View *main_view = browser_gadget_->GetMainView();
+      main_view->ConnectOnCloseEvent(
           NewSlot(&metadata_, &GadgetsMetadata::FreeMemory));
+      GadgetBrowserScriptUtils::Register(this, main_view->GetScriptContext());
     }
   }
 
