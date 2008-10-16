@@ -17,48 +17,23 @@
 #ifndef GGADGET_NPAPI_NPAPI_PLUGIN_SCRIPT_H__
 #define GGADGET_NPAPI_NPAPI_PLUGIN_SCRIPT_H__
 
-#include <third_party/npapi/npupp.h>
-#include <third_party/npapi/npapi.h>
-#include <third_party/npapi/npruntime.h>
-
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/npapi/npapi_wrapper.h>
 
 namespace ggadget {
 namespace npapi {
 
 /**
- * Class definition for wrapping native scriptable object,
- * which can then be accessed by plugin.
- */
-class NPNativeObject {
- public:
-  NPNativeObject(NPP instance, ScriptableInterface *object);
-  ~NPNativeObject();
-
-  /**
-   * Returns the native scriptable object that is wrapped.
-   */
-  ScriptableInterface *UnWrap();
-
- private:
-  class Impl;
-
-  // The first part of this object must be NPObject.
-  NPObject np_obj_;
-  Impl *impl_;
-};
-
-/**
  * Class definition for Wrapping plugin scriptable object,
  * which can then be accessed directly from native JS engine.
  */
-class NPPluginObject : public ScriptableHelperDefault {
+class ScriptableNPObject : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xec31413d89ab02ce, ScriptableInterface);
 
  public:
-  NPPluginObject(NPP instance, NPObject *np_obj);
-  ~NPPluginObject();
+  ScriptableNPObject(NPObject *np_obj);
+  ~ScriptableNPObject();
 
   /**
    * Return the NPObject that is wrapped.
@@ -73,8 +48,8 @@ class NPPluginObject : public ScriptableHelperDefault {
 /**
  * For Unittest.
  */
-Variant ConvertNPToLocal(NPP instance, const NPVariant *np_var);
-void ConvertLocalToNP(NPP instance, const Variant &var, NPVariant *np_var);
+Variant ConvertNPToNative(const NPVariant *np_var);
+void ConvertNativeToNP(const Variant &var, NPVariant *np_var);
 
 } // namespace npapi
 } // namespace ggadget

@@ -12,29 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-if GGL_BUILD_GTK_FLASH_ELEMENT
+IF(GGL_BUILD_LIBGGADGET_GTK)
 
-INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+APPLY_CONFIG(GTK2)
+ADD_MODULE(gtk-flash-element
+  gtk_flash_element.cc
+)
+TARGET_LINK_LIBRARIES(gtk-flash-element
+  ggadget-gtk${GGL_EPOCH}
+)
+OUTPUT_MODULE(gtk-flash-element)
 
-extension_LTLIBRARIES	= gtk-flash-element.la
-extensiondir		= $(GGL_MODULE_DIR)
-
-gtk_flash_element_la_SOURCES = \
-			       gtk_flash_element.cc
-
-gtk_flash_element_la_CXXFLAGS = \
-				$(DEFAULT_COMPILE_FLAGS)
-
-gtk_flash_element_la_CPPFLAGS = \
-				$(PREDEFINED_MACROS)
-
-gtk_flash_element_la_LIBADD = \
-			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-
-gtk_flash_element_la_LDFLAGS = \
-			       -avoid-version \
-			       -module
-
-endif
+ENDIF(GGL_BUILD_LIBGGADGET_GTK)

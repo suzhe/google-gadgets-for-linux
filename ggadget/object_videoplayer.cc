@@ -552,6 +552,7 @@ class ObjectVideoPlayer::Impl {
 
 ObjectVideoPlayer::ObjectVideoPlayer(View *view, const char *name)
     : BasicElement(view, "object", name, false) {
+  SetEnabled(true);
   impl_ = new Impl(this, view);
   if (!impl_->video_element_)
     return;
@@ -582,10 +583,16 @@ void ObjectVideoPlayer::Layout() {
   }
 }
 
+void ObjectVideoPlayer::DoClassRegister() {
+  // Don't register properties inherited from BasicElement.
+  // Properties of this object are exposed to the outside code by the 'object'
+  // property of the belonging object element.
+}
+
 void ObjectVideoPlayer::DoRegister() {
   // Don't register properties inherited from BasicElement.
-  // These properties are exposed to the outside code by the 'object' property
-  // of the belonging object element.
+  // Properties of this object are exposed to the outside code by the 'object'
+  // property of the belonging object element.
   impl_->DoRegister();
 }
 

@@ -1509,7 +1509,8 @@ class View::Impl {
     double opacity;
     if (src.type() == Variant::TYPE_STRING) {
       const char *name = VariantValue<const char *>()(src);
-      if (name && name[0] == '#' && Color::FromString(name, &color, &opacity))
+      if (name && !strchr(name, '.') &&
+          Color::FromString(name, &color, &opacity))
         return new Texture(color, opacity);
     }
 

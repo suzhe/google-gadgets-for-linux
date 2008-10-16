@@ -84,27 +84,32 @@ class BrowserElement::Impl {
   Impl(BrowserElement *owner)
       : owner_(owner),
         content_type_("text/html"),
-        container_(NULL),
         socket_(NULL),
         controller_(BrowserController::get()),
         browser_id_(controller_->AddBrowserElement(this)),
         x_(0), y_(0), width_(0), height_(0),
-        minimized_(false), popped_out_(false) {
-    owner_->GetView()->ConnectOnMinimizeEvent(
-        NewSlot(this, &Impl::OnViewMinimized));
-    owner_->GetView()->ConnectOnRestoreEvent(
-        NewSlot(this, &Impl::OnViewRestored));
-    owner_->GetView()->ConnectOnPopOutEvent(
-        NewSlot(this, &Impl::OnViewPoppedOut));
-    owner_->GetView()->ConnectOnPopInEvent(
-        NewSlot(this, &Impl::OnViewPoppedIn));
-    owner_->GetView()->ConnectOnDockEvent(
-        NewSlot(this, &Impl::OnViewDockUndock));
-    owner_->GetView()->ConnectOnUndockEvent(
-        NewSlot(this, &Impl::OnViewDockUndock));
+        minimized_(false), popped_out_(false),
+        minimized_connection_(owner->GetView()->ConnectOnMinimizeEvent(
+            NewSlot(this, &Impl::OnViewMinimized))),
+        restored_connection_(owner->GetView()->ConnectOnRestoreEvent(
+            NewSlot(this, &Impl::OnViewRestored))),
+        popout_connection_(owner->GetView()->ConnectOnPopOutEvent(
+            NewSlot(this, &Impl::OnViewPoppedOut))),
+        popin_connection_(owner->GetView()->ConnectOnPopInEvent(
+            NewSlot(this, &Impl::OnViewPoppedIn))),
+        dock_connection_(owner->GetView()->ConnectOnDockEvent(
+            NewSlot(this, &Impl::OnViewDockUndock))),
+        undock_connection_(owner->GetView()->ConnectOnUndockEvent(
+            NewSlot(this, &Impl::OnViewDockUndock))) {
   }
 
   ~Impl() {
+    minimized_connection_->Disconnect();
+    restored_connection_->Disconnect();
+    popout_connection_->Disconnect();
+    popin_connection_->Disconnect();
+    dock_connection_->Disconnect();
+    undock_connection_->Disconnect();
     if (GTK_IS_WIDGET(socket_))
       gtk_widget_destroy(socket_);
     controller_->SendCommand(kCloseBrowserCommand, browser_id_, NULL);
@@ -134,21 +139,21 @@ class BrowserElement::Impl {
     if (socket_)
       return;
 
-    socket_ = gtk_socket_new();
-    g_signal_connect_after(socket_, "realize",
-                           G_CALLBACK(OnSocketRealize), this);
-
-    container_ = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
-    if (!GTK_IS_FIXED(container_)) {
+    GtkWidget *container = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
+    if (!GTK_IS_FIXED(container)) {
       LOG("BrowserElement needs a GTK_FIXED parent. Actual type: %s",
-          G_OBJECT_TYPE_NAME(container_));
-      gtk_widget_destroy(socket_);
-      socket_ = NULL;
+          G_OBJECT_TYPE_NAME(container));
       return;
     }
 
+    socket_ = gtk_socket_new();
+    g_signal_connect_after(socket_, "realize",
+                           G_CALLBACK(OnSocketRealize), this);
+    g_signal_connect(socket_, "destroy",
+                     GTK_SIGNAL_FUNC(gtk_widget_destroyed), &socket_);
+
     GetWidgetExtents(&x_, &y_, &width_, &height_);
-    gtk_fixed_put(GTK_FIXED(container_), socket_, x_, y_);
+    gtk_fixed_put(GTK_FIXED(container), socket_, x_, y_);
     gtk_widget_set_size_request(socket_, width_, height_);
     gtk_widget_show(socket_);
     gtk_widget_realize(socket_);
@@ -264,8 +269,8 @@ class BrowserElement::Impl {
     controller_->Write(controller_->ret_fd_, result.c_str(), result.size());
   }
 
-  void SetContent(const JSONString &content) {
-    content_ = content.value;
+  void SetContent(const std::string &content) {
+    content_ = '\"' + EncodeJavaScriptString(content) + '\"';
     if (!GTK_IS_SOCKET(socket_)) {
       // After the child exited, the socket_ will become an invalid GtkSocket.
       CreateSocket();
@@ -563,7 +568,6 @@ class BrowserElement::Impl {
   BrowserElement *owner_;
   std::string content_type_;
   std::string content_;
-  GtkWidget *container_;
   GtkWidget *socket_;
   BrowserController *controller_;
   size_t browser_id_;
@@ -574,6 +578,9 @@ class BrowserElement::Impl {
   Signal1<bool, const std::string &> open_url_signal_;
   bool minimized_;
   bool popped_out_;
+  Connection *minimized_connection_, *restored_connection_,
+             *popout_connection_, *popin_connection_,
+             *dock_connection_, *undock_connection_;
 };
 
 BrowserElement::Impl::BrowserController *
@@ -615,7 +622,7 @@ void BrowserElement::SetContentType(const char *content_type) {
                          "text/html";
 }
 
-void BrowserElement::SetContent(const JSONString &content) {
+void BrowserElement::SetContent(const std::string &content) {
   impl_->SetContent(content);
 }
 

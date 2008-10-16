@@ -47,8 +47,9 @@ class ObjectVideoPlayer : public BasicElement {
  protected:
   /**
    * Register properties, methods, and signals. The real mediaplayer element
-   * doesn't need to do any registation, and should never call this function.
+   * doesn't need to do any registration, and should never call this function.
    */
+  virtual void DoClassRegister();
   virtual void DoRegister();
 
   /**

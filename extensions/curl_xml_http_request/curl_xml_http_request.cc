@@ -147,6 +147,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         send_flag_(false),
         request_headers_(NULL),
         status_(0),
+        succeeded_(false),
         response_dom_(NULL),
         default_user_agent_(default_user_agent) {
     VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
@@ -511,7 +512,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            curl_easy_strerror(code));
     }
 
-    WorkerDone(status, context);
+    WorkerDone(status, context, code == CURLE_OK);
     delete context;
     return reinterpret_cast<void *>(code);
   }
@@ -557,9 +558,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Passes the Done() request from worker thread to the main thread.
   class DoneTask : public WriteBodyTask {
    public:
-    DoneTask(unsigned short status, const WorkerContext *worker_context)
+    DoneTask(unsigned short status, const WorkerContext *worker_context,
+             bool succeeded)
           // Write blank data to ensure the header is parsed.
-        : WriteBodyTask("", 0, status, worker_context) { }
+        : WriteBodyTask("", 0, status, worker_context),
+          succeeded_(succeeded) {
+    }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       curl_easy_cleanup(worker_context_.curl);
       // This cleanup of share handle will only succeed if this request is the
@@ -572,21 +576,24 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
       WriteBodyTask::Call(main_loop, watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->Done(false);
+        worker_context_.this_p->Done(false, succeeded_);
       // Remove the internal reference that was added when the request was
       // started.
       worker_context_.this_p->Unref();
       return false;
     }
+
+    bool succeeded_;
   };
 
-  static void WorkerDone(unsigned short status, WorkerContext *context) {
+  static void WorkerDone(unsigned short status, WorkerContext *context,
+                         bool succeeded) {
     if (context->async) {
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new DoneTask(status, context));
+          0, new DoneTask(status, context, succeeded));
     } else {
-      context->this_p->Done(false);
+      context->this_p->Done(false, succeeded);
     }
   }
 
@@ -766,7 +773,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return size;
   }
 
-  void Done(bool aborting) {
+  void Done(bool aborting, bool succeeded) {
     if (curl_) {
       if (!send_flag_) {
         // This cleanup only happens if an XMLHttpRequest is opened but
@@ -787,6 +794,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
+    succeeded_ = succeeded;
     bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
@@ -819,7 +827,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       response_dom_ = NULL;
     }
 
-    Done(true);
+    Done(true, false);
   }
 
   virtual ExceptionCode GetAllResponseHeaders(const char **result) {
@@ -960,6 +968,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return INVALID_STATE_ERR;
   }
 
+  virtual bool IsSuccessful() {
+    return succeeded_;
+  }
+
   class XMLHttpRequestException : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
@@ -1091,6 +1103,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_content_type_;
   std::string response_encoding_;
   unsigned short status_;
+  bool succeeded_;
   std::string status_text_;
   std::string response_body_;
   std::string response_text_;

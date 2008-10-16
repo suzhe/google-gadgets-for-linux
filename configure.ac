@@ -458,16 +458,22 @@ fi
 
 # Check necessary data types
 AC_TYPE_SIZE_T
+AC_CHECK_SIZEOF(char)
+AC_CHECK_SIZEOF(short int)
 AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long int)
 AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(double)
 
+GGL_SIZEOF_CHAR=$ac_cv_sizeof_char
+GGL_SIZEOF_SHORT_INT=$ac_cv_sizeof_short_int
 GGL_SIZEOF_INT=$ac_cv_sizeof_int
 GGL_SIZEOF_LONG_INT=$ac_cv_sizeof_long_int
 GGL_SIZEOF_SIZE_T=$ac_cv_sizeof_size_t
 GGL_SIZEOF_DOUBLE=$ac_cv_sizeof_double
 
+AC_SUBST(GGL_SIZEOF_CHAR)
+AC_SUBST(GGL_SIZEOF_SHORT_INT)
 AC_SUBST(GGL_SIZEOF_INT)
 AC_SUBST(GGL_SIZEOF_LONG_INT)
 AC_SUBST(GGL_SIZEOF_SIZE_T)
@@ -501,7 +507,7 @@ AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
 AC_PATH_XTRA
 if test "x$no_x" != "xyes"; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_X11=1"
-  X_LIBS="$X_LIBS $X_PRE_LIBS -lX11"
+  X_LIBS="$X_LIBS $X_PRE_LIBS -lX11 -lXt"
   AC_SUBST(X_CFLAGS)
   AC_SUBST(X_LIBS)
   AC_SUBST(X_PRE_LIBS)

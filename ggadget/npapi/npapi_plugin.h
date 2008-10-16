@@ -17,91 +17,43 @@
 #ifndef GGADGET_NPAPI_NPAPI_PLUGIN_H__
 #define GGADGET_NPAPI_NPAPI_PLUGIN_H__
 
-#include <sys/types.h>
-#include <X11/Xlib.h>
 #include <string>
+#include <ggadget/common.h>
+#include <ggadget/string_utils.h>
 
-#include <ggadget/basic_element.h>
-#include <ggadget/scriptable_interface.h>
-#include <ggadget/signals.h>
-#include <ggadget/slot.h>
+struct _NPWindow;
 
 namespace ggadget {
+
+class BasicElement;
+class ScriptableInterface;
+class Connection;
+template <typename R, typename P1> class Slot1;
+
 namespace npapi {
 
 /**
- * The type of toolkit the widgets use.
+ * Represents a plugin instance.
  */
-enum ToolkitType {
-  GTK12,
-  GTK2,
-};
-
-/**
- * Window or windowless enumerations.
- */
-enum WindowType {
-  WindowTypeWindowed = 1,
-  WindowTypeWindowless,
-};
-
-/**
- * Definition of window info structure about the plugin's window environment.
- */
-struct WindowInfoStruct {
-  /** Don't set this field by yourself. */
-  int32_t type_;
-  Display *display_;
-  Visual *visual_;
-  Colormap colormap_;
-  unsigned int depth_;
-};
-
-/**
- * Definition of clip rectangle type.
- */
-struct ClipRect {
-  uint16_t top_;
-  uint16_t left_;
-  uint16_t bottom_;
-  uint16_t right_;
-};
-
-/**
- * Definition of Wndow structure used to set up the plugin window.
- */
-struct Window {
-  /** Window mode: X Window ID (if X toolkit is used), or the window id of
-   *    socket widget (if XEmbed is used).
-   *  Windowless mode: never set this field. */
-  void *window_;
-  /** Coordinates of the drawing area. Relative to the element's rectangle. */
-  uint32_t x_;
-  uint32_t y_;
-  uint32_t width_;
-  uint32_t height_;
-  /** Clipping rectangle coordinates. Relative to the element's rectangle. */
-  ClipRect cliprect_;
-  /** Contains information about the plugin's window environment. */
-  WindowInfoStruct *ws_info_;
-  /** Window or windowless. */
-  WindowType type_;
-};
-
-class NPPlugin {
+class Plugin {
  public:
+  /**
+   * Destroys the plugin instance.
+   */
+  void Destroy();
+
   /** Get the name of the plugin. */
-  std::string GetName();
+  std::string GetName() const;
 
   /** Get the description of the plugin. */
-  std::string GetDescription();
+  std::string GetDescription() const;
 
   /**
-   * Get the window type the plugin uses, i.e. window or windowless.
+   * Get if the plugin is in windowlesss or windowed mode.
    * The Host should call this first to determine the window type before
    * calling SetWindow.
    */
-  WindowType GetWindowType();
+  bool IsWindowless() const;
 
   /**
    * Setup the plugin window.
@@ -109,33 +61,32 @@ class NPPlugin {
    * changing view, etc.. This class will make a copy of the window object
    * passed in.
    */
-  bool SetWindow(Window *window);
+  bool SetWindow(const _NPWindow &window);
 
   /** Set URL of the stream that will consumed by the plugin. */
-  bool SetURL(const char *url);
-
-  /**
-   * Delegate an X event to the plugin. Only use this interface for windowless
-   * mode, as X server sends events to the plugin directly if the plugin has
-   * its own window (Exactly speaking, some events will be sent to the parent
-   * socket window but not plugin window when XEmbed is used).
-   * Supported event types:
-   * GraphicsExpose, FocusIn, FocusOut, EnterNotify, LeaveNotify, MotionNotify,
-   * ButtonPress, ButtonRelease, KeyPress, KeyRelease
-   * Note:
-   * -The host element should invoke GraphicsExpose event in its DoDraw
-   *  method. This class will set coordinate fields for this event. The host
-   *  only needs to set three fields: type, display and drawable.
-   * -Key events don't need have a position.
-   * -Mouse events have x and y coordinates relative to the top-left corner
-   *  of the plugin rectangle.
-   */
-  EventResult HandleEvent(XEvent event);
+//  bool SetURL(const char *url);
 
   /**
    * Returns true if the plugin is in transparent mode, otherwise returns false.
    */
-  bool IsTransparent();
+  bool IsTransparent() const;
+
+  /**
+   * Set the data source of the plugin.
+   * @param src a http/https or local file URL or a local file path.
+   */
+  void SetSrc(const char *src);
+
+  /**
+   * Delegates a native event to the plugin. Only use this interface for
+   * windowless mode, as X server sends events to the plugin directly if the
+   * plugin has its own window.
+   *
+   * @param event point to the native event. On GTK2 platform, the event should
+   *     be a pointer to a XEvent struct.
+   * @return @c true if the event has been handled by the plugin.
+   */
+  bool HandleEvent(void *event);
 
   /**
    * Set handler that will be called when plugin wants to show some
@@ -150,16 +101,22 @@ class NPPlugin {
    */
   ScriptableInterface *GetScriptablePlugin();
 
- private:
-  friend class NPContainer;
-  friend class NPAPIImpl;
+ public:
+  /**
+   * Creates a new Plugin instance.
+   * @param mime_type MIME type of the content.
+   * @param element the container element.
+   * @param window see SetWindow().
+   * @param parameters initial arguments.
+   */
+  static Plugin *Create(const char *mime_type, BasicElement *element,
+                        const _NPWindow &window,
+                        const StringMap &parameters);
 
-  // Can only create plugin instance through plugin container.
-  NPPlugin(const std::string &mime_type, BasicElement *element,
-           const std::string &name, const std::string &description,
-           void *instance, void *plugin_funcs,
-           bool xembed, ToolkitType toolkit);
-  ~NPPlugin();
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(Plugin);
+  Plugin();
+  ~Plugin();
 
   class Impl;
   Impl *impl_;

@@ -39,6 +39,7 @@ gtkinclude_HEADERS	= cairo_graphics.h \
 			  key_convert.h \
 			  main_loop.h \
 			  menu_builder.h \
+			  npapi_plugin_element.h \
 			  single_view_host.h \
 			  tooltip.h \
 			  utilities.h \
@@ -55,6 +56,7 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  key_convert.cc \
 			  main_loop.cc \
 			  menu_builder.cc \
+			  npapi_plugin_element.cc \
 			  pixbuf_image.cc \
 			  single_view_host.cc \
 			  tooltip.cc \
@@ -77,7 +79,8 @@ libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @RSVG_LIBS@ \
 			  @STARTUP_NOTIFICATION_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \

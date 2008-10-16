@@ -14,31 +14,26 @@
   limitations under the License.
 */
 
-#include "scriptable_function.h"
+#ifndef GGADGET_NPAPI_NPAPI_WRAPPER_H__
+#define GGADGET_NPAPI_NPAPI_WRAPPER_H__
 
-namespace ggadget {
+#define MDCPUCFG <ggadget/sysdeps.h>
+#define PR_BYTES_PER_BYTE GGL_SIZEOF_CHAR
+#define PR_BYTES_PER_SHORT GGL_SIZEOF_SHORT
+#define PR_BYTES_PER_INT GGL_SIZEOF_INT
+#define PR_BYTES_PER_LONG GGL_SIZEOF_LONG_INT
 
-class ScriptableFunction::Impl {
- public:
-  Impl(Slot *slot) : slot_(slot) {
-  }
-  ~Impl() {
-    // slot_ is destroyed in ScriptableHelper.
-  }
+#ifndef XP_UNIX
+#define XP_UNIX
+#endif
 
-  Slot *slot_;
-};
+#ifdef HAVE_X11
+#ifndef MOZ_X11
+#define MOZ_X11
+#endif
+#endif
 
-ScriptableFunction::ScriptableFunction(Slot *slot)
-    : impl_(new Impl(slot)) {
-}
+#include <third_party/npapi/npapi.h>
+#include <third_party/npapi/npupp.h>
 
-ScriptableFunction::~ScriptableFunction() {
-  delete impl_;
-}
-
-void ScriptableFunction::DoRegister() {
-  RegisterMethod("", impl_->slot_);
-}
-
-} // namespace ggadget
+#endif // GGADGET_NPAPI_NPAPI_WRAPPER_H__

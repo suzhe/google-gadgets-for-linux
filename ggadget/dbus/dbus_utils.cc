@@ -69,8 +69,9 @@ static std::string GetElementType(const char *signature) {
       *signature == DBUS_DICT_ENTRY_BEGIN_CHAR) {
     const char *index = signature;
     char start = *signature;
-    char end = (start == DBUS_STRUCT_BEGIN_CHAR) ? DBUS_STRUCT_END_CHAR :
-        DBUS_DICT_ENTRY_END_CHAR;
+    char end = static_cast<char>(start == DBUS_STRUCT_BEGIN_CHAR ?
+                                 DBUS_STRUCT_END_CHAR :
+                                 DBUS_DICT_ENTRY_END_CHAR);
     int counter = 1;
     while (counter != 0) {
       char ch = *++index;

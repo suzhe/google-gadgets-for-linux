@@ -225,6 +225,7 @@ std::string GetUsernamePasswordFromURL(const char *url);
  * ending quotes), by escaping special characters in the source string.
  */
 std::string EncodeJavaScriptString(const UTF16Char *source);
+std::string EncodeJavaScriptString(const std::string &source);
 
 /**
  * Splits a string into two parts. For convenience, the impl allows

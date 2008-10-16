@@ -59,6 +59,10 @@ class ElementFactory {
   bool RegisterElementClass(const char *tag_name,
                             ElementCreator creator);
 
+  typedef BasicElement *(*PluginElementCreator)(View *view,
+                                                const char *name,
+                                                const char *mime_type);
+
  private:
   class Impl;
   Impl *impl_;

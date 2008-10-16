@@ -98,6 +98,7 @@ public:
     *result = return_data_;
     return NO_ERR;
   }
+  virtual bool IsSuccessful() { return true; }
 
   State state_;
   unsigned short return_status_;

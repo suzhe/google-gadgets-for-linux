@@ -157,6 +157,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_(UNSENT),
         send_flag_(false),
         status_(0),
+        succeeded_(false),
         response_dom_(NULL) {
     VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
              ("Required options module have not been loaded"));
@@ -420,12 +421,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return Send(xml.c_str(), xml.size());
   }
 
-  void Done(bool aborting) {
+  void Done(bool aborting, bool succeeded) {
     bool save_send_flag = send_flag_;
     bool save_async = async_;
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
+    succeeded_ = succeeded_;
     bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
@@ -484,7 +486,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual void Abort() {
     FreeResource();
-    Done(true);
+    Done(true, false);
   }
 
   virtual ExceptionCode GetAllResponseHeaders(const char **result) {
@@ -653,6 +655,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     *result = NULL;
     LOG("XMLHttpRequest: GetStatusText: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
+  }
+
+  virtual bool IsSuccessful() {
+    return succeeded_;
   }
 
   class XMLHttpRequestException : public ScriptableHelperDefault {
@@ -849,8 +855,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (session_)
         session_->SaveCookie(header);
 
-      ChangeState(HEADERS_RECEIVED);
-      ChangeState(LOADING);
+      if (ChangeState(HEADERS_RECEIVED))
+        ChangeState(LOADING);
     }
   }
 
@@ -859,9 +865,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       FreeResource();
       send_flag_ = false;
       if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
-        ChangeState(HEADERS_RECEIVED);
-        ChangeState(LOADING);
-        ChangeState(DONE);
+        // TODO: Why do the state changes?
+        // ChangeState(HEADERS_RECEIVED);
+        // ChangeState(LOADING);
+        Done(false, false);
       } else {
         Send(NULL, 0);
       }
@@ -876,8 +883,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            id,
            response_body_.length(),
            array.length());
-      // DLOG("reponse: %s", response_body_.c_str());
-      ChangeState(DONE);
+      Done(true, !error);
     }
   }
 
@@ -906,6 +912,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_encoding_;
   unsigned short status_;
   std::string status_text_;
+  bool succeeded_;
   std::string response_body_;
   std::string response_text_;
   QString user_;

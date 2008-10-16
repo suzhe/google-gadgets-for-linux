@@ -62,6 +62,7 @@ class ObjectElement::Impl {
 ObjectElement::ObjectElement(View *view, const char *name)
     : BasicElement(view, "object", name, false),
       impl_(new Impl(this, view)) {
+  SetEnabled(true);
 }
 
 ObjectElement::~ObjectElement() {
@@ -73,6 +74,7 @@ void ObjectElement::DoClassRegister() {
   RegisterProperty("classId",
                    NewSlot(&ObjectElement::GetObjectClassId),
                    NewSlot(&ObjectElement::SetObjectClassId));
+  RegisterProperty("object", NewSlot(&ObjectElement::GetObject), NULL);
 }
 
 BasicElement *ObjectElement::CreateInstance(View *view, const char *name) {
@@ -89,8 +91,6 @@ const std::string& ObjectElement::GetObjectClassId() const {
 
 void ObjectElement::SetObjectClassId(const std::string& classid) {
   impl_->SetObjectClassId(classid);
-  if (impl_->object_)
-    RegisterConstant("object", impl_->object_);
 }
 
 void ObjectElement::Layout() {

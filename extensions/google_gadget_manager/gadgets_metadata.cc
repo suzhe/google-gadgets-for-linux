@@ -374,7 +374,8 @@ class GadgetsMetadata::Impl {
     if (request && request->GetReadyState() == XMLHttpRequestInterface::DONE) {
       unsigned short status;
       bool request_success = false, parsing_success = false;
-      if (request->GetStatus(&status) == XMLHttpRequestInterface::NO_ERR &&
+      if (request->IsSuccessful() &&
+          request->GetStatus(&status) == XMLHttpRequestInterface::NO_ERR &&
           status == 200) {
         // The request finished successfully. Use GetResponseBody() instead of
         // GetResponseText() because it's more lightweight.
