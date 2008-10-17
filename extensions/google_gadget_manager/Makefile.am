@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SUBDIRS = . gadget_browser tests
+SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -22,8 +22,7 @@ extension_LTLIBRARIES   = google-gadget-manager.la
 extensiondir            = $(GGL_MODULE_DIR)
 
 noinst_HEADERS		= gadgets_metadata.h \
-			  google_gadget_manager.h \
-			  google_gadget_manager_interface.h
+			  google_gadget_manager.h
 
 google_gadget_manager_la_SOURCES = \
 			  gadgets_metadata.cc \
@@ -42,5 +41,3 @@ google_gadget_manager_la_LIBADD = \
 google_gadget_manager_la_LDFLAGS = \
 			  -avoid-version \
 			  -module
-
-gadget_browserdir = $(GGL_RESOURCE_DIR)/google-gadget-browser

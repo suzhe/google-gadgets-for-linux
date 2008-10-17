@@ -1013,7 +1013,6 @@ AC_CONFIG_FILES([Makefile
 		 extensions/default_options/Makefile
 		 extensions/default_options/tests/Makefile
 		 extensions/google_gadget_manager/Makefile
-		 extensions/google_gadget_manager/gadget_browser/Makefile
 		 extensions/google_gadget_manager/tests/Makefile
 		 extensions/gst_audio_framework/Makefile
 		 extensions/gst_video_element/Makefile
@@ -1040,6 +1039,7 @@ AC_CONFIG_FILES([Makefile
 		 gadgets/igoogle/Makefile
 		 gadgets/photos/Makefile
 		 gadgets/rss/Makefile
+		 gadgets/gadget_browser/Makefile
 		 ggadget/Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/sysdeps.h

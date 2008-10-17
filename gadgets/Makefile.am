@@ -19,4 +19,5 @@ SUBDIRS = analog_clock \
 	  digital_alarm_clock \
 	  igoogle \
 	  rss \
-		photos
+		photos \
+		gadget_browser

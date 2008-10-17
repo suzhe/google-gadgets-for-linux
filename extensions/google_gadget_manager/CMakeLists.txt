@@ -23,8 +23,3 @@ ADD_MODULE(google-gadget-manager
 )
 TARGET_LINK_LIBRARIES(google-gadget-manager ggadget${GGL_EPOCH})
 OUTPUT_MODULE(google-gadget-manager)
-
-ADD_DIR_TO_ZIP(gadget_browser
-  ../../output/bin/google-gadget-browser.gg)
-
-INSTALL_GADGET(google-gadget-browser.gg)
