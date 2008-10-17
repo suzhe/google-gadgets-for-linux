@@ -65,6 +65,9 @@ typedef ScriptableHolder<ScriptableDBusContainer> ScriptableDBusContainerHolder;
 
 std::string GetVariantSignature(const Variant &value);
 Variant::Type GetVariantTypeFromSignature(const std::string &signature);
+bool ValidateObjectPath(const char *path);
+bool ValidateInterface(const char *interface);
+bool ValidateBusName(const char *name);
 
 struct Argument {
   Argument() {}
