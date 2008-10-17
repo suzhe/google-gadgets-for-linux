@@ -38,7 +38,8 @@ ggl_gtk_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
 ggl_gtk_LDADD	= @GTK2_LIBS@ \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
+		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la \
+		  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
 
 ggl_gtk_LDFLAGS = -R$(libdir)
 

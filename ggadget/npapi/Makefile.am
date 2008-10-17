@@ -15,8 +15,6 @@
 
 # Putting . into SBUDIRS list to force building current directory first.
 
-if GGL_BUILD_LIBGGADGET_NPAPI
-
 SUBDIRS= . tests
 
 INCLUDES		= -I$(top_builddir) \
@@ -52,5 +50,3 @@ libggadget_npapi@GGL_EPOCH@_la_LDFLAGS = \
 
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-npapi@GGL_EPOCH@.pc
-
-endif
