@@ -880,10 +880,6 @@ AM_CONDITIONAL(
   [test x$build_libggadget_dbus = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_NPAPI],
-  [test x$build_libggadget_npapi = xyes])
-
-AM_CONDITIONAL(
   [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
   [test x$build_gtkmoz_browser_element = xyes])
 

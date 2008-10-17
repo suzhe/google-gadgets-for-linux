@@ -14,7 +14,8 @@
 # limitations under the License.
 
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . tests js xdg
+SUBDIRS = . tests js xdg npapi
+
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
@@ -25,10 +26,6 @@ endif
 
 if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
-endif
-
-if GGL_BUILD_LIBGGADGET_NPAPI
-SUBDIRS += npapi
 endif
 
 INCLUDES		= -I$(top_builddir) \
