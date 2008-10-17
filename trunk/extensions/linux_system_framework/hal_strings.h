@@ -85,6 +85,7 @@ const char kHalCapabilityNet[]                  = "net";
 const char kHalCapabilityInputKeyboard[]        = "input.keyboard";
 const char kHalCapabilityInputMouse[]           = "input.mouse";
 
+const char kHalSignalPropertyModified[]         = "PropertyModified";
 
 const char kNetworkManagerDBusName[]       = "org.freedesktop.NetworkManager";
 const char kNetworkManagerObjectPath[]     = "/org/freedesktop/NetworkManager";

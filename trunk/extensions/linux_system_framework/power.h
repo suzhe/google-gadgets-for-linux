@@ -17,8 +17,11 @@
 #ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_POWER_H__
 #define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_POWER_H__
 
+#include <string>
 #include <ggadget/framework_interface.h>
 #include <ggadget/dbus/dbus_proxy.h>
+#include <ggadget/dbus/dbus_result_receiver.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 namespace framework {
@@ -38,8 +41,27 @@ class Power : public PowerInterface {
   virtual int GetTimeTotal();
 
  private:
+  void OnBatterySignal(const std::string &name,
+                       int argc, const Variant *argv);
+  void OnAcAdapterSignal(const std::string &name,
+                         int argc, const Variant *argv);
+
+  void LoadBatteryInfo();
+  void LoadAcAdapterInfo();
+
+ private:
+  DBusBooleanReceiver is_charging_;
+  DBusBooleanReceiver is_plugged_in_;
+  DBusIntReceiver percent_remaining_;
+  DBusIntReceiver time_remaining_;
+  DBusIntReceiver charge_level_design_;
+  DBusIntReceiver charge_level_current_;
+  DBusIntReceiver charge_level_rate_;
+
   DBusProxy *battery_;
+  Connection *battery_signal_connection_;
   DBusProxy *ac_adapter_;
+  Connection *ac_adapter_signal_connection_;
 };
 
 } // namespace linux_system

@@ -194,6 +194,14 @@ class DBusProxy::Impl {
     // name, path and interface.
     Impl *NewImpl(const std::string &name, const std::string &path,
                   const std::string &interface) {
+      if (!ValidateBusName(name.c_str()) ||
+          !ValidateObjectPath(path.c_str()) ||
+          !ValidateInterface(interface.c_str())) {
+        DLOG("Invalid DBus name, path or interface: %s, %s, %s",
+             name.c_str(), path.c_str(), interface.c_str());
+        return NULL;
+      }
+
       if (EnsureInitialized()) {
         std::string tri_name = GetTriName(name, path, interface);
         ProxyMap::iterator it = proxies_.find(tri_name);

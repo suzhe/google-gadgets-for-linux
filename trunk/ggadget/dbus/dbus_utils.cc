@@ -119,14 +119,19 @@ static bool ValidateSignature(const char *signature, bool single) {
   return ret;
 }
 
-// Checks if an object path is valid or not.
-static bool ValidateObjectPath(const char *path) {
+#define VALID_INITIAL_NAME_CHAR(c) \
+  (((c) >= 'A' && (c) <= 'Z') ||   \
+   ((c) >= 'a' && (c) <= 'z') ||   \
+   ((c) == '_') )
+
 #define VALID_NAME_CHAR(c)       \
   (((c) >= '0' && (c) <= '9') || \
    ((c) >= 'A' && (c) <= 'Z') || \
    ((c) >= 'a' && (c) <= 'z') || \
    ((c) == '_'))
 
+// Checks if an object path is valid or not.
+bool ValidateObjectPath(const char *path) {
   if (!path || *path != '/')
     return false;
 
@@ -149,8 +154,77 @@ static bool ValidateObjectPath(const char *path) {
     return false;
 
   return true;
+}
 
-#undef VALID_NAME_CHAR
+bool ValidateInterface(const char *interface) {
+  // Interface can't start with '.'
+  if (!interface || !*interface || *interface == '.' ||
+      !VALID_INITIAL_NAME_CHAR(*interface))
+    return false;
+
+  const char *s = interface;
+  const char *last_dot = NULL;
+  while(*s) {
+    if (*s == '.') {
+      if (*(s + 1) == '\0' || !VALID_INITIAL_NAME_CHAR(*(s + 1)))
+        return false;
+      last_dot = s;
+      ++s;
+    } else if (!VALID_NAME_CHAR(*s)) {
+      return false;
+    }
+    ++s;
+  }
+  return last_dot != NULL;
+}
+
+#define VALID_INITIAL_BUS_NAME_CHAR(c) \
+  (((c) >= 'A' && (c) <= 'Z') ||       \
+   ((c) >= 'a' && (c) <= 'z') ||       \
+   ((c) == '_') || ((c) == '-'))
+
+#define VALID_BUS_NAME_CHAR(c)   \
+  (((c) >= '0' && (c) <= '9') || \
+   ((c) >= 'A' && (c) <= 'Z') || \
+   ((c) >= 'a' && (c) <= 'z') || \
+   ((c) == '_') || ((c) == '-'))
+
+bool ValidateBusName(const char *name) {
+  const char *s = name;
+  const char *last_dot = NULL;
+  if (*s == ':') {
+    ++s;
+    while (*s) {
+      if (*s == '.') {
+        if (*(s + 1) == '\0' || !VALID_BUS_NAME_CHAR(*(s + 1)))
+          return false;
+        ++s;
+      } else if (!VALID_BUS_NAME_CHAR(*s)) {
+        return false;
+      }
+      ++s;
+    }
+    return true;
+  } else if (*s == '.') {
+    return false;
+  } else if (!VALID_INITIAL_BUS_NAME_CHAR(*s)) {
+    return false;
+  } else {
+    ++s;
+  }
+
+  while (*s) {
+    if (*s == '.') {
+      if (*(s + 1) == '\0' || !VALID_INITIAL_BUS_NAME_CHAR(*(s + 1)))
+        return false;
+      last_dot = s;
+      ++s;
+    } else if (!VALID_BUS_NAME_CHAR(*s)) {
+      return false;
+    }
+    ++s;
+  }
+  return last_dot != NULL;
 }
 
 // Helper class to get type signature of a scriptable array.
