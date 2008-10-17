@@ -50,12 +50,12 @@ EXTRA_DIST = $(GADGET_BROWSER_FILES)
 CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
-gadget_browser_DATA = google_gadget_browser.gg
+gadget_browser_DATA = google-gadget-browser.gg
 gadget_browserdir=$(GGL_RESOURCE_DIR)
 
-google_gadget_browser.gg: $(GADGET_BROWSER_FILES)
+google-gadget-browser.gg: $(GADGET_BROWSER_FILES)
 	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(GADGET_BROWSER_FILES))
 else
 nobase_gadget_browser_DATA = $(GADGET_BROWSER_FILES)
-gadget_browserdir = $(GGL_RESOURCE_DIR)/google_gadget_browser
+gadget_browserdir = $(GGL_RESOURCE_DIR)/gadget_browser
 endif
