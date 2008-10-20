@@ -56,7 +56,6 @@ using namespace ggadget::qt;
 
 namespace hosts {
 namespace qt {
-const static char *kPlasmaID = "kde_plasma";
 
 class QtHost::Impl {
  public:
@@ -71,15 +70,13 @@ class QtHost::Impl {
   };
   Impl(QtHost *host, bool composite,
        int view_debug_mode,
-       Gadget::DebugConsoleConfig debug_console_config,
-       bool with_plasma)
+       Gadget::DebugConsoleConfig debug_console_config)
     : gadget_manager_(GetGadgetManager()),
       gadget_browser_host_(host, view_debug_mode),
       host_(host),
       view_debug_mode_(view_debug_mode),
       debug_console_config_(debug_console_config),
       composite_(composite),
-      with_plasma_(with_plasma),
       gadgets_shown_(true),
       expanded_popout_(NULL),
       expanded_original_(NULL),
@@ -106,12 +103,10 @@ class QtHost::Impl {
     qApp->setQuitOnLastWindowClosed(false);
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_ADD_GADGETS")),
                     obj_, SLOT(OnAddGadget()));
-    if (!with_plasma_) {
-      menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_SHOW_ALL")),
-                      obj_, SLOT(OnShowAll()));
-      menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_HIDE_ALL")),
-                      obj_, SLOT(OnHideAll()));
-    }
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_SHOW_ALL")),
+                    obj_, SLOT(OnShowAll()));
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_HIDE_ALL")),
+                    obj_, SLOT(OnHideAll()));
     menu_.addSeparator();
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_EXIT")),
                     qApp, SLOT(quit()));
@@ -132,60 +127,10 @@ class QtHost::Impl {
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    if (with_plasma_) return;
     gadget_manager_->EnumerateGadgetInstances(
         NewSlot(this, &Impl::EnumerateGadgetInstancesCallback));
     gadget_manager_->ConnectOnRemoveGadgetInstance(
         NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
-  }
-
-  static bool GetPermissionsDescriptionCallback(int permission,
-                                                std::string *msg) {
-    if (msg->length())
-      msg->append("\n");
-    msg->append("  ");
-    msg->append(Permissions::GetDescription(permission));
-    return true;
-  }
-
-  bool ConfirmGadget(int id, Permissions *permissions) {
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    std::string download_url, title, description;
-    if (!gadget_manager_->GetGadgetInstanceInfo(id,
-                                                GetSystemLocaleName().c_str(),
-                                                NULL, &download_url,
-                                                &title, &description))
-      return false;
-
-    // Get required permissions description.
-    std::string permissions_msg;
-    permissions->EnumerateAllRequired(
-        NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
-
-    std::string message = GM_("GADGET_CONFIRM_MESSAGE");
-    message.append("\n\n")
-        .append(title).append("\n")
-        .append(download_url).append("\n\n")
-        .append(GM_("GADGET_DESCRIPTION"))
-        .append(description)
-        .append("\n\n")
-        .append(GM_("GADGET_REQUIRED_PERMISSIONS"))
-        .append("\n")
-        .append(permissions_msg);
-    int ret = QMessageBox::question(
-        NULL,
-        QString::fromUtf8(GM_("GADGET_CONFIRM_TITLE")),
-        QString::fromUtf8(message.c_str()),
-        QMessageBox::Yes| QMessageBox::No,
-        QMessageBox::Yes);
-
-    if (ret == QMessageBox::Yes) {
-      // TODO: Is it necessary to let user grant individual permissions
-      // separately?
-      permissions->GrantAllRequired();
-      return true;
-    }
-    return false;
   }
 
   bool EnumerateGadgetInstancesCallback(int id) {
@@ -196,24 +141,8 @@ class QtHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    Permissions permissions;
-    if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
-      if (!permissions.HasUngranted() || ConfirmGadget(id, &permissions)) {
-        // Save initial permissions.
-        std::string options_name =
-            gadget_manager_->GetGadgetInstanceOptionsName(id);
-        OptionsInterface *options = CreateOptions(options_name.c_str());
-        // Don't save required permissions.
-        permissions.RemoveAllRequired();
-        options->PutInternalValue(kPermissionsOption,
-                                  Variant(permissions.ToString()));
-        options->Flush();
-        delete options;
-        if (with_plasma_)
-          return InstallPlasmaApplet(id);
-        else
-          return LoadGadgetInstance(id);
-      }
+    if (ggadget::qt::ConfirmGadget(gadget_manager_, id)) {
+        return LoadGadgetInstance(id);
     } else {
       QMessageBox::information(
           NULL,
@@ -222,98 +151,8 @@ class QtHost::Impl {
               StringPrintf(
                   GM_("GADGET_LOAD_FAILURE"),
                   gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str()));
-    }
-    return false;
-  }
-
-  bool InstallPlasmaApplet(int id) {
-    static QString plasma_desktop_template =
-        "[Desktop Entry]\n"
-        "Encoding=UTF-8\n"
-        "Name=%1\n"
-        "Comment=%2\n"
-        "X-KDE-PluginInfo-Name=%3\n"
-        "X-KDE-PluginInfo-Author=%4\n"
-        "Icon=%5\n"
-        "Type=Service\n"
-        "X-KDE-Plasmagik-ApplicationName=\n"
-        "X-KDE-Plasmagik-RequiredVersion=\n"
-        "X-KDE-PluginInfo-Category=\n"
-        "X-KDE-PluginInfo-Email=\n"
-        "X-KDE-PluginInfo-EnabledByDefault=true\n"
-        "X-KDE-PluginInfo-License=\n"
-        "X-KDE-PluginInfo-Version=\n"
-        "X-KDE-PluginInfo-Website=\n"
-        "X-KDE-ServiceTypes=Plasma/Applet,Plasma/Containment\n"
-        "X-Plasma-API=googlegadgets\n";
-    // Get the local prefix of kde4
-    QString kdedir;
-    {
-      char path[PATH_MAX];
-      FILE *fp = popen("kde-config --localprefix", "r");
-      if (fp != NULL) {
-        if (fgets(path, PATH_MAX, fp)) {
-          int len = strlen(path);
-          if (path[len - 1] == '\n') path[len - 1] = '\0';
-          kdedir = path;
-        }
-        pclose(fp);
-      }
-      if (kdedir == "") {
-        kdedir = getenv("KDEHOME");
-        if (kdedir == "") {
-          LOGE("Can't find localprefix of kde by environment variable KDEHOME"
-               " or `kde-config --localprefix`");
-          return false;
-        }
-      }
-    }
-    LOG("Install plasma applet into %s", kdedir.toUtf8().data());
-    std::string author, download_url, title, description;
-    if (!gadget_manager_->GetGadgetInstanceInfo(id, "", &author, &download_url,
-                                                &title, &description))
-      return false;
-    std::string path = gadget_manager_->GetGadgetInstancePath(id).c_str();
-    std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
-    QString pkg_name = QString("ggl_%1").arg(id);
-
-    // Create package
-    QDir root(kdedir + "/share/apps/plasma/plasmoids/");
-    if (!root.cd(pkg_name) && (!root.mkpath(pkg_name) || !root.cd(pkg_name))) {
-      LOGE("Failed to create package %s",
-           (root.path() + "/" + pkg_name).toUtf8().data());
       return false;
     }
-    {
-      QFile file(root.path() + "/config.txt");
-      file.open(QIODevice::WriteOnly);
-      QTextStream out(&file);
-      out << QString::fromUtf8(path.c_str())  << "\n";
-      out << QString::fromUtf8(options.c_str()) << "\n";
-    }
-
-    // Create desktop file
-    QString desktop_content = plasma_desktop_template
-        .arg(QString::fromUtf8(title.c_str()))          // name
-        .arg(QString::fromUtf8(description.c_str()))    // comment
-        .arg(pkg_name)                                  // pluginfo-name
-        .arg(QString::fromUtf8(author.c_str()))         // author
-        .arg("google-gadgets");                         // icon
-    QFile file(kdedir + QString("/share/kde4/services/plasma-applet-ggl-%1.desktop").arg(id));
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-      LOGE("Failed to write plasma-applet-ggl-%d.desktop", id);
-      return false;
-    }
-    QTextStream out(&file);
-    out << desktop_content;
-
-    // set option to distinguish this from normal gadgets
-    OptionsInterface *opt = CreateOptions(options.c_str());
-    opt->Add(kPlasmaID, Variant(true));
-    opt->Flush();
-    delete opt;
-
-    return true;
   }
 
   bool LoadGadgetInstance(int id) {
@@ -322,12 +161,6 @@ class QtHost::Impl {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
       OptionsInterface *opt = CreateOptions(options.c_str());
-      // Having such option value means this gadget is added as a plasma applet
-      // So we just ignore it.
-      if (opt->Exists(kPlasmaID)) {
-        delete opt;
-        return true;
-      }
       delete opt;
       result =
           LoadGadget(path.c_str(), options.c_str(), id);
@@ -529,7 +362,6 @@ class QtHost::Impl {
   int view_debug_mode_;
   Gadget::DebugConsoleConfig debug_console_config_;
   bool composite_;
-  bool with_plasma_;
   bool gadgets_shown_;
 
   DecoratedViewHost *expanded_popout_;
@@ -546,9 +378,9 @@ class QtHost::Impl {
 };
 
 QtHost::QtHost(bool composite, int view_debug_mode,
-               Gadget::DebugConsoleConfig debug_console, bool with_plasma)
+               Gadget::DebugConsoleConfig debug_console)
   : impl_(new Impl(this, composite, view_debug_mode,
-                   debug_console, with_plasma)) {
+                   debug_console)) {
   impl_->InitGadgets();
 }
 
