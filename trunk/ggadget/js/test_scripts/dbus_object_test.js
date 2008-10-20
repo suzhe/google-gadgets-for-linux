@@ -21,13 +21,11 @@ TEST("Test Normal", function() {
   ASSERT(TRUE(sysobj));
   names = sysobj.ListNames();
   ASSERT(LE(1, names.length));
-  ASSERT(UNDEFINED(sysobj.length));
 
   sessionobj = new DBusSessionObject(name, path, name);
   ASSERT(NE(null, sysobj));
   names2 = sessionobj.ListNames();
   ASSERT(LE(1, names2.length));
-  ASSERT(UNDEFINED(sessionobj.length));
 });
 
 RUN_ALL_TESTS();
