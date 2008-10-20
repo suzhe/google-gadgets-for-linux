@@ -983,6 +983,13 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
 };
 
 void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
+  if (browser_gadget_) {
+    if (host != browser_gadget_->GetHost()) {
+      delete browser_gadget_;
+      browser_gadget_ = NULL;
+    }
+  }
+    
   if (!browser_gadget_) {
     Permissions permissions;
     permissions.SetGranted(Permissions::ALL_ACCESS, true);

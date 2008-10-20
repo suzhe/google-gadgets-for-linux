@@ -35,7 +35,7 @@ using ggadget::ViewInterface;
 class QtHost : public ggadget::HostInterface {
  public:
   QtHost(bool composite, int view_debug_mode,
-         Gadget::DebugConsoleConfig debug_console, bool with_plasma);
+         Gadget::DebugConsoleConfig debug_console);
   virtual ~QtHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
