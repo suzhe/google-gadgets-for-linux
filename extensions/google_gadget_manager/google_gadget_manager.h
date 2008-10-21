@@ -34,6 +34,7 @@ class MainLoopInterface;
 class OptionsInterface;
 class HostInterface;
 class Gadget;
+class PlatformUsageCollectorInterface;
 
 namespace google {
 
@@ -113,6 +114,10 @@ const char kGadgetAddedTimeOptionPrefix[] = "added_time.";
  * value will be incremented.
  */
 const char kRunCountOption[] = "run_count";
+
+/** The time when the last daily ping was sent. */
+const char kLastDailyPingTimeOption[] = "last_daily_ping";
+const char kLastWeeklyPingTimeOption[] = "last_weekly_ping";
 
 /** A hard limit of maximum number of active and inactive gadget instances. */
 const int kMaxNumGadgetInstances = 128;
@@ -303,6 +308,11 @@ class GoogleGadgetManager : public GadgetManagerInterface {
   bool NeedDownloadOrUpdateGadget(const char *gadget_id, bool failure_result);
   std::string GetDownloadedGadgetLocation(const char *gadget_id);
   bool InitInstanceOptions(const char *gadget_id, int instance_id);
+  void ScheduleDailyPing();
+  bool OnFirstDailyPing(int timer);
+  bool OnDailyPing(int timer);
+  void SendGadgetUsagePing(int type, const char *gadget_id);
+  bool RemoveGadgetInstanceInternal(int instance_id, bool send_ping);
 
   class GadgetBrowserScriptUtils;
 
@@ -311,7 +321,7 @@ class GoogleGadgetManager : public GadgetManagerInterface {
   FileManagerInterface *file_manager_;
   int64_t last_update_time_, last_try_time_;
   int retry_timeout_;
-  int update_timer_, free_metadata_timer_;
+  int update_timer_, free_metadata_timer_, daily_ping_timer_;
   bool full_download_;  // Records the last UpdateGadgetsMetadata mode.
   bool updating_metadata_;
 
@@ -330,6 +340,7 @@ class GoogleGadgetManager : public GadgetManagerInterface {
   GadgetsMetadata metadata_;
   Gadget *browser_gadget_;
   bool first_run_;
+  PlatformUsageCollectorInterface *collector_;
 };
 
 } // namespace google

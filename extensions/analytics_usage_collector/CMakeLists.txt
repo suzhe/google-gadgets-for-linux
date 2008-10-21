@@ -14,23 +14,7 @@
 # limitations under the License.
 #
 
-SUBDIRS = dbus_script_class \
-	  gtk_edit_element \
-	  qt_edit_element \
-	  qt_xml_http_request \
-	  gtkmoz_browser_element \
-	  gtk_flash_element \
-	  qtwebkit_browser_element \
-	  default_framework \
-	  gst_audio_framework \
-	  gst_video_element \
-	  gtk_system_framework \
-	  qt_system_framework \
-	  linux_system_framework \
-	  smjs_script_runtime \
-	  qt_script_runtime \
-	  curl_xml_http_request \
-	  libxml2_xml_parser \
-	  default_options \
-	  google_gadget_manager \
-	  analytics_usage_collector
+ADD_MODULE(analytics-usage-collector analytics_usage_collector.cc)
+TARGET_LINK_LIBRARIES(analytics-usage-collector
+  ggadget${GGL_EPOCH})
+OUTPUT_MODULE(analytics-usage-collector)

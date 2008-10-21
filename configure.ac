@@ -1023,6 +1023,7 @@ AC_CONFIG_HEADERS([config.h])
 # Specifies configurable files.
 AC_CONFIG_FILES([Makefile
 		 extensions/Makefile
+		 extensions/analytics_usage_collector/Makefile
 		 extensions/curl_xml_http_request/Makefile
 		 extensions/dbus_script_class/Makefile
 		 extensions/default_framework/Makefile

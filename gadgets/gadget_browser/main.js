@@ -37,7 +37,7 @@ function view_onopen() {
   // We do the init in timer because gadgetBrowserUtils is not ready when
   // gadget is created and will be registered by c++ code right after the
   // gadget is created.
-  setTimeout(function() { init(); }, 0);
+  setTimeout(init, 0);
 }
 
 function view_onclose() {
