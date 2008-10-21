@@ -17,31 +17,50 @@
 IF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)
 
 APPLY_CONFIG(X11)
+APPLY_CONFIG(DBUS)
+APPLY_CONFIG(NETWORK_MANAGER)
 
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
   file_system.cc
   runtime.cc
-  machine.cc
   memory.cc
   perfmon.cc
-  power.cc
   process.cc
-  network.cc
-  wireless_access_point.cc
-  wireless.cc
+)
+IF(GGL_BUILD_LIBGGADGET_DBUS)
+LIST(APPEND SRCS
+  machine.cc
+  power.cc
   user.cc
 )
+ENDIF(GGL_BUILD_LIBGGADGET_DBUS)
+
+IF(GGL_HAVE_NETWORK_MANAGER)
+LIST(APPEND SRCS
+  network.cc
+  wireless.cc
+  wireless_access_point.cc
+)
+ENDIF(GGL_HAVE_NETWORK_MANAGER)
+
 ADD_LIBRARY(ggadget-linux ${SRCS})
 
-ADD_MODULE(linux-system-framework linux_system_framework.cc)
-TARGET_LINK_LIBRARIES(linux-system-framework
+TARGET_LINK_LIBRARIES(ggadget-linux
   ggadget${GGL_EPOCH}
-  ggadget-dbus${GGL_EPOCH}
+  ggadget-xdg${GGL_EPOCH}
   ggadget-linux
   ${X11_LIBRARIES}
 )
+
+IF(GGL_BUILD_LIBGGADGET_DBUS)
+TARGET_LINK_LIBRARIES(ggadget-linux
+  ggadget-dbus${GGL_EPOCH}
+)
+ENDIF(GGL_BUILD_LIBGGADGET_DBUS)
+
+ADD_MODULE(linux-system-framework linux_system_framework.cc)
 OUTPUT_MODULE(linux-system-framework)
 
 ENDIF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)
