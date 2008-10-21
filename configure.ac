@@ -659,6 +659,21 @@ if test x$has_startup_notification = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_STARTUP_NOTIFICATION"
 fi
 
+# Check NetworkManager
+has_network_manager=no
+PKG_CHECK_MODULES(NETWORK_MANAGER,
+		  [NetworkManager >= 0.7], [has_network_manager=yes],
+		  [PKG_CHECK_MODULES(NETWORK_MANAGER,
+		   [NetworkManager >= 0.6], [has_network_manager=old],
+		   [has_network_manager=no])])
+
+if test x$has_network_manager != xno; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_NETWORK_MANAGER"
+  if test x$has_network_manager != xold; then
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_NEW_NETWORK_MANAGER_API"
+  fi
+fi
+
 # Check gtkmozembed
 # Check priority:
 #  xulrunner 1.9: mozilla-gtkmozembed-embedding and mozilla-js
@@ -934,6 +949,7 @@ AM_CONDITIONAL(
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
+AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
 
 if test x$ZIP = x; then
   AC_MSG_WARN([Can't generate resource file bundle without zip command.])
