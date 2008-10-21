@@ -118,7 +118,7 @@ class DefaultNetwork : public NetworkInterface {
  public:
   virtual bool IsOnline() { return true; }
   virtual ConnectionType GetConnectionType() {
-    return NetworkInterface::CONNECTION_TYPE_UNKNOWN;
+    return NetworkInterface::CONNECTION_TYPE_802_3;
   }
   virtual PhysicalMediaType GetPhysicalMediaType() {
     return NetworkInterface::PHYSICAL_MEDIA_TYPE_UNSPECIFIED;

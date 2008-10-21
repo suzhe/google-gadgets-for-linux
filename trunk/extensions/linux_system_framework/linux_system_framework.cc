@@ -35,11 +35,11 @@
 
 #ifdef HAVE_DBUS_LIBRARY
 #include "machine.h"
-#include "network.h"
 #include "power.h"
 #include "user.h"
-#include "wireless.h"
-#include "wireless_access_point.h"
+#ifdef HAVE_NETWORK_MANAGER
+#include "network.h"
+#endif
 #endif
 
 #define Initialize linux_system_framework_LTX_Initialize
@@ -65,16 +65,19 @@ static ScriptableProcess g_script_process_(&g_process_);
 
 #ifdef HAVE_DBUS_LIBRARY
 static Machine g_machine_;
-static Network g_network_;
 static Power g_power_;
 static User g_user_;
 
 static ScriptableBios g_script_bios_(&g_machine_);
 static ScriptableMachine g_script_machine_(&g_machine_);
-static ScriptableNetwork g_script_network_(&g_network_);
 static ScriptablePower g_script_power_(&g_power_);
 static ScriptableProcessor g_script_processor_(&g_machine_);
 static ScriptableUser g_script_user_(&g_user_);
+
+#ifdef HAVE_NETWORK_MANAGER
+static Network g_network_;
+static ScriptableNetwork g_script_network_(&g_network_);
+#endif
 #endif
 
 } // namespace linux_system
@@ -168,8 +171,10 @@ extern "C" {
                                         Variant(&g_script_bios_));
     reg_system->RegisterVariantConstant("machine",
                                         Variant(&g_script_machine_));
+#ifdef HAVE_NETWORK_MANAGER
     reg_system->RegisterVariantConstant("network",
                                         Variant(&g_script_network_));
+#endif
     reg_system->RegisterVariantConstant("power",
                                         Variant(&g_script_power_));
     reg_system->RegisterVariantConstant("processor",

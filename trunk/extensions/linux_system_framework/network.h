@@ -39,20 +39,32 @@ class Network : public NetworkInterface {
   Network();
   ~Network();
 
-  virtual bool IsOnline() ;
-  virtual NetworkInterface::ConnectionType GetConnectionType() ;
-  virtual NetworkInterface::PhysicalMediaType GetPhysicalMediaType() ;
-  virtual WirelessInterface *GetWireless();
+  virtual bool IsOnline() {
+    return is_online_;
+  }
+  virtual NetworkInterface::ConnectionType GetConnectionType() {
+    return connection_type_;
+  }
+  virtual NetworkInterface::PhysicalMediaType GetPhysicalMediaType() {
+    return physcial_media_type_;
+  }
+  virtual WirelessInterface *GetWireless() {
+    return &wireless_;
+  }
 
  private:
-  DBusProxy *GetInterfaceProxy(int i);
-  int GetActiveInterface();
-  std::string GetInterfacePropertyString(int i, const char *property);
-  bool IsInterfaceUp(int i);
+  void OnSignal(const std::string &name, int argc, const Variant *argv);
+  void Update();
 
-  int last_active_interface_;
-  std::vector<std::string> interfaces_;
-  std::vector<DBusProxy *> proxies_;
+ private:
+  // true if using nm 0.7 or above, false if using nm 0.6.x
+  bool is_new_api_;
+  bool is_online_;
+  NetworkInterface::ConnectionType connection_type_;
+  NetworkInterface::PhysicalMediaType physcial_media_type_;
+
+  DBusProxy *network_manager_;
+  Connection *on_signal_connection_;
   Wireless wireless_;
 };
 

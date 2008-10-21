@@ -14,156 +14,157 @@
   limitations under the License.
 */
 
+#include <NetworkManager.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/main_loop_interface.h>
 #include "network.h"
-#include "hal_strings.h"
 
 namespace ggadget {
 namespace framework {
 namespace linux_system {
 
 Network::Network()
-  : last_active_interface_(-1) {
-  DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
-                                               kHalObjectManager,
-                                               kHalInterfaceManager);
-  DBusStringArrayReceiver receiver(&interfaces_);
-  if (!proxy->CallMethod(kHalMethodFindDeviceByCapability, true,
-                         kDefaultDBusTimeout, receiver.NewSlot(),
-                         MESSAGE_TYPE_STRING, kHalCapabilityNet,
-                         MESSAGE_TYPE_INVALID)) {
-    DLOG("Get devices failed.");
-    interfaces_.clear();
-    last_active_interface_ = -2;
+  : is_new_api_(false),
+    is_online_(true), // treats online by default
+    connection_type_(CONNECTION_TYPE_802_3),
+    physcial_media_type_(PHYSICAL_MEDIA_TYPE_UNSPECIFIED),
+    network_manager_(NULL),
+    on_signal_connection_(NULL) {
+  network_manager_ = DBusProxy::NewSystemProxy(NM_DBUS_SERVICE, NM_DBUS_PATH,
+                                               NM_DBUS_INTERFACE);
+  if (!network_manager_) {
+    DLOG("Network Manager is not available.");
+    return;
   }
-  delete proxy;
 
-#ifdef _DEBUG
-  DLOG("Network interfaces:");
-  for (size_t i = 0; i < interfaces_.size(); ++i)
-    DLOG("%s", interfaces_[i].c_str());
-#endif
+  // Checks if it's nm 0.7 or above. nm 0.6.x doesn't have introspectable data
+  // nor these method and signal.
+  if (network_manager_->GetMethodInfo("GetDevices", NULL, NULL, NULL, NULL) &&
+      network_manager_->GetSignalInfo("StateChanged", NULL, NULL)) {
+    DLOG("network manager 0.7 or above is available.");
+    is_new_api_ = true;
+    int state;
+    if (network_manager_->GetProperty("State").v().ConvertToInt(&state)) {
+      is_online_ = (state == NM_STATE_CONNECTED);
+    }
+  } else {
+    DLOG("network manager 0.6.x might be used.");
+    DBusIntReceiver result;
+    if (network_manager_->CallMethod("state", true, kDefaultDBusTimeout,
+                                     result.NewSlot(), MESSAGE_TYPE_INVALID)) {
+      is_online_ = (result.GetValue() == NM_STATE_CONNECTED);
+    }
+  }
 
-  // Lazy initialize proxies for interfaces.
-  proxies_.resize(interfaces_.size(), NULL);
+  on_signal_connection_ = network_manager_->ConnectOnSignalEmit(
+      NewSlot(this, &Network::OnSignal));
+
+  if (is_online_) {
+    Update();
+  } else {
+    connection_type_ = CONNECTION_TYPE_UNKNOWN;
+    physcial_media_type_ = PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
+  }
 }
 
 Network::~Network() {
-  for(size_t i = 0; i < proxies_.size(); ++i)
-    delete proxies_[i];
+  if (on_signal_connection_)
+    on_signal_connection_->Disconnect();
+  delete network_manager_;
 }
 
-bool Network::IsOnline() {
-  // Also returns true if dbus or service is not available.
-  return GetActiveInterface() != -1;
-}
-
-NetworkInterface::ConnectionType Network::GetConnectionType() {
-  int index = GetActiveInterface();
-  if (index >= 0) {
-    std::string category =
-        GetInterfacePropertyString(index, kHalPropInfoCategory);
-    DLOG("category: %s", category.c_str());
-    if (category == kHalPropNet80203)
-      return CONNECTION_TYPE_802_3;
-    else if (category == kHalPropNet80211)
-      return CONNECTION_TYPE_NATIVE_802_11;
-    else if (category == kHalPropNetBlueTooth)
-      return CONNECTION_TYPE_BLUETOOTH;
-    else if (category == kHalPropNetIrda)
-      return CONNECTION_TYPE_IRDA;
-    else
-      LOG("the net interface %s is a unknown type: %s",
-          interfaces_[index].c_str(), category.c_str());
+void Network::OnSignal(const std::string &name, int argc, const Variant *argv) {
+  DLOG("Got signal from network manager: %s", name.c_str());
+  bool need_update = false;
+  // nm 0.6.x uses "StateChange", 0.7.x uses "StateChanged".
+  if (name == "StateChange" || name == "StateChanged") {
+    int state;
+    if (argc >= 1 && argv[0].ConvertToInt(&state)) {
+      is_online_ = (state == NM_STATE_CONNECTED);
+      DLOG("Network is %s.", is_online_ ? "connected" : "disconnected");
+      if (is_online_) {
+        need_update = true;
+      } else {
+        connection_type_ = CONNECTION_TYPE_UNKNOWN;
+        physcial_media_type_ = PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
+      }
+    }
+  } else if (name == "PropertiesChanged" || name == "DeviceAdded" ||
+             name == "DeviceRemoved" || name == "DeviceNowActive" ||
+             name == "DeviceNoLongerActive") {
+    need_update = is_online_;
   }
-  return CONNECTION_TYPE_UNKNOWN;
+  if (need_update)
+    Update();
 }
 
-NetworkInterface::PhysicalMediaType Network::GetPhysicalMediaType() {
-  NetworkInterface::ConnectionType type = GetConnectionType();
-  switch (type) {
-    case CONNECTION_TYPE_NATIVE_802_11:
-      return PHYSICAL_MEDIA_TYPE_NATIVE_802_11;
-    case CONNECTION_TYPE_BLUETOOTH:
-      return PHYSICAL_MEDIA_TYPE_BLUETOOTH;
-    default:
-      return PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
-  }
-  return PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
-}
+void Network::Update() {
+  DLOG("Update network information.");
+  StringVector devices;
+  DBusStringArrayReceiver result(&devices);
 
-WirelessInterface *Network::GetWireless() {
-  return &wireless_;
-}
+  if (network_manager_->CallMethod(is_new_api_ ? "GetDevices" : "getDevices",
+                                   true, kDefaultDBusTimeout, result.NewSlot(),
+                                   MESSAGE_TYPE_INVALID) && devices.size()) {
+    std::string dev_interface(NM_DBUS_INTERFACE);
+    dev_interface.append(is_new_api_ ? ".Device" : ".Devices");
+    for(StringVector::iterator it = devices.begin();
+        it != devices.end(); ++it) {
+      DLOG("Found network device: %s", it->c_str());
+      DBusProxy *dev = DBusProxy::NewSystemProxy(NM_DBUS_SERVICE, *it,
+                                                 dev_interface);
+      if (dev) {
+        bool active = false;
+        int type = DEVICE_TYPE_UNKNOWN;
+        if (is_new_api_) {
+          int state;
+          if (dev->GetProperty("State").v().ConvertToInt(&state))
+            active = (state == 8); // NM_DEVICE_STATE_ACTIVATED
+        } else {
+          DBusBooleanReceiver result;
+          if (dev->CallMethod("getLinkActive", true, kDefaultDBusTimeout,
+                              result.NewSlot(), MESSAGE_TYPE_INVALID))
+            active = result.GetValue();
+        }
 
-DBusProxy *Network::GetInterfaceProxy(int i) {
-  ASSERT(i >= 0);
-  // Size of proxies may be zero, if now no network device is available.
-  if (static_cast<size_t>(i) >= proxies_.size())
-    return NULL;
-  if (proxies_[i] == NULL) {
-    proxies_[i] = DBusProxy::NewSystemProxy(kHalDBusName,
-                                            interfaces_[i].c_str(),
-                                            kHalInterfaceDevice);
-  }
-  return proxies_[i];
-}
+        if (active) {
+          if (is_new_api_) {
+            dev->GetProperty("DeviceType").v().ConvertToInt(&type);
+          } else {
+            DBusIntReceiver result;
+            if (dev->CallMethod("getType", true, kDefaultDBusTimeout,
+                                result.NewSlot(), MESSAGE_TYPE_INVALID))
+              type = static_cast<int>(result.GetValue());
+          }
+          DLOG("device %s is active, type: %d", it->c_str(), type);
+        }
+        delete dev;
 
-int Network::GetActiveInterface() {
-  if (last_active_interface_ == -2) {
-    // DBus or service is not available.
-    return last_active_interface_;
-  }
-  if (last_active_interface_ >= 0) {
-    if (IsInterfaceUp(last_active_interface_))
-      return last_active_interface_;
-    else
-      last_active_interface_ = -1;
-  }
-  for (size_t i = 0; i < interfaces_.size(); ++i) {
-    if (IsInterfaceUp(static_cast<int>(i))) {
-      last_active_interface_ = static_cast<int>(i);
-      break;
+        if (active) {
+          if (type == DEVICE_TYPE_802_3_ETHERNET) {
+            connection_type_ = CONNECTION_TYPE_802_3;
+            physcial_media_type_ = PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
+          } else if (type == DEVICE_TYPE_802_11_WIRELESS) {
+            connection_type_ = CONNECTION_TYPE_NATIVE_802_11;
+            physcial_media_type_ = PHYSICAL_MEDIA_TYPE_NATIVE_802_11;
+          } else {
+            connection_type_ = CONNECTION_TYPE_UNKNOWN;
+            physcial_media_type_ = PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
+          }
+
+          // No need to check more devices.
+          if (connection_type_ != CONNECTION_TYPE_UNKNOWN)
+            break;
+        }
+      } else {
+        DLOG("Failed to create dbus object for device: %s", it->c_str());
+      }
     }
   }
-  return last_active_interface_;
-}
 
-std::string Network::GetInterfacePropertyString(int i, const char *property) {
-  DBusProxy *proxy = GetInterfaceProxy(i);
-  ASSERT(proxy);
-
-  DBusStringReceiver receiver;
-  proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
-                    receiver.NewSlot(),
-                    MESSAGE_TYPE_STRING, property,
-                    MESSAGE_TYPE_INVALID);
-  return receiver.GetValue();
-}
-
-bool Network::IsInterfaceUp(int i) {
-  DBusProxy *proxy = GetInterfaceProxy(i);
-  ASSERT(proxy);
-
-  DBusBooleanReceiver receiver;
-  if (proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
-                        receiver.NewSlot(),
-                        MESSAGE_TYPE_STRING, kHalPropNetInterfaceUp,
-                        MESSAGE_TYPE_INVALID)) {
-    return receiver.GetValue();
-  }
-
-  DLOG("net.interface_up property is missing.");
-
-  std::string category =
-      GetInterfacePropertyString(i, kHalPropInfoCategory);
-
-  // always returns true for Ethernet interface.
-  // FIXME: We should use NetworkManager to detect the correct value.
-  if (category == kHalPropNet80203)
-    return true;
-
-  return false;
+  // Always return 802.3 type if the connection type is unknown.
+  if (connection_type_ == CONNECTION_TYPE_UNKNOWN)
+    connection_type_ = CONNECTION_TYPE_802_3;
 }
 
 } // namespace linux_system
