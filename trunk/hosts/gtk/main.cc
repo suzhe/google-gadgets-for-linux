@@ -41,6 +41,7 @@
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/usage_collector_interface.h>
 #include <ggadget/xml_http_request_interface.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
@@ -68,6 +69,7 @@ static const char *kGlobalExtensions[] = {
 #endif
   "smjs-script-runtime",
   "curl-xml-http-request",
+  "analytics-usage-collector",
   "google-gadget-manager",
   NULL
 };
@@ -103,6 +105,8 @@ static const char *g_help_string =
   "      0 - No debug console allowed\n"
   "      1 - Gadgets has debug console menu item\n"
   "      2 - Open debug console when gadget is added to debug startup code\n"
+  "  -nc, --no-collector\n"
+  "      Disable the usage collector\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -135,6 +139,7 @@ int main(int argc, char* argv[]) {
   bool decorated = false;
   bool sidebar = true;
   bool background = false;
+  bool enable_collector = true;
   ggadget::Gadget::DebugConsoleConfig debug_console =
       ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
 
@@ -196,6 +201,9 @@ int main(int argc, char* argv[]) {
         debug_console =
             static_cast<ggadget::Gadget::DebugConsoleConfig>(atoi(argv[i]));
       }
+    } else if (strcmp("-nc", argv[i]) == 0 ||
+               strcmp("--no-collector", argv[i]) == 0) {
+      enable_collector = false;
     } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
       if (run_once.IsRunning()) {
@@ -253,6 +261,26 @@ int main(int argc, char* argv[]) {
   // extension manager.
   ext_manager->SetReadonly();
   ggadget::InitXHRUserAgent(GGL_APP_NAME);
+
+  if (enable_collector) {
+    ggadget::UsageCollectorFactoryInterface *collector_factory =
+        ggadget::GetUsageCollectorFactory();
+    if (collector_factory) {
+      collector_factory->SetApplicationInfo(GGL_APP_NAME, GGL_VERSION);
+      // Only take the initial screen size.
+      // We don't really want very accurate stats.
+      GdkScreen *screen = NULL;
+      gdk_display_get_pointer(gdk_display_get_default(), &screen,
+                              NULL, NULL, NULL);
+      std::string screen_size_param =
+          ggadget::StringPrintf("%dx%d", gdk_screen_get_width(screen),
+                                gdk_screen_get_height(screen));
+      collector_factory->SetParameter(
+          ggadget::UsageCollectorFactoryInterface::PARAM_SCREEN_SIZE,
+          screen_size_param.c_str());
+    }
+  }
+
   // Initialize the gadget manager before creating the host.
   ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
   gadget_manager->Init();
