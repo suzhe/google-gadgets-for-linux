@@ -326,7 +326,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
-    succeeded_ = succeeded_;
+    succeeded_ = succeeded;
     bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
