@@ -126,8 +126,8 @@ class QtViewHost::Impl {
 
   void DefaultPosition() {
     if (!parent_widget_) return;
-    int w = view_->GetWidth();
-    int h = view_->GetHeight();
+    int w = static_cast<int>(view_->GetWidth());
+    int h = static_cast<int>(view_->GetHeight());
     QPoint p = GetPopupPosition(parent_widget_->geometry(), QSize(w, h));
     window_->move(p);
   }

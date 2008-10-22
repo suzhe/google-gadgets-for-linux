@@ -230,7 +230,7 @@ class QtCanvas::Impl {
     Qt::TextElideMode mode =
         trimming == TRIMMING_PATH_ELLIPSIS ? Qt::ElideMiddle : Qt::ElideRight;
 
-    return fm.elidedText(str, mode, width);
+    return fm.elidedText(str, mode, static_cast<int>(width));
   }
 
   bool DrawText(double x, double y, double width, double height,

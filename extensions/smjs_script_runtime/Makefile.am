@@ -18,7 +18,8 @@ if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -I$(top_builddir)/third_party/smjs
 
 noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
@@ -45,16 +46,12 @@ libggadget_smjs_la_CXXFLAGS = \
 			  -fcheck-new
 
 libggadget_smjs_la_CPPFLAGS = \
-			  @SPIDERMONKEY_CPPFLAGS@ \
-			  $(PREDEFINED_MACROS)
+			  $(PREDEFINED_MACROS) \
+			  $(SMJS_CFLAGS)
 
 libggadget_smjs_la_LIBADD = \
-			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-
-libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@
-
 
 extension_LTLIBRARIES	= smjs-script-runtime.la
 extensiondir		= $(GGL_MODULE_DIR)
@@ -66,17 +63,15 @@ smjs_script_runtime_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 smjs_script_runtime_la_CPPFLAGS = \
-			  @SPIDERMONKEY_CPPFLAGS@ \
-			  $(PREDEFINED_MACROS)
+			  $(PREDEFINED_MACROS) \
+			  $(SMJS_CFLAGS)
 
 smjs_script_runtime_la_LIBADD = \
-			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  libggadget-smjs.la
+			  libggadget-smjs.la \
+			  $(top_builddir)/third_party/smjs/libjs.a
 
 smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \
-			  -module \
-			  @SPIDERMONKEY_LDFLAGS@
-
+			  -module
 endif

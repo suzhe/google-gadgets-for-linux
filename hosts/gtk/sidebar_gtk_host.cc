@@ -1486,7 +1486,9 @@ class SideBarGtkHost::Impl {
     OptionsInterface *opt = gadget->GetOptions();
     Variant value = opt->GetInternalValue(kOptionDisplayTarget);
     int target;
-    if (value.ConvertToInt(&target) && target == Gadget::TARGET_FLOATING_VIEW)
+    // Load gadget into a floating view host if sidebar is closed.
+    if (closed_ ||
+        (value.ConvertToInt(&target) && target == Gadget::TARGET_FLOATING_VIEW))
       gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     else  // default value is TARGET_SIDEBAR
       gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
