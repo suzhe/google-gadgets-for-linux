@@ -65,7 +65,6 @@ bool IsValidHTTPToken(const char *s) {
   return true;
 }
 
-
 static const char *kForbiddenHeaders[] = {
   "Accept-Charset",
   "Accept-Encoding",
@@ -204,7 +203,7 @@ static OptionsInterface *g_backoff_options = NULL;
 static Backoff::ResultType GetBackoffType(unsigned short status) {
   // status == 0: network error, don't do exponential backoff.
   return status == 0 ? Backoff::CONSTANT_BACKOFF :
-      (status >= 200 && status < 400) || status == 404 ? Backoff::SUCCESS :
+      (status >= 100 && status < 500) ? Backoff::SUCCESS :
       Backoff::EXPONENTIAL_BACKOFF;
 }
 
