@@ -75,6 +75,7 @@ SET(SRCS
   view.cc
   xml_dom.cc
   xml_http_request_factory.cc
+  xml_http_request_utils.cc
   xml_parser.cc
   xml_utils.cc
 

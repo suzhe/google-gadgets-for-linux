@@ -32,28 +32,22 @@
 #include <QtNetwork/QNetworkCookie>
 #endif
 
-#include <ggadget/backoff.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/logger.h>
-#include <ggadget/options_interface.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/signals.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_http_request_interface.h>
+#include <ggadget/xml_http_request_utils.h>
 #include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_parser_interface.h>
 #include "qt_xml_http_request_internal.h"
 
 namespace ggadget {
 namespace qt {
-
-// The name of the options to store backoff data.
-static const char kBackoffOptions[] = "backoff";
-// The name of the options item to store backoff data.
-static const char kBackoffDataOption[] = "backoff";
 
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
@@ -63,53 +57,6 @@ static const Variant kOpenDefaultArgs[] = {
 };
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
-
-static Backoff::ResultType GetBackoffType(unsigned short status) {
-  // status == 0: network error, don't do exponential backoff.
-  return status == 0 ? Backoff::CONSTANT_BACKOFF :
-         (status >= 200 && status < 400) || status == 404 ? Backoff::SUCCESS :
-         Backoff::EXPONENTIAL_BACKOFF;
-}
-
-// field-name     = token
-// token          = 1*<any CHAR except CTLs or separators>
-// separators     = "(" | ")" | "<" | ">" | "@"
-//                | "," | ";" | ":" | "\" | <">
-//                | "/" | "[" | "]" | "?" | "="
-//                | "{" | "}" | SP | HT
-static bool IsValidHTTPToken(const char *s) {
-  if (s == NULL) return false;
-  while (*s) {
-    if (*s > 32 && *s < 127 &&
-        (isalnum(*s) || strchr("!#$%&'*+ -.^_`~", *s) != NULL)) {
-      //valid case
-    } else {
-      return false;
-    }
-    ++s;
-  }
-  return true;
-}
-
-// field-value    = *( field-content | LWS )
-// field-content  = <the OCTETs making up the field-value
-//                  and consisting of either *TEXT or combinations
-//                  of token, separators, and quoted-string>
-// TEXT           = <any OCTET except CTLs, but including LWS>
-static bool IsValidHTTPHeaderValue(const char *s) {
-  if (s == NULL) return true;
-  while (*s) {
-    if ( (*s > 0 && *s<=31
-#if 0 // Disallow \r \n \t in header values.
-         && *s != '\r' && *s != '\n' && *s != '\t'
-#endif
-         ) ||
-         *s == 127)
-      return false;
-    ++s;
-  }
-  return true;
-}
 
 class Session {
  public:
@@ -159,33 +106,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         status_(0),
         succeeded_(false),
         response_dom_(NULL) {
-    VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
+    VERIFY_M(EnsureXHRBackoffOptions(main_loop->GetCurrentTime()),
              ("Required options module have not been loaded"));
   }
 
   ~XMLHttpRequest() {
     Abort();
-  }
-
-  static bool EnsureBackoffOptions(uint64_t now) {
-    if (!backoff_options_) {
-      backoff_options_ = CreateOptions(kBackoffOptions);
-      if (backoff_options_) {
-        std::string data;
-        Variant value = backoff_options_->GetValue(kBackoffDataOption);
-        if (value.ConvertToString(&data))
-          backoff_.SetData(now, data.c_str());
-      }
-    }
-    return backoff_options_ != NULL;
-  }
-
-  static void SaveBackoffData(uint64_t now) {
-    if (EnsureBackoffOptions(now)) {
-      backoff_options_->PutValue(kBackoffDataOption,
-                                 Variant(backoff_.GetData(now)));
-      backoff_options_->Flush();
-    }
   }
 
   virtual void DoClassRegister() {
@@ -309,24 +235,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode SetRequestHeader(const char *header,
                                          const char *value) {
-    static const char *kForbiddenHeaders[] = {
-        "Accept-Charset",
-        "Accept-Encoding",
-        "Connection",
-        "Content-Length",
-        "Content-Transfer-Encoding",
-        "Date",
-        "Expect",
-        "Host",
-        "Keep-Alive",
-        "Referer",
-        "TE",
-        "Trailer",
-        "Transfer-Encoding",
-        "Upgrade",
-        "Via"
-    };
-
     if (!header)
       return NULL_POINTER_ERR;
     if (state_ != OPENED || send_flag_) {
@@ -344,20 +252,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return SYNTAX_ERR;
     }
 
-    if (strncasecmp("Proxy-", header, 6) == 0 ||
-        strncasecmp("Sec-", header, 4) == 0) {
+    if (IsForbiddenHeader(header)) {
       DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
       return NO_ERR;
     }
 
-    const char **found = std::lower_bound(
-        kForbiddenHeaders, kForbiddenHeaders + arraysize(kForbiddenHeaders),
-        header, CaseInsensitiveCharPtrComparator());
-    if (found != kForbiddenHeaders + arraysize(kForbiddenHeaders) &&
-        strcasecmp(*found, header) == 0) {
-      DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
-      return NO_ERR;
-    }
     request_header_->setValue(header, value);
     return NO_ERR;
   }
@@ -384,8 +283,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       // this object from being GC'ed.
       Ref();
       // Do backoff checking to avoid DDOS attack to the server.
-      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
-                                  host_.c_str())) {
+      if (!IsXHRBackoffRequestOK(main_loop_->GetCurrentTime(),
+                                 host_.c_str())) {
         Abort();
         // Don't raise exception here because async callers might not expect
         // this kind of exception.
@@ -402,8 +301,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       }
     } else {
       // Do backoff checking to avoid DDOS attack to the server.
-      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
-                                  host_.c_str())) {
+      if (!IsXHRBackoffRequestOK(main_loop_->GetCurrentTime(),
+                                 host_.c_str())) {
         Abort();
         return NETWORK_ERR;
       }
@@ -433,9 +332,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
       uint64_t now = main_loop_->GetCurrentTime();
       if (!aborting &&
-          backoff_.ReportRequestResult(now, host_.c_str(),
-                                       GetBackoffType(status_))) {
-        SaveBackoffData(now);
+          XHRBackoffReportResult(now, host_.c_str(), status_)) {
+        SaveXHRBackoffData(now);
       }
       // The caller may call Open() again in the OnReadyStateChange callback,
       // which may cause Done() re-entered.
@@ -535,36 +433,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  bool SplitStatusAndHeaders() {
-    // RFC 2616 doesn't mentioned if HTTP/1.1 is case-sensitive, so implies
-    // it is case-insensitive.
-    // We only support HTTP version 1.0 or above.
-    if (strncasecmp(response_headers_.c_str(), "HTTP/", 5) == 0) {
-      // First split the status line and headers.
-      std::string::size_type end_of_status = response_headers_.find("\r\n", 0);
-      if (end_of_status == std::string::npos) {
-        status_text_ = response_headers_;
-        response_headers_.clear();
-      } else {
-        status_text_ = response_headers_.substr(0, end_of_status);
-        response_headers_.erase(0, end_of_status + 2);
-      }
-
-      // Then extract the status text from the status line.
-      std::string::size_type space_pos = status_text_.find(' ', 0);
-      if (space_pos != std::string::npos) {
-        space_pos = status_text_.find(' ', space_pos + 1);
-        if (space_pos != std::string::npos)
-          status_text_.erase(0, space_pos + 1);
-      }
-
-      // Otherwise, just leave the whole status line in status.
-      return true;
-    }
-    // Otherwise already splitted.
-    return false;
-  }
-
   virtual ExceptionCode GetResponseText(const char **result) {
     ASSERT(result);
 
@@ -661,34 +529,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return succeeded_;
   }
 
-  class XMLHttpRequestException : public ScriptableHelperDefault {
-   public:
-    DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
-
-    XMLHttpRequestException(ExceptionCode code) : code_(code) {
-      RegisterSimpleProperty("code", &code_);
-      RegisterMethod("toString",
-                     NewSlot(this, &XMLHttpRequestException::ToString));
-    }
-
-    std::string ToString() const {
-      const char *name;
-      switch (code_) {
-        case INVALID_STATE_ERR: name = "Invalid State"; break;
-        case SYNTAX_ERR: name = "Syntax Error"; break;
-        case SECURITY_ERR: name = "Security Error"; break;
-        case NETWORK_ERR: name = "Network Error"; break;
-        case ABORT_ERR: name = "Aborted"; break;
-        case NULL_POINTER_ERR: name = "Null Pointer"; break;
-        default: name = "Other Error"; break;
-      }
-      return StringPrintf("XMLHttpRequestException: %d %s", code_, name);
-    }
-
-   private:
-    ExceptionCode code_;
-  };
-
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
@@ -772,77 +612,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return result;
   }
 
-  void ParseResponseHeaders() {
-    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-    // http://www.w3.org/TR/XMLHttpRequest
-    std::string::size_type pos = 0;
-    while (pos != std::string::npos) {
-      std::string::size_type new_pos = response_headers_.find("\r\n", pos);
-      std::string line;
-      if (new_pos == std::string::npos) {
-        line = response_headers_.substr(pos);
-        pos = new_pos;
-      } else {
-        line = response_headers_.substr(pos, new_pos - pos);
-        pos = new_pos + 2;
-      }
-
-      std::string name, value;
-      std::string::size_type pos = line.find(':');
-      if (pos != std::string::npos) {
-        name = TrimString(line.substr(0, pos));
-        value = TrimString(line.substr(pos + 1));
-        if (!name.empty()) {
-          CaseInsensitiveStringMap::iterator it =
-              response_headers_map_.find(name);
-          if (it == response_headers_map_.end()) {
-            response_headers_map_.insert(std::make_pair(name, value));
-          } else if (!value.empty()) {
-            // According to XMLHttpRequest specification, the values of multiple
-            // headers with the same name should be concentrated together.
-            if (!it->second.empty())
-              it->second += ", ";
-            it->second += value;
-          }
-        }
-
-        if (strcasecmp(name.c_str(), "Content-Type") == 0) {
-          // Extract content type and encoding from the headers.
-          pos = value.find(';');
-          if (pos != std::string::npos) {
-            response_content_type_ = TrimString(value.substr(0, pos));
-            pos = value.find("charset");
-            if (pos != std::string::npos) {
-              pos += 7;
-              while (pos < value.length() &&
-                     (isspace(value[pos]) || value[pos] == '=')) {
-                pos++;
-              }
-              std::string::size_type pos1 = pos;
-              while (pos1 < value.length() && !isspace(value[pos1]) &&
-                     value[pos1] != ';') {
-                pos1++;
-              }
-              response_encoding_ = value.substr(pos, pos1 - pos);
-            }
-          } else {
-            response_content_type_ = value;
-          }
-        }
-      }
-    }
-  }
-
   void OnResponseHeaderReceived(const QHttpResponseHeader &header) {
     status_ = static_cast<unsigned short>(header.statusCode());
     if (status_ == 301) {
       redirected_url_ = header.value("Location").toUtf8().data();
     } else {
       response_header_ = header;
-      response_headers_ = header.toString().toStdString();
+      response_headers_ = header.toString().toUtf8().data();
       response_content_type_ = header.contentType().toStdString();
-      SplitStatusAndHeaders();
-      ParseResponseHeaders();
+      SplitStatusFromResponseHeaders(&response_headers_, &status_text_);
+      ParseResponseHeaders(response_headers_,
+                           &response_headers_map_,
+                           &response_content_type_,
+                           &response_encoding_);
 
 #if _DEBUG
       QTextStream out(stdout);
@@ -920,8 +702,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   QString method_;
   DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
-  static Backoff backoff_;
-  static OptionsInterface *backoff_options_;
 };
 
 void HttpHandler::OnResponseHeaderReceived(const QHttpResponseHeader& header) {
@@ -931,9 +711,6 @@ void HttpHandler::OnResponseHeaderReceived(const QHttpResponseHeader& header) {
 void HttpHandler::OnDone(bool error) {
   request_->OnRequestFinished(0, error);
 }
-
-Backoff XMLHttpRequest::backoff_;
-OptionsInterface *XMLHttpRequest::backoff_options_ = NULL;
 
 class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
  public:

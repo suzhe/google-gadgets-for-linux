@@ -142,6 +142,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom_interface.h \
 			  xml_dom.h \
 			  xml_http_request_interface.h \
+			  xml_http_request_utils.h \
 			  xml_parser_interface.h \
 			  xml_utils.h \
 			  zip_file_manager.h
@@ -235,6 +236,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  view_element.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
+			  xml_http_request_utils.cc \
 			  xml_parser.cc \
 			  xml_utils.cc \
 			  zip_file_manager.cc
