@@ -16,7 +16,7 @@
 
 #include "google_gadget_manager.h"
 
-static ggadget::google::GoogleGadgetManager g_gadget_manager;
+static ggadget::google::GoogleGadgetManager *g_gadget_manager = NULL;
 
 #define Initialize google_gadget_manager_LTX_Initialize
 #define Finalize google_gadget_manager_LTX_Finalize
@@ -24,7 +24,8 @@ static ggadget::google::GoogleGadgetManager g_gadget_manager;
 extern "C" {
   bool Initialize() {
     LOGI("Initialize google_gadget_manager extension.");
-    return ggadget::SetGadgetManager(&g_gadget_manager);
+    g_gadget_manager = new ggadget::google::GoogleGadgetManager();
+    return ggadget::SetGadgetManager(g_gadget_manager);
   }
 
   void Finalize() {
