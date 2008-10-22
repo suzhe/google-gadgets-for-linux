@@ -368,9 +368,7 @@ std::string GetAbsolutePath(const char *path) {
   // Not using kDirSeparator because Windows version should have more things
   // to do than simply replace the path separator.
   if (result[0] != '/') {
-    char buffer[PATH_MAX];
-    getcwd(buffer, PATH_MAX);
-    result = std::string(buffer) + "/" + result;
+    result = GetCurrentDirectory() + "/" + result;
   }
   result = NormalizeFilePath(result.c_str());
   return result;

@@ -17,7 +17,9 @@
 #ifndef GGADGET_XML_HTTP_REQUEST_INTERFACE_H__
 #define GGADGET_XML_HTTP_REQUEST_INTERFACE_H__
 
+#include <ggadget/string_utils.h>
 #include <ggadget/scriptable_interface.h>
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
@@ -90,6 +92,34 @@ class XMLHttpRequestInterface : public ScriptableInterface {
    * may also return 505 status.)
    */
   virtual bool IsSuccessful() = 0;
+
+  class XMLHttpRequestException : public ScriptableHelperDefault {
+   public:
+    DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
+
+    XMLHttpRequestException(ExceptionCode code) : code_(code) {
+      RegisterSimpleProperty("code", &code_);
+      RegisterMethod("toString",
+                     NewSlot(this, &XMLHttpRequestException::ToString));
+    }
+
+    std::string ToString() const {
+      const char *name;
+      switch (code_) {
+        case INVALID_STATE_ERR: name = "Invalid State"; break;
+        case SYNTAX_ERR: name = "Syntax Error"; break;
+        case SECURITY_ERR: name = "Security Error"; break;
+        case NETWORK_ERR: name = "Network Error"; break;
+        case ABORT_ERR: name = "Aborted"; break;
+        case NULL_POINTER_ERR: name = "Null Pointer"; break;
+        default: name = "Other Error"; break;
+      }
+      return StringPrintf("XMLHttpRequestException: %d %s", code_, name);
+    }
+
+   private:
+    ExceptionCode code_;
+  };
 };
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)
