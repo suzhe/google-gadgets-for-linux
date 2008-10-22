@@ -15,4 +15,4 @@
 #
 
 EXTRA_DIST=valgrind npapi
-SUBDIRS = codesighs editline unzip xdgmime
+SUBDIRS = codesighs unzip xdgmime smjs

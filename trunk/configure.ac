@@ -377,18 +377,21 @@ case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
+    SMJS_CFLAGS="-DXP_WIN"
     GGL_PLATFORM_SHORT=\"win\"
     GGL_PLATFORM=\"windows\"
     ;;
   *darwin* )
     ggl_host_type=macosx
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
+    SMJS_CFLAGS="-DXP_UNIX"
     GGL_PLATFORM_SHORT=\"mac\"
     GGL_PLATFORM=\"mac\"
     ;;
   *linux* )
     ggl_host_type=linux
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
+    SMJS_CFLAGS="-DXP_UNIX"
     build_linux_system_framework=yes
     GGL_PLATFORM_SHORT=\"linux\"
     GGL_PLATFORM=\"linux\"
@@ -396,6 +399,7 @@ case $host_os in
   *solaris* )
     ggl_host_type=solaris
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
+    SMJS_CFLAGS="-DXP_UNIX"
     GGL_PLATFORM_SHORT=\"solaris\"
     GGL_PLATFORM=\"solaris\"
     ;;
@@ -404,6 +408,7 @@ case $host_os in
     ;;
 esac
 
+AC_SUBST(SMJS_CFLAGS)
 AC_SUBST(GGL_PLATFORM_SHORT)
 AC_SUBST(GGL_PLATFORM)
 
@@ -621,10 +626,6 @@ fi
 has_libxml2=no
 AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 
-# Check spidermonkey library
-has_spidermonkey=no
-GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
-
 # Check D-Bus library
 has_dbus=no
 PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes],
@@ -830,11 +831,6 @@ fi
 if test x$has_qtscript != xyes -a x$build_qt_script_runtime = xyes; then
   AC_MSG_WARN([Library qt-4.4 and above is needed to build qt_script_runtime])
   build_qt_script_runtime=no
-fi
-
-if test x$has_spidermonkey != xyes -a x$build_smjs_script_runtime = xyes; then
-  AC_MSG_WARN([Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.])
-  build_smjs_script_runtime=no
 fi
 
 # has_dbus might also be equal to old
@@ -1086,7 +1082,7 @@ AC_CONFIG_FILES([Makefile
 		 resources/Makefile
 		 third_party/Makefile
 		 third_party/codesighs/Makefile
-		 third_party/editline/Makefile
+		 third_party/smjs/Makefile
 		 third_party/unzip/Makefile
 		 third_party/xdgmime/Makefile
 		 unittest/Makefile

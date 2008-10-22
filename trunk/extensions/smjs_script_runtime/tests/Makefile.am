@@ -16,21 +16,19 @@
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir) \
-			  -I$(top_srcdir)/third_party/editline
+			  -I$(top_builddir)/third_party/smjs
 
-AM_CPPFLAGS		= @SPIDERMONKEY_CPPFLAGS@ \
-			  $(PREDEFINED_MACROS)
+AM_CPPFLAGS		= $(PREDEFINED_MACROS) \
+			  $(SMJS_CFLAGS)
 
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-AM_LDFLAGS		= @SPIDERMONKEY_LDFLAGS@
-
-LDADD			= @SPIDERMONKEY_LIBS@ \
-			  ../libggadget-smjs.la \
+LDADD			= ../libggadget-smjs.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
-			  $(top_builddir)/third_party/editline/libeditline.la
+			  $(top_builddir)/third_party/smjs/libedit.a \
+			  $(top_builddir)/third_party/smjs/libjs.a
 
 check_PROGRAMS		= cross_context_test \
 			  dom_test_shell \
