@@ -354,7 +354,7 @@ else
 fi
 
 if test x$use_werror = xyes; then
-  DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -Werror -Wconversion"
+  DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -Werror"
 fi
 
 # Enable stdc const macros by default, like INT64_C etc.
