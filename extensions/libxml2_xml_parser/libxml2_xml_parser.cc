@@ -464,8 +464,30 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
     delete element;
     return;
   }
+
+  // We don't support full DOM2 namespaces, but we must keep all namespace
+  // related information in the result DOM.
   if (xmlele->ns)
     element->SetPrefix(FromXmlCharPtr(xmlele->ns->prefix));
+  for (xmlNsPtr ns = xmlele->nsDef; ns; ns = ns->next) {
+    DOMAttrInterface *attr;
+    if (ns->prefix && *ns->prefix) {
+      // xmlns:prefix="uri" case.
+      domdoc->CreateAttribute(FromXmlCharPtr(ns->prefix), &attr);
+      if (attr)
+        attr->SetPrefix("xmlns");
+    } else {
+      // xmlns="uri" case.
+      domdoc->CreateAttribute("xmlns", &attr);
+    }
+    if (!attr || DOM_NO_ERR != element->SetAttributeNode(attr)) {
+      // Unlikely to happen.
+      DLOG("Failed to create xmlns attribute or to add it to element");
+      delete attr;
+      continue;
+    }
+    attr->SetValue(FromXmlCharPtr(ns->href));
+  }
 
   // libxml2 doesn't support node column position for now.
   element->SetRow(static_cast<int>(xmlGetLineNo(xmlele)));

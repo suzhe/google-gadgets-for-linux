@@ -90,6 +90,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         main_loop_(main_loop),
         xml_parser_(xml_parser),
         async_(false),
+        method_(HTTP_GET),
         state_(UNSENT),
         send_flag_(false),
         request_headers_(NULL),
@@ -222,12 +223,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (strcasecmp(method, "HEAD") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
       curl_easy_setopt(curl_, CURLOPT_NOBODY, 1);
+      method_ = HTTP_HEAD;
     } else if (strcasecmp(method, "GET") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
+      method_ = HTTP_GET;
     } else if (strcasecmp(method, "POST") == 0) {
-      // Don't set CURLOPT_POST here. If the data parameter of Send()
-      // is not blank, POST method will be set automatically.
-      // curl_easy_setopt(curl_, CURLOPT_POST, 1);
+      curl_easy_setopt(curl_, CURLOPT_POST, 1);
+      method_ = HTTP_POST;
+    } else if (strcasecmp(method, "PUT") == 0) {
+      curl_easy_setopt(curl_, CURLOPT_UPLOAD, 1);
+      method_ = HTTP_PUT;
     } else {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
       return SYNTAX_ERR;
@@ -243,6 +248,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         user_pwd += password;
       curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd.c_str());
     }
+
+    // Disable the default "Expect: 100-continue" request header.
+    request_headers_ = curl_slist_append(request_headers_, "Expect:");
 
     async_ = async;
     ChangeState(OPENED);
@@ -284,7 +292,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                   curl_slist *a_request_headers,
                   const char *a_request_data, size_t a_request_size)
         : this_p(a_this_p), curl(a_curl), async(a_async),
-          request_headers(a_request_headers) {
+          request_headers(a_request_headers),
+          request_offset(0) {
       if (a_request_data && a_request_size > 0)
         request_data.assign(a_request_data, a_request_size);
     }
@@ -293,6 +302,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     bool async;
     curl_slist *request_headers;
     std::string request_data;
+    size_t request_offset;
   };
 
   virtual ExceptionCode Send(const char *data, size_t size) {
@@ -330,11 +340,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     request_headers_ = NULL;
 
     if (data && size > 0) {
-      curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
-                       context->request_data.size());
-      // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
-      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
-                       context->request_data.c_str());
+      if (method_ == HTTP_POST) {
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE_LARGE,
+                         static_cast<curl_off_t>(size));
+        // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                         context->request_data.c_str());
+      } else if (method_ == HTTP_PUT) {
+        curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
+        curl_easy_setopt(curl_, CURLOPT_READDATA, context);
+        curl_easy_setopt(curl_, CURLOPT_INFILESIZE_LARGE,
+                         static_cast<curl_off_t>(size));
+      }
     }
 
   #ifdef _DEBUG
@@ -413,6 +430,31 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     WorkerDone(status, context, code == CURLE_OK);
     delete context;
     return reinterpret_cast<void *>(code);
+  }
+
+  static size_t ReadCallback(void *ptr, size_t size, size_t mem_block,
+                             void *user_p) {
+    size_t data_size = size * mem_block;
+    WorkerContext *context = static_cast<WorkerContext *>(user_p);
+    ASSERT(context->request_data.size() >= context->request_offset);
+    size_t bytes_left = context->request_data.size() - context->request_offset;
+    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu this=%p left=%zu",
+         size, mem_block, context->this_p, bytes_left);
+    if (bytes_left == 0)
+      return 0;
+
+    if (context->async &&
+        context->this_p->curl_ != context->curl) {
+      // The current XMLHttpRequest has been aborted, so abort the
+      // curl request.
+      return CURL_READFUNC_ABORT;
+    }
+
+    data_size = std::min(data_size, context->request_data.size() -
+                                    context->request_offset);
+    memcpy(ptr, context->request_data.c_str(), data_size);
+    context->request_offset += data_size;
+    return data_size;
   }
 
   // Passes the WriteHeader() request from worker thread to the main thread.
@@ -498,7 +540,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *user_p) {
     if (!CheckSize(0, size, mem_block))
-      return CURLE_WRITE_ERROR;
+      return 0;
 
     size_t data_size = size * mem_block;
     WorkerContext *context = static_cast<WorkerContext *>(user_p);
@@ -508,7 +550,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (context->this_p->curl_ != context->curl) {
         // The current XMLHttpRequest has been aborted, so abort the
         // curl request.
-        return CURLE_WRITE_ERROR;
+        return 0;
       }
 
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
@@ -527,14 +569,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (CheckSize(response_headers_.length(), size, 1))
       response_headers_ += data;
     else
-      size = CURLE_WRITE_ERROR;
+      size = 0;
     return size;
   }
 
   static size_t WriteBodyCallback(void *ptr, size_t size, size_t mem_block,
                                   void *user_p) {
     if (!CheckSize(0, size, mem_block))
-      return CURLE_WRITE_ERROR;
+      return 0;
 
     size_t data_size = size * mem_block;
     WorkerContext *context = static_cast<WorkerContext *>(user_p);
@@ -549,7 +591,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (context->this_p->curl_ != context->curl) {
         // The current XMLHttpRequest has been aborted, so abort the
         // curl request.
-        return CURLE_WRITE_ERROR;
+        return 0;
       }
 
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
@@ -872,6 +914,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   std::string url_, host_;
   bool async_;
+  enum HTTPMethod { HTTP_HEAD, HTTP_GET, HTTP_POST, HTTP_PUT };
+  HTTPMethod method_;
 
   State state_;
   // Required by the specification.

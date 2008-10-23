@@ -290,7 +290,7 @@ static const CursorTypeMapping kCursorTypeMappings[] = {
   { ViewInterface::CURSOR_SIZENS, GDK_SB_V_DOUBLE_ARROW }, // FIXME
   { ViewInterface::CURSOR_SIZEALL, GDK_FLEUR }, // FIXME
   { ViewInterface::CURSOR_NO, GDK_X_CURSOR },
-  { ViewInterface::CURSOR_HAND, GDK_HAND1 },
+  { ViewInterface::CURSOR_HAND, GDK_HAND2 },
   { ViewInterface::CURSOR_BUSY, GDK_WATCH }, // FIXME
   { ViewInterface::CURSOR_HELP, GDK_QUESTION_ARROW }
 };
