@@ -34,11 +34,11 @@ static const char kFirstUseTimeOptionPrefix[] = "collector-first-use";
 static const char kLastUseTimeOptionPrefix[] = "collector-last-use";
 
 // TODO: Config?
-static const char kPlatformUsageAccount[] = "UA-6007037-1";
-static const char kPlatformFirstUsePing[] = "/firstuse";
-static const char kPlatformUsagePing[] = "/usage";
+static const char kPlatformUsageAccount[] = "UA-6007037-2";
+static const char kPlatformFirstUsePing[] = "/firstuse/";
+static const char kPlatformUsagePing[] = "/usage/";
 
-static const char kGadgetsUsageAccount[] = "UA-6007016-1";
+static const char kGadgetsUsageAccount[] = "UA-6007016-2";
 static const char kGadgetInstallPingPrefix[] = "/gadget-install/";
 static const char kGadgetUninstallPingPrefix[] = "/gadget-uninstall/";
 static const char kGadgetUsagePingPrefix[] = "/gadget-usage/";
@@ -122,6 +122,12 @@ class UsageCollector : public UsageCollectorInterface {
                                Variant(last_use_time_));
   }
 
+  void DoReport(const char *prefix, const char *item, const char *version) {
+    ASSERT(item && version);
+    Report((prefix + EncodeURLComponent(item) + "/" +
+            EncodeURLComponent(version)).c_str());
+  }
+
   std::string account_;
   const std::string *params_;
   OptionsInterface *options_;
@@ -136,39 +142,36 @@ class PlatformUsageCollector : public PlatformUsageCollectorInterface {
                          const std::string *params)
       : application_name_(application_name),
         version_(version),
-        collector_(kPlatformUsageAccount, params, GetGlobalOptions()) {
-  }
-
-  void Report(const char *prefix, const char *item, const char *version) {
-    ASSERT(item && version);
-    collector_.Report((prefix + EncodeURLComponent(item) + "/" +
-                       EncodeURLComponent(version)).c_str());
+        platform_collector_(kPlatformUsageAccount, params, GetGlobalOptions()),
+        gadgets_collector_(kGadgetsUsageAccount, params, GetGlobalOptions()) {
   }
 
   virtual void ReportFirstUse() {
-    Report(kPlatformFirstUsePing, application_name_.c_str(), version_.c_str());
+    platform_collector_.DoReport(kPlatformFirstUsePing,
+                                 application_name_.c_str(), version_.c_str());
   }
 
   virtual void ReportUsage() {
-    Report(kPlatformUsagePing, application_name_.c_str(), version_.c_str());
+    platform_collector_.DoReport(kPlatformUsagePing,
+                                 application_name_.c_str(), version_.c_str());
   }
 
   virtual void ReportGadgetInstall(const char *gadget_id,
                                    const char *version) {
-    Report(kGadgetInstallPingPrefix, gadget_id, version);
+    gadgets_collector_.DoReport(kGadgetInstallPingPrefix, gadget_id, version);
   }
 
   virtual void ReportGadgetUninstall(const char *gadget_id,
                                      const char *version) {
-    Report(kGadgetUninstallPingPrefix, gadget_id, version);
+    gadgets_collector_.DoReport(kGadgetUninstallPingPrefix, gadget_id, version);
   }
 
   virtual void ReportGadgetUsage(const char *gadget_id, const char *version) {
-    Report(kGadgetUsagePingPrefix, gadget_id, version);
+    gadgets_collector_.DoReport(kGadgetUsagePingPrefix, gadget_id, version);
   }
 
   std::string application_name_, version_;
-  UsageCollector collector_;
+  UsageCollector platform_collector_, gadgets_collector_;
 };
 
 class UsageCollectorFactory : public UsageCollectorFactoryInterface {
