@@ -142,8 +142,12 @@ class FloatingMainViewDecorator::Impl {
     Elements *children = resize_border_->GetChildren();
     ResizableMode resizable = owner_->GetChildViewResizable();
     bool minimized = owner_->IsMinimized();
-    bool vertical = (resizable == RESIZABLE_TRUE && !minimized);
-    bool horizontal = (resizable == RESIZABLE_TRUE || minimized);
+    bool vertical = ((resizable == RESIZABLE_TRUE ||
+                      resizable == RESIZABLE_KEEP_RATIO) &&
+                     !minimized);
+    bool horizontal = (resizable == RESIZABLE_TRUE ||
+                       resizable == RESIZABLE_KEEP_RATIO ||
+                       minimized);
     bool both = vertical && horizontal;
     children->GetItemByIndex(RESIZE_TOP)->SetVisible(vertical);
     children->GetItemByIndex(RESIZE_BOTTOM)->SetVisible(vertical);
