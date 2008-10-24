@@ -550,6 +550,11 @@ void MainViewDecoratorBase::SetMinimized(bool minimized) {
       impl_->on_popin_signal_();
     SetChildViewVisible(!minimized);
     impl_->OnMinimizedChanged();
+
+    ResizableMode mode = RESIZABLE_TRUE;
+    if (!minimized)
+      mode = GetChildViewResizable();
+    SetResizable(mode);
   }
 }
 
@@ -651,6 +656,12 @@ EventResult MainViewDecoratorBase::OnOtherEvent(const Event &event) {
     result = ViewDecoratorBase::OnOtherEvent(event);
   }
   return result;
+}
+
+void MainViewDecoratorBase::SetResizable(ResizableMode resizable) {
+  if (resizable == RESIZABLE_FALSE)
+    resizable = RESIZABLE_ZOOM;
+  ViewDecoratorBase::SetResizable(resizable);
 }
 
 void MainViewDecoratorBase::SetCaption(const char *caption) {

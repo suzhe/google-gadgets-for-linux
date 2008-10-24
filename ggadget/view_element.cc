@@ -178,7 +178,8 @@ bool ViewElement::OnSizing(double *width, double *height) {
   // If child view is resizable then just delegate OnSizing request to child
   // view.
   // The resizable view might also be zoomed, so count the scale factor in.
-  if (mode == ViewInterface::RESIZABLE_TRUE) {
+  if (mode == ViewInterface::RESIZABLE_TRUE ||
+      mode == ViewInterface::RESIZABLE_KEEP_RATIO) {
     child_width = *width / impl_->scale_;
     child_height = *height / impl_->scale_;
     ret = impl_->child_view_->OnSizing(&child_width, &child_height);
@@ -231,7 +232,8 @@ void ViewElement::SetSize(double width, double height) {
   }
 
   ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_TRUE) {
+  if (mode == ViewInterface::RESIZABLE_TRUE ||
+      mode == ViewInterface::RESIZABLE_KEEP_RATIO) {
     // The resizable view might also be zoomed, so count the scale factor in.
     impl_->child_view_->SetSize(width / impl_->scale_, height / impl_->scale_);
     impl_->UpdateScaleAndSize();

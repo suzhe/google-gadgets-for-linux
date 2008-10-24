@@ -39,6 +39,7 @@ class ViewInterface {
   enum ResizableMode {
     RESIZABLE_FALSE,
     RESIZABLE_TRUE,
+    RESIZABLE_KEEP_RATIO,
     /** The user can resize the view while keeping the original aspect ratio. */
     RESIZABLE_ZOOM
   };

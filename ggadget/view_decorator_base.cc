@@ -14,8 +14,6 @@
   limitations under the License.
 */
 
-#include "view_decorator_base.h"
-
 #include <string>
 #include <algorithm>
 #include "logger.h"
@@ -30,8 +28,10 @@
 #include "signals.h"
 #include "slot.h"
 #include "view.h"
+#include "view_host_interface.h"
 #include "view_element.h"
 #include "copy_element.h"
+#include "view_decorator_base.h"
 
 namespace ggadget {
 
@@ -232,8 +232,10 @@ void ViewDecoratorBase::SetChildView(View *child_view) {
   View *old_ = GetChildView();
   if (old_ != child_view) {
     impl_->view_element_->SetChildView(child_view);
-    if (child_view)
+    if (child_view) {
       impl_->child_resizable_ = child_view->GetResizable();
+      GetViewHost()->SetResizable(impl_->child_resizable_);
+    }
     OnChildViewChanged();
     UpdateViewSize();
   }
@@ -288,7 +290,8 @@ bool ViewDecoratorBase::LoadChildViewSize() {
       impl_->view_element_->SetScale(1.0);
     }
     // view size is only applicable to resizable view.
-    if (GetChildViewResizable() == ViewInterface::RESIZABLE_TRUE) {
+    if (GetChildViewResizable() == RESIZABLE_TRUE ||
+        GetChildViewResizable() == RESIZABLE_KEEP_RATIO) {
       double width, height;
       if (vw.type() == Variant::TYPE_DOUBLE &&
           vh.type() == Variant::TYPE_DOUBLE) {
@@ -505,13 +508,14 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 void ViewDecoratorBase::SetResizable(ResizableMode resizable) {
   if (impl_->child_resizable_ != resizable) {
     // Reset the zoom factor to 1 if the child view is changed to
-    // resizable.
-    if (impl_->child_resizable_ != ViewInterface::RESIZABLE_TRUE &&
-        resizable == ViewInterface::RESIZABLE_TRUE) {
+    // resizable or keep_ratio.
+    if (resizable == ViewInterface::RESIZABLE_TRUE ||
+        resizable == ViewInterface::RESIZABLE_KEEP_RATIO) {
       impl_->view_element_->SetScale(1.0);
     }
     impl_->child_resizable_ = resizable;
     UpdateViewSize();
+    GetViewHost()->SetResizable(resizable);
   }
 }
 

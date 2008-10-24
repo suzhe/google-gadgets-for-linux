@@ -171,6 +171,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual Gadget *GetGadget() const;
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual EventResult OnOtherEvent(const Event &event);
+  virtual void SetResizable(ResizableMode resizable);
   virtual void SetCaption(const char *caption);
 
   virtual bool ShowDecoratedView(bool modal, int flags,

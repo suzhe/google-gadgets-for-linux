@@ -291,6 +291,7 @@ class SingleViewHost::Impl {
   void SetResizable(ViewInterface::ResizableMode mode) {
     ASSERT(GTK_IS_WINDOW(window_));
     bool resizable = (mode == ViewInterface::RESIZABLE_TRUE ||
+                      mode == ViewInterface::RESIZABLE_KEEP_RATIO ||
                       (mode == ViewInterface::RESIZABLE_ZOOM &&
                        type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
     gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
