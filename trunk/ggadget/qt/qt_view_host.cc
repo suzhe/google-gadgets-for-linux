@@ -400,6 +400,7 @@ void QtViewHost::EnableInputShapeMask(bool enable) {
 
 void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   // TODO:
+  DLOG("SetResizable:%d", mode);
 }
 
 void QtViewHost::SetCaption(const char *caption) {

@@ -659,8 +659,10 @@ EventResult MainViewDecoratorBase::OnOtherEvent(const Event &event) {
 }
 
 void MainViewDecoratorBase::SetResizable(ResizableMode resizable) {
-  if (resizable == RESIZABLE_FALSE)
-    resizable = RESIZABLE_ZOOM;
+  if (impl_->minimized_)
+    resizable = RESIZABLE_TRUE;
+  else if (resizable == RESIZABLE_FALSE || resizable == RESIZABLE_ZOOM)
+    resizable = RESIZABLE_KEEP_RATIO;
   ViewDecoratorBase::SetResizable(resizable);
 }
 
