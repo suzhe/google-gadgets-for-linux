@@ -25,12 +25,14 @@
 #include <gtk/gtk.h>
 
 #define MOZILLA_CLIENT
+#include <mozilla-config.h>
 
 #ifdef XPCOM_GLUE
+#include <nsXPCOMGlue.h>
 #include <gtkmozembed_glue.cpp>
+#include "../smjs_script_runtime/libmozjs_glue.h"
 #endif
 
-#include <mozilla-config.h>
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
@@ -38,7 +40,11 @@
 
 #include <nsComponentManagerUtils.h>
 #include <nsCOMPtr.h>
+#ifdef XPCOM_GLUE
+#include <nsCRTGlue.h>
+#else
 #include <nsCRT.h>
+#endif
 #include <nsEvent.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
@@ -63,6 +69,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
+
 #include "../smjs_script_runtime/json.h"
 #include "browser_child.h"
 
@@ -244,7 +251,11 @@ class ExternalObject : public nsIXPCScriptable {
 
   NS_IMETHOD GetClassName(char **class_name) {
     NS_ENSURE_ARG_POINTER(class_name);
+#ifdef XPCOM_GLUE
+    *class_name = NS_strdup(EXTOBJ_CLASSNAME);
+#else
     *class_name = nsCRT::strdup(EXTOBJ_CLASSNAME);
+#endif
     return NS_OK;
   }
 
@@ -813,18 +824,20 @@ static bool InitGecko() {
 #ifdef XPCOM_GLUE
   nsresult rv;
 
-  NS_LogInit();
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
     "1.9.*", PR_TRUE
   };
 
   char xpcom_location[4096];
-  rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0, xpcom_location, 4096);
+  rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0,
+                                    xpcom_location, 4096);
   if (NS_FAILED(rv)) {
     g_warning("Failed to find proper Gecko Runtime Environment!");
     return false;
   }
+
+  printf("XPCOM location: %s\n", xpcom_location);
 
   // Startup the XPCOM Glue that links us up with XPCOM.
   rv = XPCOMGlueStartup(xpcom_location);
@@ -842,6 +855,12 @@ static bool InitGecko() {
   rv = GTKEmbedGlueStartupInternal();
   if (NS_FAILED(rv)) {
     g_warning("Failed to startup Gtk Embed Glue (internal)!");
+    return false;
+  }
+
+  rv = ggadget::libmozjs::LibmozjsGlueStartupWithXPCOM();
+  if (NS_FAILED(rv)) {
+    g_warning("Failed to startup SpiderMonkey Glue!");
     return false;
   }
 

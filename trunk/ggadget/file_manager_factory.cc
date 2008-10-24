@@ -56,7 +56,7 @@ bool SetGlobalFileManager(FileManagerInterface *manager) {
 }
 
 FileManagerInterface *GetGlobalFileManager() {
-  VERIFY_M(g_global_file_manager,
+  EXPECT_M(g_global_file_manager,
            ("The global FileManager has not been set yet."));
   return g_global_file_manager;
 }

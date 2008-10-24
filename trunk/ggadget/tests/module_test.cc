@@ -134,6 +134,25 @@ TEST_F(ModuleTest, EnumerateModuleFiles) {
 typedef std::string (*GetModuleNameFunc)();
 typedef void (*WithoutPrefixFunc)(const char*);
 
+TEST_F(ModuleTest, ModuleResident) {
+  Module *module = new Module();
+  Module *another = new Module();
+  ASSERT_TRUE(module->Load(kTestModules[0]));
+  ASSERT_TRUE(another->Load(kTestModules[0]));
+  ASSERT_FALSE(module->IsResident());
+  ASSERT_FALSE(another->IsResident());
+  ASSERT_TRUE(module->MakeResident());
+  ASSERT_TRUE(module->IsResident());
+  ASSERT_TRUE(another->IsResident());
+  ASSERT_TRUE(module->GetSymbol("GetModuleName") ==
+              another->GetSymbol("GetModuleName"));
+  ASSERT_FALSE(module->Unload());
+  ASSERT_FALSE(another->Unload());
+
+  delete another;
+  delete module;
+}
+
 TEST_F(ModuleTest, LoadModule) {
   GetModuleNameFunc get_module_name;
   WithoutPrefixFunc without_prefix;
@@ -141,7 +160,7 @@ TEST_F(ModuleTest, LoadModule) {
   Module *module = new Module();
 
   // Test load multiple modules.
-  for (size_t i = 0; kTestModules[i]; ++i) {
+  for (size_t i = 1; kTestModules[i]; ++i) {
     ASSERT_TRUE(module->Load(kTestModules[i]));
     ASSERT_TRUE(module->IsValid());
     ASSERT_FALSE(module->IsResident());
@@ -160,32 +179,13 @@ TEST_F(ModuleTest, LoadModule) {
   }
 
   // Test load one module multiple times.
-  ASSERT_TRUE(module->Load(kTestModules[0]));
+  ASSERT_TRUE(module->Load(kTestModules[1]));
   Module *another = new Module();
-  ASSERT_TRUE(another->Load(kTestModules[0]));
+  ASSERT_TRUE(another->Load(kTestModules[1]));
   ASSERT_TRUE(module->GetSymbol("GetModuleName") ==
               another->GetSymbol("GetModuleName"));
   ASSERT_TRUE(module->Unload());
   ASSERT_TRUE(another->Unload());
-
-  delete another;
-  delete module;
-}
-
-TEST_F(ModuleTest, ModuleResident) {
-  Module *module = new Module();
-  Module *another = new Module();
-  ASSERT_TRUE(module->Load(kTestModules[0]));
-  ASSERT_TRUE(another->Load(kTestModules[0]));
-  ASSERT_FALSE(module->IsResident());
-  ASSERT_FALSE(another->IsResident());
-  ASSERT_TRUE(module->MakeResident());
-  ASSERT_TRUE(module->IsResident());
-  ASSERT_TRUE(another->IsResident());
-  ASSERT_TRUE(module->GetSymbol("GetModuleName") ==
-              another->GetSymbol("GetModuleName"));
-  ASSERT_FALSE(module->Unload());
-  ASSERT_FALSE(another->Unload());
 
   delete another;
   delete module;

@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_JSON_H__
-#define GGADGET_SMJS_JSON_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_JSON_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_JSON_H__
 
-#include <jsapi.h>
 #include <string>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -36,4 +36,4 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val);
 } // namespace smjs
 } // namespace ggadget
 
-#endif  // GGADGET_SMJS_JSON_H__
+#endif  // EXTENSIONS_SMJS_SCRIPT_RUNTIME_JSON_H__

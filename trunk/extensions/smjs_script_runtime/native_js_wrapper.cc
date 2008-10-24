@@ -19,6 +19,7 @@
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
+
 #include "native_js_wrapper.h"
 #include "converter.h"
 #include "js_function_slot.h"

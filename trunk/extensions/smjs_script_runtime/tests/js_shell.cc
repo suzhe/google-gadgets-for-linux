@@ -305,6 +305,12 @@ JSBool InitCustomObjects(JSScriptContext *context);
 void DestroyCustomObjects(JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
+#ifdef XPCOM_GLUE
+  if (!ggadget::libmozjs::LibmozjsGlueStartup()) {
+    printf("Failed to load libmozjs.so\n");
+    return 1;
+  }
+#endif
   setlocale(LC_ALL, "");
   JSScriptRuntime *runtime = new JSScriptRuntime();
   JSScriptContext *context = ggadget::down_cast<JSScriptContext *>(

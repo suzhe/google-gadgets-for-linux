@@ -14,5 +14,21 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind npapi
-SUBDIRS = codesighs unzip xdgmime editline
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit -Wno-pointer-sign -Wno-conversion")
+
+ADD_DEFINITIONS(
+  -DSYS_UNIX
+  -DHAVE_STDLIB
+  -DUNIQUE_HISTORY
+  -DUSE_DIRENT
+  -DHIDE
+  -DHAVE_TCGETATTR
+  -DANSI_ARROWS
+)
+
+SET(SRCS
+  editline.c
+  sysunix.c
+)
+
+ADD_LIBRARY(editline ${SRCS})

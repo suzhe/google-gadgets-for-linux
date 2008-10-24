@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_JS_FUNCTION_SLOT_H__
-#define GGADGET_SMJS_JS_FUNCTION_SLOT_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_FUNCTION_SLOT_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_FUNCTION_SLOT_H__
 
 #include <map>
 #include <string>
-#include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -79,4 +79,4 @@ class JSFunctionSlot : public Slot {
 } // namespace smjs
 } // namespace ggadget
 
-#endif  // GGADGET_SMJS_JS_FUNCTION_SLOT_H__
+#endif  // EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_FUNCTION_SLOT_H__

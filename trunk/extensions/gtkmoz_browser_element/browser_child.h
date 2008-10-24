@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GTKMOZ_BROWSER_CHILD_H__
-#define GGADGET_GTKMOZ_BROWSER_CHILD_H__
+#ifndef EXTENSIONS_GTKMOZ_BROWSER_CHILD_H__
+#define EXTENSIONS_GTKMOZ_BROWSER_CHILD_H__
 
 namespace ggadget {
 namespace gtkmoz {
@@ -190,4 +190,4 @@ const int kPingInterval = 30000;  // 30 seconds.
 } // namespace gtkmoz
 } // namespace ggadget
 
-#endif // GGADGET_GTKMOZ_BROWSER_CHILD_H__
+#endif // EXTENSIONS_GTKMOZ_BROWSER_CHILD_H__

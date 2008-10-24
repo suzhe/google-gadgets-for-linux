@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GTKMOZ_BROWSER_ELEMENT_H__
-#define GGADGET_GTKMOZ_BROWSER_ELEMENT_H__
+#ifndef EXTENSIONS_GTKMOZ_BROWSER_ELEMENT_H__
+#define EXTENSIONS_GTKMOZ_BROWSER_ELEMENT_H__
 
 #include <stdlib.h>
 #include <ggadget/basic_element.h>
@@ -62,4 +62,4 @@ class BrowserElement : public BasicElement {
 } // namespace gtkmoz
 } // namespace ggadget
 
-#endif // GGADGET_GTKMOZ_BROWSER_ELEMENT_H__
+#endif // EXTENSIONS_GTKMOZ_BROWSER_ELEMENT_H__

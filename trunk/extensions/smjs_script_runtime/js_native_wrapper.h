@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
-#define GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_NATIVE_WRAPPER_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_NATIVE_WRAPPER_H__
 
 #include <string>
-#include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -67,4 +67,4 @@ class JSNativeWrapper : public ScriptableHelperDefault {
 } // namespace smjs
 } // namespace ggadget
 
-#endif // GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
+#endif // EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_NATIVE_WRAPPER_H__

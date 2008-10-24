@@ -173,6 +173,21 @@ AC_ARG_WITH([browser-plugins-dir],
 	    [default_browser_plugins_dir=$withval],
 	    [default_browser_plugins_dir="$libdir/firefox/plugins"])
 
+AC_ARG_WITH([gtkmozembed],
+	    AC_HELP_STRING([--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
+		[Selects with gecko engine to build against, it affects the
+		 search rule of spidermonkey library (libmozjs) as well.]),
+	    [with_gtkmozembed=$withval],
+	    [with_gtkmozembed=auto])
+
+AC_ARG_WITH([mozjs-libname],
+	    AC_HELP_STRING([--with-mozjs-libname=libmozjs.so],
+		[Specify the file name of spidermonkey library to be
+		 dynamically loaded. It only takes effect when using a
+		 xulrunner library which supports XPCOM_GLUE.]),
+	    [with_mozjs_libname=$withval],
+	    [with_mozjs_libname=libmozjs.so])
+
 AC_ARG_ENABLE([gtk-host],
 	      AS_HELP_STRING([--disable-gtk-host],
 			     [don't build gtk host]),
@@ -686,48 +701,43 @@ fi
 # Add more rules here if your distribution doesn't support above rules.
 has_gtkmozembed=no
 
-AC_ARG_WITH(gtkmozembed,
-  AC_HELP_STRING([--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
-                 [selects with gecko engine to build against]),
-  ,[with_gtkmozembed=auto])
-
 if test x$with_gtkmozembed = xauto; then
-PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
+PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding],
 		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
-  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
+  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
 		     [has_gtkmozembed=libxul-embedding-unstable],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding mozilla-js],
-		      [has_gtkmozembed=libxul-embedding],
-      [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
-			[has_gtkmozembed=xulrunner-gtkmozembed],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
-			  [has_gtkmozembed=firefox2-gtkmozembed],
-	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
-			    [has_gtkmozembed=firefox-gtkmozembed],
-	    [has_gtkmozembed=no])])])])])])
+      [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
+			[has_gtkmozembed=libxul-embedding],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
+			  [has_gtkmozembed=xulrunner-gtkmozembed],
+	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
+			    [has_gtkmozembed=firefox2-gtkmozembed],
+	    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
+			      [has_gtkmozembed=firefox-gtkmozembed],
+	      [has_gtkmozembed=no])])])])])])
 else
   case $with_gtkmozembed in
     libxul)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding mozilla-js],
-                        [has_gtkmozembed=mozilla-gtkmozembed-embedding],
-        [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable mozilla-js],
-                           [has_gtkmozembed=libxul-embedding-unstable],
-	  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding mozilla-js],
+      PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding],
+			[has_gtkmozembed=mozilla-gtkmozembed-embedding],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
+			  [has_gtkmozembed=libxul-embedding-unstable],
+	  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
 			    [has_gtkmozembed=libxul-embedding],
-          [has_gtkmozembed=no])])])
+	    [has_gtkmozembed=no])])])
       ;;
     xulrunner)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
+      PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
                         [has_gtkmozembed=xulrunner-gtkmozembed],
         [has_gtkmozembed=no])
       ;;
     firefox2)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
+      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
                         [has_gtkmozembed=firefox2-gtkmozembed],
         [has_gtkmozembed=no])
       ;;
     firefox)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
+      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
                         [has_gtkmozembed=firefox-gtkmozembed],
         [has_gtkmozembed=no])
       ;;
@@ -735,7 +745,38 @@ else
       AC_MSG_ERROR([--with-gtkmozembed, invalid value])
   esac
 fi
-AM_CONDITIONAL(ENABLE_UPDATE_MIME_DATABASE, test x$enable_update_mime_database = xyes)
+
+# Check spidermonkey
+# If gtkmozembed is available, then use bundled libmozjs.so.
+has_libmozjs=no
+case $has_gtkmozembed in
+  mozilla-gtkmozembed-embedding | libxul-embedding-unstable | libxul-embedding)
+    PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
+		      [has_libmozjs=mozilla-js],
+		      [has_gtkmozembed=no]) ;;
+  xulrunner-gtkmozembed)
+    PKG_CHECK_MODULES(LIBMOZJS, [xulrunner-js],
+		      [has_libmozjs=xulrunner-js],
+		      [has_gtkmozembed=no]) ;;
+  firefox2)
+    PKG_CHECK_MODULES(LIBMOZJS, [firefox2-js],
+		      [has_libmozjs=firefox2-js],
+		      [has_gtkmozembed=no]) ;;
+  firefox)
+    PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
+		      [has_libmozjs=firefox-js],
+		      [has_gtkmozembed=no]) ;;
+  *)
+    PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
+		      [has_libmozjs=mozilla-js],
+      [PKG_CHECK_MODULES(LIBMOZJS, [xulrunner-js],
+			[has_libmozjs=xulrunner-js],
+	[PKG_CHECK_MODULES(LIBMOZJS, [firefox2-js],
+			  [has_libmozjs=firefox2-js],
+	  [PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
+			    [has_libmozjs=firefox-js],
+	    [has_libmozjs=no])])])]) ;;
+esac
 
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
@@ -839,12 +880,18 @@ if test x$has_dbus = xno -a x$build_libggadget_dbus = xyes; then
   build_libggadget_dbus=no
 fi
 
-if test x$has_gtkmozembed = xno -a x$build_gtkmoz_browser_element = xyes; then
-  AC_MSG_WARN([Library GtkMozEmbed is not available, gtkmoz-browser-element extension won't be built.])
-  build_gtkmoz_browser_element=no
+if test x$has_gtkmozembed = xno; then
+  if test x$build_gtkmoz_browser_element = xyes; then
+    AC_MSG_WARN([Library GtkMozEmbed is not available,]
+		[gtkmoz-browser-element extension won't be built.])
+    build_gtkmoz_browser_element=no
+  fi
 else
+  # Add smjs related cflags, we don't want to link to smjs explicitly,
+  # so don't use its libs.
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS $LIBMOZJS_CFLAGS"
+  # Add additional include dirs for mozilla 1.8 and pre 1.9
   EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
-# Add additional include dirs for mozilla 1.8 and pre 1.9
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/content"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
@@ -855,10 +902,10 @@ else
   GTKMOZEMBED_LDFLAGS=""
   MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
   if test "x$MOZILLA_FIVE_HOME" = "x"; then
-# Some distributions doesn't have libdir, so try to extract libdir from LIBS.
-# It usually occurs on some pre xulrunner 1.9 versions.
-# @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
-# FIXME: Following method might not work on systems other than Linux.
+  # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+  # It usually occurs on some pre xulrunner 1.9 versions.
+  # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+  # FIXME: Following method might not work on systems other than Linux.
     MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
     # Try to find out the correct xulrunner path.
     if test -e "$MOZILLA_FIVE_HOME/libxpcom.so"; then
@@ -872,6 +919,39 @@ else
   fi
 
   AC_SUBST(GTKMOZEMBED_LDFLAGS)
+fi
+
+if test x$has_libmozjs != xno; then
+  # Add additional include dirs
+  LIBMOZJS_INCDIR=`$PKG_CONFIG --variable=includedir $has_libmozjs`
+  if (echo $LIBMOZJS_CFLAGS | grep '/stable') > /dev/null 2>&1; then
+    if test -f $LIBMOZJS_INCDIR/unstable/jsapi.h; then
+      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -I$LIBMOZJS_INCDIR/unstable"
+    fi
+  fi
+
+  GGL_CHECK_LIBMOZJS([170], [], [has_libmozjs=no])
+  if test x$has_libmozjs != xno; then
+    # If gtkmozembed is available and uses xpcomglue, then use xpcomglue for
+    # libmozjs as well.
+    if (echo $GTKMOZEMBED_CFLAGS | grep XPCOM_GLUE) > /dev/null 2>&1; then
+      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS $GTKMOZEMBED_CFLAGS"
+    # Use libs of gtkmozembed instead of libmozjs's own library here to avoid
+    # direct linking to libmozjs.
+    # As xpcomglue is used, the only library shall be a static xpcomglue lib.
+    # No more library dependency will be introduced.
+      LIBMOZJS_LIBS="$GTKMOZEMBED_LIBS"
+    fi
+    if test x$with_mozjs_libname != x; then
+      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DGGL_MOZJS_LIBNAME=\\\"$with_mozjs_libname\\\""
+    fi
+  fi
+fi
+
+if test x$has_libmozjs = xno -a x$build_smjs_script_runtime = xyes; then
+  AC_MSG_WARN([Library SpiderMonkey is not available,]
+	      [smjs-script-runtime extension won't be built.])
+  build_smjs_script_runtime=no
 fi
 
 AM_CONDITIONAL(
@@ -1082,7 +1162,7 @@ AC_CONFIG_FILES([Makefile
 		 resources/Makefile
 		 third_party/Makefile
 		 third_party/codesighs/Makefile
-		 third_party/smjs/Makefile
+		 third_party/editline/Makefile
 		 third_party/unzip/Makefile
 		 third_party/xdgmime/Makefile
 		 unittest/Makefile

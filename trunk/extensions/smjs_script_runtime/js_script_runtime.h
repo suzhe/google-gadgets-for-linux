@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_JS_SCRIPT_RUNTIME_H__
-#define GGADGET_SMJS_JS_SCRIPT_RUNTIME_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_RUNTIME_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_RUNTIME_H__
 
-#include <jsapi.h>
 #include <ggadget/script_runtime_interface.h>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -46,4 +46,4 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
 } // namespace smjs
 } // namespace ggadget
 
-#endif  // GGADGET_SMJS_JS_SCRIPT_RUNTIME_H__
+#endif  // EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_RUNTIME_H__

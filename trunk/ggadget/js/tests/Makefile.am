@@ -14,13 +14,11 @@
 # limitations under the License.
 #
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -I$(top_srcdir)/third_party/editline
+			  -I$(top_srcdir)
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/third_party/editline/libeditline.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 check_PROGRAMS		= jscript_massager_test \
 			  massager

@@ -30,7 +30,7 @@ bool SetXMLHttpRequestFactory(XMLHttpRequestFactoryInterface *factory) {
 }
 
 XMLHttpRequestFactoryInterface *GetXMLHttpRequestFactory() {
-  VERIFY_M(g_factory, ("The XMLHttpRequest factory has not been set yet."));
+  EXPECT_M(g_factory, ("The XMLHttpRequest factory has not been set yet."));
   return g_factory;
 }
 

@@ -18,8 +18,7 @@ if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -I$(top_builddir)/third_party/smjs
+			  -I$(top_srcdir)
 
 noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
@@ -27,7 +26,8 @@ noinst_HEADERS		= converter.h \
 			  js_script_context.h \
 			  js_script_runtime.h \
 			  json.h \
-			  native_js_wrapper.h
+			  native_js_wrapper.h \
+			  libmozjs_glue.h
 
 noinst_LTLIBRARIES	= libggadget-smjs.la
 
@@ -38,7 +38,8 @@ libggadget_smjs_la_SOURCES = \
 			  js_script_context.cc \
 			  js_script_runtime.cc \
 			  json.cc \
-			  native_js_wrapper.cc
+			  native_js_wrapper.cc \
+			  libmozjs_glue.cc
 
 # add "-fcheck-new" to avoid 'operator new' warning when building jscntxt.h
 libggadget_smjs_la_CXXFLAGS = \
@@ -47,7 +48,7 @@ libggadget_smjs_la_CXXFLAGS = \
 
 libggadget_smjs_la_CPPFLAGS = \
 			  $(PREDEFINED_MACROS) \
-			  $(SMJS_CFLAGS)
+			  $(LIBMOZJS_CFLAGS)
 
 libggadget_smjs_la_LIBADD = \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
@@ -64,12 +65,12 @@ smjs_script_runtime_la_CXXFLAGS = \
 
 smjs_script_runtime_la_CPPFLAGS = \
 			  $(PREDEFINED_MACROS) \
-			  $(SMJS_CFLAGS)
+			  $(LIBMOZJS_CFLAGS)
 
 smjs_script_runtime_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  libggadget-smjs.la \
-			  $(top_builddir)/third_party/smjs/libjs.a
+			  $(LIBMOZJS_LIBS)
 
 smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \

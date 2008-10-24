@@ -31,16 +31,55 @@ TEST(Common, LOG_MACRO) {
   DLOG("%d", 200);
 }
 
+static bool CheckTrue(int *i) {
+  ++ *i;
+  return true;
+}
+
+static bool CheckFalse(int *i) {
+  ++ *i;
+  return false;
+}
+
 TEST(Common, ASSERT_MACRO) {
-  ASSERT(true);
-  ASSERT_M(true, ("Some message: %d", 100));
-  VERIFY(true);
-  VERIFY_M(true, ("Some message: %d", 200));
-  VERIFY(false);
-  VERIFY_M(false, ("Some message: %d", 300));
-  // Should fail at runtime
-  // ASSERT(false);
-  // ASSERT_M(false, ("message: %d", 400));
+  int i = 0;
+  VERIFY(CheckTrue(&i));
+  EXPECT_EQ(1, i);
+  VERIFY_M(CheckTrue(&i), ("Some message: %d", 100));
+  EXPECT_EQ(2, i);
+
+  ASSERT(CheckTrue(&i));
+#if NDEBUG
+  EXPECT_EQ(2, i);
+#else
+  EXPECT_EQ(3, i);
+#endif
+  ASSERT_M(CheckTrue(&i), ("Some message: %d", 200));
+#if NDEBUG
+  EXPECT_EQ(2, i);
+#else
+  EXPECT_EQ(4, i);
+#endif
+  EXPECT_M(CheckTrue(&i), ("Some message: %d", 300));
+#if NDEBUG
+  EXPECT_EQ(2, i);
+#else
+  EXPECT_EQ(5, i);
+#endif
+  EXPECT_M(CheckFalse(&i), ("Some message: %d", 400));
+#if NDEBUG
+  EXPECT_EQ(2, i);
+#else
+  EXPECT_EQ(6, i);
+#endif
+
+#if NDEBUG
+  ASSERT(CheckFalse(&i));
+  ASSERT_M(CheckFalse(&i), ("message: %d", 500));
+  VERIFY(CheckFalse(&i));
+  VERIFY_M(CheckFalse(&i), ("Some message: %d", 600));
+  EXPECT_EQ(4, i);
+#endif
 }
 
 TEST(Common, COMPILE_ASSERT_MACRO) {

@@ -14,14 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_CONVERTER_H__
-#define GGADGET_SMJS_CONVERTER_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_CONVERTER_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_CONVERTER_H__
 
-#include <jsapi.h>
 #include <string>
-
 #include <ggadget/common.h>
 #include <ggadget/variant.h>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -110,4 +109,4 @@ JSBool RaiseException(JSContext *cx, const char *format, ...)
 } // namespace smjs
 } // namespace ggadget
 
-#endif  // GGADGET_SMJS_CONVERTER_H__
+#endif  // EXTENSIONS_SMJS_SCRIPT_RUNTIME_CONVERTER_H__

@@ -47,7 +47,8 @@ ggllibexec_PROGRAMS	= gtkmoz-browser-child
 ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
 gtkmoz_browser_child_SOURCES    = browser_child.cc \
-				  ../smjs_script_runtime/json.cc
+				  ../smjs_script_runtime/json.cc \
+				  ../smjs_script_runtime/libmozjs_glue.cc
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \

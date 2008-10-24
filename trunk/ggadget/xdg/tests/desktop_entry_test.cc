@@ -118,10 +118,14 @@ TEST(DesktopEntry, AppGood1) {
   EXPECT_STREQ("Hello world", entry.GetComment().c_str());
   EXPECT_STREQ("A simple app", entry.GetGenericName().c_str());
   setlocale(LC_ALL, "zh_CN.UTF-8");
-  EXPECT_STREQ("你好", entry.GetName().c_str());
+  char *locale = setlocale(LC_MESSAGES, NULL);
+  if (locale && strncmp(locale, "zh_CN", 5) == 0)
+    EXPECT_STREQ("你好", entry.GetName().c_str());
   EXPECT_STREQ("Hello world", entry.GetComment().c_str());
   setlocale(LC_ALL, "fr_FR.UTF-8");
-  EXPECT_STREQ("Bonjour", entry.GetName().c_str());
+  locale = setlocale(LC_MESSAGES, NULL);
+  if (locale && strncmp(locale, "fr_FR", 5) == 0)
+    EXPECT_STREQ("Bonjour", entry.GetName().c_str());
   EXPECT_STREQ("hello", entry.GetIcon().c_str());
   EXPECT_STREQ("/tmp", entry.GetWorkingDirectory().c_str());
   EXPECT_STREQ("text/plain;image/png;application/x-zip",
@@ -145,7 +149,9 @@ TEST(DesktopEntry, AppGood2) {
   ASSERT_TRUE(entry.IsValid());
   EXPECT_TRUE(entry.GetType() == DesktopEntry::APPLICATION);
   setlocale(LC_ALL, "zh_CN.UTF-8");
-  EXPECT_STREQ("你好", entry.GetName().c_str());
+  char *locale = setlocale(LC_MESSAGES, NULL);
+  if (locale && strncmp(locale, "zh_CN", 5) == 0)
+    EXPECT_STREQ("你好", entry.GetName().c_str());
   static const char *argv[] = {
     "http://www.google.com",
     "file:///tmp/abc%20def"
@@ -161,7 +167,9 @@ TEST(DesktopEntry, URLGood) {
   ASSERT_TRUE(entry.IsValid());
   EXPECT_TRUE(entry.GetType() == DesktopEntry::LINK);
   setlocale(LC_ALL, "en_US.UTF-8");
-  EXPECT_STREQ(" Hello", entry.GetName().c_str());
+  char *locale = setlocale(LC_MESSAGES, NULL);
+  if (locale && strncmp(locale, "en_US", 5) == 0)
+    EXPECT_STREQ(" Hello", entry.GetName().c_str());
   EXPECT_STREQ("http://www.google.com", entry.GetURL().c_str());
 }
 

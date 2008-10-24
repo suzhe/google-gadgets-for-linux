@@ -14,16 +14,16 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
-#define GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
+#ifndef EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_CONTEXT_H__
+#define EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_CONTEXT_H__
 
 #include <map>
 #include <string>
 #include <vector>
-#include <jsapi.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/signals.h>
+#include "libmozjs_glue.h"
 
 namespace ggadget {
 namespace smjs {
@@ -220,4 +220,4 @@ JSScriptContext *GetJSScriptContext(JSContext *context);
 } // namespace smjs
 } // namespace ggadget
 
-#endif  // GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
+#endif  // EXTENSIONS_SMJS_SCRIPT_RUNTIME_JS_SCRIPT_CONTEXT_H__
