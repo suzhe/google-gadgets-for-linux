@@ -15,9 +15,9 @@
 #
 
 SUBDIRS = analog_clock \
-	  designer \
-	  digital_alarm_clock \
-	  igoogle \
-	  rss \
+		designer \
+		digital_alarm_clock \
+		igoogle \
+		rss \
 		photos \
 		gadget_browser
