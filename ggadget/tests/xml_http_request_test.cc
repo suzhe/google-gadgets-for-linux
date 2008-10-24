@@ -28,6 +28,7 @@
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request_interface.h"
 #include "ggadget/xml_parser_interface.h"
+#include "ggadget/memory_options.h"
 #include "native_main_loop.h"
 #include "unittest/gtest.h"
 #include "init_extensions.h"
@@ -38,6 +39,9 @@ using ggadget::DOMDocumentInterface;
 using ggadget::NativeMainLoop;
 using ggadget::XMLParserInterface;
 using ggadget::GetXMLParser;
+using ggadget::OptionsInterface;
+using ggadget::MemoryOptions;
+using ggadget::SetGlobalOptions;
 
 static NativeMainLoop g_main_loop;
 
@@ -596,12 +600,18 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
   ggadget::GetXMLHttpRequestFactory()->DestroySession(session);
 }
 
+static OptionsInterface *MemoryOptionsFactory(const char *name) {
+  return new MemoryOptions();
+}
+
 int main(int argc, char **argv) {
   ggadget::SetGlobalMainLoop(&g_main_loop);
   testing::ParseGTestFlags(&argc, argv);
 
   // To prevent the server from calling exit when meet SIGPIPE.
   signal(SIGPIPE, SIG_IGN);
+
+  SetOptionsFactory(MemoryOptionsFactory);
 
   static const char *kExtensions[] = {
     "curl_xml_http_request/curl-xml-http-request",

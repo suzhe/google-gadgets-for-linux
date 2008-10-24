@@ -31,7 +31,7 @@ bool SetXMLParser(XMLParserInterface *xml_parser) {
 }
 
 XMLParserInterface *GetXMLParser() {
-  VERIFY_M(g_xml_parser, ("The global xml parser has not been set yet."));
+  EXPECT_M(g_xml_parser, ("The global xml parser has not been set yet."));
   return g_xml_parser;
 }
 

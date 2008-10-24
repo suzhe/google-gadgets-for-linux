@@ -31,7 +31,7 @@ bool SetOptionsFactory(OptionsFactory options_factory) {
 }
 
 OptionsInterface *CreateOptions(const char *name) {
-  VERIFY_M(g_options_factory, ("The options factory has not been set yet."));
+  EXPECT_M(g_options_factory, ("The options factory has not been set yet."));
   return g_options_factory ? g_options_factory(name) : NULL;
 }
 
@@ -45,7 +45,7 @@ bool SetGlobalOptions(OptionsInterface *global_options) {
 }
 
 OptionsInterface *GetGlobalOptions() {
-  VERIFY_M(g_global_options, ("The global options has not been set yet."));
+  EXPECT_M(g_global_options, ("The global options has not been set yet."));
   return g_global_options;
 }
 

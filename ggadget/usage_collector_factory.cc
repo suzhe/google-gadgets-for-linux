@@ -31,7 +31,7 @@ bool SetUsageCollectorFactory(UsageCollectorFactoryInterface *factory) {
 }
 
 UsageCollectorFactoryInterface *GetUsageCollectorFactory() {
-  VERIFY_M(g_factory, ("The UsageCollector factory has not been set yet."));
+  EXPECT_M(g_factory, ("The UsageCollector factory has not been set yet."));
   return g_factory;
 }
 

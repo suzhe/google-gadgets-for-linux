@@ -17,7 +17,7 @@
 #include <jsapi.h>
 #include "../js_script_context.h"
 #include "../js_script_runtime.h"
-#include "ggadget/scriptable_helper.h" 
+#include "ggadget/scriptable_helper.h"
 #include "unittest/gtest.h"
 
 using namespace ggadget;
@@ -153,8 +153,13 @@ TEST(CrossContext, Test) {
 }
 
 int main(int argc, char *argv[]) {
+#ifdef XPCOM_GLUE
+  if (!ggadget::libmozjs::LibmozjsGlueStartup()) {
+    printf("Failed to load libmozjs.so\n");
+    return 1;
+  }
+#endif
   setlocale(LC_ALL, "");
   testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }
-

@@ -51,6 +51,8 @@ static const bool kTestModulesIsExtension[] = {
   true,
 };
 
+static ExtensionManager *g_manager = NULL;
+
 class ExtensionManagerTest : public testing::Test {
  protected:
   virtual void SetUp() {
@@ -72,22 +74,6 @@ class ExtensionManagerTest : public testing::Test {
   }
 };
 
-
-TEST_F(ExtensionManagerTest, LoadExtension) {
-  ExtensionManager *manager =
-      ExtensionManager::CreateExtensionManager();
-
-  ASSERT_TRUE(manager != NULL);
-  for (size_t i = 0; kTestModules[i]; ++i)
-    ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
-  // Same extension can be loaded twice.
-  for (size_t i = 0; kTestModules[i]; ++i)
-    ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
-  for (size_t i = 0; kTestModules[i]; ++i)
-    ASSERT_TRUE(manager->UnloadExtension(kTestModules[i]));
-
-  ASSERT_TRUE(manager->Destroy());
-}
 
 class EnumerateExtensionCallback {
  public:
@@ -125,22 +111,7 @@ class EnumerateExtensionCallback {
   ExtensionManager *manager_;
 };
 
-TEST_F(ExtensionManagerTest, Enumerate) {
-  ExtensionManager *manager =
-      ExtensionManager::CreateExtensionManager();
-
-  ASSERT_TRUE(manager != NULL);
-  for (size_t i = 0; kTestModules[i]; ++i)
-    ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
-
-  EnumerateExtensionCallback callback(manager);
-  ASSERT_TRUE(manager->EnumerateLoadedExtensions(
-      NewSlot(&callback, &EnumerateExtensionCallback::Callback)));
-
-  ASSERT_TRUE(manager->Destroy());
-}
-
-TEST_F(ExtensionManagerTest, RegisterLoaded) {
+TEST_F(ExtensionManagerTest, LoadAndEnumerateAndRegister) {
   MultipleExtensionRegisterWrapper reg_wrapper;
   ElementExtensionRegister element_reg(NULL);
   ScriptExtensionRegister script_reg(NULL, NULL);
@@ -149,43 +120,41 @@ TEST_F(ExtensionManagerTest, RegisterLoaded) {
   reg_wrapper.AddExtensionRegister(&script_reg);
   reg_wrapper.AddExtensionRegister(&framework_reg);
 
-  ExtensionManager *manager =
-      ExtensionManager::CreateExtensionManager();
-
-  ASSERT_TRUE(manager != NULL);
   for (size_t i = 0; kTestModules[i]; ++i) {
     if (kTestModulesIsExtension[i])
-      ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
+      ASSERT_TRUE(g_manager->LoadExtension(kTestModules[i], false));
   }
 
-  EXPECT_TRUE(manager->RegisterLoadedExtensions(&reg_wrapper));
+  EXPECT_TRUE(g_manager->RegisterLoadedExtensions(&reg_wrapper));
 
   for (size_t i = 0; kTestModules[i]; ++i) {
     if (!kTestModulesIsExtension[i])
-      ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
+      ASSERT_TRUE(g_manager->LoadExtension(kTestModules[i], false));
   }
 
-  EXPECT_FALSE(manager->RegisterLoadedExtensions(&reg_wrapper));
+  EXPECT_FALSE(g_manager->RegisterLoadedExtensions(&reg_wrapper));
 
-  ASSERT_TRUE(manager->Destroy());
+  EnumerateExtensionCallback callback(g_manager);
+  ASSERT_TRUE(g_manager->EnumerateLoadedExtensions(
+      NewSlot(&callback, &EnumerateExtensionCallback::Callback)));
+
+  // Same extension can be loaded twice.
+  for (size_t i = 0; kTestModules[i]; ++i)
+    ASSERT_TRUE(g_manager->LoadExtension(kTestModules[i], false));
 }
 
 TEST_F(ExtensionManagerTest, Resident) {
-  ExtensionManager *manager =
-      ExtensionManager::CreateExtensionManager();
-
-  ASSERT_TRUE(manager != NULL);
-  for (size_t i = 0; kTestModules[i]; ++i)
-    ASSERT_TRUE(manager->LoadExtension(kTestModules[i], i % 2));
-
   for (size_t i = 0; kTestModules[i]; ++i) {
-    if (i % 2)
-      EXPECT_FALSE(manager->UnloadExtension(kTestModules[i]));
-    else
-      EXPECT_TRUE(manager->UnloadExtension(kTestModules[i]));
+    if (kTestModulesIsExtension[i])
+      ASSERT_TRUE(g_manager->LoadExtension(kTestModules[i], true));
   }
 
-  ASSERT_TRUE(manager->Destroy());
+  for (size_t i = 0; kTestModules[i]; ++i) {
+    if (kTestModulesIsExtension[i])
+      EXPECT_FALSE(g_manager->UnloadExtension(kTestModules[i]));
+    else
+      EXPECT_TRUE(g_manager->UnloadExtension(kTestModules[i]));
+  }
 }
 
 TEST_F(ExtensionManagerTest, GlobalManager) {
@@ -197,38 +166,31 @@ TEST_F(ExtensionManagerTest, GlobalManager) {
   reg_wrapper.AddExtensionRegister(&script_reg);
   reg_wrapper.AddExtensionRegister(&framework_reg);
 
-  ExtensionManager *manager = NULL;
+  ASSERT_EQ(NULL, ExtensionManager::GetGlobalExtensionManager());
 
-  ASSERT_EQ(manager, ExtensionManager::GetGlobalExtensionManager());
-
-  manager = ExtensionManager::CreateExtensionManager();
-
-  ASSERT_TRUE(manager != NULL);
-  for (size_t i = 0; kTestModules[i]; ++i) {
-    if (kTestModulesIsExtension[i])
-      ASSERT_TRUE(manager->LoadExtension(kTestModules[i], false));
-  }
-
-  ASSERT_TRUE(ExtensionManager::SetGlobalExtensionManager(manager));
-  ASSERT_EQ(manager, ExtensionManager::GetGlobalExtensionManager());
-  EXPECT_FALSE(ExtensionManager::SetGlobalExtensionManager(manager));
-  manager->SetReadonly();
+  ASSERT_TRUE(ExtensionManager::SetGlobalExtensionManager(g_manager));
+  ASSERT_EQ(g_manager, ExtensionManager::GetGlobalExtensionManager());
+  EXPECT_FALSE(ExtensionManager::SetGlobalExtensionManager(g_manager));
+  g_manager->SetReadonly();
 
   for (size_t i = 0; kTestModules[i]; ++i) {
     if (kTestModulesIsExtension[i])
-      ASSERT_FALSE(manager->LoadExtension(kTestModules[i], false));
+      ASSERT_FALSE(g_manager->LoadExtension(kTestModules[i], false));
   }
 
   for (size_t i = 0; kTestModules[i]; ++i) {
     if (kTestModulesIsExtension[i])
-      EXPECT_FALSE(manager->UnloadExtension(kTestModules[i]));
+      EXPECT_FALSE(g_manager->UnloadExtension(kTestModules[i]));
   }
 
-  EXPECT_TRUE(manager->RegisterLoadedExtensions(&reg_wrapper));
-  EXPECT_FALSE(manager->Destroy());
+  EXPECT_TRUE(g_manager->RegisterLoadedExtensions(&reg_wrapper));
+  EXPECT_FALSE(g_manager->Destroy());
 }
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
+
+  g_manager = ExtensionManager::CreateExtensionManager();
+
   return RUN_ALL_TESTS();
 }

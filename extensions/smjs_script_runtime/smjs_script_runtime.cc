@@ -31,12 +31,21 @@ static JSScriptRuntime *g_smjs_script_runtime_ = NULL;
 extern "C" {
   bool Initialize() {
     LOGI("Initialize smjs_script_runtime extension.");
+
+#ifdef XPCOM_GLUE
+    return ggadget::libmozjs::LibmozjsGlueStartup();
+#else
     return true;
+#endif
   }
 
   void Finalize() {
     LOGI("Finalize smjs_script_runtime extension.");
     delete g_smjs_script_runtime_;
+
+#ifdef XPCOM_GLUE
+    ggadget::libmozjs::LibmozjsGlueShutdown();
+#endif
   }
 
   bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager) {
