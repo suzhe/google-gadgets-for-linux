@@ -327,7 +327,7 @@ class Plugin::Impl {
 
   ~Impl() {
     if (!temp_dir_.empty())
-      RemoveDirectory(temp_dir_.c_str());
+      RemoveDirectory(temp_dir_.c_str(), true);
     if (plugin_root_)
       plugin_root_->Unref();
     on_destroy_();

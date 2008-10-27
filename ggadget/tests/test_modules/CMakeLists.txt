@@ -24,8 +24,6 @@ SET(SRCS
   ../../test_module.cc
 )
 
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-
 ADD_SUBDIRECTORY(foo_module)
 ADD_SUBDIRECTORY(bar_module)
 ADD_SUBDIRECTORY(fake_module)

@@ -53,6 +53,12 @@ TEST(SystemUtils, BuildPath) {
 TEST(SystemUtils, SplitFilePath) {
   std::string dir;
   std::string file;
+  EXPECT_FALSE(SplitFilePath("/", &dir, &file));
+  EXPECT_STREQ("/", dir.c_str());
+  EXPECT_STREQ("", file.c_str());
+  EXPECT_TRUE(SplitFilePath("/tmp", &dir, &file));
+  EXPECT_STREQ("/", dir.c_str());
+  EXPECT_STREQ("tmp", file.c_str());
   EXPECT_TRUE(SplitFilePath("/foo/bar/file", &dir, &file));
   EXPECT_STREQ("/foo/bar", dir.c_str());
   EXPECT_STREQ("file", file.c_str());
@@ -133,7 +139,18 @@ TEST(SystemUtils, RemoveDirectory) {
   ASSERT_EQ(0, system(("mkdir " + subdir).c_str()));
   ASSERT_EQ(0, system(("touch " + file).c_str()));
   ASSERT_EQ(0, system(("touch " + subfile).c_str()));
-  ASSERT_TRUE(RemoveDirectory(tempdir.c_str()));
+  ASSERT_TRUE(RemoveDirectory(tempdir.c_str(), true));
+
+  ASSERT_TRUE(CreateTempDirectory("removeme1", &tempdir));
+  subdir = BuildFilePath(tempdir.c_str(), "subdir", NULL);
+  file = BuildFilePath(tempdir.c_str(), "file", NULL);
+  subfile = BuildFilePath(subdir.c_str(), "file", NULL);
+  ASSERT_EQ(0, system(("mkdir " + subdir).c_str()));
+  ASSERT_EQ(0, system(("touch " + file).c_str()));
+  ASSERT_EQ(0, system(("touch " + subfile).c_str()));
+  ASSERT_EQ(0, system(("chmod a-w " + subfile).c_str()));
+  ASSERT_FALSE(RemoveDirectory(tempdir.c_str(), false));
+  ASSERT_TRUE(RemoveDirectory(tempdir.c_str(), true));
 }
 
 TEST(SystemUtils, NormalizeFilePath) {

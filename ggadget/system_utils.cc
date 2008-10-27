@@ -120,7 +120,8 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
 
   const char *last_sep = path + len - sep_len;
   bool has_sep = false;
-  for (; last_sep != path; --last_sep) {
+
+  for (; last_sep >= path; --last_sep) {
     if (strncmp(last_sep, kDirSeparatorStr, sep_len) == 0) {
       has_sep = true;
       break;
@@ -139,6 +140,8 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
       dir->assign(path, (first_sep == path ? sep_len : first_sep - path));
     }
     last_sep += sep_len;
+  } else {
+    last_sep++;
   }
 
   if (filename && *last_sep)
@@ -317,7 +320,7 @@ std::string NormalizeFilePath(const char *path) {
 
 std::string GetCurrentDirectory() {
   char buf[4096];
-  if (::getcwd(buf, 1024) == buf) {
+  if (::getcwd(buf, sizeof(buf)) == buf) {
     // it's fit.
     return std::string(buf);
   } else {
@@ -363,12 +366,14 @@ std::string GetAbsolutePath(const char *path) {
   if (!path || !*path)
     return "";
 
-  // Normalizes the file path.
   std::string result = path;
   // Not using kDirSeparator because Windows version should have more things
   // to do than simply replace the path separator.
   if (result[0] != '/') {
-    result = GetCurrentDirectory() + "/" + result;
+    std::string current_dir = GetCurrentDirectory();
+    if (current_dir.empty())
+      return "";
+    result = current_dir + "/" + result;
   }
   result = NormalizeFilePath(result.c_str());
   return result;
@@ -413,7 +418,7 @@ bool CreateTempDirectory(const char *prefix, std::string *path) {
   return result;
 }
 
-bool RemoveDirectory(const char *path) {
+bool RemoveDirectory(const char *path, bool remove_readonly_files) {
   if (!path || !*path)
     return false;
 
@@ -438,10 +443,12 @@ bool RemoveDirectory(const char *path) {
           BuildFilePath(dir_path.c_str(), pfile->d_name, NULL);
       struct stat file_stat;
       bool result = false;
+      if (!remove_readonly_files && access(file_path.c_str(), W_OK) != 0)
+        return false;
       // Don't use dirent.d_type, it's a non-standard field.
       if (lstat(file_path.c_str(), &file_stat) == 0) {
         if (S_ISDIR(file_stat.st_mode))
-          result = RemoveDirectory(file_path.c_str());
+          result = RemoveDirectory(file_path.c_str(), remove_readonly_files);
         else
           result = (::unlink(file_path.c_str()) == 0);
       }
@@ -497,6 +504,9 @@ bool CopyFile(const char *src, const char *dest) {
   ASSERT(src && dest);
   if (!src || !dest)
     return false;
+
+  if (strcmp(src, dest) == 0)
+    return true;
 
   FILE *in_fp = fopen(src, "r");
   if (!in_fp) {

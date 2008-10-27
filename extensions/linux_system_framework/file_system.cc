@@ -27,6 +27,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
+#include "ggadget/gadget_consts.h"
+#include "ggadget/slot.h"
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/xdg/utilities.h"
@@ -38,16 +40,7 @@ namespace framework {
 namespace linux_system {
 
 static const size_t kBlockSize = 8192;
-static const size_t kMaxFileSize = 1024 * 1024;
-
-// utility function for replace all char1 to char2
-static void ReplaceAll(std::string *str_ptr,
-                       const char char1,
-                       const char char2) {
-  for (size_t i = 0; i < str_ptr->size(); ++i)
-    if ((*str_ptr)[i] == char1)
-      (*str_ptr)[i] = char2;
-}
+static const size_t kMaxFileSize = 10 * 1024 * 1024;
 
 void FixCRLF(std::string *data) {
   ASSERT(data);
@@ -85,7 +78,7 @@ void FixCRLF(std::string *data) {
 }
 
 // utility function for initializing the file path
-static void InitFilePath(const char *filename,
+static bool InitFilePath(const char *filename,
                          std::string *base_ptr,
                          std::string *name_ptr,
                          std::string *path_ptr) {
@@ -95,27 +88,29 @@ static void InitFilePath(const char *filename,
   ASSERT(name_ptr);
   ASSERT(path_ptr);
 
-  std::string str_path(filename);
-  ReplaceAll(&str_path, '\\', '/');
-  str_path = ggadget::GetAbsolutePath(str_path.c_str());
+  *path_ptr = ggadget::GetAbsolutePath(filename);
+  return !path_ptr->empty() &&
+         SplitFilePath(path_ptr->c_str(), base_ptr, name_ptr);
+}
 
-  while (str_path.size() > 0 && str_path[str_path.size() - 1] == '/')
-    str_path.resize(str_path.size() - 1);
+// Returns normalized dest if dest is not ended with dir separator, otherwise
+// returns dest/source_name.
+bool NormalizeSourceAndDest(const char *source, const char *dest,
+                            std::string *result_source,
+                            std::string *result_dest) {
+  std::string base, name;
+  if (!InitFilePath(source, &base, &name, result_source))
+    return false;
 
-  if (str_path.empty()) {
-    *name_ptr = "/";
-    *base_ptr = "/";
-    *path_ptr = "/";
-    return;
+  char last = dest[strlen(dest) - 1];
+  if (last == '\\' || last == ggadget::kDirSeparator) {
+    // Copy the source under the dest dir.
+    *result_dest = ggadget::GetAbsolutePath(
+         ggadget::BuildFilePath(dest, name.c_str(), NULL).c_str());
+  } else {
+    *result_dest = ggadget::GetAbsolutePath(dest);
   }
-
-  size_t last_index = str_path.find_last_of('/');
-
-  // filename is in absolute path
-  *name_ptr = str_path.substr(last_index + 1,
-                              str_path.size() - last_index - 1);
-  *base_ptr = str_path.substr(0, last_index + 1);
-  *path_ptr = str_path;
+  return !result_dest->empty();
 }
 
 static bool CopyFile(const char *source, const char *dest, bool overwrite) {
@@ -124,62 +119,19 @@ static bool CopyFile(const char *source, const char *dest, bool overwrite) {
   ASSERT(dest);
   ASSERT(*dest);
 
+  std::string sourcefile, destfile;
+  if (!NormalizeSourceAndDest(source, dest, &sourcefile, &destfile))
+    return false;
+
   struct stat stat_value;
-  std::string sourcefile = ggadget::NormalizeFilePath(source);
-  std::string destfile;
   memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(dest, &stat_value) == 0) {
-    if (S_ISDIR(stat_value.st_mode)) {
-      // Destination is a folder.
-      std::string base, name, realpath;
-      InitFilePath(source, &base, &name, &realpath);
-      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
-      memset(&stat_value, 0, sizeof(stat_value));
-      if (stat(destfile.c_str(), &stat_value) == 0) {
-        // Destination exists.
-        if (!overwrite)
-          return false;
-        // Destination is a directory.
-        if (S_ISDIR(stat_value.st_mode))
-          return false;
-      }
-    } else {
-      // Destination is a file.
-      destfile = dest;
-      if (!overwrite)
-        return false;
-    }
-  } else {
-    // File doesn't exist.
-    destfile = dest;
-  }
-
-  destfile = ggadget::NormalizeFilePath(destfile.c_str());
-  if (sourcefile == destfile)
-    return false;
-
-  FILE *in = fopen(sourcefile.c_str(), "rb");
-  if (in == NULL)
-    return false;
-  FILE *out = fopen(destfile.c_str(), "wb");
-  if (out == NULL) {
-    fclose(in);
-    return false;
-  }
-
-  ggadget::scoped_ptr<char> p(new char[kBlockSize]);
-  size_t size = 0;
-  while ((size = fread(p.get(), 1, kBlockSize, in)) > 0) {
-    if (fwrite(p.get(), 1, size, out) != size) {
-      fclose(in);
-      fclose(out);
+  if (stat(destfile.c_str(), &stat_value) == 0) {
+    if (!overwrite)
       return false;
-    }
+    if (S_ISDIR(stat_value.st_mode))
+      return false;
   }
-
-  fclose(in);
-  fclose(out);
-  return true;
+  return ggadget::CopyFile(sourcefile.c_str(), destfile.c_str());
 }
 
 static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
@@ -188,71 +140,52 @@ static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
   ASSERT(dest);
   ASSERT(*dest);
 
+  std::string sourcedir, destdir;
+  if (!NormalizeSourceAndDest(source, dest, &sourcedir, &destdir))
+    return false;
+
   struct stat stat_value;
-  std::string sourcefile = ggadget::NormalizeFilePath(source);
-  std::string destfile;
   memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(dest, &stat_value) == 0) {
-    if (S_ISDIR(stat_value.st_mode)) {
-      // Destination is a folder.
-      std::string base, name, realpath;
-      InitFilePath(source, &base, &name, &realpath);
-      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
-      memset(&stat_value, 0, sizeof(stat_value));
-      if (stat(destfile.c_str(), &stat_value) == 0) {
-        // Destination exists.
-        if (!overwrite)
-          return false;
-        // Destination is a directory.
-        if (S_ISDIR(stat_value.st_mode)) {
-          if (!overwrite)
-            return false;
-        }
-      }
-    } else {
-      // Destination is a file.
-      destfile = dest;
-      if (!overwrite)
-        return false;
-    }
-  } else {
-    // File doesn't exist.
-    destfile = dest;
+  if (stat(destdir.c_str(), &stat_value) == 0) {
+    if (!overwrite)
+      return false;
+    if (!S_ISDIR(stat_value.st_mode))
+      return false;
+  } else if (mkdir(destdir.c_str(), 0755) != 0) {
+    return false;
   }
 
-  destfile = ggadget::NormalizeFilePath(destfile.c_str());
-  if (destfile.size() > sourcefile.size() &&
-      destfile[sourcefile.size()] == '/' &&
-      strncmp(sourcefile.c_str(), destfile.c_str(), sourcefile.size()) == 0)
-    return false;
-  if (sourcefile == destfile)
+  if (destdir.size() > sourcedir.size() &&
+      destdir[sourcedir.size()] == '/' &&
+      strncmp(sourcedir.c_str(), destdir.c_str(), sourcedir.size()) == 0)
     return false;
 
-  mkdir(destfile.c_str(), 0755);
-
-  DIR *dir = NULL;
-  struct dirent *entry = NULL;
-
-  dir = opendir(source);
+  DIR *dir = opendir(sourcedir.c_str());
   if (dir == NULL)
     return false;
 
+  if (sourcedir == destdir) {
+    closedir(dir);
+    return overwrite;
+  }
+  struct dirent *entry = NULL;
   while ((entry = readdir(dir)) != NULL) {
     if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
       continue;
 
-    struct stat stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
     std::string file =
-        ggadget::BuildFilePath(source, entry->d_name, NULL);
+        ggadget::BuildFilePath(sourcedir.c_str(), entry->d_name, NULL);
     if (stat(file.c_str(), &stat_value) == 0) {
+      std::string dest_file =
+          ggadget::BuildFilePath(destdir.c_str(), entry->d_name, NULL);
       if (S_ISDIR(stat_value.st_mode)) {
-        if (!CopyFolder(file.c_str(), destfile.c_str(), overwrite)) {
+        if (!CopyFolder(file.c_str(), dest_file.c_str(), overwrite)) {
           closedir(dir);
           return false;
         }
       } else {
-        if (!CopyFile(file.c_str(), destfile.c_str(), overwrite)) {
+        if (!CopyFile(file.c_str(), dest_file.c_str(), overwrite)) {
           closedir(dir);
           return false;
         }
@@ -264,83 +197,79 @@ static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
   return true;
 }
 
-static bool Move(const char *source, const char *dest) {
+// The no_use parameter eases wildcard handling. See OperateWildcard.
+static bool MoveFile(const char *source, const char *dest, bool no_use) {
   ASSERT(source);
   ASSERT(*source);
   ASSERT(dest);
   ASSERT(*dest);
 
+  std::string sourcefile, destfile;
+  if (!NormalizeSourceAndDest(source, dest, &sourcefile, &destfile))
+    return false;
+
   struct stat stat_value;
-  std::string destfile;
   memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(dest, &stat_value) == 0) {
-    if (S_ISDIR(stat_value.st_mode)) {
-      // Destination is a folder.
-      std::string base, name, realpath;
-      InitFilePath(source, &base, &name, &realpath);
-      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
-      memset(&stat_value, 0, sizeof(stat_value));
-      if (stat(destfile.c_str(), &stat_value) == 0) {
-        return false;
-      }
-    } else {
-      // Destination is a file.
-      return false;
-    }
-  } else {
-    // File doesn't exist.
-    destfile = dest;
-  }
-
-  return rename(source, destfile.c_str()) == 0;
-}
-
-static bool DeleteFile(const char *filename, bool force) {
-  ASSERT(filename);
-  ASSERT(*filename);
-
-  if (unlink(filename) == 0) {
+  if (stat(sourcefile.c_str(), &stat_value) != 0 || S_ISDIR(stat_value.st_mode))
+    return false;
+  if (sourcefile == destfile)
     return true;
-  }
-  return false;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(destfile.c_str(), &stat_value) == 0)
+    return false;
+
+  if (rename(sourcefile.c_str(), destfile.c_str()) == 0)
+    return true;
+
+  // Otherwise try to copy to dest and remove source.
+  return CopyFile(source, dest, false) && unlink(source) == 0;
 }
 
-static bool DeleteFolder(const char *filename, bool force) {
+// The no_use parameter eases wildcard handling. See OperateWildcard.
+static bool MoveFolder(const char *source, const char *dest, bool no_use) {
+  ASSERT(source);
+  ASSERT(*source);
+  ASSERT(dest);
+  ASSERT(*dest);
+
+  std::string sourcedir, destdir;
+  if (!NormalizeSourceAndDest(source, dest, &sourcedir, &destdir))
+    return false;
+
+  struct stat stat_value;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(sourcedir.c_str(), &stat_value) != 0 || !S_ISDIR(stat_value.st_mode))
+    return false;
+  if (sourcedir == destdir)
+    return true;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(destdir.c_str(), &stat_value) == 0)
+    return false;
+
+  if (rename(sourcedir.c_str(), destdir.c_str()) == 0)
+    return true;
+
+  // Otherwise try to copy to dest and remove source.
+  return CopyFolder(source, dest, false) &&
+         ggadget::RemoveDirectory(source, true);
+}
+
+// The no_use parameter eases wildcard handling. See OperateWildcard.
+static bool DeleteFile(const char *filename, const char *no_use, bool force) {
   ASSERT(filename);
   ASSERT(*filename);
 
-  DIR *dir = NULL;
-  struct dirent *entry = NULL;
+  if (!force && access(filename, W_OK) != 0)
+    return false;
+  return unlink(filename) == 0;
+}
 
-  dir = opendir(filename);
-  if (dir == NULL)
-    return 0;
+// The no_use parameter eases wildcard handling. See OperateWildcard.
+static bool DeleteFolder(const char *filename, const char *no_use, bool force) {
+  ASSERT(filename);
+  ASSERT(*filename);
 
-  while ((entry = readdir(dir)) != NULL) {
-    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-      continue;
-
-    struct stat stat_value;
-    memset(&stat_value, 0, sizeof(stat_value));
-    std::string file =
-        ggadget::BuildFilePath(filename, entry->d_name, NULL);
-    if (stat(file.c_str(), &stat_value) == 0) {
-      if (S_ISDIR(stat_value.st_mode)) {
-        if (!DeleteFolder(file.c_str(), force)) {
-          closedir(dir);
-          return false;
-        }
-      } else {
-        if (!DeleteFile(file.c_str(), force)) {
-          closedir(dir);
-          return false;
-        }
-      }
-    }
-  }
-
-  closedir(dir);
-  return rmdir(filename) == 0;
+  return ggadget::RemoveDirectory(filename, force);
 }
 
 static bool SetName(const char *path, const char *dir, const char *name) {
@@ -425,7 +354,7 @@ class TextStream : public TextStreamInterface {
 
   bool Init() {
     if (mode_ == IO_MODE_READING) {
-      scoped_ptr<char>buffer(new char[kMaxFileSize]);
+      scoped_ptr<char> buffer(new char[kMaxFileSize]);
       ssize_t size = read(fd_, buffer.get(), kMaxFileSize - 1);
       if (size == -1)
         return false;
@@ -931,7 +860,7 @@ class File : public FileInterface {
   virtual bool Delete(bool force) {
     if (path_.empty())
       return false;
-    bool result = linux_system::DeleteFile(path_.c_str(), force);
+    bool result = linux_system::DeleteFile(path_.c_str(), "no_use", force);
     if (result)
       path_.clear();
     return result;
@@ -950,7 +879,7 @@ class File : public FileInterface {
       return false;
     if (!dest || !*dest)
       return false;
-    bool result = linux_system::Move(path_.c_str(), dest);
+    bool result = linux_system::MoveFile(path_.c_str(), dest, false);
     if (result) {
       std::string path = ggadget::GetAbsolutePath(dest);
       InitFilePath(path.c_str(), &base_, &name_, &path_);
@@ -1261,7 +1190,7 @@ class Folder : public FolderInterface {
   virtual bool Delete(bool force) {
     if (path_.empty())
       return false;
-    return linux_system::DeleteFolder(path_.c_str(), force);
+    return linux_system::DeleteFolder(path_.c_str(), "no_use", force);
   }
 
   virtual bool Copy(const char *dest, bool overwrite) {
@@ -1277,7 +1206,7 @@ class Folder : public FolderInterface {
       return false;
     if (!dest || !*dest)
       return false;
-    bool result = linux_system::Move(path_.c_str(), dest);
+    bool result = linux_system::MoveFolder(path_.c_str(), dest, false);
     if (result) {
       std::string path = ggadget::GetAbsolutePath(dest);
       InitFilePath(path.c_str(), &base_, &name_, &path_);
@@ -1327,8 +1256,7 @@ class Folder : public FolderInterface {
     if (path_.empty())
       return NULL;
 
-    std::string str_path(filename);
-    ReplaceAll(&str_path, '\\', '/');
+    std::string str_path(ggadget::NormalizeFilePath(filename));
     std::string file;
 
     if (ggadget::IsAbsolutePath(str_path.c_str())) {
@@ -1472,9 +1400,7 @@ bool FileSystem::FileExists(const char *file_spec) {
   if (!file_spec || !*file_spec)
     return false;
 
-  std::string str_path(file_spec);
-  ReplaceAll(&str_path, '\\', '/');
-
+  std::string str_path(ggadget::NormalizeFilePath(file_spec));
   if (access(str_path.c_str(), F_OK))
     return false;
 
@@ -1494,9 +1420,7 @@ bool FileSystem::FolderExists(const char *folder_spec) {
   if (!folder_spec || !*folder_spec)
     return false;
 
-  std::string str_path(folder_spec);
-  ReplaceAll(&str_path, '\\', '/');
-
+  std::string str_path(ggadget::NormalizeFilePath(folder_spec));
   if (access(str_path.c_str(), F_OK))
     return false;
 
@@ -1542,235 +1466,70 @@ FolderInterface *FileSystem::GetSpecialFolder(SpecialFolder special_folder) {
   return new Folder("/tmp");
 }
 
-bool FileSystem::DeleteFile(const char *file_spec, bool force) {
-  if (!file_spec || !*file_spec)
+static bool OperateWildcard(
+    const char *source, const char *dest, bool bool_param,
+    bool (*operation)(const char *, const char *, bool)) {
+  if (!source || !*source || !dest || !*dest)
     return false;
 
+  if (!strchr(source, '*') && !strchr(source, '?'))
+    return operation(source, dest, bool_param);
+
+  // If source contains wildcard, the dest must be a directory.
+  // Microsoft FileSystemObject requires that the target directory name must
+  // be ended with a directory separator.
+  std::string dest_str(dest);
+  dest_str += ggadget::kDirSeparator;
   glob_t globbuf;
-  if (glob(file_spec,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+  if (glob(source,
+           // GLOB_NOESCAPE because we have treated '\'s differently.
+           GLOB_NOSORT | GLOB_NOCHECK | GLOB_NOESCAPE,
            NULL, &globbuf) != 0) {
     globfree(&globbuf);
     return false;
   }
 
-  if (globbuf.gl_pathc == 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  size_t count = 0;
   for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-    if (FileExists(globbuf.gl_pathv[i])) {
-      ++count;
-      if (!linux_system::DeleteFile(globbuf.gl_pathv[i], force)) {
-        globfree(&globbuf);
-        return false;
-      }
+    if (!operation(globbuf.gl_pathv[i], dest_str.c_str(), bool_param)) {
+      globfree(&globbuf);
+      return false;
     }
   }
-
   globfree(&globbuf);
-  return count > 0;
+  return true;
+}
+
+bool FileSystem::DeleteFile(const char *file_spec, bool force) {
+  return OperateWildcard(file_spec, "no_use", force, linux_system::DeleteFile);
 }
 
 bool FileSystem::DeleteFolder(const char *folder_spec, bool force) {
-  if (!folder_spec || !*folder_spec)
-    return false;
-
-  glob_t globbuf;
-  if (glob(folder_spec,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
-           NULL, &globbuf) != 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  if (globbuf.gl_pathc == 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  size_t count = 0;
-  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-    if (FolderExists(globbuf.gl_pathv[i])) {
-      ++count;
-      if (!linux_system::DeleteFolder(globbuf.gl_pathv[i], force)) {
-        globfree(&globbuf);
-        return false;
-      }
-    }
-  }
-
-  globfree(&globbuf);
-  return count > 0;
+  return OperateWildcard(folder_spec, "no_use", force,
+                         linux_system::DeleteFolder);
 }
 
 bool FileSystem::MoveFile(const char *source, const char *dest) {
-  if (!source || !*source || !dest || !*dest)
-    return false;
-
-  glob_t globbuf;
-  if (glob(source,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
-           NULL, &globbuf) != 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  if (globbuf.gl_pathc > 1) {
-    if (!FolderExists(dest)) {
-      globfree(&globbuf);
-      return false;
-    }
-
-    size_t count = 0;
-    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-      if (FileExists(globbuf.gl_pathv[i])) {
-        ++count;
-        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
-          globfree(&globbuf);
-          return false;
-        }
-      }
-    }
-    globfree(&globbuf);
-    return count > 0;
-  } else if (globbuf.gl_pathc == 1) {
-    globfree(&globbuf);
-    return linux_system::Move(source, dest);
-  }
-
-  globfree(&globbuf);
-  return false;
+  return OperateWildcard(source, dest, false, linux_system::MoveFile);
 }
 
 bool FileSystem::MoveFolder(const char *source, const char *dest) {
-  if (!source || !dest || !*source || !*dest)
-    return false;
-  if (!source || !*source || !dest || !*dest)
-    return false;
-
-  glob_t globbuf;
-  if (glob(source,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
-           NULL, &globbuf) != 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  if (globbuf.gl_pathc > 1) {
-    if (!FolderExists(dest)) {
-      globfree(&globbuf);
-      return false;
-    }
-
-    size_t count = 0;
-    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-      if (FolderExists(globbuf.gl_pathv[i])) {
-        ++count;
-        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
-          globfree(&globbuf);
-          return false;
-        }
-      }
-    }
-    globfree(&globbuf);
-    return count > 0;
-  } else if (globbuf.gl_pathc == 1) {
-    globfree(&globbuf);
-    return linux_system::Move(source, dest);
-  }
-
-  globfree(&globbuf);
-  return false;
+  return OperateWildcard(source, dest, false, linux_system::MoveFolder);
 }
 
 bool FileSystem::CopyFile(const char *source, const char *dest,
                           bool overwrite) {
-  if (!source || !*source || !dest || !*dest)
-    return false;
-
-  glob_t globbuf;
-  if (glob(source,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
-           NULL, &globbuf) != 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  if (globbuf.gl_pathc > 1) {
-    if (!FolderExists(dest)) {
-      globfree(&globbuf);
-      return false;
-    }
-
-    size_t count = 0;
-    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-      if (FileExists(globbuf.gl_pathv[i])) {
-        ++count;
-        if (!linux_system::CopyFile(globbuf.gl_pathv[i], dest, overwrite)) {
-          globfree(&globbuf);
-          return false;
-        }
-      }
-    }
-    globfree(&globbuf);
-    return count > 0;
-  } else if (globbuf.gl_pathc == 1) {
-    globfree(&globbuf);
-    return linux_system::CopyFile(source, dest, overwrite);
-  }
-
-  globfree(&globbuf);
-  return false;
+  return OperateWildcard(source, dest, overwrite, linux_system::CopyFile);
 }
 
 bool FileSystem::CopyFolder(const char *source, const char *dest,
                             bool overwrite) {
-  if (!source || !*source || !dest || !*dest)
-    return false;
-
-  glob_t globbuf;
-  if (glob(source,
-           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
-           NULL, &globbuf) != 0) {
-    globfree(&globbuf);
-    return false;
-  }
-
-  if (globbuf.gl_pathc > 1) {
-    if (!FolderExists(dest)) {
-      globfree(&globbuf);
-      return false;
-    }
-
-    size_t count = 0;
-    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-      if (FolderExists(globbuf.gl_pathv[i])) {
-        ++count;
-        if (!linux_system::CopyFolder(globbuf.gl_pathv[i], dest, overwrite)) {
-          globfree(&globbuf);
-          return false;
-        }
-      }
-    }
-    globfree(&globbuf);
-    return count > 0;
-  } else if (globbuf.gl_pathc == 1) {
-    globfree(&globbuf);
-    return linux_system::CopyFolder(source, dest, overwrite);
-  }
-
-  globfree(&globbuf);
-  return false;
+  return OperateWildcard(source, dest, overwrite, linux_system::CopyFolder);
 }
 
 FolderInterface *FileSystem::CreateFolder(const char *path) {
   if (!path || !*path)
     return NULL;
-  std::string str_path(path);
-  ReplaceAll(&str_path, '\\', '/');
+  std::string str_path(ggadget::NormalizeFilePath(path));
   struct stat stat_value;
   memset(&stat_value, 0, sizeof(stat_value));
   if (stat(str_path.c_str(), &stat_value) == 0)

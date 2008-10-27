@@ -28,6 +28,9 @@ using namespace ggadget;
 using namespace ggadget::framework;
 using namespace ggadget::framework::linux_system;
 
+#define TEST_DIR_NAME "GGL_FileSystem_Test"
+#define TEST_DIR "/tmp/" TEST_DIR_NAME
+
 TEST(FileSystem, GetDrives) {
   FileSystem filesystem;
   DrivesInterface *drives = filesystem.GetDrives();
@@ -44,10 +47,8 @@ TEST(FileSystem, GetDrives) {
 
 TEST(FileSystem, BuildPath) {
   FileSystem filesystem;
-  EXPECT_EQ("/tmp/GGL_FileSystem_Test/file.cc",
-            filesystem.BuildPath("/tmp/GGL_FileSystem_Test/", "file.cc"));
-  EXPECT_EQ("/tmp/GGL_FileSystem_Test/file.cc",
-            filesystem.BuildPath("/tmp/GGL_FileSystem_Test", "file.cc"));
+  EXPECT_EQ(TEST_DIR "/file.cc", filesystem.BuildPath(TEST_DIR "/", "file.cc"));
+  EXPECT_EQ(TEST_DIR "/file.cc", filesystem.BuildPath(TEST_DIR, "file.cc"));
   EXPECT_EQ("/file.cc", filesystem.BuildPath("/", "file.cc"));
   EXPECT_EQ("/tmp", filesystem.BuildPath("/tmp", ""));
   EXPECT_EQ("/tmp", filesystem.BuildPath("/tmp", NULL));
@@ -58,10 +59,8 @@ TEST(FileSystem, BuildPath) {
 // test method GetParentFolderName with valid arguments
 TEST(FileSystem, GetParentFolderName) {
   FileSystem filesystem;
-  EXPECT_EQ("/tmp",
-            filesystem.GetParentFolderName("/tmp/GGL_FileSystem_Test/"));
-  EXPECT_EQ("/tmp",
-            filesystem.GetParentFolderName("/tmp/GGL_FileSystem_Test"));
+  EXPECT_EQ("/tmp", filesystem.GetParentFolderName("/tmp/test/"));
+  EXPECT_EQ("/tmp", filesystem.GetParentFolderName("/tmp/test"));
   EXPECT_EQ("/", filesystem.GetParentFolderName("/tmp"));
   EXPECT_EQ("", filesystem.GetParentFolderName("/"));
   EXPECT_EQ("", filesystem.GetParentFolderName(""));
@@ -71,12 +70,9 @@ TEST(FileSystem, GetParentFolderName) {
 // test method GetFileName
 TEST(FileSystem, GetFileName) {
   FileSystem filesystem;
-  EXPECT_EQ("file.cc",
-            filesystem.GetFileName("/tmp/GGL_FileSystem_Test/file.cc"));
-  EXPECT_EQ("GGL_FileSystem_Test",
-            filesystem.GetFileName("/tmp/GGL_FileSystem_Test"));
-  EXPECT_EQ("GGL_FileSystem_Test",
-            filesystem.GetFileName("/tmp/GGL_FileSystem_Test/"));
+  EXPECT_EQ("file.cc", filesystem.GetFileName(TEST_DIR "/file.cc"));
+  EXPECT_EQ(TEST_DIR_NAME, filesystem.GetFileName(TEST_DIR));
+  EXPECT_EQ(TEST_DIR_NAME, filesystem.GetFileName(TEST_DIR "/"));
   EXPECT_EQ("", filesystem.GetFileName("/"));
   EXPECT_EQ("", filesystem.GetFileName(""));
   EXPECT_EQ("", filesystem.GetFileName(NULL));
@@ -85,14 +81,10 @@ TEST(FileSystem, GetFileName) {
 // test method GetBaseName
 TEST(FileSystem, GetBaseName) {
   FileSystem filesystem;
-  EXPECT_EQ("file",
-            filesystem.GetBaseName("/tmp/GGL_FileSystem_Test/file.cc"));
-  EXPECT_EQ("file",
-            filesystem.GetBaseName("/tmp/GGL_FileSystem_Test/file"));
-  EXPECT_EQ("file",
-            filesystem.GetBaseName("/tmp/GGL_FileSystem_Test/file.cc/"));
-  EXPECT_EQ("file",
-            filesystem.GetBaseName("/tmp/GGL_FileSystem_Test/file/"));
+  EXPECT_EQ("file", filesystem.GetBaseName(TEST_DIR "/file.cc"));
+  EXPECT_EQ("file", filesystem.GetBaseName(TEST_DIR "/file"));
+  EXPECT_EQ("file", filesystem.GetBaseName(TEST_DIR "/file.cc/"));
+  EXPECT_EQ("file", filesystem.GetBaseName(TEST_DIR "/file/"));
   EXPECT_EQ("", filesystem.GetFileName("/"));
   EXPECT_EQ("", filesystem.GetFileName(""));
   EXPECT_EQ("", filesystem.GetFileName(NULL));
@@ -101,24 +93,15 @@ TEST(FileSystem, GetBaseName) {
 // test method GetExtensionName
 TEST(FileSystem, GetExtensionName) {
   FileSystem filesystem;
-  EXPECT_EQ("cc",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/file.cc"));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/file"));
-  EXPECT_EQ("cc",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/file.cc/"));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/file/"));
-  EXPECT_EQ("file",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/.file"));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName("/tmp/GGL_FileSystem_Test/file."));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName("/"));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName(""));
-  EXPECT_EQ("",
-            filesystem.GetExtensionName(NULL));
+  EXPECT_EQ("cc", filesystem.GetExtensionName(TEST_DIR "/file.cc"));
+  EXPECT_EQ("", filesystem.GetExtensionName(TEST_DIR "/file"));
+  EXPECT_EQ("cc", filesystem.GetExtensionName(TEST_DIR "/file.cc/"));
+  EXPECT_EQ("", filesystem.GetExtensionName(TEST_DIR "/file/"));
+  EXPECT_EQ("file", filesystem.GetExtensionName(TEST_DIR "/.file"));
+  EXPECT_EQ("", filesystem.GetExtensionName(TEST_DIR "/file."));
+  EXPECT_EQ("", filesystem.GetExtensionName("/"));
+  EXPECT_EQ("", filesystem.GetExtensionName(""));
+  EXPECT_EQ("", filesystem.GetExtensionName(NULL));
 }
 
 // test method GetAbsolutePathName
@@ -146,59 +129,59 @@ TEST(FileSystem, GetTempName) {
 // test method FileExists
 TEST(FileSystem, FileFolderExists) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   fclose(file);
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file.cc"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file2.cc"));
   EXPECT_FALSE(filesystem.FileExists(""));
   EXPECT_FALSE(filesystem.FileExists(NULL));
   EXPECT_FALSE(filesystem.FolderExists(""));
   EXPECT_FALSE(filesystem.FolderExists(NULL));
-  unlink("/tmp/GGL_FileSystem_Test/file.cc");
-  rmdir("/tmp/GGL_FileSystem_Test");
+  unlink(TEST_DIR "/file.cc");
+  rmdir(TEST_DIR);
 }
 
 // test method GetFile.
 TEST(FileSystem, GetFile) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   fclose(file);
-  FileInterface *fi = filesystem.GetFile("/tmp/GGL_FileSystem_Test/file.cc");
+  FileInterface *fi = filesystem.GetFile(TEST_DIR "/file.cc");
   EXPECT_TRUE(fi != NULL);
   fi->Destroy();
-  EXPECT_TRUE(filesystem.GetFile("/tmp/GGL_FileSystem_Test") == NULL);
-  EXPECT_TRUE(filesystem.GetFile("/tmp/GGL_FileSystem_Test/file2.cc") == NULL);
+  EXPECT_TRUE(filesystem.GetFile(TEST_DIR) == NULL);
+  EXPECT_TRUE(filesystem.GetFile(TEST_DIR "/file2.cc") == NULL);
   EXPECT_TRUE(filesystem.GetFile("") == NULL);
   EXPECT_TRUE(filesystem.GetFile(NULL) == NULL);
-  unlink("/tmp/GGL_FileSystem_Test/file.cc");
-  rmdir("/tmp/GGL_FileSystem_Test");
+  unlink(TEST_DIR "/file.cc");
+  rmdir(TEST_DIR);
 }
 
 // test method GetFolder.
 TEST(FileSystem, GetFolder) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   fclose(file);
-  FolderInterface *fi = filesystem.GetFolder("/tmp/GGL_FileSystem_Test/");
+  FolderInterface *fi = filesystem.GetFolder(TEST_DIR "/");
   EXPECT_TRUE(fi != NULL);
   fi->Destroy();
-  fi = filesystem.GetFolder("/tmp/GGL_FileSystem_Test");
+  fi = filesystem.GetFolder(TEST_DIR);
   EXPECT_TRUE(fi != NULL);
   fi->Destroy();
   fi = filesystem.GetFolder("/");
   EXPECT_TRUE(fi != NULL);
   fi->Destroy();
-  EXPECT_TRUE(filesystem.GetFolder("/tmp/GGL_FileSystem_Test/file.cc") == NULL);
-  EXPECT_TRUE(filesystem.GetFolder("/tmp/GGL_FileSystem_Test2") == NULL);
+  EXPECT_TRUE(filesystem.GetFolder(TEST_DIR "/file.cc") == NULL);
+  EXPECT_TRUE(filesystem.GetFolder(TEST_DIR "2") == NULL);
   EXPECT_TRUE(filesystem.GetFolder("") == NULL);
   EXPECT_TRUE(filesystem.GetFolder(NULL) == NULL);
-  unlink("/tmp/GGL_FileSystem_Test/file.cc");
-  rmdir("/tmp/GGL_FileSystem_Test");
+  unlink(TEST_DIR "/file.cc");
+  rmdir(TEST_DIR);
 }
 
 // tests method GetSpecialFolder
@@ -219,67 +202,78 @@ TEST(FileSystem, GetSpecialFolder) {
 // Tests DeleteFile.
 TEST(FileSystem, DeleteFile) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
 
+  EXPECT_EQ(0, chmod(TEST_DIR "/file1.cc", 0400));
   // Deletes a single file.
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.DeleteFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                    true));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file1.cc"));
+  EXPECT_FALSE(filesystem.DeleteFile(TEST_DIR "/file1.cc", false));
+  EXPECT_TRUE(filesystem.DeleteFile(TEST_DIR "/file1.cc", true));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file1.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file3.cc"));
 
   // Deletes file with wild characters.
-  EXPECT_TRUE(filesystem.DeleteFile("/tmp/GGL_FileSystem_Test/file*.cc",
-                                    true));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
+  EXPECT_TRUE(filesystem.DeleteFile(TEST_DIR "/file*.cc", true));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file3.cc"));
 
   // Deletes non-existing file.
-  EXPECT_FALSE(filesystem.DeleteFile("/tmp/GGL_FileSystem_Test/file4.cc",
-                                     true));
+  EXPECT_FALSE(filesystem.DeleteFile(TEST_DIR "/file4.cc", true));
 
   // Deletes folder.
-  EXPECT_FALSE(filesystem.DeleteFile("/tmp/GGL_FileSystem_Test",
-                                     true));
+  EXPECT_FALSE(filesystem.DeleteFile(TEST_DIR, true));
 
   EXPECT_FALSE(filesystem.DeleteFile("", true));
   EXPECT_FALSE(filesystem.DeleteFile(NULL, true));
 
-  rmdir("/tmp/GGL_FileSystem_Test");
+  rmdir(TEST_DIR);
 }
 
+#include <errno.h>
 // test method DeleteFolder with existing folder
 TEST(FileSystem, DeleteFolder) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  mkdir(TEST_DIR "/dir", 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
+  file = fopen(TEST_DIR "/dir/file4.cc", "wb");
+  fclose(file);
+  EXPECT_EQ(0, chmod(TEST_DIR "/dir/file4.cc", 0400));
 
   // Deletes files.
-  EXPECT_FALSE(filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test/file1.cc",
-                                       true));
-  EXPECT_FALSE(filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test/file2.cc",
-                                       true));
-  EXPECT_FALSE(filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test/file3.cc",
-                                       true));
-  EXPECT_FALSE(filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test/file4.cc",
-                                       true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/file1.cc", true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/file2.cc", true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/file3.cc", true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/file4.cc", true));
   // Deletes folder.
-  EXPECT_TRUE(filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test/",
-                                      true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/dir", false));
+  EXPECT_EQ(0, chmod(TEST_DIR, 0500));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/dir", false));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR "/dir", true));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR, false));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR, true));
+  // Though the above DeleteFolder fails, file4.cc should be deleted.
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/dir/file4.cc"));
+  file = fopen(TEST_DIR "/dir/file4.cc", "wb");
+  fclose(file);
+  EXPECT_EQ(0, chmod(TEST_DIR "/dir/file4.cc", 0400));
+  EXPECT_EQ(0, chmod(TEST_DIR, 0700));
+  EXPECT_FALSE(filesystem.DeleteFolder(TEST_DIR, false));
+  EXPECT_TRUE(filesystem.DeleteFolder(TEST_DIR, true));
 
-  EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/"));
+  EXPECT_FALSE(filesystem.FolderExists(TEST_DIR "/"));
 
   EXPECT_FALSE(filesystem.DeleteFolder("", true));
   EXPECT_FALSE(filesystem.DeleteFolder(NULL, true));
@@ -288,42 +282,38 @@ TEST(FileSystem, DeleteFolder) {
 // test method MoveFile.
 TEST(FileSystem, MoveFile) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  mkdir("/tmp/GGL_FileSystem_Test2", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  mkdir(TEST_DIR "2", 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
 
-  EXPECT_FALSE(filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                   "/tmp/GGL_FileSystem_Test/file1.cc"));
+  EXPECT_TRUE(filesystem.MoveFile(TEST_DIR "/file1.cc", TEST_DIR "/file1.cc"));
 
   // Moves an existing file to a non-existing file.
-  EXPECT_TRUE(filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                  "/tmp/GGL_FileSystem_Test/file4.cc"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file4.cc"));
+  EXPECT_TRUE(filesystem.MoveFile(TEST_DIR "/file1.cc", TEST_DIR "/file4.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file1.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file4.cc"));
 
   // Moves an existing file to an existing file.
-  EXPECT_FALSE(filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file2.cc",
-                                   "/tmp/GGL_FileSystem_Test/file3.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
+  EXPECT_FALSE(filesystem.MoveFile(TEST_DIR "/file2.cc", TEST_DIR "/file3.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file3.cc"));
 
   // Moves an existing file to an existing folder.
-  EXPECT_TRUE(filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file*.cc",
-                                  "/tmp/GGL_FileSystem_Test2/"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
-  EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file4.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file3.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file4.cc"));
+  EXPECT_TRUE(filesystem.MoveFile(TEST_DIR "/file*.cc", TEST_DIR "2/"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file3.cc"));
+  EXPECT_FALSE(filesystem.FileExists(TEST_DIR "/file4.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file3.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file4.cc"));
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test2", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
+  filesystem.DeleteFolder(TEST_DIR "2", true);
 
   EXPECT_FALSE(filesystem.MoveFile("", ""));
   EXPECT_FALSE(filesystem.MoveFile(NULL, NULL));
@@ -332,54 +322,47 @@ TEST(FileSystem, MoveFile) {
 // test method MoveFolder.
 TEST(FileSystem, MoveFolder) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  mkdir("/tmp/GGL_FileSystem_Test2", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  mkdir(TEST_DIR "2", 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test3", "wb");
+  file = fopen(TEST_DIR "3", "wb");
   fclose(file);
 
-  EXPECT_FALSE(filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/"));
+  EXPECT_TRUE(filesystem.MoveFolder(TEST_DIR, TEST_DIR));
+  EXPECT_TRUE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR));
+  EXPECT_FALSE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR "/"));
 
   // Moves a folder into its sub-folder.
-  EXPECT_FALSE(filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/subfolder"));
+  EXPECT_FALSE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR "/subfolder"));
+  EXPECT_FALSE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR "/subfolder/"));
   // Moves a folder into another folder.
-  EXPECT_TRUE(filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test2"));
-  EXPECT_FALSE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FolderExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file3.cc"));
+  EXPECT_FALSE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR "2"));
+  EXPECT_TRUE(filesystem.MoveFolder(TEST_DIR "/", TEST_DIR "2/"));
+  EXPECT_FALSE(filesystem.FolderExists(TEST_DIR));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "2/GGL_FileSystem_Test"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file1.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file3.cc"));
 
   // Moves a folder into another folder and rename.
-  EXPECT_TRUE(filesystem.MoveFolder(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test",
-      "/tmp/GGL_FileSystem_Test4"));
-  EXPECT_FALSE(filesystem.FolderExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test4"));
+  EXPECT_TRUE(filesystem.MoveFolder(TEST_DIR "2/" TEST_DIR_NAME,
+                                    TEST_DIR "4"));
+  EXPECT_FALSE(filesystem.FolderExists(TEST_DIR "2/" TEST_DIR_NAME));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "4"));
 
   // Moves a folder into another folder and rename.
-  EXPECT_FALSE(filesystem.MoveFolder(
-      "/tmp/GGL_FileSystem_Test4",
-      "/tmp/GGL_FileSystem_Test3"));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test4"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test3"));
+  EXPECT_FALSE(filesystem.MoveFolder(TEST_DIR "4", TEST_DIR "3"));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "4"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "3"));
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test4", true);
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test2", true);
-  unlink("/tmp/GGL_FileSystem_Test3");
+  filesystem.DeleteFolder(TEST_DIR "4", true);
+  filesystem.DeleteFolder(TEST_DIR "2", true);
+  unlink(TEST_DIR "3");
 
   EXPECT_FALSE(filesystem.MoveFolder("", ""));
   EXPECT_FALSE(filesystem.MoveFolder(NULL, NULL));
@@ -388,65 +371,54 @@ TEST(FileSystem, MoveFolder) {
 // test method CopyFile
 TEST(FileSystem, CopyFile) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  mkdir("/tmp/GGL_FileSystem_Test2", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  mkdir(TEST_DIR "2", 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fputs("test", file);
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
 
-  EXPECT_FALSE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                   "/tmp/GGL_FileSystem_Test/file1.cc",
+  EXPECT_FALSE(filesystem.CopyFile(TEST_DIR "/file1.cc", TEST_DIR "/file1.cc",
                                    false));
-  EXPECT_FALSE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                   "/tmp/GGL_FileSystem_Test/file1.cc",
-                                   true));
+  EXPECT_TRUE(filesystem.CopyFile(TEST_DIR "/file1.cc", TEST_DIR "/file1.cc",
+                                  true));
 
   // Copies an existing file to a non-existing file.
-  EXPECT_TRUE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1.cc",
-                                  "/tmp/GGL_FileSystem_Test/file4.cc",
+  EXPECT_TRUE(filesystem.CopyFile(TEST_DIR "/file1.cc", TEST_DIR "/file4.cc",
                                   false));
-  file = fopen("/tmp/GGL_FileSystem_Test/file4.cc", "rb");
+  file = fopen(TEST_DIR "/file4.cc", "rb");
   char buffer[32];
   EXPECT_EQ(4U, fread(buffer, 1, 32, file));
   fclose(file);
   EXPECT_EQ("test", std::string(buffer, 4));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file4.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file1.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file4.cc"));
 
   // Copies an existing file to an existing file.
-  EXPECT_FALSE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file2.cc",
-                                   "/tmp/GGL_FileSystem_Test/file3.cc",
+  EXPECT_FALSE(filesystem.CopyFile(TEST_DIR "/file2.cc", TEST_DIR "/file3.cc",
                                    false));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
-  EXPECT_TRUE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file2.cc",
-                                  "/tmp/GGL_FileSystem_Test/file3.cc",
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file3.cc"));
+  EXPECT_TRUE(filesystem.CopyFile(TEST_DIR "/file2.cc", TEST_DIR "/file3.cc",
                                   true));
 
   // Copies an existing file to an existing folder.
-  EXPECT_TRUE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file*.cc",
-                                  "/tmp/GGL_FileSystem_Test2/",
-                                  false));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file3.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file4.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file3.cc"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test2/file4.cc"));
+  EXPECT_TRUE(filesystem.CopyFile(TEST_DIR "/file*.cc", TEST_DIR "2", false));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file3.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "/file4.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file3.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/file4.cc"));
 
-  EXPECT_FALSE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file*.cc",
-                                   "/tmp/GGL_FileSystem_Test2/",
-                                   false));
-  EXPECT_TRUE(filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file*.cc",
-                                  "/tmp/GGL_FileSystem_Test2/",
-                                  true));
+  EXPECT_FALSE(filesystem.CopyFile(TEST_DIR "/file*.cc", TEST_DIR "2/", false));
+  EXPECT_TRUE(filesystem.CopyFile(TEST_DIR "/file*.cc", TEST_DIR "2/", true));
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test2", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
+  filesystem.DeleteFolder(TEST_DIR "2", true);
 
   EXPECT_FALSE(filesystem.CopyFile("", "", false));
   EXPECT_FALSE(filesystem.CopyFile(NULL, NULL, false));
@@ -455,75 +427,58 @@ TEST(FileSystem, CopyFile) {
 // test method CopyFolder.
 TEST(FileSystem, CopyFolder) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  mkdir("/tmp/GGL_FileSystem_Test2", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file1.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  mkdir(TEST_DIR "2", 0700);
+  FILE *file = fopen(TEST_DIR "/file1.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file2.cc", "wb");
+  file = fopen(TEST_DIR "/file2.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test/file3.cc", "wb");
+  file = fopen(TEST_DIR "/file3.cc", "wb");
   fclose(file);
-  file = fopen("/tmp/GGL_FileSystem_Test3", "wb");
+  file = fopen(TEST_DIR "3", "wb");
   fclose(file);
 
-  EXPECT_FALSE(filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/",
-                                     false));
-  EXPECT_FALSE(filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/",
-                                     true));
+  EXPECT_TRUE(filesystem.CopyFolder(TEST_DIR, TEST_DIR, true));
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR, TEST_DIR, false));
+  EXPECT_TRUE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR, true));
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR, false));
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "/", false));
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "/", true));
 
   // Copies a folder into its sub-folder.
-  EXPECT_FALSE(filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/subfolder",
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "/subfolder",
                                      false));
-  EXPECT_FALSE(filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test/subfolder",
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "/subfolder",
                                      true));
   // Copies a folder into another folder.
-  EXPECT_TRUE(filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/",
-                                     "/tmp/GGL_FileSystem_Test2",
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "2", false));
+  EXPECT_TRUE(filesystem.CopyFolder(TEST_DIR "/", TEST_DIR "2/", false));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "2/" TEST_DIR_NAME));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file1.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file2.cc"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "2/" TEST_DIR_NAME "/file3.cc"));
+
+  // Copies a folder into another folder and rename.
+  EXPECT_TRUE(filesystem.CopyFolder(TEST_DIR "2/" TEST_DIR_NAME,
+                                    TEST_DIR "4", false));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "2/" TEST_DIR_NAME));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "4"));
+
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "2/" TEST_DIR_NAME, "/tmp/",
                                      false));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FolderExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file1.cc"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file2.cc"));
-  EXPECT_TRUE(filesystem.FileExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test/file3.cc"));
+  EXPECT_TRUE(filesystem.CopyFolder(TEST_DIR "2/" TEST_DIR_NAME, "/tmp/",
+                                    true));
 
   // Copies a folder into another folder and rename.
-  EXPECT_TRUE(filesystem.CopyFolder(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test",
-      "/tmp/GGL_FileSystem_Test4",
-      false));
-  EXPECT_TRUE(filesystem.FolderExists(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test"));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test4"));
+  EXPECT_FALSE(filesystem.CopyFolder(TEST_DIR "4", TEST_DIR "3", false));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "4"));
+  EXPECT_TRUE(filesystem.FileExists(TEST_DIR "3"));
 
-  EXPECT_FALSE(filesystem.CopyFolder(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test",
-      "/tmp/",
-      false));
-  EXPECT_TRUE(filesystem.CopyFolder(
-      "/tmp/GGL_FileSystem_Test2/GGL_FileSystem_Test",
-      "/tmp/",
-      true));
-
-  // Copies a folder into another folder and rename.
-  EXPECT_FALSE(filesystem.CopyFolder(
-      "/tmp/GGL_FileSystem_Test4",
-      "/tmp/GGL_FileSystem_Test3",
-      false));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test4"));
-  EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test3"));
-
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test4", true);
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test2", true);
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
-  unlink("/tmp/GGL_FileSystem_Test3");
+  filesystem.DeleteFolder(TEST_DIR "4", true);
+  filesystem.DeleteFolder(TEST_DIR "2", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
+  unlink(TEST_DIR "3");
 
   EXPECT_FALSE(filesystem.CopyFolder("", "", false));
   EXPECT_FALSE(filesystem.CopyFolder(NULL, NULL, false));
@@ -534,21 +489,23 @@ TEST(FileSystem, CopyFolder) {
 // test method CreateFolder.
 TEST(FileSystem, CreateFolder) {
   FileSystem filesystem;
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   fclose(file);
 
-  EXPECT_FALSE(filesystem.CreateFolder("/tmp/GGL_FileSystem_Test/file.cc"));
-  EXPECT_TRUE(filesystem.CreateFolder("/tmp/GGL_FileSystem_Test/folder"));
+  EXPECT_FALSE(filesystem.CreateFolder(TEST_DIR "/file.cc"));
+  EXPECT_TRUE(filesystem.CreateFolder(TEST_DIR "/folder"));
   EXPECT_FALSE(filesystem.CreateFolder(""));
   EXPECT_FALSE(filesystem.CreateFolder(NULL));
-  EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder"));
+  EXPECT_TRUE(filesystem.FolderExists(TEST_DIR "/folder"));
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 }
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
-
-  return RUN_ALL_TESTS();
+  system("rm -rf " TEST_DIR "*");
+  int result = RUN_ALL_TESTS();
+  system("rm -rf " TEST_DIR "*");
+  return result;
 }

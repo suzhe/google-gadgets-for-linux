@@ -263,7 +263,7 @@ TEST(FileManager, DirWrite) {
   ASSERT_TRUE(fm->Init(base_new_dir_path, true));
   TestFileManagerWriteFunctions("", base_new_dir_path, fm, false);
   delete fm;
-  RemoveDirectory(base_new_dir_path);
+  RemoveDirectory(base_new_dir_path, true);
 }
 
 TEST(FileManager, ZipWrite) {
@@ -366,7 +366,7 @@ TEST(FileManager, FileManagerWrapper) {
   EXPECT_TRUE(fm->EnumerateFiles("zip/", NewSlot(EnumerateCallback)));
   EXPECT_TRUE(expected_set == actual_set);
   delete fm;
-  RemoveDirectory(base_new_dir_path);
+  RemoveDirectory(base_new_dir_path, true);
   ::unlink(base_new_gg_path);
 }
 
