@@ -480,7 +480,7 @@ class ContentPolicy : public nsIContentPolicy {
                         nsIURI *request_origin, nsISupports *context,
                         const nsACString &mime_type_guess, nsISupports *extra,
                         PRInt16 *retval) {
-    nsCString url_spec, origin_spec;
+    nsCString url_spec, origin_spec, url_scheme;
     content_location->GetSpec(url_spec);
     if (content_type == TYPE_DOCUMENT && g_embed_for_new_window) {
       // Handle a new window request.
@@ -500,13 +500,15 @@ class ContentPolicy : public nsIContentPolicy {
     }
 
     *retval = ACCEPT;
+    content_location->GetScheme(url_scheme);
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       // If the URL is opened the first time in a blank window or frame,
       // request_origin is NULL or "about:blank".
       if (content_location && request_origin) {
         request_origin->GetSpec(origin_spec);
         if (!origin_spec.Equals(nsCString("about:blank")) &&
-            !origin_spec.Equals(url_spec)) {
+            !origin_spec.Equals(url_spec) &&
+            !url_scheme.Equals("javascript")) {
           PRBool is_loading = PR_FALSE;
           int browser_id = FindBrowserIdByContentPolicyContext(context,
                                                                &is_loading);
@@ -826,7 +828,7 @@ static bool InitGecko() {
 
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.*", PR_TRUE
+    "1.9.0.*", PR_TRUE
   };
 
   char xpcom_location[4096];

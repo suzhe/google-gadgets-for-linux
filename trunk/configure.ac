@@ -692,7 +692,6 @@ fi
 
 # Check gtkmozembed
 # Check priority:
-#  xulrunner 1.9: mozilla-gtkmozembed-embedding and mozilla-js
 #  xulrunner 1.9: libxul-embedding-unstable and mozilla-js
 #  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
 #  firefox 2.0: firefox2-gtkmozembed and firefox2-js
@@ -702,29 +701,25 @@ fi
 has_gtkmozembed=no
 
 if test x$with_gtkmozembed = xauto; then
-PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding],
-		  [has_gtkmozembed=mozilla-gtkmozembed-embedding],
-  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
-		     [has_gtkmozembed=libxul-embedding-unstable],
-      [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
-			[has_gtkmozembed=libxul-embedding],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
-			  [has_gtkmozembed=xulrunner-gtkmozembed],
-	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
-			    [has_gtkmozembed=firefox2-gtkmozembed],
-	    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
-			      [has_gtkmozembed=firefox-gtkmozembed],
-	      [has_gtkmozembed=no])])])])])])
+PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
+		   [has_gtkmozembed=libxul-embedding-unstable],
+    [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
+		       [has_gtkmozembed=libxul-embedding],
+      [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
+			[has_gtkmozembed=xulrunner-gtkmozembed],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
+			  [has_gtkmozembed=firefox2-gtkmozembed],
+	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
+			    [has_gtkmozembed=firefox-gtkmozembed],
+	    [has_gtkmozembed=no])])])])])
 else
   case $with_gtkmozembed in
     libxul)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed-embedding],
-			[has_gtkmozembed=mozilla-gtkmozembed-embedding],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
-			  [has_gtkmozembed=libxul-embedding-unstable],
-	  [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
-			    [has_gtkmozembed=libxul-embedding],
-	    [has_gtkmozembed=no])])])
+      PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
+			[has_gtkmozembed=libxul-embedding-unstable],
+	[PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
+			  [has_gtkmozembed=libxul-embedding],
+	  [has_gtkmozembed=no])])
       ;;
     xulrunner)
       PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
@@ -750,7 +745,7 @@ fi
 # If gtkmozembed is available, then use bundled libmozjs.so.
 has_libmozjs=no
 case $has_gtkmozembed in
-  mozilla-gtkmozembed-embedding | libxul-embedding-unstable | libxul-embedding)
+  libxul-embedding-unstable | libxul-embedding)
     PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
 		      [has_libmozjs=mozilla-js],
 		      [has_gtkmozembed=no]) ;;
@@ -935,6 +930,7 @@ if test x$has_libmozjs != xno; then
     # If gtkmozembed is available and uses xpcomglue, then use xpcomglue for
     # libmozjs as well.
     if (echo $GTKMOZEMBED_CFLAGS | grep XPCOM_GLUE) > /dev/null 2>&1; then
+      AC_MSG_NOTICE([Use xulrunner's xpcomglue to load libmozjs.])
       LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS $GTKMOZEMBED_CFLAGS"
     # Use libs of gtkmozembed instead of libmozjs's own library here to avoid
     # direct linking to libmozjs.

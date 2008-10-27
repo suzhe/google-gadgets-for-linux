@@ -249,6 +249,44 @@ std::string DecodeURL(const std::string &source) {
 #undef DECODE_HEX_CHAR
 }
 
+static bool IsValidSchemeStartChar(char ch) {
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+}
+
+static bool IsValidSchemeChar(char ch) {
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+         (ch >= '0' && ch <= '9') || ch == '+' || ch == '.' || ch == '-';
+}
+
+std::string GetURLScheme(const char *url) {
+  if (!url || !IsValidSchemeStartChar(*url))
+    return std::string();
+
+  const char *colon = strchr(url, ':');
+  if (colon) {
+    for (const char *p = url; p != colon; ++p) {
+      if (!IsValidSchemeChar(*p))
+        return std::string();
+    }
+    return std::string(url, colon);
+  }
+
+  return std::string();
+}
+
+bool IsValidURLScheme(const char *scheme) {
+  static const char *kValidURLSchemes[] = {
+    "http", "https", "feed", "file", "mailto", NULL
+  };
+  if (scheme && *scheme) {
+    for(size_t i = 0; kValidURLSchemes[i]; ++i) {
+      if (strcasecmp(scheme, kValidURLSchemes[i]) == 0)
+        return true;
+    }
+  }
+  return false;
+}
+
 bool HasValidURLPrefix(const char *url) {
   if (!url || !*url) return false;
 

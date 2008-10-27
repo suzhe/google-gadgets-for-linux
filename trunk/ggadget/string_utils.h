@@ -155,8 +155,19 @@ std::string DecodeURL(const std::string &source);
 bool IsValidURLChar(char c);
 bool IsValidURLComponentChar(char c);
 
+/** Returns the scheme of a url, eg. http, https, etc. */
+std::string GetURLScheme(const char *url);
+
 /**
- * Returns whether the given string has a valid url prefix.
+ * Returns whether the given url scheme is valid or not.
+ *
+ * Valid url schemes are:
+ * http, https, feed, file, mailto
+ */
+bool IsValidURLScheme(const char *scheme);
+
+/**
+ * Returns whether the given string has a valid url prefixes.
  *
  * Valid url prefixes are:
  * http://
