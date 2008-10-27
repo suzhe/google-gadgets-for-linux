@@ -80,6 +80,7 @@ class ScriptableFileSystem::Impl {
         : message_(message) {
       message_ += " failed.";
       RegisterConstant("message", message_);
+      RegisterMethod("toString", NewSimpleGetterSlot(&message_));
     }
 
    private:

@@ -166,7 +166,7 @@ TEST_F(ExtensionManagerTest, GlobalManager) {
   reg_wrapper.AddExtensionRegister(&script_reg);
   reg_wrapper.AddExtensionRegister(&framework_reg);
 
-  ASSERT_EQ(NULL, ExtensionManager::GetGlobalExtensionManager());
+  ASSERT_TRUE(NULL == ExtensionManager::GetGlobalExtensionManager());
 
   ASSERT_TRUE(ExtensionManager::SetGlobalExtensionManager(g_manager));
   ASSERT_EQ(g_manager, ExtensionManager::GetGlobalExtensionManager());

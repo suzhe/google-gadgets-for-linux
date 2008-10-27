@@ -29,33 +29,35 @@ using namespace ggadget;
 using namespace ggadget::framework;
 using namespace ggadget::framework::linux_system;
 
+#define TEST_DIR_NAME "GGL_FileSystem_Test"
+#define TEST_DIR "/tmp/" TEST_DIR_NAME
+
 TEST(FileSystem, OpenTextFile) {
   FileSystem filesystem;
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   fclose(file);
 
   // Opens an existing file for reading.
-  TextStreamInterface *ti =
-      filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
-                              IO_MODE_READING,
-                              false,
-                              TRISTATE_USE_DEFAULT);
+  TextStreamInterface *ti = filesystem.OpenTextFile(TEST_DIR "/file.cc",
+                                                    IO_MODE_READING,
+                                                    false,
+                                                    TRISTATE_USE_DEFAULT);
   ASSERT_TRUE(ti != NULL);
   ti->Close();
   ti->Destroy();
 
   // Opens a non-existing file for reading.
-  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file2.cc",
+  ti = filesystem.OpenTextFile(TEST_DIR "/file2.cc",
                                IO_MODE_READING,
                                false,
                                TRISTATE_USE_DEFAULT);
   ASSERT_TRUE(ti == NULL);
 
   // Opens a non-existing file for reading and create it.
-  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file2.cc",
+  ti = filesystem.OpenTextFile(TEST_DIR "/file2.cc",
                                IO_MODE_READING,
                                true,
                                TRISTATE_USE_DEFAULT);
@@ -64,28 +66,24 @@ TEST(FileSystem, OpenTextFile) {
   ti->Destroy();
 
   // Opens an existing file for writing.
-  ti = filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
-                                 false,
-                                 false);
+  ti = filesystem.CreateTextFile(TEST_DIR "/file.cc", false, false);
   ASSERT_TRUE(ti == NULL);
 
   // Opens an existing file for writing.
-  ti = filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
-                                 true,
-                                 false);
+  ti = filesystem.CreateTextFile(TEST_DIR "/file.cc", true, false);
   ASSERT_TRUE(ti != NULL);
   ti->Close();
   ti->Destroy();
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 }
 
 TEST(FileSystem, Read) {
   FileSystem filesystem;
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "wb");
+  mkdir(TEST_DIR, 0700);
+  FILE *file = fopen(TEST_DIR "/file.cc", "wb");
   char data[] =
       "this is a test\n"
       "\xe4\xb8\xad\xe6\x96\x87\n"
@@ -96,11 +94,10 @@ TEST(FileSystem, Read) {
   fclose(file);
 
   // Opens an existing file for reading.
-  TextStreamInterface *ti =
-      filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
-                              IO_MODE_READING,
-                              false,
-                              TRISTATE_USE_DEFAULT);
+  TextStreamInterface *ti = filesystem.OpenTextFile(TEST_DIR "/file.cc",
+                                                    IO_MODE_READING,
+                                                    false,
+                                                    TRISTATE_USE_DEFAULT);
   ASSERT_TRUE(ti != NULL);
 
   EXPECT_EQ(1, ti->GetLine());
@@ -140,7 +137,7 @@ TEST(FileSystem, Read) {
   ti->Close();
   ti->Destroy();
 
-  ti = filesystem.OpenTextFile("/tmp/GGL_FileSystem_Test/file.cc",
+  ti = filesystem.OpenTextFile(TEST_DIR "/file.cc",
                                IO_MODE_READING,
                                false,
                                TRISTATE_USE_DEFAULT);
@@ -157,19 +154,17 @@ TEST(FileSystem, Read) {
   ti->Close();
   ti->Destroy();
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 }
 
 TEST(FileSystem, Write) {
   FileSystem filesystem;
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 
-  mkdir("/tmp/GGL_FileSystem_Test", 0700);
+  mkdir(TEST_DIR, 0700);
   // Opens an existing file for reading.
-  TextStreamInterface *ti =
-      filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/file.cc",
-                              true,
-                              false);
+  TextStreamInterface *ti = filesystem.CreateTextFile(TEST_DIR "/file.cc",
+                                                      true, false);
   ASSERT_TRUE(ti != NULL);
 
   EXPECT_EQ(1, ti->GetLine());
@@ -203,7 +198,7 @@ TEST(FileSystem, Write) {
   ti->Destroy();
 
   char buffer[1024];
-  FILE *file = fopen("/tmp/GGL_FileSystem_Test/file.cc", "rb");
+  FILE *file = fopen(TEST_DIR "/file.cc", "rb");
   size_t size = fread(buffer, 1, sizeof(buffer), file);
   EXPECT_EQ(
       "this is a test\n"
@@ -213,11 +208,14 @@ TEST(FileSystem, Write) {
       std::string(buffer, size));
   fclose(file);
 
-  filesystem.DeleteFolder("/tmp/GGL_FileSystem_Test", true);
+  filesystem.DeleteFolder(TEST_DIR, true);
 }
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
   setlocale(LC_ALL, "en_US.UTF-8");
-  return RUN_ALL_TESTS();
+  system("rm -rf " TEST_DIR "*");
+  int result = RUN_ALL_TESTS();
+  system("rm -rf " TEST_DIR "*");
+  return result;
 }

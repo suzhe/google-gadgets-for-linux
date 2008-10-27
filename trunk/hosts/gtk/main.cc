@@ -206,10 +206,12 @@ int main(int argc, char* argv[]) {
       enable_collector = false;
     } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
-      if (run_once.IsRunning()) {
-        run_once.SendMessage(path);
-      } else {
-        gadget_paths.push_back(path);
+      if (!path.empty()) {
+        if (run_once.IsRunning()) {
+          run_once.SendMessage(path);
+        } else {
+          gadget_paths.push_back(path);
+        }
       }
     }
   }

@@ -152,9 +152,12 @@ bool CreateTempDirectory(const char *prefix, std::string *path);
  * Removes a directory tree, all files under the specified directory will be
  * removed.
  *
+ * @param path the path of the directory tree.
+ * @param remove_readonly_files @c true if also force to remove readonly files,
+ *     otherwise readonly files cause error.
  * @return true if succeeded.
  */
-bool RemoveDirectory(const char *path);
+bool RemoveDirectory(const char *path, bool remove_readonly_files);
 
 /**
  * Returns the current system locale information. In most cases,

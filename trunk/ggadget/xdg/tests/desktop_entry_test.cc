@@ -202,6 +202,6 @@ int main(int argc, char **argv) {
     return 1;
   }
   int result = RUN_ALL_TESTS();
-  RemoveDirectory(g_temp_dir.c_str());
+  RemoveDirectory(g_temp_dir.c_str(), true);
   return result;
 }

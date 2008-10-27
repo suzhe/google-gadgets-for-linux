@@ -45,7 +45,7 @@ class DirFileManager::Impl {
 
   void Finalize() {
     if (temp_dir_.length())
-      RemoveDirectory(temp_dir_.c_str());
+      RemoveDirectory(temp_dir_.c_str(), true);
 
     temp_dir_.clear();
     base_path_.clear();
@@ -169,7 +169,7 @@ class DirFileManager::Impl {
       if (!S_ISDIR(stat_value.st_mode))
         result = (::unlink(path.c_str()) == 0);
       else
-        result = RemoveDirectory(path.c_str());
+        result = RemoveDirectory(path.c_str(), true);
     }
 
     if (!result) {
