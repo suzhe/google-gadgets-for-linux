@@ -142,7 +142,7 @@ bool OpenURL(const Gadget *gadget, const char *url) {
     new_url.append(url);
     new_url = EncodeURL(new_url);
     return OpenURL(gadget, new_url.c_str());
-  } else if (!HasValidURLPrefix(url)) {
+  } else if (GetURLScheme(url).length() == 0) {
     // URI without prefix, will be treated as http://
     // Allow mailto:xxx.
     std::string new_url(kHttpUrlPrefix);

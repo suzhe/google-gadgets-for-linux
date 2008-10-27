@@ -392,6 +392,24 @@ TEST(StringUtils, ValidURL) {
   EXPECT_TRUE(IsValidRSSURL("https:///abcdef"));
 }
 
+TEST(StringUtils, URLScheme) {
+  EXPECT_STREQ("http", GetURLScheme("http://abc.com").c_str());
+  EXPECT_STREQ("h323", GetURLScheme("h323://abc.com").c_str());
+  EXPECT_STREQ("iris.beep", GetURLScheme("iris.beep://abc.com").c_str());
+  EXPECT_STREQ("A+B.C-D", GetURLScheme("A+B.C-D://abc.com").c_str());
+  EXPECT_STREQ("", GetURLScheme("http//abc.com").c_str());
+  EXPECT_STREQ("", GetURLScheme("323://abc.com").c_str());
+  EXPECT_STREQ("", GetURLScheme("h*tp://abc.com").c_str());
+
+  EXPECT_TRUE(IsValidURLScheme("http"));
+  EXPECT_TRUE(IsValidURLScheme("https"));
+  EXPECT_TRUE(IsValidURLScheme("feed"));
+  EXPECT_TRUE(IsValidURLScheme("file"));
+  EXPECT_TRUE(IsValidURLScheme("mailto"));
+  EXPECT_FALSE(IsValidURLScheme("ftp"));
+  EXPECT_FALSE(IsValidURLScheme("javascript"));
+}
+
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
