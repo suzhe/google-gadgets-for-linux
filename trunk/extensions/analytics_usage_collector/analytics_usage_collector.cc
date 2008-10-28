@@ -34,11 +34,11 @@ static const char kFirstUseTimeOptionPrefix[] = "collector-first-use";
 static const char kLastUseTimeOptionPrefix[] = "collector-last-use";
 
 // TODO: Config?
-static const char kPlatformUsageAccount[] = "UA-6007037-2";
+static const char kPlatformUsageAccount[] = "UA-6103715-1";
 static const char kPlatformFirstUsePing[] = "/firstuse/";
 static const char kPlatformUsagePing[] = "/usage/";
 
-static const char kGadgetsUsageAccount[] = "UA-6007016-2";
+static const char kGadgetsUsageAccount[] = "UA-6103720-1";
 static const char kGadgetInstallPingPrefix[] = "/gadget-install/";
 static const char kGadgetUninstallPingPrefix[] = "/gadget-uninstall/";
 static const char kGadgetUsagePingPrefix[] = "/gadget-usage/";
