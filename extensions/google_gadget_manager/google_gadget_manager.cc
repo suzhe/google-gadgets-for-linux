@@ -1036,7 +1036,7 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
       browser_gadget_ = NULL;
     }
   }
-    
+
   if (!browser_gadget_) {
     Permissions permissions;
     permissions.SetGranted(Permissions::ALL_ACCESS, true);
