@@ -508,7 +508,7 @@ class ContentPolicy : public nsIContentPolicy {
         request_origin->GetSpec(origin_spec);
         if (!origin_spec.Equals(nsCString("about:blank")) &&
             !origin_spec.Equals(url_spec) &&
-            !url_scheme.Equals("javascript")) {
+            !url_scheme.Equals(nsCString("javascript"))) {
           PRBool is_loading = PR_FALSE;
           int browser_id = FindBrowserIdByContentPolicyContext(context,
                                                                &is_loading);

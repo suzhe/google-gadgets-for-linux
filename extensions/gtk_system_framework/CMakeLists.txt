@@ -17,6 +17,11 @@
 IF(GGL_BUILD_LIBGGADGET_GTK)
 
 APPLY_CONFIG(GTK2)
+
+IF(RSVG_FOUND)
+  APPLY_CONFIG(RSVG)
+ENDIF(RSVG_FOUND)
+
 ADD_MODULE(gtk-system-framework gtk_system_framework.cc)
 TARGET_LINK_LIBRARIES(gtk-system-framework
   ggadget-gtk${GGL_EPOCH}
