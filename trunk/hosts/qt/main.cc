@@ -64,8 +64,7 @@ static const char *kGlobalExtensions[] = {
   "qtwebkit-browser-element",
   "qt-system-framework",
   "qt-edit-element",
-// gst and Qt may not work together.
-//  "gst-audio-framework",
+  "gst-audio-framework",
   "gst-video-element",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
