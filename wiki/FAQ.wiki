@@ -38,3 +38,8 @@ or
   all_proxy=http://yourproxy.com:8080
 }}}
 Replace yourproxy.com with your proxy address and 8080 with your proxy port.
+
+You can also put the user name and password into the proxy URL like the following if the proxy server requires authentication:
+{{{
+  all_proxy=http://username:password@yourproxy.com:8080
+}}}
