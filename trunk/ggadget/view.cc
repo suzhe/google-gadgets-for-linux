@@ -536,9 +536,13 @@ class View::Impl {
     Event::Type type = event.GetType();
     double opacity;
 
-    // Don't handle the mouse event if the pixel under the mouse pointer is
-    // fully transparent and there is no element grabbing the mouse.
-    if (type != Event::EVENT_MOUSE_OUT && !grabmouse_element_.Get() &&
+    // Main views don't handle the mouse event if the pixel under the mouse
+    // pointer is fully transparent and there is no element grabbing the mouse.
+    // Options views and details views don't have this feature because they
+    // look opaque.
+    if (view_host_ &&
+        view_host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN &&
+        type != Event::EVENT_MOUSE_OUT && !grabmouse_element_.Get() &&
         enable_cache_ && canvas_cache_ && canvas_cache_->GetPointValue(
             event.GetX(), event.GetY(), NULL, &opacity) && opacity == 0) {
       // Send out fake mouse out event if the pixel is fully transparent and
