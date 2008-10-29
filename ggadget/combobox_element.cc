@@ -46,7 +46,8 @@ class Droplist : public ListBoxElement {
   Droplist(ComboBoxElement *combobox)
       : ListBoxElement(combobox->GetView(), "listbox", ""),
         combobox_(combobox),
-        mouse_selection_mode_(false) {
+        mouse_selection_mode_(false),
+        item_over_color_(ListBoxElement::GetItemOverColor()) {
     SetParentElement(combobox);
   }
 

@@ -61,6 +61,7 @@ EditElementBase::EditElementBase(View *view, const char *name)
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);
+  SetCursor(ViewInterface::CURSOR_IBEAM);
 }
 
 void EditElementBase::DoClassRegister() {

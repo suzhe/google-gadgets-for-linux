@@ -606,8 +606,12 @@ bool Elements::RemoveElement(BasicElement *element) {
 
 void Elements::RemoveAllElements() {
   impl_->RemoveAllElements();
-  if (impl_->element_removed_)
-    impl_->owner_->QueueDraw();
+  if (impl_->element_removed_) {
+    if (impl_->owner_)
+      impl_->owner_->QueueDraw();
+    else
+      impl_->view_->QueueDraw();
+  }
 }
 
 void Elements::Layout() {
