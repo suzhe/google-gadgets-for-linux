@@ -35,13 +35,14 @@ class Wireless : public WirelessInterface {
   virtual bool EnumerationSupported() const;
 
   virtual int GetAPCount() const;
-  virtual const WirelessAccessPointInterface *GetWirelessAccessPoint(
-      int index) const;
   virtual WirelessAccessPointInterface *GetWirelessAccessPoint(int index);
 
   virtual std::string GetName() const;
   virtual std::string GetNetworkName() const;
   virtual int GetSignalStrength() const;
+  virtual void ConnectAP(const char *ap_name, Slot1<void, bool> *callback);
+  virtual void DisconnectAP(const char *ap_name, Slot1<void, bool> *callback);
+
  private:
   class Impl;
   Impl *impl_;

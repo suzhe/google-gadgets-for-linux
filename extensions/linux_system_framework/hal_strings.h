@@ -87,21 +87,6 @@ const char kHalCapabilityInputMouse[]           = "input.mouse";
 
 const char kHalSignalPropertyModified[]         = "PropertyModified";
 
-const char kNetworkManagerDBusName[]       = "org.freedesktop.NetworkManager";
-const char kNetworkManagerObjectPath[]     = "/org/freedesktop/NetworkManager";
-const char kNetworkManagerInterface[]      = "org.freedesktop.NetworkManager";
-const char kNetworkManagerDeviceInterface[]  = "org.freedesktop.NetworkManager.Devices";
-
-const char kNetworkManagerInfoDBusName[]   = "org.freedesktop.NetworkManagerInfo";
-const char kNetworkManagerInfoObjectPath[] = "/org/freedesktop/NetworkManagerInfo";
-const char kNetworkManagerInfoInterface[]  = "org.freedesktop.NetworkManagerInfo";
-
-const char kNetworkManagerMethodGetDevices[]    = "getDevices";
-const char kNetworkManagerMethodGetProperties[] = "getProperties";
-const char kNetworkManagerMethodSetActive[]     = "setActiveDevice";
-const char kNetworkManagerMethodSetWireless[]   = "setWirelessEnabled";
-const char kNetworkManagerMethodGetWireless[]   = "getWirelessEnabled";
-
 } // namespace linux_system
 } // namespace framework
 } // namespace ggadget

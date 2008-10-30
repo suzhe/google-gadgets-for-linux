@@ -26,6 +26,8 @@ limitations under the License.
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 
+#define DBUS_VERBOSE_LOG
+
 namespace ggadget {
 namespace dbus {
 
@@ -1374,7 +1376,9 @@ class DBusMainLoopClosure::Impl {
    public:
     DBusDispatchCallback(Impl *impl) : impl_(impl) { }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("Dispatch DBus connection.");
+#endif
       // Only dispatch once each time.
       int status = dbus_connection_dispatch(impl_->connection_);
 
@@ -1396,23 +1400,39 @@ class DBusMainLoopClosure::Impl {
   class DBusWatchCallback : public WatchCallbackInterface {
    public:
     DBusWatchCallback(Impl *impl, DBusWatch *watch)
-      : impl_(impl), watch_(watch), read_id_(-1), write_id_(-1) {
+      : impl_(impl), watch_(watch),
+        read_id_(-1), write_id_(-1), refcount_(1) {
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Create DBusWatchCallback %p, watch %p", this, watch_);
+#endif
       SetEnabled(dbus_watch_get_enabled(watch));
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      ASSERT(impl_);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == read_id_ || watch_id == write_id_);
-      DLOG("Call DBusWatchCallback, watch id: %d (%s)",
-           watch_id, (watch_id == read_id_ ? "read" : "write"));
+      ASSERT(refcount_ > 0);
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Call DBusWatchCallback %p, watch %p, watch id: %d (%s)",
+           this, watch_, watch_id, (watch_id == read_id_ ? "read" : "write"));
+#endif
 
-      if (!dbus_watch_get_enabled(watch_))
+      if (!dbus_watch_get_enabled(watch_)) {
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Don't call disabled DBusWatchCallback %p, watch %p",
+             this, watch_);
+#endif
         return true;
+      }
 
       int flags =
           (watch_id == read_id_ ? DBUS_WATCH_READABLE : DBUS_WATCH_WRITABLE);
 
       dbus_watch_handle(watch_, flags);
       impl_->CheckDispatchStatus();
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("End call DBusWatchCallback %p, watch %p", this, watch_);
+#endif
       // Keep this watch until RemoveWatch() or SetEnabled() is called
       // explicitly.
       return true;
@@ -1424,6 +1444,7 @@ class DBusMainLoopClosure::Impl {
         read_id_ = -1;
       else if (write_id_ == watch_id)
         write_id_ = -1;
+      Unref();
     }
 
     void SetEnabled(bool enabled) {
@@ -1434,15 +1455,25 @@ class DBusMainLoopClosure::Impl {
 #endif
       int flags = dbus_watch_get_flags(watch_);
       if (enabled) {
-        if ((flags & DBUS_WATCH_READABLE) && read_id_ <= 0)
+        if ((flags & DBUS_WATCH_READABLE) && read_id_ <= 0) {
           read_id_ = impl_->main_loop_->AddIOReadWatch(fd, this);
-        if ((flags & DBUS_WATCH_WRITABLE) && write_id_ <= 0)
+          Ref();
+        }
+        if ((flags & DBUS_WATCH_WRITABLE) && write_id_ <= 0) {
           write_id_ = impl_->main_loop_->AddIOWriteWatch(fd, this);
-        DLOG("Enable DBus watch, fd:%d, flag:%d, rid:%d, wid:%d",
-             fd, flags, read_id_, write_id_);
+          Ref();
+        }
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Enable DBusWatchCallback %p, watch %p, "
+             "fd:%d, flag:%d, rid:%d, wid:%d",
+             this, watch_, fd, flags, read_id_, write_id_);
+#endif
       } else {
-        DLOG("Disable DBus watch, fd:%d, flag:%d, rid:%d, wid:%d",
-             fd, flags, read_id_, write_id_);
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Disable DBusWatchCallback %p, watch %p, "
+             "fd:%d, flag:%d, rid:%d, wid:%d",
+             this, watch_, fd, flags, read_id_, write_id_);
+#endif
         if (read_id_ > 0)
           impl_->main_loop_->RemoveWatch(read_id_);
         if (write_id_ > 0)
@@ -1451,33 +1482,66 @@ class DBusMainLoopClosure::Impl {
     }
     void Remove() {
       SetEnabled(false);
-      delete this;
+      Unref();
     }
 
    private:
+    void Ref() {
+      ASSERT(refcount_ > 0);
+      ++refcount_;
+    }
+    void Unref() {
+      ASSERT(refcount_ > 0);
+      --refcount_;
+      if (refcount_ <= 0)
+        delete this;
+    }
     virtual ~DBusWatchCallback() {
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Destroy DBusWatchCallback %p, watch %p", this, watch_);
+#endif
     }
 
     Impl *impl_;
     DBusWatch *watch_;
     int read_id_;
     int write_id_;
+    int refcount_;
   };
 
   // watch callback for handling dbus timeout.
   class DBusTimeoutCallback : public WatchCallbackInterface {
    public:
     DBusTimeoutCallback(Impl *impl, DBusTimeout* timeout)
-      : impl_(impl), timeout_(timeout), watch_id_(-1) {
+      : impl_(impl), timeout_(timeout), watch_id_(-1), refcount_(1) {
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Create DBusTimeoutCallback %p, timeout %p", this, timeout_);
+#endif
       SetEnabled(dbus_timeout_get_enabled(timeout));
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       ASSERT(impl_);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == watch_id_);
-      DLOG("Call DBusTimeoutCallback, watch id: %d", watch_id);
+      ASSERT(refcount_ > 0);
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Call DBusTimeoutCallback %p, timeout %p, watch id: %d",
+           this, timeout_, watch_id_);
+#endif
+
+      if (!dbus_timeout_get_enabled(timeout_)) {
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Don't call disabled DBusTimeoutCallback %p, timeout_ %p",
+             this, timeout_);
+#endif
+        return true;
+      }
+
       dbus_timeout_handle(timeout_);
       impl_->CheckDispatchStatus();
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("End call DBusTimeoutCallback %p, timeout %p", this, timeout_);
+#endif
       // Keep this watch until RemoveWatch() or SetEnabled() is called
       // explicitly.
       return true;
@@ -1486,29 +1550,51 @@ class DBusMainLoopClosure::Impl {
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == watch_id_);
       watch_id_ = -1;
+      Unref();
     }
     void SetEnabled(bool enabled) {
       int interval = dbus_timeout_get_interval(timeout_);
       if (enabled && watch_id_ <= 0) {
         watch_id_ = impl_->main_loop_->AddTimeoutWatch(interval, this);
-        DLOG("Enable DBus timeout, id:%d, interval:%d", watch_id_, interval);
+        Ref();
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Enable DBusTimeoutCallback %p, timeout %p, id:%d, interval:%d",
+             this, timeout_, watch_id_, interval);
+#endif
       } else if (!enabled && watch_id_ > 0) {
-        DLOG("Disable DBus timeout, id:%d, interval:%d", watch_id_, interval);
+#ifdef DBUS_VERBOSE_LOG
+        DLOG("Disable DBusTimeoutCallback %p, timeout %p, id:%d, interval:%d",
+             this, timeout_, watch_id_, interval);
+#endif
         impl_->main_loop_->RemoveWatch(watch_id_);
       }
     }
     void Remove() {
       SetEnabled(false);
-      delete this;
+      Unref();
     }
 
    private:
+    void Ref() {
+      ASSERT(refcount_ > 0);
+      ++refcount_;
+    }
+    void Unref() {
+      ASSERT(refcount_ > 0);
+      --refcount_;
+      if (refcount_ <= 0)
+        delete this;
+    }
     virtual ~DBusTimeoutCallback() {
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("Destroy DBusTimeoutCallback %p, timeout %p", this, timeout_);
+#endif
     }
 
     Impl *impl_;
     DBusTimeout *timeout_;
     int watch_id_;
+    int refcount_;
   };
 
  public:
@@ -1557,21 +1643,27 @@ class DBusMainLoopClosure::Impl {
   static void DispatchStatus(DBusConnection *connection,
                              DBusDispatchStatus new_status,
                              void *data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DispatchStatus");
+#endif
     Impl *impl = reinterpret_cast<Impl*>(data);
     ASSERT(impl);
     impl->CheckDispatchStatus();
   }
 
   static void WakeUpMain(void *data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus wake up main loop.");
+#endif
     Impl *impl = reinterpret_cast<Impl*>(data);
     ASSERT(impl);
     impl->main_loop_->WakeUp();
   }
 
   static dbus_bool_t AddWatch(DBusWatch *watch, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus add watch.");
+#endif
     Impl *impl = reinterpret_cast<Impl*>(data);
     ASSERT(impl);
     DBusWatchCallback *callback =
@@ -1581,7 +1673,9 @@ class DBusMainLoopClosure::Impl {
   }
 
   static void RemoveWatch(DBusWatch* watch, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus remove watch.");
+#endif
     DBusWatchCallback *callback =
         reinterpret_cast<DBusWatchCallback *>(dbus_watch_get_data(watch));
     if (callback)
@@ -1589,7 +1683,9 @@ class DBusMainLoopClosure::Impl {
   }
 
   static void WatchToggled(DBusWatch* watch, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus toggle watch.");
+#endif
     DBusWatchCallback *callback =
         reinterpret_cast<DBusWatchCallback *>(dbus_watch_get_data(watch));
     if (callback)
@@ -1597,7 +1693,9 @@ class DBusMainLoopClosure::Impl {
   }
 
   static dbus_bool_t AddTimeout(DBusTimeout *timeout, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus add timeout.");
+#endif
     Impl *impl = reinterpret_cast<Impl*>(data);
     ASSERT(impl);
     DBusTimeoutCallback *callback =
@@ -1607,7 +1705,9 @@ class DBusMainLoopClosure::Impl {
   }
 
   static void RemoveTimeout(DBusTimeout *timeout, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus remove timeout.");
+#endif
     DBusTimeoutCallback *callback =
         reinterpret_cast<DBusTimeoutCallback *>(dbus_timeout_get_data(timeout));
     if (callback)
@@ -1615,7 +1715,9 @@ class DBusMainLoopClosure::Impl {
   }
 
   static void TimeoutToggled(DBusTimeout *timeout, void* data) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("DBus toggle timeout.");
+#endif
     DBusTimeoutCallback *callback =
         reinterpret_cast<DBusTimeoutCallback *>(dbus_timeout_get_data(timeout));
     if (callback)

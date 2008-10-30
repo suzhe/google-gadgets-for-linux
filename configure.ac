@@ -688,6 +688,9 @@ if test x$has_network_manager != xno; then
   if test x$has_network_manager != xold; then
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_NEW_NETWORK_MANAGER_API"
   fi
+else
+  AC_MSG_WARN([Development package of NetworkManager is not installed,]
+	      [network and wireless support of framework.system won't be built.])
 fi
 
 # Check gtkmozembed

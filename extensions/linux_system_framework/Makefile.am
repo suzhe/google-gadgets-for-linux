@@ -33,7 +33,6 @@ noinst_HEADERS		= file_system.h \
 			  process.h \
 			  user.h \
 			  wireless.h \
-			  wireless_access_point.h \
 			  hal_strings.h
 
 noinst_LTLIBRARIES	= libggadget-linux.la
@@ -54,8 +53,7 @@ libggadget_linux_la_SOURCES += \
 if GGL_HAVE_NETWORK_MANAGER
 libggadget_linux_la_SOURCES += \
 			  network.cc \
-			  wireless.cc \
-			  wireless_access_point.cc
+			  wireless.cc
 endif
 endif
 
