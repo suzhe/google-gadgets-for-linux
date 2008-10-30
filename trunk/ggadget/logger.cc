@@ -74,6 +74,8 @@ static void DoLog(LogLevel level, const char *file, int line,
   } else {
     printf("%s:%d: %s\n", file, line, message.c_str());
   }
+  // Prints out the log message immediately.
+  fflush(stdout);
   in_logger = false;
 }
 

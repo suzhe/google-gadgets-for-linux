@@ -70,7 +70,8 @@ smjs_script_runtime_la_CPPFLAGS = \
 smjs_script_runtime_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  libggadget-smjs.la \
-			  $(LIBMOZJS_LIBS)
+			  $(LIBMOZJS_LIBS) \
+			  -ldl
 
 smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \

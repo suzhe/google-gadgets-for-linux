@@ -23,6 +23,20 @@ namespace ggadget {
 namespace framework {
 namespace linux_system {
 
+#ifdef NM_DEVICE_TYPE_WIFI
+static const int kDeviceTypeWifi = NM_DEVICE_TYPE_WIFI;
+#else
+static const int kDeviceTypeWifi = DEVICE_TYPE_802_11_WIRELESS;
+#endif
+
+#ifdef NM_DEVICE_TYPE_ETHERNET
+static const int kDeviceTypeEthernet = NM_DEVICE_TYPE_ETHERNET;
+#else
+static const int kDeviceTypeEthernet = DEVICE_TYPE_802_3_ETHERNET;
+#endif
+
+static const int kDeviceTypeUnknown = 0;
+
 Network::Network()
   : is_new_api_(false),
     is_online_(true), // treats online by default
@@ -115,7 +129,7 @@ void Network::Update() {
                                                  dev_interface);
       if (dev) {
         bool active = false;
-        int type = DEVICE_TYPE_UNKNOWN;
+        int type = kDeviceTypeUnknown;
         if (is_new_api_) {
           int state;
           if (dev->GetProperty("State").v().ConvertToInt(&state))
@@ -141,10 +155,10 @@ void Network::Update() {
         delete dev;
 
         if (active) {
-          if (type == DEVICE_TYPE_802_3_ETHERNET) {
+          if (type == kDeviceTypeEthernet) {
             connection_type_ = CONNECTION_TYPE_802_3;
             physcial_media_type_ = PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
-          } else if (type == DEVICE_TYPE_802_11_WIRELESS) {
+          } else if (type == kDeviceTypeWifi) {
             connection_type_ = CONNECTION_TYPE_NATIVE_802_11;
             physcial_media_type_ = PHYSICAL_MEDIA_TYPE_NATIVE_802_11;
           } else {

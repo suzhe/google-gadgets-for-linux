@@ -61,7 +61,8 @@ gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
 				  @GTKMOZEMBED_LIBS@ \
 				  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
-				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+				  -ldl
 
 gtkmoz_browser_child_LDFLAGS	= @GTKMOZEMBED_LDFLAGS@
 

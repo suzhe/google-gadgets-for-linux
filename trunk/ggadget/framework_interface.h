@@ -352,6 +352,13 @@ class WirelessInterface {
 
   /** Get the wireless connection's signal strength, in percentage. */
   virtual int GetSignalStrength() const = 0;
+
+  /** Connects to a specific access point. */
+  virtual void ConnectAP(const char *ap_name, Slot1<void, bool> *callback) = 0;
+
+  /** Disconnects from a specific access point. */
+  virtual void DisconnectAP(const char *ap_name,
+                            Slot1<void, bool> *callback) = 0;
 };
 
 

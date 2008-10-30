@@ -266,6 +266,16 @@ void KillServer() {
   dbus_error_free(&error);
 }
 
+class ErrorValue {
+ public:
+  bool Callback(int id, const Variant &value) {
+    DLOG("Error received.");
+    EXPECT_EQ(-1, id);
+    g_mainloop->Quit();
+    return true;
+  }
+};
+
 class IntValue {
  public:
   IntValue() : value_(0) {
@@ -273,7 +283,7 @@ class IntValue {
   ~IntValue() {}
   bool Callback(int id, const Variant &value) {
     DLOG("id: %d, value: %s", id, value.Print().c_str());
-    ASSERT(value.type() == Variant::TYPE_INT64);
+    EXPECT_EQ(Variant::TYPE_INT64, value.type());
     int64_t v = VariantValue<int64_t>()(value);
     value_ = static_cast<int>(v);
     g_mainloop->Quit();
@@ -290,7 +300,8 @@ class BoolValue {
   void Set(bool v) { value_ = v; }
   bool value() const { return value_; }
   bool Callback(int id, const Variant &value) {
-    ASSERT(value.type() == Variant::TYPE_BOOL);
+    DLOG("id: %d, value: %s", id, value.Print().c_str());
+    EXPECT_EQ(Variant::TYPE_BOOL, value.type());
     value_ = VariantValue<bool>()(value);
     g_mainloop->Quit();
     return true;
@@ -303,7 +314,8 @@ class StringValue {
  public:
   std::string value() const { return value_; }
   bool Callback(int id, const Variant &value) {
-    ASSERT(value.type() == Variant::TYPE_STRING);
+    DLOG("id: %d, value: %s", id, value.Print().c_str());
+    EXPECT_EQ(Variant::TYPE_STRING, value.type());
     value_ = VariantValue<std::string>()(value);
     g_mainloop->Quit();
     return true;
@@ -338,14 +350,13 @@ void RegisterSignalHandler() {
 
 TEST(DBusProxy, AsyncCall) {
   DBusProxy *proxy = DBusProxy::NewSessionProxy(kName, kPath, kInterface);
+  ErrorValue err;
   IntValue obj;
-  //This timeout test doesn't work on dbus 1.2.1, seems that it's a bug of dbus
-  //library, which damages the memory when timeout expired.
-  //EXPECT_TRUE(proxy->CallMethod("Hello", false, 200,
-  //                              NewSlot(&obj, &IntValue::Callback),
-  //                              MESSAGE_TYPE_INVALID));
-  //g_mainloop->Run();
-  //EXPECT_EQ(0, obj.value());
+  // Timeout test.
+  EXPECT_TRUE(proxy->CallMethod("Hello", false, 200,
+                                NewSlot(&err, &ErrorValue::Callback),
+                                MESSAGE_TYPE_INVALID));
+  g_mainloop->Run();
   EXPECT_TRUE(proxy->CallMethod("Hello", false, 1000,
                                 NewSlot(&obj, &IntValue::Callback),
                                 MESSAGE_TYPE_INVALID));

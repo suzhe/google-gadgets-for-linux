@@ -176,9 +176,12 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
   }
 
   ResultVariant result = ResultVariant(Variant(GetReturnType()));
-  for (Impl::Connections::const_iterator it = impl_->connections_.begin();
-       !*death_flag_ptr && it != impl_->connections_.end(); ++it) {
-    Connection *connection = *it;
+
+  // Can't use iterator here, because new connection might be added during the
+  // loop, which may invalidate the iterator.
+  size_t n_connections = impl_->connections_.size();
+  for (size_t i = 0; i < n_connections && !*death_flag_ptr; ++i) {
+    Connection *connection = impl_->connections_[i];
     if (connection && connection->slot_) {
       result = connection->slot_->Call(NULL, argc, argv);
     }

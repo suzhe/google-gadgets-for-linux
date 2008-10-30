@@ -28,7 +28,8 @@ LDADD			= ../libggadget-smjs.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/editline/libeditline.la \
-			  $(LIBMOZJS_LIBS)
+			  $(LIBMOZJS_LIBS) \
+			  -ldl
 
 check_PROGRAMS		= cross_context_test \
 			  dom_test_shell \
