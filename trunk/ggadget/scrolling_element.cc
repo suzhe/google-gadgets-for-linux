@@ -236,7 +236,8 @@ void ScrollingElement::SetYLineStep(int value) {
 
 EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                            BasicElement **fired_element,
-                                           BasicElement **in_element) {
+                                           BasicElement **in_element,
+                                           ViewInterface::HitTest *hittest) {
   if (!direct && impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
     double new_x = event.GetX() - impl_->scrollbar_->GetPixelX();
     double new_y = event.GetY() - impl_->scrollbar_->GetPixelY();
@@ -245,14 +246,14 @@ EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
       MouseEvent new_event(event);
       new_event.SetX(new_x);
       new_event.SetY(new_y);
-      return impl_->scrollbar_->OnMouseEvent(new_event, direct,
-                                             fired_element, in_element);
+      return impl_->scrollbar_->OnMouseEvent(new_event, direct, fired_element,
+                                             in_element, hittest);
     }
   }
 
   ElementHolder self_holder(this);
-  EventResult result = BasicElement::OnMouseEvent(event, direct,
-                                                  fired_element, in_element);
+  EventResult result = BasicElement::OnMouseEvent(event, direct, fired_element,
+                                                  in_element, hittest);
   if (result == EVENT_RESULT_UNHANDLED &&
       event.GetType() == Event::EVENT_MOUSE_WHEEL &&
       impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {

@@ -312,10 +312,6 @@ static const HitTestCursorTypeMapping kHitTestCursorTypeMappings[] = {
 };
 
 GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
-  if (type < 0) return NULL;
-
-  DLOG("Create gtk cursor for type: %d, hittest: %d", type, hittest);
-
   GdkCursorType gdk_type = GDK_ARROW;
   // Try match with hittest first.
   for (size_t i = 0; i < arraysize(kHitTestCursorTypeMappings); ++i) {
@@ -334,6 +330,9 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
       }
     }
   }
+
+  DLOG("Create gtk cursor for type: %d, hittest: %d, gdk: %d",
+       type, hittest, gdk_type);
 
   return gdk_cursor_new(gdk_type);
 }

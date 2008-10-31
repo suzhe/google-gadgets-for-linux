@@ -346,9 +346,11 @@ void ViewElement::DoDraw(CanvasInterface *canvas) {
 EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
                                       bool direct,
                                       BasicElement **fired_element,
-                                      BasicElement **in_element) {
+                                      BasicElement **in_element,
+                                      ViewInterface::HitTest *hittest) {
   if (!impl_->child_view_)
-    return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+    return BasicElement::OnMouseEvent(event, direct, fired_element,
+                                      in_element, hittest);
 
   // child view must process the mouse event first, so that the hittest value
   // can be updated correctly.
@@ -362,8 +364,8 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
     result1 = impl_->child_view_->OnMouseEvent(event);
   }
 
-  EventResult result2 = BasicElement::OnMouseEvent(event, direct,
-                                                   fired_element, in_element);
+  EventResult result2 = BasicElement::OnMouseEvent(event, direct, fired_element,
+                                                   in_element, hittest);
 
   return std::max(result1, result2);
 }

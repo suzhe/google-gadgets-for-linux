@@ -764,7 +764,8 @@ class BasicElement::Impl {
  public:
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
-                           BasicElement **in_element) {
+                           BasicElement **in_element,
+                           ViewInterface::HitTest *hittest) {
     Event::Type type = event.GetType();
     ElementHolder this_element_holder(owner_);
 
@@ -772,24 +773,31 @@ class BasicElement::Impl {
 
     // Always process direct messages because the sender wants this element
     // to process.
+    // Test visible_ and opacity_ first, to prevent from calling GetHitTest()
+    // every time.
+    if (!direct && (!visible_ || opacity_ == 0))
+      return EVENT_RESULT_UNHANDLED;
+
+    ViewInterface::HitTest this_hittest =
+        owner_->GetHitTest(event.GetX(), event.GetY());
+
     // GetHitTest() might be overrode.
     // FIXME: Verify if the hittest logic is correct.
-    if (!direct && (!visible_ || opacity_ == 0 ||
-         owner_->GetHitTest(event.GetX(), event.GetY()) ==
-           ViewInterface::HT_TRANSPARENT)) {
+    if (!direct && this_hittest == ViewInterface::HT_TRANSPARENT)
       return EVENT_RESULT_UNHANDLED;
-    }
 
     if (!direct && children_) {
       // Send to the children first.
       EventResult result = children_->OnMouseEvent(event, fired_element,
-                                                   in_element);
+                                                   in_element, hittest);
       if (!this_element_holder.Get() || *fired_element)
         return result;
     }
 
-    if (!*in_element)
+    if (!*in_element) {
       *in_element = owner_;
+      *hittest = this_hittest;
+    }
 
     if (!enabled_) {
       return EVENT_RESULT_UNHANDLED;
@@ -860,6 +868,8 @@ class BasicElement::Impl {
       result = std::max(result, owner_->HandleMouseEvent(event));
     *fired_element = this_element_holder.Get();
     *in_element = in_element_holder.Get();
+    // No need to reset hittest even if in_element get destroyed. In this case,
+    // hittest value is undefined.
     return result;
   }
 
@@ -1771,8 +1781,9 @@ void BasicElement::MarkRedraw() {
 
 EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                        BasicElement **fired_element,
-                                       BasicElement **in_element) {
-  return impl_->OnMouseEvent(event, direct, fired_element, in_element);
+                                       BasicElement **in_element,
+                                       ViewInterface::HitTest *hittest) {
+  return impl_->OnMouseEvent(event, direct, fired_element, in_element, hittest);
 }
 
 EventResult BasicElement::OnDragEvent(const DragEvent &event, bool direct,
