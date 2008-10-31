@@ -41,7 +41,6 @@ IF(GGL_HAVE_NETWORK_MANAGER)
 LIST(APPEND SRCS
   network.cc
   wireless.cc
-  wireless_access_point.cc
 )
 ENDIF(GGL_HAVE_NETWORK_MANAGER)
 
