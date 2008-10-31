@@ -44,14 +44,16 @@ namespace qt {
 
 class QtViewHost::Impl {
  public:
-  Impl(ViewHostInterface::Type type,
+  Impl(QtViewHost *owner,
+       ViewHostInterface::Type type,
        double zoom,
        bool composite,
        bool decorated,
        bool record_states,
        int debug_mode,
        QWidget *parent)
-    : view_(NULL),
+    : owner_(owner),
+      view_(NULL),
       type_(type),
       widget_(NULL),
       window_(NULL),
@@ -78,16 +80,14 @@ class QtViewHost::Impl {
 
     Detach();
 
-    if (qt_obj_) delete qt_obj_;
+    delete qt_obj_;
   }
 
   void Detach() {
     SaveWindowStates();
     view_ = NULL;
-    if (window_)
-      delete window_;
-    if (dialog_)
-      delete dialog_;
+    delete window_;
+    delete dialog_;
     window_ = widget_ = NULL;
     dialog_ = NULL;
     if (feedback_handler_) {
@@ -287,6 +287,7 @@ class QtViewHost::Impl {
     }
   }
 
+  QtViewHost *owner_;
   ViewInterface *view_;
   ViewHostInterface::Type type_;
   QtViewWidget *widget_;
@@ -321,7 +322,15 @@ void QtViewHostObject::OnViewWidgetClose(QObject *obj) {
   if (owner_->type_ == ViewHostInterface::VIEW_HOST_DETAILS)
     owner_->HandleDetailsViewClose();
   owner_->window_ = NULL;
-  owner_->widget_ = NULL;
+  // Quick and dirty hack:
+  // user can close a view through close button provided by gadget or through
+  // ways provided by windows system. The latter will come here without
+  // calling CloseView. So call it here manually.
+  // owner_->widget_ is NULL if we come here through CloseView
+  if (owner_->widget_) {
+    owner_->widget_ = NULL;
+    owner_->owner_->CloseView();
+  }
 }
 
 void QtViewHostObject::OnShow(bool flag) {
@@ -331,7 +340,8 @@ void QtViewHostObject::OnShow(bool flag) {
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
                        double zoom, bool composite, bool decorated,
                        bool record_states, int debug_mode, QWidget *parent)
-  : impl_(new Impl(type, zoom, composite, decorated, record_states, debug_mode, parent)) {
+  : impl_(new Impl(this, type, zoom, composite,
+                   decorated, record_states, debug_mode, parent)) {
 }
 
 QtViewHost::~QtViewHost() {
@@ -429,9 +439,10 @@ bool QtViewHost::ShowView(bool modal, int flags,
 void QtViewHost::CloseView() {
   if (impl_->window_) {
     impl_->SaveWindowStates();
+    // must set widget_ to NULL before delete window_
+    impl_->widget_ = NULL;
     delete impl_->window_;
     impl_->window_ = NULL;
-    impl_->widget_ = NULL;
   }
   ASSERT(!impl_->widget_);
 }
