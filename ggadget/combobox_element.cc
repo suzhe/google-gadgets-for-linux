@@ -605,10 +605,13 @@ void ComboBoxElement::Layout() {
 
 EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                           BasicElement **fired_element,
-                                          BasicElement **in_element) {
-  if (direct)
+                                          BasicElement **in_element,
+                                          ViewInterface::HitTest *hittest) {
+  if (direct) {
     // In case that mouse clicked in area other than the edit and drop list.
-    return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+    return BasicElement::OnMouseEvent(event, direct, fired_element,
+                                      in_element, hittest);
+  }
 
   // From now on, draws the mouse over item using itemOverColor.
   impl_->droplist_->SetMouseSelectionMode(true);
@@ -622,11 +625,11 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
     if (impl_->edit_ && y >= kEditMargin && x >= kEditMargin &&
         y_in_droplist < -kEditMargin &&
         x < impl_->edit_->GetPixelWidth() - kEditMargin) {
-      return impl_->edit_->OnMouseEvent(event, direct,
-                                        fired_element, in_element);
+      return impl_->edit_->OnMouseEvent(event, direct, fired_element,
+                                        in_element, hittest);
     }
-    return BasicElement::OnMouseEvent(event, direct,
-                                      fired_element, in_element);
+    return BasicElement::OnMouseEvent(event, direct, fired_element,
+                                      in_element, hittest);
   }
   if (!impl_->droplist_->IsVisible()) {
     // The mouse is in the listbox area while the listbox is invisible.
@@ -637,8 +640,8 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
   // Send event to the drop list.
   MouseEvent new_event(event);
   new_event.SetY(y_in_droplist);
-  return impl_->droplist_->OnMouseEvent(new_event, direct,
-                                        fired_element, in_element);
+  return impl_->droplist_->OnMouseEvent(new_event, direct, fired_element,
+                                        in_element, hittest);
 }
 
 EventResult ComboBoxElement::OnDragEvent(const DragEvent &event, bool direct,
@@ -718,7 +721,9 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
     case Event::EVENT_MOUSE_WHEEL:
       if (impl_->droplist_->IsVisible()) {
         BasicElement *dummy1, *dummy2;
-        r = impl_->droplist_->OnMouseEvent(event, true, &dummy1, &dummy2);
+        ViewInterface::HitTest dummy3;
+        r = impl_->droplist_->OnMouseEvent(event, true, &dummy1,
+                                           &dummy2, &dummy3);
       }
      break;
    default:

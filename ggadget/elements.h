@@ -22,6 +22,7 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/variant.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -245,11 +246,14 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *     @c NULL if no one.
    * @param[out] in_element the child element where the mouse is in (including
    *     disabled child elements, but not invisible child elements).
+   * @param[out] hittest result of this mouse event. It's the hittest value of
+   *     in_element, if there is no in_element, the return value is undefined.
    * @return result of event handling.
    */
   EventResult OnMouseEvent(const MouseEvent &event,
                            BasicElement **fired_element,
-                           BasicElement **in_element);
+                           BasicElement **in_element,
+                           ViewInterface::HitTest *hittest);
 
   /**
    * Handler of the drag and drop events.

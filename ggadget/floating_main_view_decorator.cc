@@ -102,7 +102,7 @@ class FloatingMainViewDecorator::Impl {
     }
     resize_border_->SetVisible(false);
     resize_border_->SetEnabled(false);
-    owner->InsertDecoratorElement(resize_border_, false);
+    owner->InsertDecoratorElement(resize_border_, true);
 
     // Setup zoom corner
     ImgElement *corner_img = new ImgElement(owner, NULL);

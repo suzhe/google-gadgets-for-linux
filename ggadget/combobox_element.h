@@ -88,7 +88,8 @@ class ComboBoxElement : public BasicElement {
 
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element);
+                                   BasicElement **in_element,
+                                   ViewInterface::HitTest *hittest);
   virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
                                   BasicElement **fired_element);
 

@@ -68,6 +68,8 @@ static const char kNMInterfaceSettings[] =
   "org.freedesktop.NetworkManagerSettings";
 static const char kNMInterfaceSettingsConnection[] =
   "org.freedesktop.NetworkManagerSettings.Connection";
+static const char kNMInterfaceSettingsSystem[] =
+  "org.freedesktop.NetworkManagerSettings.System";
 
 namespace ggadget {
 namespace framework {
@@ -553,7 +555,8 @@ class Wireless::Impl {
   Impl()
     : new_api_(false),
       device_(NULL),
-      network_manager_(NULL) {
+      network_manager_(NULL),
+      on_signal_connection_(NULL) {
     network_manager_ =
         DBusProxy::NewSystemProxy(kNMService, kNMPath, kNMInterface);
     if (!network_manager_) {
@@ -841,6 +844,73 @@ class Wireless::Impl {
     return std::string();
   }
 
+  /** Only for nm 0.7.x. */
+  static bool FindConnectionInSettings(DBusProxy *settings,
+                                       const std::string &ssid,
+                                       std::string *connection) {
+    StringVector connections;
+    DBusStringArrayReceiver receiver(&connections);
+    if (!settings->CallMethod("ListConnections", true, kDefaultDBusTimeout,
+                              receiver.NewSlot(), MESSAGE_TYPE_INVALID))
+      return false;
+
+    for (StringVector::iterator it = connections.begin();
+         it != connections.end(); ++it) {
+      DBusProxy *con =
+          DBusProxy::NewSystemProxy(settings->GetName(), *it,
+                                    kNMInterfaceSettingsConnection);
+      if (con) {
+        DBusScriptableReceiver receiver;
+        con->CallMethod("GetSettings", true, kDefaultDBusTimeout,
+                        receiver.NewSlot(), MESSAGE_TYPE_INVALID);
+        // con is not required anymore.
+        delete con;
+        std::string con_ssid = GetSSIDFromSettings(receiver.GetValue());
+        if (con_ssid == ssid) {
+          *connection = *it;
+          DLOG("A connection for access point %s has been found "
+               "in %s, path %s", ssid.c_str(), settings->GetName().c_str(),
+               it->c_str());
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Only for nm 0.7.x. This piece of code doesn't work yet, due to the
+   * PolicyKit issue. The AddConnection call will always fail due to lack of
+   * privilege.
+   */
+  static bool CreateNewConnectionInSettings(DBusProxy *settings,
+                                            const std::string &ssid) {
+    typedef SharedScriptable<0xa03f49b2cab5479a> ScriptableDict;
+    DBusProxy *sys = settings->NewInterfaceProxy(kNMInterfaceSettingsSystem);
+    if (sys) {
+      ScriptableDict *data = new ScriptableDict();
+      ScriptableDict *connection = new ScriptableDict();
+      ScriptableDict *wireless = new ScriptableDict();
+      ScriptableArray *ssid_array =
+          ScriptableArray::Create(ssid.begin(), ssid.end());
+      connection->RegisterVariantConstant("id", Variant("GGL Auto " + ssid));
+      connection->RegisterVariantConstant("type", Variant("802-11-wireless"));
+      wireless->RegisterVariantConstant("mode", Variant("infrastructure"));
+      wireless->RegisterVariantConstant("ssid", Variant(ssid_array));
+      data->RegisterVariantConstant("connection", Variant(connection));
+      data->RegisterVariantConstant("802-11-wireless", Variant(wireless));
+
+      data->Ref();
+      Variant argv[1] = { Variant(data) };
+      int id = sys->CallMethod("AddConnection", true, kDefaultDBusTimeout,
+                               NULL, 1, argv);
+      data->Unref();
+      delete sys;
+      return id != 0;
+    }
+    return false;
+  }
+
   /**
    * Only for nm 0.7.x, gets a connection for specific access point.
    * Currently there is no way to create default connection for an access point
@@ -862,34 +932,24 @@ class Wireless::Impl {
           DBusProxy::NewSystemProxy(kNMSettingsServices[i],
                                     kNMPathSettings,
                                     kNMInterfaceSettings);
-      StringVector connections;
-      DBusStringArrayReceiver receiver(&connections);
       if (settings) {
-        settings->CallMethod("ListConnections", true, kDefaultDBusTimeout,
-                             receiver.NewSlot(), MESSAGE_TYPE_INVALID);
-        // settings is not required anymore.
-        delete settings;
-        for (StringVector::iterator it = connections.begin();
-             it != connections.end(); ++it) {
-          DBusProxy *con =
-              DBusProxy::NewSystemProxy(kNMSettingsServices[i], *it,
-                                        kNMInterfaceSettingsConnection);
-          if (con) {
-            DBusScriptableReceiver settings;
-            con->CallMethod("GetSettings", true, kDefaultDBusTimeout,
-                            settings.NewSlot(), MESSAGE_TYPE_INVALID);
-            // con is not required anymore.
-            delete con;
-            std::string con_ssid = GetSSIDFromSettings(settings.GetValue());
-            if (con_ssid == ssid) {
+        if (FindConnectionInSettings(settings, ssid, connection)) {
+          *service = kNMSettingsServices[i];
+          delete settings;
+          return true;
+        }
+
+        // Only system settings has add connection method.
+        if (kNMSettingsServices[i] == kNMServiceSystemSettings) {
+          if (CreateNewConnectionInSettings(settings, ssid)) {
+            if (FindConnectionInSettings(settings, ssid, connection)) {
               *service = kNMSettingsServices[i];
-              *connection = *it;
-              DLOG("A connection for access point %s has been found in %s, path %s",
-                   ssid.c_str(), kNMSettingsServices[i], it->c_str());
+              delete settings;
               return true;
             }
           }
         }
+        delete settings;
       }
     }
 

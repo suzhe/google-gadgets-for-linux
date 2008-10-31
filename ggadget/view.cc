@@ -371,10 +371,12 @@ class View::Impl {
 
     BasicElement *temp, *temp1; // Used to receive unused output parameters.
     EventResult result = EVENT_RESULT_UNHANDLED;
+    ViewInterface::HitTest temp_hittest;
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE,
     // EVENT_MOUSE_UP and EVENT_MOUSE_CLICK events to it directly, until
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
     // left button down.
+    // FIXME: Is it necessary to update hittest_ when mouse is grabbing?
     if (grabmouse_element_.Get()) {
       if (grabmouse_element_.Get()->IsReallyEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
@@ -382,8 +384,8 @@ class View::Impl {
            type == Event::EVENT_MOUSE_CLICK)) {
         MouseEvent new_event(event);
         MapChildMouseEvent(event, grabmouse_element_.Get(), &new_event);
-        result = grabmouse_element_.Get()->OnMouseEvent(new_event, true,
-                                                        &temp, &temp1);
+        result = grabmouse_element_.Get()->OnMouseEvent(
+            new_event, true, &temp, &temp1, &temp_hittest);
         // Set correct mouse cursor.
         if (grabmouse_element_.Get()) {
           owner_->SetCursor(grabmouse_element_.Get()->GetCursor());
@@ -405,8 +407,8 @@ class View::Impl {
       if (mouseover_element_.Get()) {
         MouseEvent new_event(event);
         MapChildMouseEvent(event, mouseover_element_.Get(), &new_event);
-        result = mouseover_element_.Get()->OnMouseEvent(new_event, true,
-                                                        &temp, &temp1);
+        result = mouseover_element_.Get()->OnMouseEvent(
+            new_event, true, &temp, &temp1, &temp_hittest);
         mouseover_element_.Reset(NULL);
       }
       return result;
@@ -414,7 +416,7 @@ class View::Impl {
 
     BasicElement *fired_element = NULL;
     BasicElement *in_element = NULL;
-    ElementHolder fired_element_holder, in_element_holder;
+    ViewInterface::HitTest child_hittest = HT_CLIENT;
 
     // Dispatch the event to children normally,
     // unless popup is active and event is inside popup element.
@@ -425,10 +427,9 @@ class View::Impl {
         MapChildMouseEvent(event, popup_element_.Get(), &new_event);
         if (popup_element_.Get()->IsPointIn(new_event.GetX(),
                                             new_event.GetY())) {
-          result = popup_element_.Get()->OnMouseEvent(new_event,
-                                                      false, // NOT direct
-                                                      &fired_element,
-                                                      &in_element);
+          // Not direct.
+          result = popup_element_.Get()->OnMouseEvent(
+              new_event, false, &fired_element, &in_element, &child_hittest);
           outside_popup = false;
         }
       } else {
@@ -436,7 +437,8 @@ class View::Impl {
       }
     }
     if (outside_popup) {
-      result = children_.OnMouseEvent(event, &fired_element, &in_element);
+      result = children_.OnMouseEvent(event, &fired_element,
+                                      &in_element, &child_hittest);
       // The following might hit if a grabbed element is
       // turned invisible or disabled while under grab.
       if (type == Event::EVENT_MOUSE_DOWN && result != EVENT_RESULT_CANCELED) {
@@ -450,21 +452,20 @@ class View::Impl {
     if (!mouse_over_)
       return result;
 
-    fired_element_holder.Reset(fired_element);
-    in_element_holder.Reset(in_element);
+    ElementHolder in_element_holder(in_element);
 
-    if (fired_element_holder.Get() && type == Event::EVENT_MOUSE_DOWN &&
+    if (fired_element && type == Event::EVENT_MOUSE_DOWN &&
         (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
       // Start grabbing.
       grabmouse_element_.Reset(fired_element);
       // Focus is handled in BasicElement.
     }
 
-    if (fired_element_holder.Get() != mouseover_element_.Get()) {
+    if (fired_element != mouseover_element_.Get()) {
       BasicElement *old_mouseover_element = mouseover_element_.Get();
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
-      mouseover_element_.Reset(fired_element_holder.Get());
+      mouseover_element_.Reset(fired_element);
 
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
@@ -475,7 +476,7 @@ class View::Impl {
                                   event.GetModifier());
         MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
-                                            &temp, &temp1);
+                                            &temp, &temp1, &temp_hittest);
       }
 
       if (mouseover_element_.Get()) {
@@ -490,22 +491,12 @@ class View::Impl {
                                    event.GetModifier());
         MapChildMouseEvent(event, mouseover_element_.Get(), &mouseover_event);
         mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
-                                               &temp, &temp1);
+                                               &temp, &temp1, &temp_hittest);
       }
     }
 
     if (in_element_holder.Get()) {
-      double x, y;
-      in_element->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
-      // Gets the hit test value of the element currently pointed by mouse.
-      // It'll be used as the hit test value of the View.
-      // hittest_ must be set before calling SetCursor(), because ViewHost
-      // might want to get view's hittest value to help determine the correct
-      // cursor type.
-      // FIXME: Integrate GetHitTest into OnMouseEvent to prevent extra
-      // coordinate translation.
-      hittest_ = in_element->GetHitTest(x, y);
-      owner_->SetCursor(in_element->GetCursor());
+      hittest_ = child_hittest;
       if (type == Event::EVENT_MOUSE_MOVE &&
           in_element != tooltip_element_.Get()) {
         tooltip_element_.Reset(in_element);
@@ -514,8 +505,17 @@ class View::Impl {
     } else {
       // FIXME: If HT_NOWHERE is more suitable?
       hittest_ = ViewInterface::HT_TRANSPARENT;
-      owner_->SetCursor(CURSOR_DEFAULT);
       tooltip_element_.Reset(NULL);
+    }
+
+    // If in element has a special hittest value, then use its cursor instead
+    // of mouseover element's cursor.
+    if (hittest_ != HT_CLIENT && in_element_holder.Get()) {
+      owner_->SetCursor(in_element_holder.Get()->GetCursor());
+    } else if (mouseover_element_.Get()) {
+      owner_->SetCursor(mouseover_element_.Get()->GetCursor());
+    } else {
+      owner_->SetCursor(CURSOR_DEFAULT);
     }
 
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
@@ -1627,6 +1627,7 @@ class View::Impl {
   bool mouse_over_;
   int last_cursor_type_;
   ViewInterface::HitTest hittest_;
+  ViewInterface::HitTest last_hittest_;
 
   Signal0<void> on_destroy_signal_;
 
@@ -2049,8 +2050,10 @@ void View::SetTooltip(const char *tooltip) {
 }
 
 void View::SetCursor(int type) {
-  if (impl_->view_host_ && impl_->last_cursor_type_ != type) {
+  if (impl_->view_host_ && (impl_->last_cursor_type_ != type ||
+                            impl_->last_hittest_ != impl_->hittest_)) {
     impl_->last_cursor_type_ = type;
+    impl_->last_hittest_ = impl_->hittest_;
     impl_->view_host_->SetCursor(type);
   }
 }

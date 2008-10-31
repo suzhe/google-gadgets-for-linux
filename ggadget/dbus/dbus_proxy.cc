@@ -619,7 +619,7 @@ class DBusProxy::Impl {
                interface_.c_str());
         }
         CallAndFreeResultCallback(callback, out_args, ret);
-        return ret ? call_id : false;
+        return ret ? call_id : 0;
       } else {
         return CallMethodAsync(bus, interface_.c_str(), method.c_str(),
                                *in_args, callback, timeout);

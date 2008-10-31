@@ -250,13 +250,15 @@ class Elements::Impl {
 
   EventResult OnMouseEvent(const MouseEvent &event,
                            BasicElement **fired_element,
-                           BasicElement **in_element) {
+                           BasicElement **in_element,
+                           ViewInterface::HitTest *hittest) {
     // The following event types are processed directly in the view.
     ASSERT(event.GetType() != Event::EVENT_MOUSE_OVER &&
            event.GetType() != Event::EVENT_MOUSE_OUT);
 
     ElementHolder in_element_holder(*in_element);
     *fired_element = NULL;
+    ViewInterface::HitTest in_hittest = *hittest;
     MouseEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
     for (Children::reverse_iterator ite = children_.rbegin();
@@ -271,24 +273,30 @@ class Elements::Impl {
         BasicElement *child = *ite;
         ElementHolder child_holder(*ite);
         BasicElement *descendant_in_element = NULL;
+        ViewInterface::HitTest descendant_hittest = *hittest;
         EventResult result = child->OnMouseEvent(new_event, false,
                                                  fired_element,
-                                                 &descendant_in_element);
+                                                 &descendant_in_element,
+                                                 &descendant_hittest);
         // The child has been removed by some event handler, can't continue.
         if (!child_holder.Get()) {
           *in_element = in_element_holder.Get();
+          *hittest = in_hittest;
           return result;
         }
         if (!in_element_holder.Get()) {
           in_element_holder.Reset(descendant_in_element);
+          in_hittest = descendant_hittest;
         }
         if (*fired_element) {
           *in_element = in_element_holder.Get();
+          *hittest = in_hittest;
           return result;
         }
       }
     }
     *in_element = in_element_holder.Get();
+    *hittest = in_hittest;
     return EVENT_RESULT_UNHANDLED;
   }
 
@@ -624,8 +632,9 @@ void Elements::Draw(CanvasInterface *canvas) {
 
 EventResult Elements::OnMouseEvent(const MouseEvent &event,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element) {
-  return impl_->OnMouseEvent(event, fired_element, in_element);
+                                   BasicElement **in_element,
+                                   ViewInterface::HitTest *hittest) {
+  return impl_->OnMouseEvent(event, fired_element, in_element, hittest);
 }
 
 EventResult Elements::OnDragEvent(const DragEvent &event,

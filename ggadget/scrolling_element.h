@@ -77,7 +77,8 @@ class ScrollingElement : public BasicElement {
   virtual double GetClientHeight() const;
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element);
+                                   BasicElement **in_element,
+                                   ViewInterface::HitTest *hittest);
 
   /**
    * Overrides because this element supports scrolling.
