@@ -66,6 +66,8 @@ class Network : public NetworkInterface {
   DBusProxy *network_manager_;
   Connection *on_signal_connection_;
   Wireless wireless_;
+
+  DISALLOW_EVIL_CONSTRUCTORS(Network);
 };
 
 } // namespace linux_system

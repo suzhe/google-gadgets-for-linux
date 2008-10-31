@@ -559,13 +559,9 @@ static TextStreamInterface *OpenTextFile(const char *filename,
     return NULL;
 
   TextStream *stream = new TextStream(fd, mode, format == TRISTATE_TRUE);
-  if (stream) {
-    if (stream->Init()) {
-      return stream;
-    }
-    stream->Destroy();
-  }
-
+  if (stream->Init())
+    return stream;
+  stream->Destroy();
   return NULL;
 }
 

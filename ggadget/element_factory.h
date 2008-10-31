@@ -17,6 +17,8 @@
 #ifndef GGADGET_ELEMENT_FACTORY_H__
 #define GGADGET_ELEMENT_FACTORY_H__
 
+#include <ggadget/common.h>
+
 namespace ggadget {
 
 class BasicElement;
@@ -66,6 +68,7 @@ class ElementFactory {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(ElementFactory);
 };
 
 } // namespace ggadget

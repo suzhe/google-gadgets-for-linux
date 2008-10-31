@@ -299,6 +299,8 @@ std::string GetVariantSignature(const Variant &value) {
       {
         ScriptableInterface *scriptable =
             VariantValue<ScriptableInterface*>()(value);
+        if (!scriptable)
+          return "";
         Variant length = scriptable->GetProperty("length").v();
         if (length.type() != Variant::TYPE_VOID) {
           /* firstly treat as an array. */
@@ -540,6 +542,10 @@ class DBusMarshaller::Impl {
             }
             ScriptableInterface *dict =
                 VariantValue<ScriptableInterface*>()(arg.value.v());
+            if (!dict) {
+              DLOG("Dict is NULL");
+              return false;
+            }
             Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, dict_sig.c_str());
             DictMarshaller slot(sub, sig_list[0], sig_list[1]);
             if (!dict->EnumerateProperties(
@@ -553,6 +559,10 @@ class DBusMarshaller::Impl {
             Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, signature.c_str());
             ScriptableInterface *array =
                 VariantValue<ScriptableInterface*>()(arg.value.v());
+            if (!array) {
+              DLOG("Array is NULL");
+              return false;
+            }
             ArrayMarshaller slot(sub, signature);
             if (!array->EnumerateElements(
                 NewSlot(&slot, &ArrayMarshaller::Callback))) {
@@ -583,6 +593,10 @@ class DBusMarshaller::Impl {
                                DBUS_TYPE_STRUCT : DBUS_TYPE_DICT_ENTRY, NULL);
           ScriptableInterface *structure =
               VariantValue<ScriptableInterface*>()(arg.value.v());
+          if (!structure) {
+            DLOG("Structure is NULL");
+            return false;
+          }
           StructMarshaller slot(sub, sig_list);
           if (!structure->EnumerateElements(
               NewSlot(&slot, &StructMarshaller::Callback))) {

@@ -431,7 +431,8 @@ class ObjectVideoPlayer::Impl {
     } else {
       // It may be a relative file name under the base path of the gadget.
       std::string extracted_file;
-      if (!view_->GetFileManager()->ExtractFile(uri, &extracted_file))
+      FileManagerInterface *file_manager = view_->GetFileManager();
+      if (!file_manager || !file_manager->ExtractFile(uri, &extracted_file))
         return NULL;
       real_uri = "file://" + extracted_file;
     }

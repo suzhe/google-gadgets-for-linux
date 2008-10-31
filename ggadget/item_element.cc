@@ -122,7 +122,7 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
 
   DrawChildren(canvas);
 
-  if (impl_->drawoverlay_ && listbox->HasItemSeparator()) {
+  if (impl_->drawoverlay_ && listbox && listbox->HasItemSeparator()) {
     const Texture *item_separator = listbox->GetItemSeparatorTexture();
     if (item_separator)
       item_separator->Draw(canvas, 0, GetPixelHeight() - 2, GetPixelWidth(), 2);

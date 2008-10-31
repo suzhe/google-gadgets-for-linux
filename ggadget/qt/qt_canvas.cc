@@ -56,10 +56,12 @@ static void SetupPainter(QPainter *p) {
 
 class QtCanvas::Impl {
  public:
-  Impl(const QtGraphics *g, double w, double h, bool create_painter)
-    : width_(w), height_(h), opacity_(1.), zoom_(1.),
-      on_zoom_connection_(NULL),
-      image_(NULL), painter_(NULL), region_(NULL) {
+  Impl(QtCanvas *owner, const QtGraphics *g,
+       double w, double h, bool create_painter)
+      : owner_(owner),
+        width_(w), height_(h), opacity_(1.), zoom_(1.),
+        on_zoom_connection_(NULL),
+        image_(NULL), painter_(NULL), region_(NULL) {
     if (g){
       zoom_ = g->GetZoom();
       on_zoom_connection_ =
@@ -76,11 +78,12 @@ class QtCanvas::Impl {
     }
   }
 
-  Impl(const std::string &data, bool create_painter)
-    : width_(0), height_(0),
-      opacity_(1.), zoom_(1.),
-      on_zoom_connection_(NULL),
-      image_(NULL), painter_(NULL), region_(NULL) {
+  Impl(QtCanvas *owner, const std::string &data, bool create_painter)
+      : owner_(owner),
+        width_(0), height_(0),
+        opacity_(1.), zoom_(1.),
+        on_zoom_connection_(NULL),
+        image_(NULL), painter_(NULL), region_(NULL) {
     image_ = new QImage();
     if (!image_) return;
 
@@ -101,10 +104,11 @@ class QtCanvas::Impl {
     }
   }
 
-  Impl(double w, double h, QPainter *painter)
-    : width_(w), height_(h), opacity_(1.), zoom_(1.),
-      on_zoom_connection_(NULL), image_(NULL),
-      painter_(painter), region_(NULL) {
+  Impl(QtCanvas *owner, double w, double h, QPainter *painter)
+      : owner_(owner),
+        width_(w), height_(h), opacity_(1.), zoom_(1.),
+        on_zoom_connection_(NULL), image_(NULL),
+        painter_(painter), region_(NULL) {
     SetupPainter(painter_);
   }
 
@@ -376,6 +380,7 @@ class QtCanvas::Impl {
     return true;
   }
 
+  QtCanvas *owner_;
   double width_, height_;
   double opacity_;
   double zoom_;
@@ -383,17 +388,19 @@ class QtCanvas::Impl {
   QImage *image_;
   QPainter *painter_;
   QRegion *region_;
-  QtCanvas *owner_;
 };
 
 QtCanvas::QtCanvas(const QtGraphics *g, double w, double h, bool create_painter)
-  : impl_(new Impl(g, w, h, create_painter)) { impl_->owner_ = this; }
+    : impl_(new Impl(this, g, w, h, create_painter)) {
+}
 
 QtCanvas::QtCanvas(double w, double h, QPainter *painter)
-  : impl_(new Impl(w, h, painter)) { impl_->owner_ = this; }
+    : impl_(new Impl(this, w, h, painter)) {
+}
 
-QtCanvas::QtCanvas(const std::string &data, bool create_painter) :
-  impl_(new Impl(data, create_painter)) { impl_->owner_ = this; }
+QtCanvas::QtCanvas(const std::string &data, bool create_painter)
+    : impl_(new Impl(this, data, create_painter)) {
+}
 
 QtCanvas::~QtCanvas() {
   delete impl_;

@@ -46,6 +46,8 @@ class QtFont : public FontInterface {
   double size_;
   Style style_;
   Weight weight_;
+
+  DISALLOW_EVIL_CONSTRUCTORS(QtFont);
 };
 
 } // namespace qt

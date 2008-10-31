@@ -16,8 +16,6 @@
 
 #include "user.h"
 
-#include <fstream>
-
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/logger.h>
 #include <ggadget/string_utils.h>
@@ -31,7 +29,8 @@ namespace linux_system {
 const char kProcfsInterruptsFile[] = "/proc/interrupts";
 
 User::User()
-    : period_(kDefaultIdlePeriod),
+    : input_device_state_(0),
+      period_(kDefaultIdlePeriod),
       last_irq_(time(NULL)) {
   DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
                                                kHalObjectManager,
@@ -53,7 +52,7 @@ User::User()
   // Set a timeout to check whether there are input events from these devices.
   WatchCallbackSlot *callback =
       new WatchCallbackSlot(NewSlot(this, &User::CheckInputEvents));
-  GetGlobalMainLoop()->AddTimeoutWatch(500, callback);
+  GetGlobalMainLoop()->AddTimeoutWatch(10000, callback);
 }
 
 void User::FindDevices(DBusProxy *proxy, const char *capability) {
@@ -141,24 +140,36 @@ void User::GetDeviceName(const char *device_udi) {
   }
 }
 
+static int GetHash(int base, const char *str) {
+  while (*str) {
+    base = base * 31 + static_cast<unsigned char >(*str);
+    str++;
+  }
+  return base;
+}
+
 bool User::CheckInputEvents(int watch_id) {
   char line[256];
-  size_t count = 0;
-  std::ifstream interrupt_file(kProcfsInterruptsFile);
-  ASSERT(interrupt_file);
-
-  while (interrupt_file.getline(line, 256)) {
-    for (size_t i = 0; i < input_devices_.size(); i++) {
-      int port;
-      if (strcasestr(line, input_devices_[i].c_str()) != NULL &&
-          sscanf(line, "%d: %zu", &port, &count) ==2 &&
-          irq_count_[port] != count) {
-        ASSERT(port < 256);
-        last_irq_ = time(NULL);
-        irq_count_[port] = count;
-        // DLOG("User input: %s", input_devices_[i].c_str());
+  FILE *interrupt_file = fopen(kProcfsInterruptsFile, "r");
+  if (interrupt_file) {
+    int new_state = 0;
+    while (fgets(line, sizeof(line), interrupt_file)) {
+      for (size_t i = 0; i < input_devices_.size(); i++) {
+        if (strcasestr(line, input_devices_[i].c_str()) != NULL) {
+          new_state = GetHash(new_state, line);
+          break;
+        }
       }
     }
+    fclose(interrupt_file);
+
+    if (new_state != input_device_state_) {
+      input_device_state_ = new_state;
+      last_irq_ = time(NULL);
+    }
+  } else {
+    // If failed to get input status, let IsUserIdle() always return false.
+    last_irq_ = time(NULL);
   }
 
   return true;

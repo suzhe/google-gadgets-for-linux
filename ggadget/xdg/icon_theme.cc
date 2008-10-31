@@ -448,7 +448,6 @@ static void EnsureUpdated() {
     icon_dirs = new std::map<std::string, int>;
     icon_themes = new std::map<std::string, IconTheme*>;
     icon_formats = new std::vector<std::string>;
-    memset(icon_themes, 0, sizeof(icon_themes));
     EnableSvgIcon(false);
     InitIconDir();
     last_check_time = now;

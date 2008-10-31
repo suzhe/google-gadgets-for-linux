@@ -43,6 +43,7 @@ class ScriptableNPObject : public ScriptableHelperDefault {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableNPObject);
 };
 
 /**

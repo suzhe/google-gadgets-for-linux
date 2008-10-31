@@ -103,6 +103,8 @@ QtEditElement::QtEditElement(View *view, const char *name)
 }
 
 QtEditElement::~QtEditElement() {
+  delete cursor_;
+  delete background_;
 }
 
 void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
@@ -150,6 +152,7 @@ Variant QtEditElement::GetBackground() const {
 }
 
 void QtEditElement::SetBackground(const Variant &background) {
+  delete background_;
   background_ = GetView()->LoadTexture(background);
 }
 

@@ -480,6 +480,8 @@ class ContentPolicy : public nsIContentPolicy {
                         nsIURI *request_origin, nsISupports *context,
                         const nsACString &mime_type_guess, nsISupports *extra,
                         PRInt16 *retval) {
+    NS_ENSURE_ARG_POINTER(content_location);
+    NS_ENSURE_ARG_POINTER(retval);
     nsCString url_spec, origin_spec, url_scheme;
     content_location->GetSpec(url_spec);
     if (content_type == TYPE_DOCUMENT && g_embed_for_new_window) {
@@ -504,7 +506,7 @@ class ContentPolicy : public nsIContentPolicy {
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       // If the URL is opened the first time in a blank window or frame,
       // request_origin is NULL or "about:blank".
-      if (content_location && request_origin) {
+      if (request_origin) {
         request_origin->GetSpec(origin_spec);
         if (!origin_spec.Equals(nsCString("about:blank")) &&
             !origin_spec.Equals(url_spec) &&

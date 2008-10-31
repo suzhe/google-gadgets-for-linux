@@ -645,9 +645,9 @@ ScriptableScreen::~ScriptableScreen() {
 ScriptableUser::ScriptableUser(UserInterface *user) {
   RegisterProperty("idle",
                    NewSlot(user, &UserInterface::IsUserIdle), NULL);
-  RegisterProperty("idle_period",
+  /* RegisterProperty("idle_period",
                    NewSlot(user, &UserInterface::GetIdlePeriod),
-                   NewSlot(user, &UserInterface::SetIdlePeriod));
+                   NewSlot(user, &UserInterface::SetIdlePeriod)); */
 }
 
 ScriptableUser::~ScriptableUser() {

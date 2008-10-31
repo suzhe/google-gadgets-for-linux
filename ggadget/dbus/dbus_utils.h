@@ -137,6 +137,7 @@ class DBusMainLoopClosure {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(DBusMainLoopClosure);
 };
 
 }  // namespace dbus

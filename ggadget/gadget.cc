@@ -211,7 +211,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (!host_ || !element_factory_ || !file_manager_ || !options_ ||
         !scriptable_options_)
       return false;
-    
+
     // Create gadget FileManager
     FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
     if (fm == NULL)
@@ -238,7 +238,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       main_view_->view()->Alert(error_msg.c_str());
       return false;
     }
- 
+
     main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
 
     std::string min_version = GetManifestInfo(kManifestMinVersion);
@@ -646,7 +646,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                            ScriptContextInterface *context) {
     std::string real_message;
     std::string script_filename;
-    int script_line;
+    int script_line = 0;
     if (context)
       context->GetCurrentFileAndLine(&script_filename, &script_line);
     if (script_filename.empty() ||

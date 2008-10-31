@@ -50,6 +50,7 @@ class QtHost : public ggadget::HostInterface {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(QtHost);
 };
 
 } // namespace qt
