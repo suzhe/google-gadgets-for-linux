@@ -18,6 +18,7 @@
 #define HOSTS_GTK_SIDEBAR_GTK_HOST_H__
 
 #include <string>
+#include <ggadget/common.h>
 #include <ggadget/gadget.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
@@ -48,6 +49,7 @@ class SideBarGtkHost : public ggadget::HostInterface {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(SideBarGtkHost);
 };
 
 } // namespace gtk

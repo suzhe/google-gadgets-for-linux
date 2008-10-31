@@ -52,10 +52,9 @@ class User : public UserInterface {
   bool CheckInputEvents(int watch_id);
 
   std::vector<std::string> input_devices_;
-
+  int input_device_state_;
   time_t period_;
   time_t last_irq_;
-  size_t irq_count_[256];
 };
 
 } // namespace linux_system

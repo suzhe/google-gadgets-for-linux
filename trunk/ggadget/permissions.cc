@@ -230,14 +230,16 @@ void Permissions::FromString(const char *str) {
     if (perm_str.length() > 1) {
       char signature = perm_str[0];
       int perm = GetByName(perm_str.c_str() + 1);
-      if (signature == '+') {
-        impl_->granted_ |= kPermissionsInfo[perm].mask;
-        impl_->denied_ &= ~kPermissionsInfo[perm].mask;
-      } else if (signature == '-') {
-        impl_->denied_ |= kPermissionsInfo[perm].mask;
-        impl_->granted_ &= ~kPermissionsInfo[perm].mask;
-      } else if (signature == '#') {
-        impl_->required_ |= kPermissionsInfo[perm].mask;
+      if (perm != -1) {
+        if (signature == '+') {
+          impl_->granted_ |= kPermissionsInfo[perm].mask;
+          impl_->denied_ &= ~kPermissionsInfo[perm].mask;
+        } else if (signature == '-') {
+          impl_->denied_ |= kPermissionsInfo[perm].mask;
+          impl_->granted_ &= ~kPermissionsInfo[perm].mask;
+        } else if (signature == '#') {
+          impl_->required_ |= kPermissionsInfo[perm].mask;
+        }
       }
     }
   }

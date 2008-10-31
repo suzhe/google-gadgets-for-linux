@@ -376,6 +376,8 @@ class StringEnumSetter : public Slot1<void, const char *> {
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
     const char *name = VariantValue<const char *>()(argv[0]);
+    if (!name)
+      return ResultVariant();
     for (int i = 0; i < count_; i++) {
       if (strcmp(name, names_[i]) == 0) {
         Variant param(i);

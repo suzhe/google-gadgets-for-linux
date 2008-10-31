@@ -31,9 +31,10 @@ namespace ggadget {
 enum DisplayState {
   STATE_NORMAL,
   STATE_DOWN,
-  STATE_OVER,
-  STATE_COUNT
+  STATE_OVER
 };
+
+static const int kStateCount = STATE_OVER + 1;
 
 enum ScrollBarImage {
   IMAGE_BACKGROUND,
@@ -50,8 +51,9 @@ enum ScrollBarImage {
   IMAGE_RIGHT_NORMAL = IMAGE_RIGHT_START,
   IMAGE_RIGHT_DOWN,
   IMAGE_RIGHT_OVER,
-  IMAGE_COUNT
 };
+
+static const int kImageCount = IMAGE_RIGHT_OVER + 1;
 
 static const char *kHorizontalImages[] = {
   kScrollDefaultBackgroundH,
@@ -112,20 +114,20 @@ class ScrollBarElement::Impl {
         // Windows default to horizontal for orientation,
         // but puzzlingly use vertical images as default.
         orientation_(ORIENTATION_VERTICAL) {
-    for (int i = 0; i < IMAGE_COUNT; i++) {
+    for (int i = 0; i < kImageCount; i++) {
       images_[i] = NULL;
       image_is_default_[i] = true;
     }
   }
 
   ~Impl() {
-    for (int i = 0; i < IMAGE_COUNT; i++)
+    for (int i = 0; i < kImageCount; i++)
       DestroyImage(images_[i]);
   }
 
   // Called when the orientation changes or default rendering is switched off.
   void DestroyDefaultImages() {
-    for (int i = 0; i < IMAGE_COUNT; i++) {
+    for (int i = 0; i < kImageCount; i++) {
       if (image_is_default_[i]) {
         DestroyImage(images_[i]);
         images_[i] = NULL;
@@ -138,7 +140,7 @@ class ScrollBarElement::Impl {
       View *view = owner_->GetView();
       const char **images_src = orientation_ == ORIENTATION_HORIZONTAL ?
                                 kHorizontalImages : kVerticalImages;
-      for (int i = 0; i < IMAGE_COUNT; i++) {
+      for (int i = 0; i < kImageCount; i++) {
         if (!images_[i] && image_is_default_[i])
           images_[i] = view->LoadImageFromGlobal(images_src[i], false);
       }
@@ -337,8 +339,8 @@ class ScrollBarElement::Impl {
   // All the following rects are in horizontal coordinates, that is,
   // x and y, w and h are swapped when the orientation is vertical.
   Rectangle left_rect_, right_rect_, thumb_rect_;
-  ImageInterface *images_[IMAGE_COUNT];
-  bool image_is_default_[IMAGE_COUNT];
+  ImageInterface *images_[kImageCount];
+  bool image_is_default_[kImageCount];
   bool default_rendering_;
   int min_, max_, value_, pagestep_, linestep_;
   int accum_wheel_delta_;

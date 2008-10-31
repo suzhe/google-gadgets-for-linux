@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
 
   std::string error;
   g_main_loop = new ggadget::qt::QtMainLoop();
-  if (!ggadget::qt::InitGGL(g_main_loop, GGL_APP_NAME, 
+  if (!ggadget::qt::InitGGL(g_main_loop, GGL_APP_NAME,
                             profile_dir.c_str(),
                             kGlobalExtensions,
                             log_level,
@@ -302,8 +302,7 @@ int main(int argc, char* argv[]) {
   ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
   gadget_manager->Init();
 
-  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode,
-                                             debug_console);
+  hosts::qt::QtHost host(composite, debug_mode, debug_console);
 
   // Load gadget files.
   for (size_t i = 0; i < gadget_paths.size(); ++i)

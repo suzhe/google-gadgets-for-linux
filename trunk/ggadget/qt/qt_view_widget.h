@@ -80,6 +80,9 @@ class QtViewWidget : public QWidget {
  signals:
   void moved(int x, int y);
   void geometryChanged(int dleft, int dtop, int dw, int dh);
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(QtViewWidget);
 };
 
 

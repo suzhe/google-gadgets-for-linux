@@ -32,6 +32,7 @@ class QtMainLoop : public MainLoopInterface {
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(QtMainLoop);
 };
 
 class WatchNode : public QObject {
@@ -53,6 +54,9 @@ class WatchNode : public QObject {
  public slots:
   void OnTimeout();
   void OnIOEvent(int fd);
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(WatchNode);
 };
 
 } // namespace qt

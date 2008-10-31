@@ -45,11 +45,9 @@ LIST(APPEND SRCS
 ENDIF(GGL_HAVE_NETWORK_MANAGER)
 
 ADD_LIBRARY(ggadget-linux ${SRCS})
-
 TARGET_LINK_LIBRARIES(ggadget-linux
   ggadget${GGL_EPOCH}
   ggadget-xdg${GGL_EPOCH}
-  ggadget-linux
   ${X11_LIBRARIES}
 )
 
@@ -60,6 +58,10 @@ TARGET_LINK_LIBRARIES(ggadget-linux
 ENDIF(GGL_BUILD_LIBGGADGET_DBUS)
 
 ADD_MODULE(linux-system-framework linux_system_framework.cc)
+TARGET_LINK_LIBRARIES(linux-system-framework
+  ggadget-linux
+)
+
 OUTPUT_MODULE(linux-system-framework)
 
 ENDIF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)
