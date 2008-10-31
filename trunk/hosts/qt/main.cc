@@ -27,6 +27,7 @@
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QPushButton>
 #include <QtGui/QMessageBox>
+#include <QtGui/QDesktopWidget>
 
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
@@ -34,6 +35,7 @@
 #include <ggadget/host_interface.h>
 #include <ggadget/host_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/messages.h>
 #include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_view_host.h>
@@ -281,20 +283,12 @@ int main(int argc, char* argv[]) {
         ggadget::GetUsageCollectorFactory();
     if (collector_factory) {
       collector_factory->SetApplicationInfo(GGL_APP_NAME, GGL_VERSION);
-      // TODO(idlecat511): Get the screen size:
-      // Only take the initial screen size.
-      // We don't really want very accurate stats.
-      /*
-      GdkScreen *screen = NULL;
-      gdk_display_get_pointer(gdk_display_get_default(), &screen,
-                              NULL, NULL, NULL);
+      QRect rect = app.desktop()->screenGeometry();
       std::string screen_size_param =
-          StringPrintf("%dx%d", gdk_screen_get_width(screen),
-                       gdk_screen_get_height(screen));
+          ggadget::StringPrintf("%dx%d", rect.width(), rect.height());
       collector_factory->SetParameter(
           ggadget::UsageCollectorFactoryInterface::PARAM_SCREEN_SIZE,
           screen_size_param.c_str());
-      */
     }
   }
 
