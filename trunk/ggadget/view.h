@@ -117,7 +117,7 @@ class View : public ViewInterface {
 
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
-  virtual void SetCaption(const char *caption);
+  virtual void SetCaption(const std::string &caption);
   virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
@@ -414,10 +414,18 @@ class View : public ViewInterface {
   uint64_t GetCurrentTime() const;
 
   /**
-   * Display tooltip at the current cursor position. The tooltip will be
+   * Shows an element's tooltip at current cursor position. The tooltip will be
    * automatically hidden when appropriate.
    */
-  void SetTooltip(const char *tooltip);
+  void ShowElementTooltip(BasicElement *element);
+
+  /**
+   * Shows an element's tooltip at specific position in element's coordinates.
+   * @param element The element for which tooltip will be shown. Must belong to
+   *     this view.
+   * @param x, y Position to show the tooltip, in element's coordinates.
+   */
+  void ShowElementTooltipAtPosition(BasicElement *element, double x, double y);
 
   /**
    * Sets the current mouse cursor.

@@ -1220,6 +1220,7 @@ void BasicElement::DoClassRegister() {
 
   RegisterMethod("focus", NewSlot(&BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(&BasicElement::KillFocus));
+  RegisterMethod("showTooltip", NewSlot(&BasicElement::ShowTooltip));
 
   RegisterClassSignal(kOnClickEvent, &Impl::onclick_event_,
                       &BasicElement::impl_);
@@ -1660,11 +1661,14 @@ std::string BasicElement::GetTooltip() const {
   return impl_->tooltip_;
 }
 
-void BasicElement::SetTooltip(const char *tooltip) {
-  if (tooltip)
-    impl_->tooltip_ = tooltip;
-  else
-    impl_->tooltip_.clear();
+void BasicElement::SetTooltip(const std::string &tooltip) {
+  impl_->tooltip_ = tooltip;
+}
+
+void BasicElement::ShowTooltip() {
+  // Shows tooltip at center of this element.
+  impl_->view_->ShowElementTooltipAtPosition(
+      this, impl_->width_ / 2, impl_->height_ / 2);
 }
 
 BasicElement::FlipMode BasicElement::GetFlip() const {

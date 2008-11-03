@@ -290,7 +290,13 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * element.
    */
   std::string GetTooltip() const;
-  void SetTooltip(const char *tooltip);
+  void SetTooltip(const std::string &tooltip);
+
+  /**
+   * Shows tooltip of this basicElement immediately.
+   * The tooltip will be showed just below this element.
+   */
+  void ShowTooltip();
 
   /**
    * Gets and sets the flip mode. Default flip mode is @c FLIP_NONE.

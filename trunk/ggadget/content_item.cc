@@ -385,7 +385,7 @@ std::string ContentItem::GetTooltip() const {
   return impl_->tooltip_;
 }
 
-void ContentItem::SetTooltip(const char *tooltip) {
+void ContentItem::SetTooltip(const std::string &tooltip) {
   impl_->tooltip_ = tooltip;
 }
 

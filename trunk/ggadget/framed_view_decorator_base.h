@@ -41,7 +41,7 @@ class FramedViewDecoratorBase : public ViewDecoratorBase {
  public:
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual void SetResizable(ResizableMode resizable);
-  virtual void SetCaption(const char *caption);
+  virtual void SetCaption(const std::string &caption);
 
  protected:
   virtual void OnChildViewChanged();

@@ -385,10 +385,20 @@ void ViewDecoratorBase::SetChildViewCursor(ViewInterface::CursorType type) {
   impl_->view_element_->SetCursor(type);
 }
 
-void ViewDecoratorBase::SetChildViewTooltip(const char *tooltip) {
+void ViewDecoratorBase::ShowChildViewTooltip(const std::string &tooltip) {
   impl_->view_element_->SetTooltip(tooltip);
   // Make sure the tooltip is updated immediately.
-  SetTooltip(tooltip);
+  ShowElementTooltip(impl_->view_element_);
+}
+
+void ViewDecoratorBase::ShowChildViewTooltipAtPosition(
+    const std::string &tooltip, double x, double y) {
+  impl_->view_element_->SetTooltip(tooltip);
+  // Make sure the tooltip is updated immediately.
+  if (impl_->view_element_->IsVisible()) {
+    double scale = impl_->view_element_->GetScale();
+    ShowElementTooltipAtPosition(impl_->view_element_, x * scale, y * scale);
+  }
 }
 
 void ViewDecoratorBase::SetOptionPrefix(const char *option_prefix) {

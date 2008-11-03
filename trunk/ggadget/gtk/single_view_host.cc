@@ -297,9 +297,9 @@ class SingleViewHost::Impl {
     gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
   }
 
-  void SetCaption(const char *caption) {
+  void SetCaption(const std::string &caption) {
     ASSERT(GTK_IS_WINDOW(window_));
-    gtk_window_set_title(GTK_WINDOW(window_), caption);
+    gtk_window_set_title(GTK_WINDOW(window_), caption.c_str());
   }
 
   void SetShowCaptionAlways(bool always) {
@@ -317,8 +317,31 @@ class SingleViewHost::Impl {
       gdk_cursor_unref(cursor);
   }
 
-  void SetTooltip(const char *tooltip) {
-    tooltip_->Show(tooltip);
+  void ShowTooltip(const std::string &tooltip) {
+    DLOG("SingleViewHost::ShowTooltip(%s)", tooltip.c_str());
+    tooltip_->Show(tooltip.c_str());
+  }
+
+  void ShowTooltipAtPosition(const std::string &tooltip, double x, double y) {
+    ASSERT(window_);
+    ViewCoordToNativeWidgetCoord(x, y, &x, &y);
+    gint screen_x = static_cast<gint>(x) + win_x_;
+    gint screen_y = static_cast<gint>(y) + win_y_;
+    // It's in options dialog, the native widget is not the toplevel window.
+    if (widget_ != window_) {
+      GdkWindow *window = widget_->window;
+      GdkWindow *toplevel = gdk_window_get_toplevel(window);
+      for (; window != toplevel; window = gdk_window_get_parent(window)) {
+        gint pos_x, pos_y;
+        gdk_window_get_position(window, &pos_x, &pos_y);
+        screen_x += pos_x;
+        screen_y += pos_y;
+      }
+    }
+    DLOG("SingleViewHost::ShowTooltipAtPosition(%s, %d, %d)",
+         tooltip.c_str(), screen_x, screen_y);
+    tooltip_->ShowAtPosition(tooltip.c_str(), gtk_widget_get_screen(window_),
+                             screen_x, screen_y);
   }
 
   bool ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler) {
@@ -1005,7 +1028,7 @@ void SingleViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   impl_->SetResizable(mode);
 }
 
-void SingleViewHost::SetCaption(const char *caption) {
+void SingleViewHost::SetCaption(const std::string &caption) {
   impl_->SetCaption(caption);
 }
 
@@ -1017,8 +1040,13 @@ void SingleViewHost::SetCursor(int type) {
   impl_->SetCursor(type);
 }
 
-void SingleViewHost::SetTooltip(const char *tooltip) {
-  impl_->SetTooltip(tooltip);
+void SingleViewHost::ShowTooltip(const std::string &tooltip) {
+  impl_->ShowTooltip(tooltip);
+}
+
+void SingleViewHost::ShowTooltipAtPosition(const std::string &tooltip,
+                                           double x, double y) {
+  impl_->ShowTooltipAtPosition(tooltip, x, y);
 }
 
 bool SingleViewHost::ShowView(bool modal, int flags,

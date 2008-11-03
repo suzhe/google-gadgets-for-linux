@@ -164,7 +164,7 @@ class ViewWidgetBinder::Impl {
     EventResult result = EVENT_RESULT_UNHANDLED;
 
     impl->button_pressed_ = true;
-    impl->host_->SetTooltip(NULL);
+    impl->host_->ShowTooltip("");
 
     if (!impl->focused_) {
       impl->focused_ = true;
@@ -226,7 +226,7 @@ class ViewWidgetBinder::Impl {
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
     impl->button_pressed_ = false;
-    impl->host_->SetTooltip(NULL);
+    impl->host_->ShowTooltip("");
 #ifdef GRAB_POINTER_EXPLICITLY
     if (impl->pointer_grabbed_) {
       gdk_pointer_ungrab(event->time);
@@ -271,7 +271,7 @@ class ViewWidgetBinder::Impl {
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
-    impl->host_->SetTooltip(NULL);
+    impl->host_->ShowTooltip("");
 
     int mod = ConvertGdkModifierToModifier(event->state);
     unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
@@ -503,7 +503,7 @@ class ViewWidgetBinder::Impl {
     if (impl->button_pressed_)
       return FALSE;
 
-    impl->host_->SetTooltip(NULL);
+    impl->host_->ShowTooltip("");
 
     MouseEvent e(Event::EVENT_MOUSE_OUT,
                  event->x / impl->zoom_, event->y / impl->zoom_, 0, 0,
@@ -519,7 +519,7 @@ class ViewWidgetBinder::Impl {
       return FALSE;
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->host_->SetTooltip(NULL);
+    impl->host_->ShowTooltip("");
 
     MouseEvent e(Event::EVENT_MOUSE_OVER,
                  event->x / impl->zoom_, event->y / impl->zoom_, 0, 0,

@@ -55,15 +55,15 @@ class Tooltip::Impl {
     gtk_widget_destroy(window_);
   }
 
-  bool DelayedShow(int watch_id) {
-    GdkScreen *screen;
-    gint x, y;
-    gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
+  void AdjustAndShowWidget(GdkScreen *screen, int x, int y, bool center) {
     gint monitor = gdk_screen_get_monitor_at_point(screen, x, y);
     GdkRectangle rect;
     gdk_screen_get_monitor_geometry(screen, monitor, &rect);
     GtkRequisition size;
     gtk_widget_size_request(window_, &size);
+
+    if (center)
+      x -= size.width / 2;
 
     // Adjust the position to display the whole tooltip window inside the
     // monitor region.
@@ -77,6 +77,13 @@ class Tooltip::Impl {
     gtk_window_set_screen(GTK_WINDOW(window_), screen);
     gtk_window_move(GTK_WINDOW(window_), x, y);
     gtk_widget_show_all(window_);
+  }
+
+  bool DelayedShow(int watch_id) {
+    GdkScreen *screen;
+    gint x, y;
+    gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
+    AdjustAndShowWidget(screen, x, y, false);
     show_timer_ = 0;
     return false;
   }
@@ -109,6 +116,21 @@ class Tooltip::Impl {
       } else {
         DelayedShow(0);
       }
+
+      if (hide_timeout_ > 0) {
+        hide_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
+            hide_timeout_,
+            new WatchCallbackSlot(NewSlot(this, &Impl::DelayedHide)));
+      }
+    }
+  }
+
+  void ShowAtPosition(const char *tooltip,
+                      GdkScreen *screen, int x, int y) {
+    Hide();
+    if (tooltip && *tooltip) {
+      gtk_label_set_text(GTK_LABEL(label_), tooltip);
+      AdjustAndShowWidget(screen, x, y, true);
 
       if (hide_timeout_ > 0) {
         hide_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
@@ -153,6 +175,11 @@ Tooltip::~Tooltip() {
 
 void Tooltip::Show(const char *tooltip) {
   impl_->Show(tooltip);
+}
+
+void Tooltip::ShowAtPosition(const char *tooltip,
+                             GdkScreen *screen, int x, int y) {
+  impl_->ShowAtPosition(tooltip, screen, x, y);
 }
 
 void Tooltip::Hide() {

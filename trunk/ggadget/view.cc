@@ -499,8 +499,7 @@ class View::Impl {
       hittest_ = child_hittest;
       if (type == Event::EVENT_MOUSE_MOVE &&
           in_element != tooltip_element_.Get()) {
-        tooltip_element_.Reset(in_element);
-        owner_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
+        owner_->ShowElementTooltip(in_element);
       }
     } else {
       // FIXME: If HT_NOWHERE is more suitable?
@@ -1384,8 +1383,9 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
-    if (element == tooltip_element_.Get())
-      owner_->SetTooltip(NULL);
+    // Clears tooltip immediately.
+    if (element == tooltip_element_.Get() && view_host_)
+      view_host_->ShowTooltip("");
 
     std::string name = element->GetName();
     if (!name.empty()) {
@@ -1727,8 +1727,8 @@ ViewInterface::ResizableMode View::GetResizable() const {
   return impl_->resizable_;
 }
 
-void View::SetCaption(const char *caption) {
-  impl_->caption_ = caption ? caption : "";
+void View::SetCaption(const std::string &caption) {
+  impl_->caption_ = caption;
   if (impl_->view_host_)
     impl_->view_host_->SetCaption(caption);
 }
@@ -2044,9 +2044,23 @@ uint64_t View::GetCurrentTime() const {
   return impl_->main_loop_->GetCurrentTime();
 }
 
-void View::SetTooltip(const char *tooltip) {
+void View::ShowElementTooltip(BasicElement *element) {
+  ASSERT(element);
+  ASSERT(element->GetView() == this);
+  impl_->tooltip_element_.Reset(element);
   if (impl_->view_host_)
-    impl_->view_host_->SetTooltip(tooltip);
+    impl_->view_host_->ShowTooltip(element->GetTooltip());
+}
+
+void View::ShowElementTooltipAtPosition(BasicElement *element,
+                                        double x, double y) {
+  ASSERT(element);
+  ASSERT(element->GetView() == this);
+  impl_->tooltip_element_.Reset(element);
+  if (impl_->view_host_) {
+    element->SelfCoordToViewCoord(x, y, &x, &y);
+    impl_->view_host_->ShowTooltipAtPosition(element->GetTooltip(), x, y);
+  }
 }
 
 void View::SetCursor(int type) {
