@@ -337,6 +337,25 @@ class Gadget {
   static bool GetGadgetManifest(const char *base_path, StringMap *data);
 
   /**
+   * Locale version of GetGadgetManifest. You can specify locale other than
+   * using system locale.
+   */
+  static bool GetGadgetManifestForLocale(const char *base_path,
+                                         const char *locale,
+                                         StringMap *data);
+  /**
+   * A utility to get an FileManagerInterface of a gadget without constructing a
+   * Gadget object.
+   * @param base_path see document for Gadget constructor.
+   * @param locale Locale to be used, system locale will be used if it's NULL
+   *               or is "".
+   * @return the file manager of the gadget
+   */
+  static FileManagerInterface *GetGadgetFileManagerForLocale(
+      const char *base_path,
+      const char *locale);
+
+  /**
    * A utility to get required permissions of a gadget from its manifest
    * information.
    *

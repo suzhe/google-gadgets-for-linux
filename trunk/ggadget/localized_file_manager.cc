@@ -36,9 +36,14 @@ namespace ggadget {
 
 class LocalizedFileManager::Impl {
  public:
-  Impl(FileManagerInterface *file_manager)
+  Impl(FileManagerInterface *file_manager, const char *locale)
     : file_manager_(file_manager) {
-    std::string locale_name = GetSystemLocaleName();
+    std::string locale_name;
+    if (locale && *locale)
+      locale_name = locale;
+    else
+      locale_name = GetSystemLocaleName();
+
     prefixes_.push_back(locale_name);
     std::string lower_locale_name = ToLower(locale_name);
     if (lower_locale_name != locale_name)
@@ -76,7 +81,7 @@ class LocalizedFileManager::Impl {
 
 
 LocalizedFileManager::LocalizedFileManager()
-  : impl_(new Impl(NULL)){
+  : impl_(new Impl(NULL, NULL)){
 }
 
 LocalizedFileManager::~LocalizedFileManager() {
@@ -84,7 +89,12 @@ LocalizedFileManager::~LocalizedFileManager() {
 }
 
 LocalizedFileManager::LocalizedFileManager(FileManagerInterface *file_manager)
-  : impl_(new Impl(file_manager)){
+  : impl_(new Impl(file_manager, NULL)){
+}
+
+LocalizedFileManager::LocalizedFileManager(FileManagerInterface *file_manager,
+                                           const char *locale)
+  : impl_(new Impl(file_manager, locale)){
 }
 
 bool LocalizedFileManager::Attach(FileManagerInterface *file_manager) {

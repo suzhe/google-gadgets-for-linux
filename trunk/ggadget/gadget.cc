@@ -213,7 +213,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
 
     // Create gadget FileManager
-    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
+    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str(),
+                                                       NULL);
     if (fm == NULL)
       return false;
     file_manager_->RegisterFileManager("", fm);
@@ -970,7 +971,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return true;
   }
 
-  static FileManagerInterface *CreateGadgetFileManager(const char *base_path) {
+  static FileManagerInterface *CreateGadgetFileManager(const char *base_path,
+                                                       const char *locale) {
     std::string path, filename;
     SplitFilePath(base_path, &path, &filename);
 
@@ -979,7 +981,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       path = base_path;
 
     FileManagerInterface *fm = CreateFileManager(path.c_str());
-    return fm ? new LocalizedFileManager(fm) : NULL;
+    return fm ? new LocalizedFileManager(fm, locale) : NULL;
   }
 
   NativeOwnedScriptable<UINT64_C(0x4edfd94b70f04da6)> global_;
@@ -1208,10 +1210,17 @@ bool Gadget::HasAboutDialog() const {
 
 // static methods
 bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
+  return GetGadgetManifestForLocale(base_path, NULL, data);
+}
+
+bool Gadget::GetGadgetManifestForLocale(const char *base_path,
+                                        const char *locale,
+                                        StringMap *data) {
   ASSERT(base_path);
   ASSERT(data);
 
-  FileManagerInterface *file_manager = Impl::CreateGadgetFileManager(base_path);
+  FileManagerInterface *file_manager =
+      Impl::CreateGadgetFileManager(base_path, locale);
   if (!file_manager)
     return false;
 
@@ -1219,6 +1228,12 @@ bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
   bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
   delete file_manager;
   return result;
+}
+
+FileManagerInterface *Gadget::GetGadgetFileManagerForLocale(
+    const char *base_path,
+    const char *locale) {
+  return Impl::CreateGadgetFileManager(base_path, locale);
 }
 
 bool Gadget::GetGadgetRequiredPermissions(const StringMap *manifest,
