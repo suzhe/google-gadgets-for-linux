@@ -51,6 +51,7 @@ class LocalizedFileManager : public FileManagerInterface {
    *        destroyed, when this LocalizedFileManager instance is destroyed.
    */
   explicit LocalizedFileManager(FileManagerInterface *file_manager);
+  LocalizedFileManager(FileManagerInterface *file_manager, const char *locale);
   virtual ~LocalizedFileManager();
 
   /**
