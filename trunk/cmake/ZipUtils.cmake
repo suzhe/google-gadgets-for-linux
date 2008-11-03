@@ -33,7 +33,7 @@ MACRO(ADD_DIR_TO_ZIP_INTERNAL _source _zip_file)
 
   STRING(REPLACE / + ADD_DIR_TO_ZIP_target ${_zip_file}_${_source}_zip)
   ADD_CUSTOM_TARGET(${ADD_DIR_TO_ZIP_target} ALL
-    ${CMAKE_SOURCE_DIR}/utils/zip.sh -r -u ${_zip_file}
+    ${CMAKE_SOURCE_DIR}/cmake/zip.sh -r -u ${_zip_file}
       ${ADD_DIR_TO_ZIP_relative_files}
     DEPENDS ${ADD_DIR_TO_ZIP_source_files}
     WORKING_DIRECTORY ${_source})
@@ -52,7 +52,7 @@ MACRO(ADD_FILE_TO_ZIP_INTERNAL _file _zip_file)
   GET_FILENAME_COMPONENT(ADD_FILE_TO_ZIP_name ${_file} NAME)
   GET_FILENAME_COMPONENT(ADD_FILE_TO_ZIP_path ${_file} PATH)
   ADD_CUSTOM_TARGET(${ADD_FILE_TO_ZIP_target} ALL
-    ${CMAKE_SOURCE_DIR}/utils/zip.sh -u ${_zip_file} ${ADD_FILE_TO_ZIP_name}
+    ${CMAKE_SOURCE_DIR}/cmake/zip.sh -u ${_zip_file} ${ADD_FILE_TO_ZIP_name}
     DEPENDS ${_file}
     WORKING_DIRECTORY ${ADD_FILE_TO_ZIP_path})
 ENDMACRO(ADD_FILE_TO_ZIP_INTERNAL _file _zip_file)
@@ -70,7 +70,7 @@ MACRO(ADD_TARGET_TO_ZIP_INTERNAL _target_name _zip_file)
   GET_FILENAME_COMPONENT(ADD_TARGET_TO_ZIP_path
     ${ADD_TARGET_TO_ZIP_location} PATH)
   ADD_CUSTOM_TARGET(${ADD_TARGET_TO_ZIP_target} ALL
-    ${CMAKE_SOURCE_DIR}/utils/zip.sh -u ${_zip_file} ${ADD_TARGET_TO_ZIP_name}
+    ${CMAKE_SOURCE_DIR}/cmake/zip.sh -u ${_zip_file} ${ADD_TARGET_TO_ZIP_name}
     DEPENDS ${_target_name}
     WORKING_DIRECTORY ${ADD_TARGET_TO_ZIP_path})
 ENDMACRO(ADD_TARGET_TO_ZIP_INTERNAL _target_name _zip_file)

@@ -15,6 +15,8 @@
 
 # Putting . into SBUDIRS list to force building current directory first.
 
+EXTRA_DIST = CMakeLists.txt
+
 SUBDIRS= . tests
 
 INCLUDES		= -I$(top_builddir) \
@@ -42,7 +44,8 @@ libggadget_npapi@GGL_EPOCH@_la_CPPFLAGS = \
 
 libggadget_npapi@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(X_LIBS)
+			  $(X_LIBS) \
+			  -ldl
 
 libggadget_npapi@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \

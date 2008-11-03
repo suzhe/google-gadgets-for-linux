@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EXTRA_DIST = CMakeLists.txt
+
 if GGL_BUILD_GTKMOZ_BROWSER_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \

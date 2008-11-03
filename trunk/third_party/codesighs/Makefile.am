@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 EXTRA_PROGRAMS		= codesighs nm2tsv maptsvdifftool
 
 codesighs_SOURCES	= codesighs.c

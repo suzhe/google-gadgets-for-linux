@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-EXTRA_DIST		= js_unittest.js
+EXTRA_DIST		= js_unittest.js CMakeLists.txt
 
 noinst_HEADERS		= gtest_internal_inl.h \
 			  gtest_internal.h \

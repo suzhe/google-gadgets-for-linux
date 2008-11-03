@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind npapi
+EXTRA_DIST = valgrind npapi CMakeLists.txt
 SUBDIRS = codesighs unzip xdgmime editline

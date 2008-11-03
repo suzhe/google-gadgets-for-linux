@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 # libggadget-dbus is mandatory for linux-system-framework.
 if GGL_HOST_LINUX
 

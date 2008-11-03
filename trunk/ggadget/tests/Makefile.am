@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST		= file_manager_test_data
+EXTRA_DIST		= file_manager_test_data CMakeLists.txt
 
 SUBDIRS = test_modules
 
