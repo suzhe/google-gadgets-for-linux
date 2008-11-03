@@ -239,7 +239,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
-    main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
+    main_view_->view()->SetCaption(GetManifestInfo(kManifestName));
 
     std::string min_version = GetManifestInfo(kManifestMinVersion);
     DLOG("Gadget min version: %s", min_version.c_str());
@@ -725,7 +725,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
            VariantValue<bool>()(result)) && window->AdjustSize()) {
         view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
-          view->SetCaption(main_view_->view()->GetCaption().c_str());
+          view->SetCaption(main_view_->view()->GetCaption());
         ret = view->ShowView(true, flags,
                              NewSlot(OptionsDialogCallback, &options_view));
       } else {
@@ -757,7 +757,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
           view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
-          view->SetCaption(main_view_->view()->GetCaption().c_str());
+          view->SetCaption(main_view_->view()->GetCaption());
 
         if (param) {
           // Set up the param variable in the opened options view.
@@ -865,11 +865,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (title && *title) {
       details_view_->view()->SetCaption(title);
     } else if (details_view_->view()->GetCaption().empty()) {
-      details_view_->view()->SetCaption(
-          main_view_->view()->GetCaption().c_str());
+      details_view_->view()->SetCaption(main_view_->view()->GetCaption());
     }
 
-    details_view_->view()->ShowView(title, flags, feedback_handler);
+    details_view_->view()->ShowView(false, flags, feedback_handler);
     return true;
   }
 

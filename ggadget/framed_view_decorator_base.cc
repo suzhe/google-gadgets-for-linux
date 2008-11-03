@@ -391,7 +391,7 @@ void FramedViewDecoratorBase::SetResizable(ResizableMode resizable) {
   impl_->LayoutResizeBorder();
 }
 
-void FramedViewDecoratorBase::SetCaption(const char *caption) {
+void FramedViewDecoratorBase::SetCaption(const std::string &caption) {
   impl_->caption_->GetTextFrame()->SetText(caption);
   ViewDecoratorBase::SetCaption(caption);
 }

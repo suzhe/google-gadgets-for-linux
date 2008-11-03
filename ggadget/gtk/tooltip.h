@@ -43,6 +43,13 @@ class Tooltip {
   void Show(const char *tooltip);
 
   /**
+   * Shows a tooltip at specific screen and position.
+   * The tooltip will be shown immediately.
+   */
+  void ShowAtPosition(const char *tooltip,
+                      GdkScreen *screen, int x, int y);
+
+  /**
    * Hide tooltip window immediately.
    */
   void Hide();

@@ -572,14 +572,15 @@ class ContentAreaElement::Impl {
       if (mouse_over_item_ != new_mouse_over_item) {
         mouse_over_item_ = new_mouse_over_item;
         mouse_over_pin_ = new_mouse_over_pin;
-        const char *tooltip = tooltip_required ?
-                              new_mouse_over_item->GetTooltip().c_str() : NULL;
+        std::string tooltip;
+        if (tooltip_required)
+          tooltip = new_mouse_over_item->GetTooltip();
         // Store the tooltip to let view display it when appropriate using
         // the default mouse-in logic.
         owner_->SetTooltip(tooltip);
         // Display the tooltip now, because view only displays tooltip when
         // the mouse-in element changes.
-        owner_->GetView()->SetTooltip(tooltip);
+        owner_->GetView()->ShowElementTooltip(owner_);
         queue_draw = true;
       } else if (new_mouse_over_pin != mouse_over_pin_) {
         mouse_over_pin_ = new_mouse_over_pin;

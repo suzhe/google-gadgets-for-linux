@@ -109,12 +109,19 @@ class ViewDecoratorBase : public View {
   /** Sets cursor type required by child view. */
   void SetChildViewCursor(ViewInterface::CursorType type);
 
-  /** Sets tooltip required by child view. */
-  void SetChildViewTooltip(const char *tooltip);
+  /** Shows tooltip required by child view. */
+  void ShowChildViewTooltip(const std::string &tooltip);
+
+  /**
+   * Shows tooltip required by child view at specific position in child view's
+   * coordinates.
+   */
+  void ShowChildViewTooltipAtPosition(const std::string &tooltip,
+                                      double x, double y);
 
   /** Sets the option prefix **/
   void SetOptionPrefix(const char *option_prefix);
-  
+
   /** Gets the option prefix **/
   std::string GetOptionPrefix() const;
 

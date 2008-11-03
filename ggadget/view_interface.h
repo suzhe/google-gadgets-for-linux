@@ -201,7 +201,7 @@ class ViewInterface {
    * floating/expanded mode but not shown when the gadget is in the Sidebar.
    * @see SetShowCaptionAlways()
    */
-  virtual void SetCaption(const char *caption) = 0;
+  virtual void SetCaption(const std::string &caption) = 0;
   virtual std::string GetCaption() const = 0;
 
   /**

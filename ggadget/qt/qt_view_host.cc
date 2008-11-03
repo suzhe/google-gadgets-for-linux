@@ -413,8 +413,8 @@ void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   DLOG("SetResizable:%d", mode);
 }
 
-void QtViewHost::SetCaption(const char *caption) {
-  impl_->caption_ = QString::fromUtf8(caption);
+void QtViewHost::SetCaption(const std::string &caption) {
+  impl_->caption_ = QString::fromUtf8(caption.c_str());
   if (impl_->window_)
     impl_->window_->setWindowTitle(impl_->caption_);
 }
@@ -427,8 +427,16 @@ void QtViewHost::SetCursor(int type) {
   impl_->widget_->setCursor(cursor);
 }
 
-void QtViewHost::SetTooltip(const char *tooltip) {
-  QToolTip::showText(QCursor::pos(), QString::fromUtf8(tooltip));
+void QtViewHost::ShowTooltip(const std::string &tooltip) {
+  QToolTip::showText(QCursor::pos(), QString::fromUtf8(tooltip.c_str()));
+}
+
+void QtViewHost::ShowTooltipAtPosition(const std::string &tooltip,
+                                       double x, double y) {
+  ViewCoordToNativeWidgetCoord(x, y, &x, &y);
+  QPoint pos(static_cast<int>(x), static_cast<int>(y));
+  QToolTip::showText(impl_->widget_->mapToGlobal(pos),
+                     QString::fromUtf8(tooltip.c_str()));
 }
 
 bool QtViewHost::ShowView(bool modal, int flags,

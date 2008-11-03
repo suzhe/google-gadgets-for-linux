@@ -101,15 +101,22 @@ class SideBar::Impl : public View {
       // Do nothing.
     }
     virtual void SetResizable(ViewInterface::ResizableMode mode) {}
-    virtual void SetCaption(const char *caption) {}
+    virtual void SetCaption(const std::string &caption) {}
     virtual void SetShowCaptionAlways(bool always) {}
     virtual void SetCursor(int type) {
       view_element_->SetCursor(
           static_cast<ViewInterface::CursorType>(type));
       owner_->view_host_->SetCursor(type);
     }
-    virtual void SetTooltip(const char *tooltip) {
-      owner_->view_host_->SetTooltip(tooltip);
+    virtual void ShowTooltip(const std::string &tooltip) {
+      view_element_->SetTooltip(tooltip);
+      owner_->ShowElementTooltip(view_element_);
+    }
+    virtual void ShowTooltipAtPosition(const std::string &tooltip,
+                                       double x, double y) {
+      view_element_->SetTooltip(tooltip);
+      double scale = view_element_->GetScale();
+      owner_->ShowElementTooltipAtPosition(view_element_, x * scale, y * scale);
     }
     virtual bool ShowView(bool modal, int flags,
                           Slot1<bool, int> *feedback_handler) {

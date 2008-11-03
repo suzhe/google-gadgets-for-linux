@@ -163,7 +163,7 @@ class ContentItem : public ScriptableHelperDefault {
 
   /** Gets and sets the tooltip text, such as full headlines, etc. */
   std::string GetTooltip() const;
-  void SetTooltip(const char *tooltip);
+  void SetTooltip(const std::string &tooltip);
 
   /** Gets and sets the item's required display position. */
   void GetRect(double *x, double *y, double *width, double *height,

@@ -883,6 +883,7 @@ class Wireless::Impl {
    * PolicyKit issue. The AddConnection call will always fail due to lack of
    * privilege.
    */
+#if 0
   static bool CreateNewConnectionInSettings(DBusProxy *settings,
                                             const std::string &ssid) {
     typedef SharedScriptable<0xa03f49b2cab5479a> ScriptableDict;
@@ -910,6 +911,7 @@ class Wireless::Impl {
     }
     return false;
   }
+#endif
 
   /**
    * Only for nm 0.7.x, gets a connection for specific access point.
@@ -938,7 +940,7 @@ class Wireless::Impl {
           delete settings;
           return true;
         }
-
+#if 0
         // Only system settings has add connection method.
         if (kNMSettingsServices[i] == kNMServiceSystemSettings) {
           if (CreateNewConnectionInSettings(settings, ssid)) {
@@ -949,6 +951,7 @@ class Wireless::Impl {
             }
           }
         }
+#endif
         delete settings;
       }
     }

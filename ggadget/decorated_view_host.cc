@@ -144,7 +144,7 @@ void DecoratedViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   impl_->view_decorator_->SetResizable(mode);
 }
 
-void DecoratedViewHost::SetCaption(const char *caption) {
+void DecoratedViewHost::SetCaption(const std::string &caption) {
   impl_->view_decorator_->SetCaption(caption);
 }
 
@@ -157,8 +157,13 @@ void DecoratedViewHost::SetCursor(int type) {
       static_cast<ViewInterface::CursorType>(type));
 }
 
-void DecoratedViewHost::SetTooltip(const char *tooltip) {
-  impl_->view_decorator_->SetChildViewTooltip(tooltip);
+void DecoratedViewHost::ShowTooltip(const std::string &tooltip) {
+  impl_->view_decorator_->ShowChildViewTooltip(tooltip);
+}
+
+void DecoratedViewHost::ShowTooltipAtPosition(const std::string &tooltip,
+                                              double x, double y) {
+  impl_->view_decorator_->ShowChildViewTooltipAtPosition(tooltip, x, y);
 }
 
 bool DecoratedViewHost::ShowView(bool modal, int flags,

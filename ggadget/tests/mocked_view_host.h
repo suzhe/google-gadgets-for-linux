@@ -150,10 +150,12 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void QueueResize() { resize_queued_ = true; }
   virtual void EnableInputShapeMask(bool enable) { };
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
-  virtual void SetCaption(const char *caption) { }
+  virtual void SetCaption(const std::string &caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(int type) { }
-  virtual void SetTooltip(const char *tooltip) { }
+  virtual void ShowTooltip(const std::string &tooltip) { }
+  virtual void ShowTooltipAtPosition(const std::string &tooltip,
+                                     double x, double y) { }
   virtual bool ShowView(bool modal, int flags,
                         ggadget::Slot1<bool, int> *feedback_handler) {
     delete feedback_handler;
