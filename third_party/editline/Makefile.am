@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 noinst_HEADERS		= editline.h \
 			  unix.h
 

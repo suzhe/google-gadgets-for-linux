@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EXTRA_DIST = CMakeLists.txt \
+	     bar_module \
+	     fake_module \
+	     foo_module \
+	     tux_module
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 

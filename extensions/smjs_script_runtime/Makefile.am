@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 

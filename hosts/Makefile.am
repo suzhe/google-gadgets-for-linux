@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 SUBDIRS =
 
 if GGL_BUILD_GTK_HOST

@@ -20,7 +20,7 @@ TEST_IMAGES		= 120day.png \
 			  testmask.png \
 			  opaque.png
 
-EXTRA_DIST		= $(TEST_IMAGES)
+EXTRA_DIST		= $(TEST_IMAGES) CMakeLists.txt
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

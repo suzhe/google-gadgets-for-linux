@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EXTRA_DIST = CMakeLists.txt
+
 if GGL_BUILD_QT_SYSTEM_FRAMEWORK
 
 INCLUDES		= -I$(top_builddir) \
@@ -32,7 +34,8 @@ qt_system_framework_la_CPPFLAGS = \
 
 qt_system_framework_la_LIBADD = \
 			  @QT4_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 qt_system_framework_la_LDFLAGS = \
 			  -avoid-version \

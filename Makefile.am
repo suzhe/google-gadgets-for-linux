@@ -30,7 +30,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  xdg \
 	  hosts
 
-EXTRA_DIST = autotools
+EXTRA_DIST = autotools cmake CMakeLists.txt
 
 dist-hook:
 	rm -rf `find $(distdir) -name '.svn'`

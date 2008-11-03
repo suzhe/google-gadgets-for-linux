@@ -74,7 +74,7 @@ ggl-gtk.desktop : ggl-gtk.desktop.in
 	$(top_builddir)/xdg/intl-desktop-file.sh $@.tmp $@
 	rm -f $@.tmp
 
-EXTRA_DIST = $(desktop_in_files)
+EXTRA_DIST = $(desktop_in_files) CMakeLists.txt
 CLEANFILES = $(desktop_DATA)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE

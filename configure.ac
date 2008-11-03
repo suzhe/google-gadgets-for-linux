@@ -360,17 +360,28 @@ AC_SUBST(GGL_RESOURCE_DIR)
 ###########################################################
 ##                 Default compiler options.             ##
 ###########################################################
+
+# Check -fstack-protector and -fstack-protector-all
+GGL_CHECK_STACK_PROTECTOR([has_stack_protector=yes], [has_stack_protector=no])
+
 if test x$enable_debug = xyes; then
   DEFAULT_COMPILE_FLAGS="-g -O0 -Wall"
   DEBUG_MACROS="_DEBUG";
+  if test x$has_stack_protector = xyes; then
+    DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -fstack-protector-all"
+  fi
 else
   DEFAULT_COMPILE_FLAGS="-O2 -Wall"
   DEBUG_MACROS="NDEBUG";
+  if test x$has_stack_protector = xyes; then
+    DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -fstack-protector"
+  fi
 fi
 
 if test x$use_werror = xyes; then
   DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -Werror"
 fi
+
 
 # Enable stdc const macros by default, like INT64_C etc.
 PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \

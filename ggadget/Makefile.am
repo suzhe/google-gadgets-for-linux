@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EXTRA_DIST = CMakeLists.txt
+
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests js xdg npapi
 

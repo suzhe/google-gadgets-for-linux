@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 

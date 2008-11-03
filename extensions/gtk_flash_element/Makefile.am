@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EXTRA_DIST = CMakeLists.txt
+
 if GGL_BUILD_GTK_FLASH_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \
@@ -21,20 +23,17 @@ INCLUDES		= -I$(top_builddir) \
 extension_LTLIBRARIES	= gtk-flash-element.la
 extensiondir		= $(GGL_MODULE_DIR)
 
-gtk_flash_element_la_SOURCES = \
-			       gtk_flash_element.cc
+gtk_flash_element_la_SOURCES = gtk_flash_element.cc
 
-gtk_flash_element_la_CXXFLAGS = \
-				$(DEFAULT_COMPILE_FLAGS)
+gtk_flash_element_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
 
-gtk_flash_element_la_CPPFLAGS = \
-				$(PREDEFINED_MACROS)
+gtk_flash_element_la_CPPFLAGS = $(PREDEFINED_MACROS)
 
-gtk_flash_element_la_LIBADD = \
-			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+gtk_flash_element_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			      $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la \
+			      $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
-gtk_flash_element_la_LDFLAGS = \
-			       -avoid-version \
+gtk_flash_element_la_LDFLAGS = -avoid-version \
 			       -module
 
 endif

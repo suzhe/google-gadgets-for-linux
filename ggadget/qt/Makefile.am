@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST = CMakeLists.txt
+
 if GGL_BUILD_LIBGGADGET_QT
 
 # Putting . into SBUDIRS list to force building current directory first.
