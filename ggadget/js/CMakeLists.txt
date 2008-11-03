@@ -19,8 +19,9 @@ ADD_SUBDIRECTORY(tests)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-conversion")
 
 ADD_CUSTOM_COMMAND(OUTPUT jscript_massager.cc
-  COMMAND flex -o jscript_massager.cc ${CMAKE_CURRENT_SOURCE_DIR}/jscript_massager.l
-  MAIN_DEPENDENCY jscript_massager.l )
+  COMMAND flex -o jscript_massager.cc jscript_massager.l
+  MAIN_DEPENDENCY jscript_massager.l
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_LIBRARY(ggadget-js${GGL_EPOCH} SHARED jscript_massager.cc js_utils.cc)
 TARGET_LINK_LIBRARIES(ggadget-js${GGL_EPOCH} ggadget${GGL_EPOCH})

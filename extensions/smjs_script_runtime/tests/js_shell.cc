@@ -53,22 +53,16 @@ char *readline(const char *prompt);
 void add_history(const char *line);
 }
 
-static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
-  if (g_interactive) {
-    char *linep = readline(prompt);
-    if (!linep)
-      return JS_FALSE;
-    if (linep[0] != '\0')
-      add_history(linep);
-    strncpy(buffer, linep, size - 2);
-    free(linep);
-    buffer[size - 2] = '\0';
-    strncat(buffer, "\n", 1);
-  } else {
-    if (!fgets(buffer, size, file))
-      return JS_FALSE;
-  }
-  return JS_TRUE;
+static JSBool GetLine(char *buffer, size_t size, const char *prompt) {
+  char *linep = readline(prompt);
+  if (!linep)
+    return JS_FALSE;
+  if (linep[0] != '\0')
+    add_history(linep);
+  strncpy(buffer, linep, size - 2);
+  free(linep);
+  buffer[size - 2] = '\0';
+  strncat(buffer, "\n", 1);
 }
 
 static JSBool IsCompilableUnit(JSContext *cx, JSObject *obj,
@@ -117,62 +111,64 @@ static JSBool IsCompilableUnit(JSContext *cx, JSObject *obj,
   return JS_TRUE;
 }
 
-static const int kBufferSize = 65536;
-static char g_buffer[kBufferSize];
+static void ProcessScript(JSContext *cx, JSObject *obj,
+                          const char *script, size_t length,
+                          const char *filename, int startline) {
+  ggadget::UTF16String utf16_string;
+  ggadget::ConvertStringUTF8ToUTF16(script, length, &utf16_string);
+  JSScript *js_script = JS_CompileUCScript(cx, obj,
+                                           utf16_string.c_str(),
+                                           utf16_string.size(),
+                                           filename, startline);
+  if (js_script) {
+    jsval result;
+    if (JS_ExecuteScript(cx, obj, js_script, &result) &&
+        result != JSVAL_VOID &&
+        g_interactive) {
+      puts(PrintJSValue(cx, result).c_str());
+    }
+    JS_DestroyScript(cx, js_script);
+  }
+  JS_ClearPendingException(cx);
+}
+
+static char g_buffer[10 * 1024 * 1024];
 static void Process(JSContext *cx, JSObject *obj, const char *filename) {
-  FILE *file;
   if (!filename || strcmp(filename, "-") == 0) {
     g_interactive = true;
-    file = stdin;
-    filename = "(stdin)";
+    int lineno = 1;
+    bool eof = false;
+    do {
+      char *bufp = g_buffer;
+      size_t remain_size = sizeof(g_buffer);
+      *bufp = '\0';
+      int startline = lineno;
+      do {
+        if (!GetLine(bufp, remain_size,
+                     startline == lineno ? "js> " : "  > ")) {
+          eof = true;
+          break;
+        }
+        size_t line_len = strlen(bufp);
+        bufp += line_len;
+        remain_size -= line_len;
+        lineno++;
+      } while (!IsCompilableUnit(cx, obj, g_buffer));
+      ProcessScript(cx, obj, g_buffer, sizeof(g_buffer) - remain_size,
+                    filename, startline);
+    } while (!eof && g_quit_code == DONT_QUIT);
   } else {
     g_interactive = false;
-    file = fopen(filename, "r");
+    FILE *file = fopen(filename, "r");
     if (!file) {
       fprintf(stderr, "Can't open file: %s\n", filename);
       g_quit_code = QUIT_ERROR;
       return;
     }
+    fprintf(stderr, "Load from file: %s\n", filename);
+    size_t size = fread(g_buffer, 1, sizeof(g_buffer), file);
+    ProcessScript(cx, obj, g_buffer, size, filename, 1);
   }
-
-  int lineno = 1;
-  bool eof = false;
-  do {
-    char *bufp = g_buffer;
-    int remain_size = kBufferSize;
-    *bufp = '\0';
-    int startline = lineno;
-    do {
-      if (!GetLine(file, bufp, remain_size,
-                   startline == lineno ? "js> " : "  > ")) {
-        eof = true;
-        break;
-      }
-      int line_len = strlen(bufp);
-      bufp += line_len;
-      remain_size -= line_len;
-      lineno++;
-    } while (!IsCompilableUnit(cx, obj, g_buffer));
-
-    ggadget::UTF16String utf16_string;
-    ggadget::ConvertStringUTF8ToUTF16(g_buffer, strlen(g_buffer),
-                                      &utf16_string);
-    JSScript *script = JS_CompileUCScript(cx, obj,
-                                          utf16_string.c_str(),
-                                          utf16_string.size(),
-                                          filename, startline);
-    if (script) {
-      jsval result;
-      if (JS_ExecuteScript(cx, obj, script, &result) &&
-          result != JSVAL_VOID &&
-          g_interactive) {
-        puts(PrintJSValue(cx, result).c_str());
-      }
-      JS_DestroyScript(cx, script);
-    }
-    // printf("%s:%d: %s\n", filename, startline, g_buffer);
-    JS_ClearPendingException(cx);
-  } while (!eof && g_quit_code == DONT_QUIT);
 }
 
 static JSBool Print(JSContext *cx, JSObject *obj,
@@ -181,6 +177,19 @@ static JSBool Print(JSContext *cx, JSObject *obj,
     printf("%s ", PrintJSValue(cx, argv[i]).c_str());
   putchar('\n');
   fflush(stdout);
+  return JS_TRUE;
+}
+
+static JSBool Load(JSContext *cx, JSObject *obj,
+                   uintN argc, jsval *argv, jsval *rval) {
+  if (argc >= 1) {
+    JSString *js_string = JS_ValueToString(cx, argv[0]);
+    if (js_string) {
+      char *bytes = JS_GetStringBytes(js_string);
+      if (bytes)
+        Process(cx, JS_GetGlobalObject(cx), bytes);
+    }
+  }
   return JS_TRUE;
 }
 
@@ -234,14 +243,15 @@ static void ErrorReporter(JSContext *cx, const char *message,
       strncmp(message, kAssertFailurePrefix,
               sizeof(kAssertFailurePrefix) - 1) != 0) {
     if (JSREPORT_IS_EXCEPTION(report->flags) ||
-        JSREPORT_IS_STRICT(report->flags))
+        JSREPORT_IS_STRICT(report->flags)) {
       // Unhandled exception or strict errors, quit.
       g_quit_code = QUIT_JSERROR;
-    else
+    } else {
       // Convert this error into an exception, to make the tester be able to
       // catch it.
       JS_SetPendingException(cx,
           STRING_TO_JSVAL(JS_NewString(cx, strdup(message), strlen(message))));
+    }
   }
 
   fflush(stdout);
@@ -290,6 +300,7 @@ static JSBool JSONDecodeFunc(JSContext *cx, JSObject *obj,
 
 static JSFunctionSpec global_functions[] = {
   { "print", Print, 0 },
+  { "load", Load, 1 },
   { "quit", Quit, 0 },
   { "gc", GC, 0 },
   { "setVerbose", SetVerbose, 1 },
