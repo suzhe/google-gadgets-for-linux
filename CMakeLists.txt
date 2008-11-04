@@ -25,6 +25,7 @@ ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
 ADD_SUBDIRECTORY(gadgets)
+ADD_SUBDIRECTORY(xdg)
 
 ADD_DIR_TO_ZIP(resources output/bin/resources.gg)
 
