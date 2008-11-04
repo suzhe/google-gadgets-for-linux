@@ -90,13 +90,12 @@ static bool IsSvg(const std::string &data) {
 }
 #endif
 
-ImageInterface *CairoGraphics::NewImage(const char *tag,
+ImageInterface *CairoGraphics::NewImage(const std::string &tag,
                                         const std::string &data,
                                         bool is_mask) const {
   if (data.empty())
     return NULL;
 
-  std::string tag_str(tag ? tag : "");
   CairoImageBase *img = NULL;
 
 #ifdef HAVE_RSVG_LIBRARY
@@ -121,12 +120,13 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
   return img;
 }
 
-FontInterface *CairoGraphics::NewFont(const char *family, double pt_size,
+FontInterface *CairoGraphics::NewFont(const std::string &family,
+                                      double pt_size,
                                       FontInterface::Style style,
                                       FontInterface::Weight weight) const {
   PangoFontDescription *font = pango_font_description_new();
 
-  pango_font_description_set_family(font, family);
+  pango_font_description_set_family(font, family.c_str());
   // Calculate pixel size based on the Windows DPI of 96 for compatibility
   // reasons.
   double px_size = pt_size * PANGO_SCALE * 96. / 72.;

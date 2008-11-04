@@ -61,14 +61,15 @@ class GraphicsInterface {
    *     black color will be treated as fully transparent.
    * @return NULL on error, an ImageInterface object otherwise.
    */
-  virtual ImageInterface *NewImage(const char *tag,
+  virtual ImageInterface *NewImage(const std::string &tag,
                                    const std::string &data,
                                    bool is_mask) const = 0;
 
   /**
    * Create a new font. This font is used when rendering text to a canvas.
    */
-  virtual FontInterface *NewFont(const char *family, double pt_size,
+  virtual FontInterface *NewFont(const std::string &family,
+                                 double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
 

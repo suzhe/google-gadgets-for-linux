@@ -21,10 +21,10 @@
 namespace ggadget {
 namespace qt {
 
-QtFont::QtFont(const char *family, double size, Style style,
-                     Weight weight)
+QtFont::QtFont(const std::string &family, double size,
+               Style style, Weight weight)
     : size_(size), style_(style), weight_(weight) {
-  font_ = new QFont(family);
+  font_ = new QFont(family.c_str());
   int px_size = D2I(size * 96./ 72.);
   font_->setPixelSize(px_size);
   if (weight == WEIGHT_BOLD)

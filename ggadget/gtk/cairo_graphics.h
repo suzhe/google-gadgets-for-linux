@@ -42,10 +42,12 @@ class CairoGraphics : public GraphicsInterface {
  public:
   virtual CanvasInterface *NewCanvas(double w, double h) const;
 
-  virtual ImageInterface *NewImage(const char *tag, const std::string &data,
+  virtual ImageInterface *NewImage(const std::string &tag,
+                                   const std::string &data,
                                    bool is_mask) const;
 
-  virtual FontInterface *NewFont(const char *family, double pt_size,
+  virtual FontInterface *NewFont(const std::string &family,
+                                 double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 

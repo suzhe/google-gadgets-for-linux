@@ -31,7 +31,8 @@ using namespace ggadget;
 class MockedGraphics : public ggadget::GraphicsInterface {
   class MockedImage : public ggadget::ImageInterface {
    public:
-    MockedImage(MockedGraphics *gfx, const char *tag, bool share, bool is_mask)
+    MockedImage(MockedGraphics *gfx, const std::string &tag,
+                bool share, bool is_mask)
       : gfx_(gfx), tag_(tag), is_mask_(is_mask) {
       if (share) {
         if (is_mask) {
@@ -75,14 +76,14 @@ class MockedGraphics : public ggadget::GraphicsInterface {
   virtual ggadget::CanvasInterface *NewCanvas(double w, double h) const {
     return NULL;
   }
-  virtual ggadget::ImageInterface *NewImage(const char *tag,
+  virtual ggadget::ImageInterface *NewImage(const std::string &tag,
                                             const std::string &data,
                                             bool is_mask) const {
     return new MockedImage(const_cast<MockedGraphics*>(this), tag, true,
                            is_mask);
   }
   virtual ggadget::FontInterface *NewFont(
-      const char *family, double pt_size,
+      const std::string &family, double pt_size,
       ggadget::FontInterface::Style style,
       ggadget::FontInterface::Weight weight) const {
     return NULL;
@@ -160,23 +161,32 @@ TEST(ImageCache, LoadImage) {
   ASSERT_FALSE(img2->GetCanvas());
   img2->Destroy();
 
+  local->should_fail_ = true;
+  local->requested_file_.clear();
+  img1 = img_cache.LoadImage(&gfx, &g_local_fm, "non-exist-file", false);
+  ASSERT_STREQ("non-exist-file", local->requested_file_.c_str());
+  ASSERT_TRUE(img1);
+  ASSERT_STREQ("non-exist-file", img1->GetTag().c_str());
+  img2 = img1->MultiplyColor(Color::kMiddleColor);
+  ASSERT_EQ(NULL, img2);
+  img1->Destroy();
+
   ASSERT_FALSE(img_cache.LoadImage(&gfx, NULL, "", false));
-  ASSERT_FALSE(img_cache.LoadImage(&gfx, NULL, NULL, false));
 }
 
 int main(int argc, char *argv[]) {
   testing::ParseGTestFlags(&argc, argv);
 
   FileManagerWrapper *fm = new FileManagerWrapper();
-  global_root = new MockedFileManager();
+  global_root = new MockedFileManager("/");
   fm->RegisterFileManager(kDirSeparatorStr, global_root);
-  resource = new MockedFileManager();
+  resource = new MockedFileManager("/usr/share/google-gadgets/resources/");
   fm->RegisterFileManager(kGlobalResourcePrefix, resource);
   SetGlobalFileManager(fm);
 
-  local = new MockedFileManager();
+  local = new MockedFileManager("/test/gadgets/");
   g_local_fm.RegisterFileManager("", local);
-  local_root = new MockedFileManager();
+  local_root = new MockedFileManager("/");
   g_local_fm.RegisterFileManager(kDirSeparatorStr, local_root);
 
   return RUN_ALL_TESTS();

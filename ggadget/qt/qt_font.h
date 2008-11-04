@@ -29,8 +29,7 @@ namespace qt {
  */
 class QtFont : public FontInterface {
  public:
-  QtFont(const char *family, double size, Style style,
-         Weight weight);
+  QtFont(const std::string &family, double size, Style style, Weight weight);
   virtual ~QtFont();
 
   virtual Style GetStyle() const { return style_; };

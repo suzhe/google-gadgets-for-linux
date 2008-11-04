@@ -91,7 +91,7 @@ class TextFrame::Impl {
     // The FontInterface object is cached on draw.
     if (!font_) {
       font_ = view_->GetGraphics()->NewFont(
-          font_name_.empty() ? kDefaultFontName : font_name_.c_str(),
+          font_name_.empty() ? kDefaultFontName : font_name_,
           size_,
           italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
           bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL);

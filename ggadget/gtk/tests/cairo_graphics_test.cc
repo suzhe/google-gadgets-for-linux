@@ -117,13 +117,13 @@ TEST_F(CairoGfxTest, LoadImage) {
   img->Destroy();
   img1->Destroy();
 
-  img = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), false);
+  img = gfx_.NewImage(kTestFile120day, std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
-  img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), false);
+  img1 = gfx_.NewImage(kTestFile120day, std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img1);
   ASSERT_TRUE(img != img1);
   img1->Destroy();
-  img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), true);
+  img1 = gfx_.NewImage(kTestFile120day, std::string(buffer, filelen), true);
   ASSERT_TRUE(img != img1);
   img1->Destroy();
 
