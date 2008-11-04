@@ -16,7 +16,21 @@
 
 IF(GGL_BUILD_QT_HOST)
 
-#ADD_SUBDIRECTORY(tests)
+# Generates ggl-qt.desktop file
+SET(bindir ${CMAKE_INSTALL_PREFIX}/bin)
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/ggl-qt.desktop.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop.in"
+  @ONLY)
+ADD_CUSTOM_TARGET(GenAppDesktop ALL
+  ./intl_desktop_file ${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop
+  DEPENDS intl_desktop_file
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/output/bin
+  )
+INSTALL(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop
+  DESTINATION
+  ${CMAKE_INSTALL_PREFIX}/share/applications
+  )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-conversion")
 
@@ -47,7 +61,4 @@ INSTALL( TARGETS ggl-qt
     ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
 
-INSTALL( FILES "${CMAKE_SOURCE_DIR}/resources/google-gadgets.png"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps"
-)
 ENDIF(GGL_BUILD_QT_HOST)

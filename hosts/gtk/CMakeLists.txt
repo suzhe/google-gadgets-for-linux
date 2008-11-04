@@ -16,6 +16,22 @@
 
 IF(GGL_BUILD_GTK_HOST)
 
+# Generates ggl-gtk.desktop file
+SET(bindir ${CMAKE_INSTALL_PREFIX}/bin)
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/ggl-gtk.desktop.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/ggl-gtk.desktop.in"
+  @ONLY)
+ADD_CUSTOM_TARGET(GenAppDesktop ALL
+  ./intl_desktop_file ${CMAKE_CURRENT_BINARY_DIR}/ggl-gtk.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/ggl-gtk.desktop
+  DEPENDS intl_desktop_file
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/output/bin
+  )
+INSTALL(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/ggl-gtk.desktop
+  DESTINATION
+  ${CMAKE_INSTALL_PREFIX}/share/applications
+  )
+
 APPLY_CONFIG(CAIRO)
 APPLY_CONFIG(GTK2)
 
