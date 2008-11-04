@@ -346,7 +346,7 @@ TEST_F(BasicElementTest, TestTooltip) {
   ASSERT_STREQ("", m.GetTooltip().c_str());
   m.SetTooltip("mytooltip");
   ASSERT_STREQ("mytooltip", m.GetTooltip().c_str());
-  m.SetTooltip(NULL);
+  m.SetTooltip("");
   ASSERT_STREQ("", m.GetTooltip().c_str());
 }
 

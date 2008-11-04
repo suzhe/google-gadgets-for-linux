@@ -17,10 +17,10 @@
 
 <view width="200" height="200" resizable="true" showCaptionAlways="true"
       caption="&GADGET_NAME;" onsizing="ViewOnSizing()" onsize="ViewOnSize()"
-      onOptionChanged="OnOptionChanged()">
+      resizeBorder="6 0 8 8" onOptionChanged="OnOptionChanged()">
   <!-- a background acts as input shape mask. -->
-  <div width="100%" height="100%" background="#FFFFFF"/>
-  <_browser name="browser" x="2" y="2" width="196" height="196"/>
+  <img width="100%" height="100%" src="bkgnd.png" stretchMiddle="true"/>
+  <_browser name="browser" x="6" y="11" width="188" height="183"/>
   <script src="shared.js"/>
   <script src="main.js"/>
 </view>

@@ -299,7 +299,7 @@ class  MainViewDecoratorBase::Impl {
 
       if (var.type() == Variant::TYPE_BOOL)
         owner_->SetMinimized(VariantValue<bool>()(var));
-      
+
       if (var1.type() == Variant::TYPE_BOOL)
         owner_->SetMinimizedIconVisible(VariantValue<bool>()(var1));
 
@@ -473,8 +473,8 @@ void MainViewDecoratorBase::SetMinimizedCaptionVisible(bool visible) {
     if (!visible && !impl_->minimized_icon_visible_) {
       SetMinimizedIconVisible(true);
     } else {
-      impl_->SaveMinimizedState();
       DoLayout();
+      impl_->SaveMinimizedState();
     }
   }
 }
@@ -550,6 +550,7 @@ void MainViewDecoratorBase::SetMinimized(bool minimized) {
       impl_->on_popin_signal_();
     SetChildViewVisible(!minimized);
     impl_->OnMinimizedChanged();
+    DoLayout();
 
     ResizableMode mode = RESIZABLE_TRUE;
     if (!minimized)
@@ -666,7 +667,7 @@ void MainViewDecoratorBase::SetResizable(ResizableMode resizable) {
   ViewDecoratorBase::SetResizable(resizable);
 }
 
-void MainViewDecoratorBase::SetCaption(const char *caption) {
+void MainViewDecoratorBase::SetCaption(const std::string &caption) {
   impl_->minimized_caption_->GetTextFrame()->SetText(caption);
   ViewDecoratorBase::SetCaption(caption);
 }
@@ -680,6 +681,7 @@ bool MainViewDecoratorBase::ShowDecoratedView(
     SimpleEvent event(impl_->minimized_ ? Event::EVENT_MINIMIZE :
                       Event::EVENT_RESTORE);
     child->OnOtherEvent(event);
+    impl_->minimized_caption_->GetTextFrame()->SetText(child->GetCaption());
   }
   return ViewDecoratorBase::ShowDecoratedView(modal, flags, feedback_handler);
 }
@@ -705,7 +707,7 @@ void MainViewDecoratorBase::OnChildViewChanged() {
     impl_->minimized_icon_->SetPixelHeight(
         std::min(kVDMainIconHeight, impl_->minimized_icon_->GetSrcHeight()));
 
-    View *child = gadget->GetMainView();
+    View *child = GetChildView();
     if (child)
       impl_->minimized_caption_->GetTextFrame()->SetText(child->GetCaption());
   } else {
@@ -725,13 +727,13 @@ void MainViewDecoratorBase::DoLayout() {
     impl_->OnMinimizedChanged();
   }
 
+  if (!impl_->minimized_) return;
+
   double left, top, right, bottom;
   GetMargins(&left, &top, &right, &bottom);
   double width = GetWidth();
   double height = GetHeight();
   double client_center = top + (height - top - bottom) / 2.0;
-
-  if (!impl_->minimized_) return;
 
   if (impl_->minimized_bkgnd_) {
     impl_->minimized_bkgnd_->SetPixelX(left);

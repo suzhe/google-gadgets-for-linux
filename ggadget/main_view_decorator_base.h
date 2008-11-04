@@ -172,7 +172,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual EventResult OnOtherEvent(const Event &event);
   virtual void SetResizable(ResizableMode resizable);
-  virtual void SetCaption(const char *caption);
+  virtual void SetCaption(const std::string &caption);
 
   virtual bool ShowDecoratedView(bool modal, int flags,
                                  Slot1<bool, int> *feedback_handler);

@@ -63,6 +63,7 @@ static JSBool GetLine(char *buffer, size_t size, const char *prompt) {
   free(linep);
   buffer[size - 2] = '\0';
   strncat(buffer, "\n", 1);
+  return JS_TRUE;
 }
 
 static JSBool IsCompilableUnit(JSContext *cx, JSObject *obj,
