@@ -53,7 +53,7 @@ ICONS = 32x32.png \
 	128x128.png \
 	192x192.png
 
-EXTRA_DIST = $(xml_files) $(ICONS)
+EXTRA_DIST = $(xml_files) $(ICONS) CMakeLists.txt
 
 if ENABLE_XDG_ICON_RESOURCE
 update-icon-cache:
