@@ -107,13 +107,13 @@ class MockedGraphics : public ggadget::GraphicsInterface {
   virtual ggadget::CanvasInterface *NewCanvas(double w, double h) const {
     return new MockedCanvas(w, h);
   }
-  virtual ggadget::ImageInterface *NewImage(const char *tag,
+  virtual ggadget::ImageInterface *NewImage(const std::string &tag,
                                             const std::string &data,
                                             bool is_mask) const {
       return NULL;
   }
   virtual ggadget::FontInterface *NewFont(
-      const char *family, double pt_size,
+      const std::string &family, double pt_size,
       ggadget::FontInterface::Style style,
       ggadget::FontInterface::Weight weight) const {
     return NULL;

@@ -55,7 +55,7 @@ static void QImageMultiplyColor(QImage* dest,
 
 class QtImage::Impl {
  public:
-  Impl(QtGraphics *g, const char *tag,
+  Impl(QtGraphics *g, const std::string &tag,
        const std::string &data, bool is_mask)
     : is_mask_(is_mask),
       canvas_(NULL),
@@ -134,7 +134,7 @@ class QtImage::Impl {
 };
 
 QtImage::QtImage(QtGraphics *graphics,
-                 const char *tag,
+                 const std::string &tag,
                  const std::string &data,
                  bool is_mask)
   : impl_(new Impl(graphics, tag, data, is_mask)) {
