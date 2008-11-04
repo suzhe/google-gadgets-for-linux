@@ -67,7 +67,7 @@ BEGIN_NS(js)
 /* %endif */
 
 /* %if-c-only */
-
+    
 /* %endif */
 
 /* %if-c-only */
@@ -264,7 +264,7 @@ extern FILE *yyin, *yyout;
                     if ( yytext[yyl] == '\n' )\
                         --yylineno;\
             }while(0)
-
+    
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
 	do \
@@ -338,7 +338,7 @@ struct yy_buffer_state
 
     int yy_bs_lineno; /**< The line count. */
     int yy_bs_column; /**< The column count. */
-
+    
 	/* Whether to try to fill the input buffer when we reach the
 	 * end of it.
 	 */
@@ -8888,7 +8888,7 @@ extern int yywrap (void );
 /* %not-for-header */
 
     static void yyunput (int c,char *buf_ptr  );
-
+    
 /* %ok-for-header */
 
 /* %endif */
@@ -9050,7 +9050,7 @@ YY_DECL
 	register yy_state_type yy_current_state;
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
-
+    
 /* %% [7.0] user's declarations go here */
 #line 245 "jscript_massager.l"
 
@@ -9151,7 +9151,7 @@ yy_find_action:
 			int yyl;
 			for ( yyl = (yy_more_len); yyl < yyleng; ++yyl )
 				if ( yytext[yyl] == '\n' )
-
+					   
     yylineno++;
 ;
 			}
@@ -9767,7 +9767,7 @@ static int yy_get_next_buffer (void)
 {
 	register yy_state_type yy_current_state;
 	register char *yy_cp;
-
+    
 /* %% [15.0] code to get the start state into yy_current_state goes here */
 	yy_current_state = (yy_start);
 
@@ -9833,7 +9833,7 @@ static int yy_get_next_buffer (void)
 /* %endif */
 {
 	register char *yy_cp;
-
+    
     yy_cp = (yy_c_buf_p);
 
 	/* undo effects of setting up yytext */
@@ -9889,7 +9889,7 @@ static int yy_get_next_buffer (void)
 /* %endif */
 {
 	int c;
-
+    
 	*(yy_c_buf_p) = (yy_hold_char);
 
 	if ( *(yy_c_buf_p) == YY_END_OF_BUFFER_CHAR )
@@ -9952,7 +9952,7 @@ static int yy_get_next_buffer (void)
 
 /* %% [19.0] update BOL and yylineno */
 	if ( c == '\n' )
-
+		   
     yylineno++;
 ;
 
@@ -9973,7 +9973,7 @@ static int yy_get_next_buffer (void)
 /* %if-c++-only */
 /* %endif */
 {
-
+    
 	if ( ! YY_CURRENT_BUFFER ){
         yyensure_buffer_stack ();
 		YY_CURRENT_BUFFER_LVALUE =
@@ -9994,7 +9994,7 @@ static int yy_get_next_buffer (void)
 /* %if-c++-only */
 /* %endif */
 {
-
+    
 	/* TODO. We should be able to replace this entire function body
 	 * with
 	 *		yypop_buffer_state();
@@ -10048,7 +10048,7 @@ static void yy_load_buffer_state  (void)
 /* %endif */
 {
 	YY_BUFFER_STATE b;
-
+    
 	b = (YY_BUFFER_STATE) yyalloc(sizeof( struct yy_buffer_state )  );
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in yy_create_buffer()" );
@@ -10079,7 +10079,7 @@ static void yy_load_buffer_state  (void)
 /* %if-c++-only */
 /* %endif */
 {
-
+    
 	if ( ! b )
 		return;
 
@@ -10097,7 +10097,7 @@ static void yy_load_buffer_state  (void)
 #ifndef __cplusplus
 extern int isatty (int );
 #endif /* __cplusplus */
-
+    
 /* %endif */
 
 /* %if-c++-only */
@@ -10115,7 +10115,7 @@ extern int isatty (int );
 
 {
 	int oerrno = errno;
-
+    
 	yy_flush_buffer(b );
 
 	b->yy_input_file = file;
@@ -10133,7 +10133,7 @@ extern int isatty (int );
 /* %if-c-only */
 
         b->yy_is_interactive = file ? (isatty( fileno(file) ) > 0) : 0;
-
+    
 /* %endif */
 /* %if-c++-only */
 /* %endif */
@@ -10246,7 +10246,7 @@ static void yyensure_buffer_stack (void)
 /* %endif */
 {
 	int num_to_alloc;
-
+    
 	if (!(yy_buffer_stack)) {
 
 		/* First allocation is just for 2 elements, since we don't know if this
@@ -10259,9 +10259,9 @@ static void yyensure_buffer_stack (void)
 								);
 		if ( ! (yy_buffer_stack) )
 			YY_FATAL_ERROR( "out of dynamic memory in yyensure_buffer_stack()" );
-
+								  
 		memset((yy_buffer_stack), 0, num_to_alloc * sizeof(struct yy_buffer_state*));
-
+				
 		(yy_buffer_stack_max) = num_to_alloc;
 		(yy_buffer_stack_top) = 0;
 		return;
@@ -10297,7 +10297,7 @@ static void yyensure_buffer_stack (void)
 YY_BUFFER_STATE yy_scan_buffer  (char * base, yy_size_t  size )
 {
 	YY_BUFFER_STATE b;
-
+    
 	if ( size < 2 ||
 	     base[size-2] != YY_END_OF_BUFFER_CHAR ||
 	     base[size-1] != YY_END_OF_BUFFER_CHAR )
@@ -10335,7 +10335,7 @@ YY_BUFFER_STATE yy_scan_buffer  (char * base, yy_size_t  size )
  */
 YY_BUFFER_STATE yy_scan_string (yyconst char * yystr )
 {
-
+    
 	return yy_scan_bytes(yystr,strlen(yystr) );
 }
 /* %endif */
@@ -10354,7 +10354,7 @@ YY_BUFFER_STATE yy_scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
 	char *buf;
 	yy_size_t n;
 	int i;
-
+    
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
 	buf = (char *) yyalloc(n  );
@@ -10421,7 +10421,7 @@ static void yy_fatal_error (yyconst char* msg )
  */
 int yyget_lineno  (void)
 {
-
+        
     return yylineno;
 }
 
@@ -10467,7 +10467,7 @@ char *yyget_text  (void)
  */
 void yyset_lineno (int  line_number )
 {
-
+    
     yylineno = line_number;
 }
 
@@ -10513,7 +10513,7 @@ static int yy_init_globals (void)
 
     /* We do not touch yylineno unless the option is enabled. */
     yylineno =  1;
-
+    
     (yy_buffer_stack) = 0;
     (yy_buffer_stack_top) = 0;
     (yy_buffer_stack_max) = 0;
@@ -10541,7 +10541,7 @@ static int yy_init_globals (void)
 /* yylex_destroy is for both reentrant and non-reentrant scanners. */
 int yylex_destroy  (void)
 {
-
+    
     /* Pop the buffer stack, destroying each element. */
 	while(YY_CURRENT_BUFFER){
 		yy_delete_buffer(YY_CURRENT_BUFFER  );

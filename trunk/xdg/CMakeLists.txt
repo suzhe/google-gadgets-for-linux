@@ -22,18 +22,21 @@ SET(ICONS
   192x192
   )
 
-FOREACH(icon ICONS)
+FOREACH(icon ${ICONS})
   INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/${icon}.png"
     DESTINATION
-    "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${icon}/apps/google-gadgets.png")
+    "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${icon}/apps"
+    RENAME google-gadgets.png)
   INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/${icon}.png"
     DESTINATION
-    "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${icon}/mimetypes/application-x-google-gadgets.png")
-ENDFOREACH(icon ICONS)
+    "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${icon}/mimetypes"
+    RENAME application-x-google-gadgets.png)
+ENDFOREACH(icon ${ICONS})
 
-INSTALL(FILES "{CMAKE_SOURCE_DIR}/xdg/00-google-gadgets.xml"
+INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/00-google-gadgets.xml"
   DESTINATION
-  "${CMAKE_INSTALL_PREFIX}/share/mime/packages/google-gadgets.xml"
+  "${CMAKE_INSTALL_PREFIX}/share/mime/packages"
+  RENAME google-gadgets.xml
     )
 
 ADD_EXECUTABLE(intl_desktop_file intl_desktop_file.cc)
@@ -56,4 +59,9 @@ ADD_CUSTOM_TARGET(GenAppDesktop ALL
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/output/bin
   )
 
-
+INSTALL(FILES
+  ${CMAKE_BINARY_DIR}/output/bin/ggl-gtk.desktop
+  ${CMAKE_BINARY_DIR}/output/bin/ggl-qt.desktop
+  DESTINATION
+  ${CMAKE_INSTALL_PREFIX}/share/applications
+  )
