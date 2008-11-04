@@ -21,7 +21,8 @@ IGOOGLE_GADGET_FILES= en/strings.xml \
 		      main.xml \
 		      options.js \
 		      options.xml \
-		      shared.js
+		      shared.js \
+		      bkgnd.png
 
 EXTRA_DIST = $(IGOOGLE_GADGET_FILES)
 CLEANFILES = *.gg

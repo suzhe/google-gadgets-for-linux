@@ -210,13 +210,20 @@ function ViewOnSizing() {
     if (null != h && event.height > h + 4) {
       event.height = h + 4;
     }
-    gadget.debug.trace("OnSizing: " + event.width + ", " + event.height);
   }
+
+  // Disallow resizing to smaller than resize border's margin.
+  if (event.width < 15)
+    event.width = 15;
+  if (event.height < 20)
+    event.height = 20;
+
+  gadget.debug.trace("OnSizing: " + event.width + ", " + event.height);
 }
 
 function ViewOnSize() {
-  browser.width = view.width - 4;
-  browser.height = view.height - 4;
+  browser.width = view.width - 14;
+  browser.height = view.height - 19;
 }
 
 function ShowGadget() {

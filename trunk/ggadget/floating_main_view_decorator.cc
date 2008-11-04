@@ -69,7 +69,6 @@ class FloatingMainViewDecorator::Impl {
       show_decorator_(false),
       transparent_(transparent_background),
       background_(new ImgElement(owner, NULL)),
-      resize_border_(new DivElement(owner, NULL)),
       zoom_corner_(new DivElement(owner, NULL)) {
     background_->SetSrc(Variant(transparent_ ? kVDMainBackgroundTransparent :
                                 kVDMainBackground));
@@ -98,11 +97,12 @@ class FloatingMainViewDecorator::Impl {
         elm->SetRelativeHeight(1);
       elm->SetCursor(info->cursor);
       elm->SetHitTest(info->hittest);
-      resize_border_->GetChildren()->InsertElement(elm, NULL);
+      elm->SetEnabled(false);
+      elm->SetVisible(false);
+      // resize border elements must be on top of child view.
+      owner->InsertDecoratorElement(elm, false);
+      resize_borders_[i] = elm;
     }
-    resize_border_->SetVisible(false);
-    resize_border_->SetEnabled(false);
-    owner->InsertDecoratorElement(resize_border_, true);
 
     // Setup zoom corner
     ImgElement *corner_img = new ImgElement(owner, NULL);
@@ -129,17 +129,11 @@ class FloatingMainViewDecorator::Impl {
       background_->SetPixelY(0);
       background_->SetRelativeWidth(1);
       background_->SetRelativeHeight(1);
-      resize_border_->SetPixelX(0);
-      resize_border_->SetPixelY(0);
-      resize_border_->SetRelativeWidth(1);
-      resize_border_->SetRelativeHeight(1);
     }
   }
 
   // Returns true if the decorator border shall be shown.
   bool UpdateResizeBorder() {
-    // Update resize border visibility.
-    Elements *children = resize_border_->GetChildren();
     ResizableMode resizable = owner_->GetChildViewResizable();
     bool minimized = owner_->IsMinimized();
     bool vertical = ((resizable == RESIZABLE_TRUE ||
@@ -149,14 +143,14 @@ class FloatingMainViewDecorator::Impl {
                        resizable == RESIZABLE_KEEP_RATIO ||
                        minimized);
     bool both = vertical && horizontal;
-    children->GetItemByIndex(RESIZE_TOP)->SetVisible(vertical);
-    children->GetItemByIndex(RESIZE_BOTTOM)->SetVisible(vertical);
-    children->GetItemByIndex(RESIZE_LEFT)->SetVisible(horizontal);
-    children->GetItemByIndex(RESIZE_RIGHT)->SetVisible(horizontal);
-    children->GetItemByIndex(RESIZE_TOP_LEFT)->SetVisible(both);
-    children->GetItemByIndex(RESIZE_TOP_RIGHT)->SetVisible(both);
-    children->GetItemByIndex(RESIZE_BOTTOM_LEFT)->SetVisible(both);
-    children->GetItemByIndex(RESIZE_BOTTOM_RIGHT)->SetVisible(both);
+    resize_borders_[RESIZE_TOP]->SetVisible(vertical && show_decorator_);
+    resize_borders_[RESIZE_BOTTOM]->SetVisible(vertical && show_decorator_);
+    resize_borders_[RESIZE_LEFT]->SetVisible(horizontal && show_decorator_);
+    resize_borders_[RESIZE_RIGHT]->SetVisible(horizontal && show_decorator_);
+    resize_borders_[RESIZE_TOP_LEFT]->SetVisible(both && show_decorator_);
+    resize_borders_[RESIZE_TOP_RIGHT]->SetVisible(both && show_decorator_);
+    resize_borders_[RESIZE_BOTTOM_LEFT]->SetVisible(both && show_decorator_);
+    resize_borders_[RESIZE_BOTTOM_RIGHT]->SetVisible(both && show_decorator_);
 
     if (vertical || horizontal) {
       // Update resize border size.
@@ -173,18 +167,18 @@ class FloatingMainViewDecorator::Impl {
         bottom = kVDMainBorderWidth;
       }
 
-      children->GetItemByIndex(RESIZE_LEFT)->SetPixelWidth(left);
-      children->GetItemByIndex(RESIZE_TOP)->SetPixelHeight(top);
-      children->GetItemByIndex(RESIZE_RIGHT)->SetPixelWidth(right);
-      children->GetItemByIndex(RESIZE_BOTTOM)->SetPixelHeight(bottom);
-      children->GetItemByIndex(RESIZE_TOP_LEFT)->SetPixelWidth(left);
-      children->GetItemByIndex(RESIZE_TOP_LEFT)->SetPixelHeight(top);
-      children->GetItemByIndex(RESIZE_TOP_RIGHT)->SetPixelWidth(right);
-      children->GetItemByIndex(RESIZE_TOP_RIGHT)->SetPixelHeight(top);
-      children->GetItemByIndex(RESIZE_BOTTOM_LEFT)->SetPixelWidth(left);
-      children->GetItemByIndex(RESIZE_BOTTOM_LEFT)->SetPixelHeight(bottom);
-      children->GetItemByIndex(RESIZE_BOTTOM_RIGHT)->SetPixelWidth(right);
-      children->GetItemByIndex(RESIZE_BOTTOM_RIGHT)->SetPixelHeight(bottom);
+      resize_borders_[RESIZE_LEFT]->SetPixelWidth(left);
+      resize_borders_[RESIZE_TOP]->SetPixelHeight(top);
+      resize_borders_[RESIZE_RIGHT]->SetPixelWidth(right);
+      resize_borders_[RESIZE_BOTTOM]->SetPixelHeight(bottom);
+      resize_borders_[RESIZE_TOP_LEFT]->SetPixelWidth(left);
+      resize_borders_[RESIZE_TOP_LEFT]->SetPixelHeight(top);
+      resize_borders_[RESIZE_TOP_RIGHT]->SetPixelWidth(right);
+      resize_borders_[RESIZE_TOP_RIGHT]->SetPixelHeight(top);
+      resize_borders_[RESIZE_BOTTOM_LEFT]->SetPixelWidth(left);
+      resize_borders_[RESIZE_BOTTOM_LEFT]->SetPixelHeight(bottom);
+      resize_borders_[RESIZE_BOTTOM_RIGHT]->SetPixelWidth(right);
+      resize_borders_[RESIZE_BOTTOM_RIGHT]->SetPixelHeight(bottom);
 
       return !specified;
     }
@@ -192,27 +186,24 @@ class FloatingMainViewDecorator::Impl {
   }
 
   void UpdateDecoratorVisibility() {
-    bool show_border = UpdateResizeBorder();
+    bool show_background = UpdateResizeBorder();
     if (show_decorator_) {
       ResizableMode resizable = owner_->GetChildViewResizable();
       if (resizable == RESIZABLE_TRUE || owner_->IsMinimized()) {
         // background will always be shown if it's not transparent.
         if (transparent_)
-          background_->SetVisible(show_border);
-        resize_border_->SetVisible(true);
+          background_->SetVisible(show_background);
         zoom_corner_->SetVisible(false);
       } else {
         // background for transparent mode is only visible when view is
         // resizable.
         if (transparent_)
           background_->SetVisible(false);
-        resize_border_->SetVisible(false);
         zoom_corner_->SetVisible(true);
       }
     } else {
       if (transparent_)
         background_->SetVisible(false);
-      resize_border_->SetVisible(false);
       zoom_corner_->SetVisible(false);
     }
   }
@@ -246,7 +237,9 @@ class FloatingMainViewDecorator::Impl {
         btn_edge = right;
     }
 
-    *btn_edge = btn_margin;
+    if (transparent_)
+      *btn_edge = btn_margin;
+
     return btn_edge;
   }
 
@@ -260,6 +253,35 @@ class FloatingMainViewDecorator::Impl {
     on_dock_signal_();
   }
 
+  void DoLayout(double width, double height) {
+    double left, top, right, bottom;
+    GetBackgroundMargins(&left, &top, &right, &bottom);
+
+    background_->SetPixelX(left);
+    background_->SetPixelY(top);
+    background_->SetPixelWidth(width - left - right);
+    background_->SetPixelHeight(height - top - bottom);
+
+    resize_borders_[RESIZE_LEFT]->SetPixelX(left);
+    resize_borders_[RESIZE_LEFT]->SetPixelY(top);
+    resize_borders_[RESIZE_TOP]->SetPixelX(left);
+    resize_borders_[RESIZE_TOP]->SetPixelY(top);
+    resize_borders_[RESIZE_RIGHT]->SetPixelX(width - right);
+    resize_borders_[RESIZE_RIGHT]->SetPixelY(top);
+    resize_borders_[RESIZE_BOTTOM]->SetPixelX(left);
+    resize_borders_[RESIZE_BOTTOM]->SetPixelY(height - bottom);
+    resize_borders_[RESIZE_TOP_LEFT]->SetPixelX(left);
+    resize_borders_[RESIZE_TOP_LEFT]->SetPixelY(top);
+    resize_borders_[RESIZE_TOP_RIGHT]->SetPixelX(width - right);
+    resize_borders_[RESIZE_TOP_RIGHT]->SetPixelY(top);
+    resize_borders_[RESIZE_BOTTOM_LEFT]->SetPixelX(left);
+    resize_borders_[RESIZE_BOTTOM_LEFT]->SetPixelY(height - bottom);
+    resize_borders_[RESIZE_BOTTOM_RIGHT]->SetPixelX(width - right);
+    resize_borders_[RESIZE_BOTTOM_RIGHT]->SetPixelY(height - bottom);
+
+    UpdateDecoratorVisibility();
+  }
+
  public:
   FloatingMainViewDecorator *owner_;
 
@@ -267,8 +289,8 @@ class FloatingMainViewDecorator::Impl {
   bool transparent_;
 
   ImgElement *background_;
-  DivElement *resize_border_;
   DivElement *zoom_corner_;
+  BasicElement *resize_borders_[NUMBER_OF_RESIZE_BORDERS];
 
   Signal0<void> on_dock_signal_;
 };
@@ -318,44 +340,20 @@ void FloatingMainViewDecorator::DoLayout() {
   // Call through parent's DoLayout();
   MainViewDecoratorBase::DoLayout();
 
-  double left, top, right, bottom;
   double width = GetWidth();
   double height = GetHeight();
-  impl_->GetBackgroundMargins(&left, &top, &right, &bottom);
-
-  if (impl_->transparent_) {
-    impl_->background_->SetPixelX(left);
-    impl_->background_->SetPixelY(top);
-    impl_->background_->SetPixelWidth(width - left - right);
-    impl_->background_->SetPixelHeight(height - top - bottom);
-  }
-
-  if (impl_->transparent_ || impl_->IsChildViewHasResizeBorder()) {
-    impl_->resize_border_->SetPixelX(left);
-    impl_->resize_border_->SetPixelY(top);
-    impl_->resize_border_->SetPixelWidth(width - left - right);
-    impl_->resize_border_->SetPixelHeight(height - top - bottom);
-  }
-
-  impl_->UpdateDecoratorVisibility();
+  impl_->DoLayout(width, height);
 }
 
 void FloatingMainViewDecorator::GetMargins(double *left, double *top,
                                            double *right, double *bottom) const {
-  double *btn_edge = impl_->GetBackgroundMargins(left, top, right, bottom);
-  double border_margin =
-      (impl_->IsChildViewHasResizeBorder() ? 0 : kVDMainBorderWidth);
+  impl_->GetBackgroundMargins(left, top, right, bottom);
 
-  *left += border_margin;
-  *top += border_margin;
-  *right += border_margin;
-  *bottom += border_margin;
-
-  if (!impl_->transparent_) {
-    if (IsMinimized())
-      *btn_edge = border_margin;
-    else
-      *btn_edge -= border_margin;
+  if (!impl_->IsChildViewHasResizeBorder() || IsMinimized()) {
+    *left += kVDMainBorderWidth;
+    *top += kVDMainBorderWidth;
+    *right += kVDMainBorderWidth;
+    *bottom += kVDMainBorderWidth;
   }
 }
 
