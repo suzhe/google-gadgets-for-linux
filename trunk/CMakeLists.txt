@@ -32,7 +32,3 @@ ADD_DIR_TO_ZIP(resources output/bin/resources.gg)
 INSTALL( FILES "${CMAKE_BINARY_DIR}/output/bin/resources.gg"
     DESTINATION "${CMAKE_INSTALL_PREFIX}/share/google-gadgets"
 )
-
-INSTALL( FILES "${CMAKE_SOURCE_DIR}/resources/google-gadgets.png"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps"
-)
