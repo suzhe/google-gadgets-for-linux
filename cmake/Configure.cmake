@@ -313,31 +313,95 @@ ELSE(NETWORK_MANAGER_FOUND)
   ENDIF(NETWORK_MANAGER_OLD_FOUND)
 ENDIF(NETWORK_MANAGER_FOUND)
 
-INCLUDE(SpiderMonkey)
-IF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
-  SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 0)
-  MESSAGE("Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.")
-ENDIF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
+# Check gtkmozembed (Please refer to configure.ac)
+# Check priority:
+#  xulrunner 1.9: libxul-embedding-unstable and mozilla-js
+#  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
+#  firefox 2.0: firefox2-gtkmozembed and firefox2-js
+#  firefox 1.5: firefox-gtkmozembed and firefox-js
+#
+# Add more rules here if your distribution doesn't support above rules.
+MACRO(HASH_PUT _hash _key _value)
+  LIST(APPEND ${_hash} ${_key})
+  SET(__${_hash}_${_key}__ ${_value})
+ENDMACRO(HASH_PUT _hash _key _value)
 
-IF(GGL_BUILD_LIBGGADGET_GTK AND SMJS_FOUND)
-  GET_CONFIG(xulrunner-gtkmozembed 1.8 GTKMOZEMBED GTKMOZEMBED_FOUND)
-  IF(NOT GTKMOZEMBED_FOUND)
-    GET_CONFIG(firefox2-gtkmozembed 2.0 GTKMOZEMBED GTKMOZEMBED_FOUND)
-    IF(NOT GTKMOZEMBED_FOUND)
-      GET_CONFIG(firefox-gtkmozembed 1.5 GTKMOZEMBED GTKMOZEMBED_FOUND)
-      IF(NOT GTKMOZEMBED_FOUND)
-        GET_CONFIG(mozilla-gtkmozembed 1.8 GTKMOZEMBED GTKMOZEMBED_FOUND)
-      ENDIF(NOT GTKMOZEMBED_FOUND)
-    ENDIF(NOT GTKMOZEMBED_FOUND)
-  ENDIF(NOT GTKMOZEMBED_FOUND)
+MACRO(HASH_GET _hash _key _value)
+  SET(${_value} ${__${_hash}_${_key}__})
+ENDMACRO(HASH_GET _hash _key _value)
+
+# We need to check xul if smjs runtime is to be built because we prefer
+# to using smjs through glue mechanism provided by xul
+IF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
+  HASH_PUT(xul_hash libxul-embedding-unstable mozilla-js)
+  HASH_PUT(xul_hash libxul-embedding mozilla-js)
+  HASH_PUT(xul_hash xulrunner-gtkmozembed xulrunner-js)
+  HASH_PUT(xul_hash firefox2-gtkmozembed firefox2-js)
+  HASH_PUT(xul_hash firefox-gtkmozembed firefox-js)
+
+  FOREACH(pkg ${xul_hash})
+    GET_CONFIG(${pkg} 0 GTKMOZEMBED GTKMOZEMBED_FOUND)
+    IF(GTKMOZEMBED_FOUND)
+      PKG_GET_VARIABLE(${pkg} "includedir" EMBED_INCDIR)
+      LIST(APPEND GTKMOZEMBED_INCLUDE_DIR
+        ${EMBED_INCDIR}
+	${EMBED_INCDIR}/content
+	${EMBED_INCDIR}/dom
+	${EMBED_INCDIR}/xpconnect
+	${EMBED_INCDIR}/widget
+	${EMBED_INCDIR}/gtkembedmoz
+	${EMBED_INCDIR}/xpcom)
+      HASH_GET(xul_hash "${pkg}" LIBSMJS)
+      GET_CONFIG(${LIBSMJS} 0 SMJS SMJS_FOUND)
+      IF(SMJS_FOUND)
+	SET(SMJS_NAME ${LIBSMJS})
+      ENDIF(SMJS_FOUND)
+      BREAK()
+    ENDIF(GTKMOZEMBED_FOUND)
+  ENDFOREACH(pkg ${PKG_NAMES})
+
   IF(NOT GTKMOZEMBED_FOUND AND GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)
     SET(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT 0)
     MESSAGE("Library GtkMozEmbed is not available, gtkmoz-browser-element extension won't be built.")
   ENDIF(NOT GTKMOZEMBED_FOUND AND GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)
-ELSE(GGL_BUILD_LIBGGADGET_GTK AND SMJS_FOUND)
-  SET(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT 0)
-  MESSAGE("Library gtk-2.0 or SpiderMonkey is not available, gtkmoz-browser-element extension won't be built.")
-ENDIF(GGL_BUILD_LIBGGADGET_GTK AND SMJS_FOUND)
+
+ENDIF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
+
+IF(NOT SMJS_FOUND)
+  SET(SMJS_LIST
+    mozilla-js
+    xulrunner-js
+    firefox2-js
+    firefox-js
+    )
+  FOREACH(js ${SMJS_LIST})
+    GET_CONFIG(${js} 0 SMJS SMJS_FOUND)
+    IF(SMJS_FOUND)
+      SET(SMJS_NAME ${LIBSMJS})
+      BREAK()
+    ENDIF(SMJS_FOUND)
+  ENDFOREACH(js ${SMJS_LIST})
+ENDIF(NOT SMJS_FOUND)
+
+# Hell, some distributions' package of smjs is broken. We have to fix it here
+IF(SMJS_FOUND)
+  STRING(REGEX MATCH "/stable" RESULT "${SMJS_INCLUDE_DIR}")
+  IF("${RESULT}" STREQUAL "/stable")
+    PKG_GET_VARIABLE(${SMJS_NAME} "includedir" SMJS_INC)
+    FIND_FILE(JSAPI_PATH jsapi.h "${SMJS_INC}/unstable")
+    IF(JSAPI_PATH)
+      LIST(APPEND SMJS_INCLUDE_DIR "${SMJS_INC}/unstable")
+    ENDIF(JSAPI_PATH)
+  ENDIF("${RESULT}" STREQUAL "/stable")
+ENDIF(SMJS_FOUND)
+
+IF(SMJS_FOUND AND GTKMOZEMBED_FOUND)
+ENDIF(SMJS_FOUND AND GTKMOZEMBED_FOUND)
+
+IF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
+  SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 0)
+  MESSAGE("Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.")
+ENDIF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
 
 MESSAGE("
 Build options:

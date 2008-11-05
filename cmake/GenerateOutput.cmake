@@ -65,3 +65,24 @@ MACRO(INSTALL_PKG_CONFIG _name)
       DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
   ENDIF(NOT WIN32)
 ENDMACRO(INSTALL_PKG_CONFIG _name)
+
+MACRO(INSTALL_BINARY_DESKTOP _name)
+  SET(bindir ${CMAKE_INSTALL_PREFIX}/bin)
+  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/${_name}.desktop.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/${_name}.desktop.in"
+    @ONLY)
+  #  ADD_CUSTOM_TARGET(GenAppDesktop ALL
+  #  ./intl_desktop_file ${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/ggl-qt.desktop
+  #  DEPENDS intl_desktop_file
+  #  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/output/bin
+  #  )
+  INSTALL(CODE
+    "EXECUTE_PROCESS(COMMAND ./intl_desktop_file ${CMAKE_CURRENT_BINARY_DIR}/${_name}.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/${_name}.desktop WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/output/bin)"
+    )
+
+  INSTALL(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/${_name}.desktop
+    DESTINATION
+    ${CMAKE_INSTALL_PREFIX}/share/applications
+    )
+ENDMACRO(INSTALL_BINARY_DESKTOP _name)
