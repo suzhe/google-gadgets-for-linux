@@ -53,7 +53,7 @@ MACRO(PKGCONFIG_EX _package _min_version
     # Get other cflags other than -I include directories.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --cflags-only-other
-      OUTPUT_VARIABLE PKGCONFIG_EX_definitions)
+      OUTPUT_VARIABLE ${_definitions})
     REMOVE_TRAILING_NEWLINE(${_definitions})
 
     # Get library names.
@@ -121,3 +121,13 @@ MACRO(APPLY_CONFIG _prefix)
   SET(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} ${${_prefix}_LINKER_FLAGS}")
 ENDMACRO(APPLY_CONFIG _prefix)
+
+MACRO(PKG_GET_VARIABLE _package _variable _value)
+  FIND_PROGRAM(PKGCONFIG pkg-config PATHS /usr/local/bin)
+  EXECUTE_PROCESS(COMMAND ${PKGCONFIG}
+    "--variable=${_variable}"
+    "${_package}"
+    OUTPUT_VARIABLE "${_value}"
+    )
+  REMOVE_TRAILING_NEWLINE(${_value})
+ENDMACRO(PKG_GET_VARIABLE _package _variable _value)
