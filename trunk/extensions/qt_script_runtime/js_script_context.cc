@@ -25,6 +25,11 @@
 #include "js_script_runtime.h"
 #include "converter.h"
 
+#if 1
+#undef DLOG
+#define DLOG  true ? (void) 0 : LOG
+#endif
+
 namespace ggadget {
 namespace qt {
 
@@ -357,7 +362,7 @@ ResolverScriptClass::~ResolverScriptClass() {
 
 void ResolverScriptClass::OnRefChange(int ref_count, int change) {
   if (change == 0) {
-    LOG("OnRefChange:%p, %p,%d", this, object_, object_->GetRefCount());
+    DLOG("OnRefChange:%p, %p,%d", this, object_, object_->GetRefCount());
     on_reference_change_connection_->Disconnect();
     object_->Unref(true);
     JSScriptContext::Impl *impl = GetEngineContext(engine())->impl_;
@@ -468,7 +473,7 @@ QScriptValue ResolverScriptClass::property(const QScriptValue & object,
   if (res.v().type() == Variant::TYPE_SLOT) {
     QScriptValue value = engine()->newFunction(SlotCaller);
     Slot *slot = VariantValue<Slot *>()(res.v());
-    LOG("\tfun::%p", slot);
+    DLOG("\tfun::%p", slot);
     QScriptValue data = engine()->newQObject(new SlotCallerWrapper(object_, slot),
                                              QScriptEngine::ScriptOwnership);
     value.setData(data);
@@ -524,7 +529,7 @@ bool ResolverScriptClass::supportsExtension(Extension extension) const {
 QVariant ResolverScriptClass::extension(Extension extension,
                                         const QVariant &argument) {
   ASSERT(call_slot_ && extension == Callable);
-  LOG("Object called as function");
+  DLOG("Object called as function");
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);
 
   Variant *argv = NULL;
@@ -620,7 +625,7 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
                                        const Variant &value) {
   ScopedLogContext log_context(this);
 
-  LOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
+  DLOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
       value.Print().c_str());
   QScriptValue obj;
   if (!object_expr || strcmp("", object_expr) == 0) {
