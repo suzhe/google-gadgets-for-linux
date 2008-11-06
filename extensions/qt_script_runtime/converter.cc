@@ -28,7 +28,7 @@
 #include "js_script_context.h"
 #include "json.h"
 
-#if 0
+#if 1
 #undef DLOG
 #define DLOG  true ? (void) 0 : LOG
 #endif

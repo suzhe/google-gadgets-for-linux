@@ -68,7 +68,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 #ifdef _DEBUG
   DLOG("JSFunctionSlot deleted");
   i--;
-  LOG("Delete JSFunctionSlot:#%d", i);
+  DLOG("Delete JSFunctionSlot:#%d", i);
 #endif
 }
 
