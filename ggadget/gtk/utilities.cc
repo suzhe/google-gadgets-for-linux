@@ -981,5 +981,11 @@ bool OpenURL(const Gadget *gadget, const char *url) {
   return ggadget::xdg::OpenURL(gadget, url);
 }
 
+uint64_t GetCurrentTime() {
+  GTimeVal tv;
+  g_get_current_time(&tv);
+  return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+}
+
 } // namespace gtk
 } // namespace ggadget

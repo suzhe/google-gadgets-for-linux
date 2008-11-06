@@ -46,6 +46,12 @@ static const double kMaximumZoom = 2.0;
 static const int kStopMoveDragTimeout = 200;
 static const char kMainViewWindowRole[] = "Google-Gadgets";
 
+// Minimal interval between queue draws.
+static const unsigned int kQueueDrawInterval = 40;
+
+// Maximum live duration of queue draw timer.
+static const uint64_t kQueueDrawTimerDuration = 1000;
+
 class SingleViewHost::Impl {
  public:
   Impl(ViewHostInterface::Type type,
@@ -91,6 +97,9 @@ class SingleViewHost::Impl {
       is_keep_above_(false),
       move_dragging_(false),
       enable_signals_(true),
+      draw_queued_(false),
+      queue_draw_timer_(0),
+      last_queue_draw_time_(0),
       feedback_handler_(NULL),
       can_close_dialog_(false) {
     ASSERT(owner);
@@ -106,6 +115,10 @@ class SingleViewHost::Impl {
   void Detach() {
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
+
+    if (queue_draw_timer_)
+      g_source_remove(queue_draw_timer_);
+    queue_draw_timer_ = 0;
 
     if (stop_move_drag_source_)
       g_source_remove(stop_move_drag_source_);
@@ -285,7 +298,26 @@ class SingleViewHost::Impl {
 
   void QueueDraw() {
     ASSERT(GTK_IS_WIDGET(widget_));
-    gtk_widget_queue_draw(widget_);
+    if (queue_draw_timer_) {
+      draw_queued_ = true;
+      return;
+    }
+
+    uint64_t current_time = GetCurrentTime();
+    if (current_time - last_queue_draw_time_ >= kQueueDrawInterval) {
+      gtk_widget_queue_draw(widget_);
+      draw_queued_ = false;
+      last_queue_draw_time_ = current_time;
+    } else {
+      draw_queued_ = true;
+    }
+
+    // Can't call view's GetCaption() here, because at this point, view might
+    // not be fully initialized yet.
+    DLOG("Install queue draw timer of view: %p", view_);
+    queue_draw_timer_ = g_timeout_add(kQueueDrawInterval,
+                                      QueueDrawTimeoutHandler,
+                                      this);
   }
 
   void SetResizable(ViewInterface::ResizableMode mode) {
@@ -895,6 +927,25 @@ class SingleViewHost::Impl {
     return FALSE;
   }
 
+  static gboolean QueueDrawTimeoutHandler(gpointer data) {
+    Impl *impl = reinterpret_cast<Impl *>(data);
+    uint64_t current_time = GetCurrentTime();
+    if (impl->draw_queued_) {
+      ASSERT(GTK_IS_WIDGET(impl->widget_));
+      gtk_widget_queue_draw(impl->widget_);
+      impl->draw_queued_ = false;
+      impl->last_queue_draw_time_ = current_time;
+    }
+
+    if (current_time - impl->last_queue_draw_time_ > kQueueDrawTimerDuration) {
+      DLOG("Remove queue draw timer of view: %p (%s)", impl->view_,
+           impl->view_->GetCaption().c_str());
+      impl->queue_draw_timer_ = 0;
+      return FALSE;
+    }
+    return TRUE;
+  }
+
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
@@ -947,6 +998,10 @@ class SingleViewHost::Impl {
   bool is_keep_above_;
   bool move_dragging_;
   bool enable_signals_;
+
+  bool draw_queued_;
+  guint queue_draw_timer_;
+  uint64_t last_queue_draw_time_;
 
   Slot1<bool, int> *feedback_handler_;
   bool can_close_dialog_; // Only useful when a model dialog is running.

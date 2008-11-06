@@ -496,7 +496,9 @@ bool GetSystemLocaleInfo(std::string *language, std::string *territory) {
 void Daemonize() {
   // FIXME: How about other systems?
 #ifdef GGL_HOST_LINUX
-  daemon(0, 0);
+  if (daemon(0, 0) != 0) {
+    LOGE("Failed to daemonize.");
+  }
 #endif
 }
 

@@ -184,25 +184,6 @@ class Plugin::Impl {
     Connection *on_owner_destroy_connection_;
   };
 
-  // This class prevents too frequent plugin queue draws.
-  class QueueDrawChecker : public WatchCallbackInterface {
-   public:
-    QueueDrawChecker(Impl *owner) : owner_(owner) {
-    }
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (owner_->pending_queue_draw_) {
-        owner_->pending_queue_draw_ = false;
-        owner_->element_->QueueDraw();
-        owner_->last_queue_draw_time_ = main_loop->GetCurrentTime();
-      }
-      return true;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-    Impl *owner_;
-  };
-
   class XMLHttpRequestCallback {
    public:
     XMLHttpRequestCallback(Impl *owner, const std::string &url,
@@ -287,11 +268,7 @@ class Plugin::Impl {
         window_(window),
         windowless_(false), transparent_(false),
         init_error_(NPERR_GENERIC_ERROR),
-        temp_file_seq_(0),
-        queue_draw_checker_timer_(GetGlobalMainLoop()->AddTimeoutWatch(
-            kCheckQueueDrawInterval, new QueueDrawChecker(this))),
-        pending_queue_draw_(false),
-        last_queue_draw_time_(0) {
+        temp_file_seq_(0) {
     ASSERT(library_info);
     memset(&instance_, 0, sizeof(instance_));
     instance_.ndata = this;
@@ -331,7 +308,6 @@ class Plugin::Impl {
     if (plugin_root_)
       plugin_root_->Unref();
     on_destroy_();
-    GetGlobalMainLoop()->RemoveWatch(queue_draw_checker_timer_);
 
     if (library_info_->plugin_funcs.destroy) {
       NPError ret = library_info_->plugin_funcs.destroy(&instance_, NULL);
@@ -472,15 +448,7 @@ class Plugin::Impl {
       return;
     // The current plugins seems always invalid the whole rect.
     // Otherwise we need to consider the zoom factor of the view.
-    uint64_t time = GetGlobalMainLoop()->GetCurrentTime();
-    if (last_queue_draw_time_ + kCheckQueueDrawInterval < time) {
-      element_->QueueDraw();
-      last_queue_draw_time_ = time;
-      pending_queue_draw_ = false;
-    } else {
-      // The QueueDrawChecker will call the queue draw after some time.
-      pending_queue_draw_ = true;
-    }
+    element_->QueueDraw();
   }
 
   void ForceRedraw() {
@@ -847,10 +815,6 @@ class Plugin::Impl {
   // initialization. nspluginwrapper requires this.
   static Display *display_;
 #endif
-
-  int queue_draw_checker_timer_;
-  bool pending_queue_draw_;
-  uint64_t last_queue_draw_time_;
 };
 
 const NPNetscapeFuncs Plugin::Impl::kContainerFuncs = {

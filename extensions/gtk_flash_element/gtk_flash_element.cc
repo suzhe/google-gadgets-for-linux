@@ -21,14 +21,14 @@
 namespace ggadget {
 namespace gtk {
 
-StringMap g_default_params;
+static StringMap g_default_flash_params;
 
 class FlashElement : public NPAPIPluginElement {
  public:
   DEFINE_CLASS_ID(0xb74637c33c404a37, NPAPIPluginElement);
   FlashElement(View *view, const char *name)
       : NPAPIPluginElement(view, name, "application/x-shockwave-flash",
-                           g_default_params, false) {
+                           g_default_flash_params, false) {
   }
 
   static BasicElement *CreateInstance(View *view, const char *name) {
@@ -41,7 +41,7 @@ class FlashObjectElement : public NPAPIPluginElement {
   DEFINE_CLASS_ID(0x69ea255b890d4fc9, NPAPIPluginElement);
   FlashObjectElement(View *view, const char *name)
       : NPAPIPluginElement(view, name, "application/x-shockwave-flash",
-                           g_default_params, true) {
+                           g_default_flash_params, true) {
   }
 
   static BasicElement *CreateInstance(View *view, const char *name) {
@@ -67,7 +67,7 @@ extern "C" {
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    ggadget::gtk::g_default_params["wmode"] = "transparent";
+    ggadget::gtk::g_default_flash_params["wmode"] = "transparent";
     if (factory) {
       LOGI("Register gtk_flash_element extension, using name \"flash\".");
       factory->RegisterElementClass(

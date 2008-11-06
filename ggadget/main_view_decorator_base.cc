@@ -48,8 +48,8 @@ static const double kVDMainIconMarginH = 4;
 static const double kVDMainCaptionMarginH = 4;
 static const double kVDMainButtonMargin = 1;
 
-static const unsigned int kVDShowTimeout = 200;
-static const unsigned int kVDHideTimeout = 500;
+static const int kVDShowTimeout = 200;
+static const int kVDHideTimeout = 500;
 static const double kVDMainFrozenOpacity = 0.5;
 
 class  MainViewDecoratorBase::Impl {

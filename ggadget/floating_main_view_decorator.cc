@@ -210,7 +210,8 @@ class FloatingMainViewDecorator::Impl {
 
   // Returns the edge besides the button box.
   double *GetBackgroundMargins(double *left, double *top,
-                               double *right, double *bottom) {
+                               double *right, double *bottom,
+                               double *button_margin) {
     ButtonBoxPosition button_position = owner_->GetButtonBoxPosition();
     ButtonBoxOrientation button_orientation = owner_->GetButtonBoxOrientation();
 
@@ -240,6 +241,9 @@ class FloatingMainViewDecorator::Impl {
     if (transparent_)
       *btn_edge = btn_margin;
 
+    if (button_margin)
+      *button_margin = btn_margin;
+
     return btn_edge;
   }
 
@@ -255,7 +259,7 @@ class FloatingMainViewDecorator::Impl {
 
   void DoLayout(double width, double height) {
     double left, top, right, bottom;
-    GetBackgroundMargins(&left, &top, &right, &bottom);
+    GetBackgroundMargins(&left, &top, &right, &bottom, NULL);
 
     background_->SetPixelX(left);
     background_->SetPixelY(top);
@@ -347,13 +351,19 @@ void FloatingMainViewDecorator::DoLayout() {
 
 void FloatingMainViewDecorator::GetMargins(double *left, double *top,
                                            double *right, double *bottom) const {
-  impl_->GetBackgroundMargins(left, top, right, bottom);
+  double btn_margin;
+  double *btn_edge =
+      impl_->GetBackgroundMargins(left, top, right, bottom, &btn_margin);
 
   if (!impl_->IsChildViewHasResizeBorder() || IsMinimized()) {
     *left += kVDMainBorderWidth;
     *top += kVDMainBorderWidth;
     *right += kVDMainBorderWidth;
     *bottom += kVDMainBorderWidth;
+  }
+
+  if (!impl_->transparent_ && !IsMinimized()) {
+    *btn_edge = btn_margin;
   }
 }
 
