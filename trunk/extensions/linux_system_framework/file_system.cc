@@ -506,7 +506,8 @@ class TextStream : public TextStreamInterface {
   bool WriteString(const std::string &data) {
     std::string buffer;
     if (ConvertUTF8ToLocaleString(data.c_str(), &buffer)) {
-      write(fd_, buffer.c_str(), buffer.size());
+      return write(fd_, buffer.c_str(), buffer.size()) ==
+          static_cast<ssize_t>(buffer.size());
     }
     return true;
   }

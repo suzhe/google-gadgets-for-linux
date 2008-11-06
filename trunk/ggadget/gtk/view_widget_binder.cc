@@ -47,6 +47,10 @@ static const char kPlainTextTarget[] = "text/plain";
 // treated as window move or resize.
 static const double kDragThreshold = 3;
 
+#ifdef _DEBUG
+static const uint64_t kFPSCountDuration = 5000;
+#endif
+
 class ViewWidgetBinder::Impl {
  public:
   Impl(ViewInterface *view,
@@ -66,6 +70,10 @@ class ViewWidgetBinder::Impl {
       button_pressed_(false),
 #ifdef GRAB_POINTER_EXPLICITLY
       pointer_grabbed_(false),
+#endif
+#ifdef _DEBUG
+      draw_count_(0),
+      last_fps_time_(0),
 #endif
       zoom_(1.0),
       mouse_down_x_(-1),
@@ -363,10 +371,9 @@ class ViewWidgetBinder::Impl {
       GdkBitmap *bitmap =
         static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
       cairo_t *mask = gdk_cairo_create(bitmap);
-      CairoCanvas *mask_canvas = new CairoCanvas(mask,
-                                                 impl->view_->GetGraphics()->GetZoom(),
-                                                 impl->view_->GetWidth(),
-                                                 impl->view_->GetHeight());
+      CairoCanvas *mask_canvas =
+          new CairoCanvas(mask, impl->view_->GetGraphics()->GetZoom(),
+                          impl->view_->GetWidth(), impl->view_->GetHeight());
       mask_canvas->ClearCanvas();
       impl->view_->Draw(mask_canvas);
       mask_canvas->Destroy();
@@ -380,6 +387,18 @@ class ViewWidgetBinder::Impl {
     canvas->Destroy();
     cairo_destroy(cr);
 
+#ifdef _DEBUG
+    ++impl->draw_count_;
+    uint64_t current_time = GetCurrentTime();
+    uint64_t duration = current_time - impl->last_fps_time_;
+    if (duration >= kFPSCountDuration) {
+      impl->last_fps_time_ = current_time;
+      DLOG("FPS of View %s: %f", impl->view_->GetCaption().c_str(),
+           static_cast<double>(impl->draw_count_ * 1000) /
+           static_cast<double>(duration));
+      impl->draw_count_ = 0;
+    }
+#endif
     return TRUE;
   }
 
@@ -749,6 +768,10 @@ class ViewWidgetBinder::Impl {
   bool button_pressed_;
 #ifdef GRAB_POINTER_EXPLICITLY
   bool pointer_grabbed_;
+#endif
+#ifdef _DEBUG
+  int draw_count_;
+  uint64_t last_fps_time_;
 #endif
   double zoom_;
   double mouse_down_x_;

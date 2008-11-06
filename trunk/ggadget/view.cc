@@ -24,6 +24,7 @@
 #include <set>
 #include <vector>
 #include <cstdlib>
+#include <algorithm>
 
 #include "view.h"
 #include "basic_element.h"
@@ -89,6 +90,11 @@ class View::Impl {
           NewSlot(this, &TimerWatchCallback::OnDestroy));
     }
 
+    ~TimerWatchCallback() {
+      destroy_connection_->Disconnect();
+      delete slot_;
+    }
+
     void SetWatchId(int watch_id) {
       event_.SetToken(watch_id);
     }
@@ -117,7 +123,8 @@ class View::Impl {
 
       // If ret is false then fire, to make sure that the last event will
       // always be fired.
-      if (fire && (!ret || current_time - last_finished_time_ > kMinInterval)) {
+      if (fire && (!ret || current_time - last_finished_time_ >
+                   kMinTimeBetweenTimerCall)) {
         if (is_event_) {
           // Because timer events are still fired during modal dialog opened
           // in key/mouse event handlers, switch off the user interaction
@@ -140,9 +147,6 @@ class View::Impl {
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       ASSERT(event_.GetToken() == watch_id);
-
-      destroy_connection_->Disconnect();
-      delete slot_;
       delete this;
     }
 
@@ -1435,9 +1439,15 @@ class View::Impl {
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
-                     unsigned int duration) {
+                     int duration) {
     if (!slot) {
-      LOG("Invalid slot for animation.");
+      DLOG("Invalid slot for animation.");
+      return 0;
+    }
+
+    if (duration <= 0) {
+      DLOG("Invalid duration %d for animation.", duration);
+      delete slot;
       return 0;
     }
 
@@ -1446,33 +1456,66 @@ class View::Impl {
         new TimerWatchCallback(this, slot, start_value, end_value,
                                duration, current_time, true);
     int id = main_loop_->AddTimeoutWatch(kAnimationInterval, watch);
-    watch->SetWatchId(id);
+    if (id > 0) {
+      watch->SetWatchId(id);
+    } else {
+      DLOG("Failed to add animation timer.");
+      delete watch;
+    }
     return id;
   }
 
-  int SetTimeout(Slot *slot, unsigned int duration) {
+  int SetTimeout(Slot *slot, int timeout) {
     if (!slot) {
       LOG("Invalid slot for timeout.");
       return 0;
     }
 
+    if (timeout < 0) {
+      DLOG("Invalid timeout %d.", timeout);
+      delete slot;
+      return 0;
+    }
+
+    if (timeout < kMinTimeout)
+      timeout = kMinTimeout;
+
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, 0, 0, true);
-    int id = main_loop_->AddTimeoutWatch(duration, watch);
-    watch->SetWatchId(id);
+    int id = main_loop_->AddTimeoutWatch(timeout, watch);
+    if (id > 0) {
+      watch->SetWatchId(id);
+    } else {
+      DLOG("Failed to add timeout timer.");
+      delete watch;
+    }
     return id;
   }
 
-  int SetInterval(Slot *slot, unsigned int duration) {
+  int SetInterval(Slot *slot, int interval) {
     if (!slot) {
       LOG("Invalid slot for interval.");
       return 0;
     }
 
+    if (interval < 0) {
+      DLOG("Invalid interval %d.", interval);
+      delete slot;
+      return 0;
+    }
+
+    if (interval < kMinInterval)
+      interval = kMinInterval;
+
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, -1, 0, true);
-    int id = main_loop_->AddTimeoutWatch(duration, watch);
-    watch->SetWatchId(id);
+    int id = main_loop_->AddTimeoutWatch(interval, watch);
+    if (id > 0) {
+      watch->SetWatchId(id);
+    } else {
+      DLOG("Failed to add interval timer.");
+      delete watch;
+    }
     return id;
   }
 
@@ -1633,8 +1676,10 @@ class View::Impl {
 
   ScriptableInterface *scriptable_view_;
 
-  static const unsigned int kAnimationInterval = 33;
-  static const unsigned int kMinInterval = 5;
+  static const int kAnimationInterval = 40;
+  static const int kMinTimeout = 10;
+  static const int kMinInterval = 10;
+  static const uint64_t kMinTimeBetweenTimerCall = 5;
 };
 
 View::View(ViewHostInterface *view_host,
@@ -1912,7 +1957,7 @@ void View::IncreaseDrawCount() {
 int View::BeginAnimation(Slot0<void> *slot,
                          int start_value,
                          int end_value,
-                         unsigned int duration) {
+                         int duration) {
   return impl_->BeginAnimation(slot, start_value, end_value, duration);
 }
 
@@ -1920,16 +1965,16 @@ void View::CancelAnimation(int token) {
   impl_->RemoveTimer(token);
 }
 
-int View::SetTimeout(Slot0<void> *slot, unsigned int duration) {
-  return impl_->SetTimeout(slot, duration);
+int View::SetTimeout(Slot0<void> *slot, int timeout) {
+  return impl_->SetTimeout(slot, timeout);
 }
 
 void View::ClearTimeout(int token) {
   impl_->RemoveTimer(token);
 }
 
-int View::SetInterval(Slot0<void> *slot, unsigned int duration) {
-  return impl_->SetInterval(slot, duration);
+int View::SetInterval(Slot0<void> *slot, int interval) {
+  return impl_->SetInterval(slot, interval);
 }
 
 void View::ClearInterval(int token) {

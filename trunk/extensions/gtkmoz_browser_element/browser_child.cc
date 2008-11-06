@@ -172,7 +172,11 @@ static int FindBrowserIdByJSContext(JSContext *cx) {
 }
 
 static std::string SendFeedbackBuffer(const std::string &buffer) {
-  write(g_up_fd, buffer.c_str(), buffer.size());
+  if (write(g_up_fd, buffer.c_str(), buffer.size()) !=
+      static_cast<ssize_t>(buffer.size())) {
+    fprintf(stderr, "browser_child: Failed to send feedback buffer.");
+    return "";
+  }
 
   std::string reply;
   char ch;

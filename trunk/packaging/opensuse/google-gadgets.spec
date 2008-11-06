@@ -22,8 +22,8 @@
 # Commom part
 #############################################################################
 Name:           google-gadgets
-Version:        0.10.2
-Release:        2
+Version:        0.10.3
+Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
 Summary:        Google Gadgets for Linux
@@ -57,6 +57,7 @@ BuildRequires:  gstreamer010-plugins-base-devel
 BuildRequires:  dbus-1-devel >= 1.0.2
 BuildRequires:  libqt4-devel >= 4.3
 BuildRequires:  startup-notification-devel
+BuildRequires:  NetworkManager-devel >= 0.6.5
 %endif
 
 #############################################################################
@@ -74,6 +75,7 @@ BuildRequires:  gstreamer-devel >= 0.10.6
 BuildRequires:  dbus-devel >= 1.0.2
 BuildRequires:  libtool-ltdl-devel
 BuildRequires:  startup-notification-devel
+BuildRequires:  NetworkManager-devel >= 0.6.5
 
 %if %{fedora_version} >= 9
 BuildRequires:  xulrunner-devel >= 1.9
@@ -239,7 +241,7 @@ Requires:       libggadget-qt-1_0-0 = %{version}
 %if 0%{?suse_version}
 Requires:       libqt4-devel >= 4.3
 %if %suse_version > 1030
-Requires:       libQtWebKit4-devel >= 4.4.0
+Requires:       libQtWebKit-devel >= 4.4.0
 %endif
 %endif
 
@@ -408,13 +410,17 @@ Authors:
 %if 0%{?suse_version}
 %{suse_update_config -f}
 autoreconf
-%configure --disable-werror
+%configure \
+  --disable-werror \
+  --with-browser-plugins-dir=%{_libdir}/browser-plugins
 make %{?jobs:-j%jobs}
 %endif
 
 %if 0%{?fedora_version}
 autoreconf
-%configure --disable-werror
+%configure \
+  --disable-werror \
+  --with-browser-plugins-dir=%{_libdir}/mozilla/plugins
 make %{?_smp_mflags}
 %endif
 
@@ -471,6 +477,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING AUTHORS README NEWS
 %dir %{_libdir}/google-gadgets/
 %dir %{_libdir}/google-gadgets/modules/
+%{_libdir}/google-gadgets/modules/analytics*.so
 %{_libdir}/google-gadgets/modules/default*.so
 %{_libdir}/google-gadgets/modules/linux*.so
 %{_libdir}/google-gadgets/modules/google-gadget-manager.so
@@ -490,6 +497,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libggadget-dbus-1.0*.so.*
 %{_libdir}/libggadget-js-1.0*.so.*
 %{_libdir}/libggadget-xdg-1.0*.so.*
+%{_libdir}/libggadget-npapi-1.0*.so.*
 
 %files -n libggadget-devel
 %defattr(-, root, root)
@@ -498,10 +506,12 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_includedir}/google-gadgets/ggadget/dbus
 %dir %{_includedir}/google-gadgets/ggadget/js
 %dir %{_includedir}/google-gadgets/ggadget/xdg
+%dir %{_includedir}/google-gadgets/ggadget/npapi
 %{_includedir}/google-gadgets/ggadget/*.h
 %{_includedir}/google-gadgets/ggadget/dbus/*.h
 %{_includedir}/google-gadgets/ggadget/js/*.h
 %{_includedir}/google-gadgets/ggadget/xdg/*.h
+%{_includedir}/google-gadgets/ggadget/npapi/*.h
 %dir %{_libdir}/google-gadgets/include/
 %dir %{_libdir}/google-gadgets/include/ggadget/
 %{_libdir}/google-gadgets/include/ggadget/sysdeps.h
@@ -509,14 +519,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libggadget-dbus-1.0*.so
 %{_libdir}/libggadget-js-1.0*.so
 %{_libdir}/libggadget-xdg-1.0*.so
+%{_libdir}/libggadget-npapi-1.0*.so
 %{_libdir}/libggadget-1.0*.la
 %{_libdir}/libggadget-dbus-1.0*.la
 %{_libdir}/libggadget-js-1.0*.la
 %{_libdir}/libggadget-xdg-1.0*.la
+%{_libdir}/libggadget-npapi-1.0*.la
 %{_libdir}/pkgconfig/libggadget-1.0.pc
 %{_libdir}/pkgconfig/libggadget-dbus-1.0.pc
 %{_libdir}/pkgconfig/libggadget-js-1.0.pc
 %{_libdir}/pkgconfig/libggadget-xdg-1.0.pc
+%{_libdir}/pkgconfig/libggadget-npapi-1.0.pc
 
 %files -n libggadget-gtk-1_0-0
 %defattr(-, root, root)
@@ -565,6 +578,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
+* Tue Nov 4 2008 James Su <james.su@gmail.com>
+- Updates to support version 0.10.3
+
 * Wed Sep 17 2008 James Su <james.su@gmail.com>
 - Fix the name and version of curl library.
 

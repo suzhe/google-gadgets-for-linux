@@ -280,7 +280,7 @@ class View : public ViewInterface {
    * @return the animation token that can be used in @c CancelAnimation().
    */
   int BeginAnimation(Slot0<void> *slot, int start_value, int end_value,
-                     unsigned int duration);
+                     int duration);
 
   /**
    * Cancels a currently running animation.
@@ -295,7 +295,7 @@ class View : public ViewInterface {
    * @param duration the duration of the timer in milliseconds.
    * @return the timeout token that can be used in @c ClearTimeout().
    */
-  int SetTimeout(Slot0<void> *slot, unsigned int duration);
+  int SetTimeout(Slot0<void> *slot, int duration);
 
   /**
    * Cancels a run-once timer.
@@ -310,7 +310,7 @@ class View : public ViewInterface {
    * @param duration the period between calls in milliseconds.
    * @return the interval token than can be used in @c ClearInterval().
    */
-  int SetInterval(Slot0<void> *slot, unsigned int duration);
+  int SetInterval(Slot0<void> *slot, int duration);
 
   /**
    * Cancels a run-forever timer.

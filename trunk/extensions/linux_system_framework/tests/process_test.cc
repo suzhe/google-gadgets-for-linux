@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
@@ -27,7 +29,7 @@ using namespace ggadget::framework::linux_system;
 TEST(Process, EnumerateProcesses) {
   Process process;
   ProcessesInterface *processes = process.EnumerateProcesses();
-  EXPECT_TRUE(processes != NULL);
+  ASSERT_TRUE(processes != NULL);
   EXPECT_GT(processes->GetCount(), 0);
   LOG("The total count of process: %d", processes->GetCount());
   processes->Destroy();
@@ -36,23 +38,25 @@ TEST(Process, EnumerateProcesses) {
 TEST(Process, GetForeground) {
   Process process;
   ProcessInfoInterface *fore_process = process.GetForeground();
-  EXPECT_TRUE(fore_process != NULL);
+  ASSERT_TRUE(fore_process != NULL);
 }
 
 TEST(Process, GetInfo) {
+  pid_t pid = getpid();
   Process process;
-  ProcessInfoInterface *proc_2 = process.GetInfo(2);
-  EXPECT_TRUE(proc_2 != NULL);
-  EXPECT_EQ(proc_2->GetProcessId(), 2);
-  EXPECT_EQ(proc_2->GetExecutablePath(), "");
+  ProcessInfoInterface *proc_2 = process.GetInfo(pid);
+  ASSERT_TRUE(proc_2 != NULL);
+  EXPECT_EQ(proc_2->GetProcessId(), pid);
+  EXPECT_NE("", proc_2->GetExecutablePath());
   proc_2->Destroy();
+  ASSERT_TRUE(process.GetInfo(0) == NULL);
 }
 
 // test Process class using the method EnumerateProcesses
 TEST(Processes, GetCount1) {
   Process process;
   ProcessesInterface *processes = process.EnumerateProcesses();
-  EXPECT_TRUE(processes != NULL);
+  ASSERT_TRUE(processes != NULL);
   EXPECT_GT(processes->GetCount(), 0);
   processes->Destroy();
 }
@@ -60,7 +64,7 @@ TEST(Processes, GetCount1) {
 // test Process class using its own constructor
 TEST(Processes, GetCount2) {
   Processes* processes = new Processes();
-  EXPECT_TRUE(processes != NULL);
+  ASSERT_TRUE(processes != NULL);
   EXPECT_GT(processes->GetCount(), 0);
   processes->Destroy();
 }
@@ -69,10 +73,10 @@ TEST(Processes, GetCount2) {
 TEST(Processes, GetItem1) {
   Process process;
   ProcessesInterface *processes = process.EnumerateProcesses();
-  EXPECT_TRUE(processes != NULL);
+  ASSERT_TRUE(processes != NULL);
   EXPECT_GT(processes->GetCount(), 0);
   ProcessInfoInterface *item = processes->GetItem(0);
-  EXPECT_TRUE(item != NULL);
+  ASSERT_TRUE(item != NULL);
   EXPECT_TRUE(item->GetProcessId() > 0);
   LOG("The item's process id: %d", item->GetProcessId());
   item->Destroy();
@@ -82,26 +86,14 @@ TEST(Processes, GetItem1) {
 // test Process class using its own constructor
 TEST(Processes, GetItem2) {
   Processes* processes = new Processes();
-  EXPECT_TRUE(processes != NULL);
+  ASSERT_TRUE(processes != NULL);
   EXPECT_GT(processes->GetCount(), 0);
   ProcessInfoInterface *item = processes->GetItem(0);
-  EXPECT_TRUE(item != NULL);
+  ASSERT_TRUE(item != NULL);
   EXPECT_TRUE(item->GetProcessId() > 0);
   LOG("The item's process id: %d", item->GetProcessId());
   item->Destroy();
   processes->Destroy();
-}
-
-// test Process class using method GetInfo
-TEST(ProcessInfo, GetProcessIdAndGetExecutablePath1) {
-  Process process;
-  ProcessInfoInterface *proc = process.GetInfo(2);
-  EXPECT_TRUE(proc != NULL);
-  EXPECT_EQ(proc->GetProcessId(), 2);
-  EXPECT_TRUE(proc->GetExecutablePath() == "");
-  LOG("The process id: %d", proc->GetProcessId());
-  LOG("The executable path: %s", proc->GetExecutablePath().c_str());
-  proc->Destroy();
 }
 
 // test Process class using its own constructor
@@ -109,14 +101,13 @@ TEST(ProcessInfo, GetProcessIdAndGetExecutablePath2) {
   int pid = 255;
   std::string path = "/usr/bin/eclipse";
   ProcessInfo *proc = new ProcessInfo(pid, path);
-  EXPECT_TRUE(proc != NULL);
+  ASSERT_TRUE(proc != NULL);
   EXPECT_EQ(proc->GetProcessId(), pid);
   EXPECT_TRUE(proc->GetExecutablePath() == path);
   LOG("The process id: %d", proc->GetProcessId());
   LOG("The executable path: %s", proc->GetExecutablePath().c_str());
   proc->Destroy();
 }
-
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);

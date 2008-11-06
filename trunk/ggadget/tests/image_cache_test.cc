@@ -168,7 +168,7 @@ TEST(ImageCache, LoadImage) {
   ASSERT_TRUE(img1);
   ASSERT_STREQ("non-exist-file", img1->GetTag().c_str());
   img2 = img1->MultiplyColor(Color::kMiddleColor);
-  ASSERT_EQ(NULL, img2);
+  ASSERT_TRUE(img2 == NULL);
   img1->Destroy();
 
   ASSERT_FALSE(img_cache.LoadImage(&gfx, NULL, "", false));

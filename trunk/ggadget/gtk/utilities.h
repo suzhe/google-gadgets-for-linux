@@ -180,6 +180,9 @@ bool OpenURL(const Gadget *gadget, const char *url);
  */
 int GetCurrentDesktopOfScreen(GdkScreen *screen);
 
+/** Gets current time in milliseconds. */
+uint64_t GetCurrentTime();
+
 } // namespace gtk
 } // namespace ggadget
 
