@@ -93,6 +93,14 @@ class XMLHttpRequestInterface : public ScriptableInterface {
    */
   virtual bool IsSuccessful() = 0;
 
+  /**
+   * Gets the effective URL. For redirected requests, the effective URL is the
+   * final target URL.
+   */
+  virtual std::string GetEffectiveUrl() = 0;
+
+  virtual std::string GetResponseContentType() = 0;
+
   class XMLHttpRequestException : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);

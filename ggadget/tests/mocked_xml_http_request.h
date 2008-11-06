@@ -99,6 +99,8 @@ public:
     return NO_ERR;
   }
   virtual bool IsSuccessful() { return true; }
+  virtual std::string GetEffectiveUrl() { return requested_url_; }
+  virtual std::string GetResponseContentType() { return ""; }
 
   State state_;
   unsigned short return_status_;

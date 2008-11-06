@@ -529,6 +529,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return succeeded_;
   }
 
+  virtual std::string GetEffectiveUrl() {
+    // TODO:
+    return url_;
+  }
+
+  virtual std::string GetResponseContentType() {
+    return response_content_type_;
+  }
+
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {

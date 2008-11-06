@@ -385,7 +385,13 @@ class NPAPIPluginElement::Impl {
     return GetParameter(name);
   }
 
+  // Registered as dynamic property setter when in_object_element_ is true.
   bool SetProperty(const std::string &name, const Variant &value) {
+    if (name == "movie") {
+      std::string value_str;
+      value.ConvertToString(&value_str);
+      owner_->SetSrc(value_str.c_str());
+    }
     if (scriptable_plugin_)
       return scriptable_plugin_->SetProperty(name.c_str(), value);
     return SetParameter(name, value);
@@ -462,9 +468,9 @@ void NPAPIPluginElement::DoClassRegister() {
                                        &NPAPIPluginElement::impl_), NULL);
     RegisterProperty("param", NewSlot(&Impl::GetParameters,
                                       &NPAPIPluginElement::impl_), NULL);
+    RegisterProperty("src", NewSlot(&NPAPIPluginElement::GetSrc),
+                     NewSlot(&NPAPIPluginElement::SetSrc));
   }
-  RegisterProperty("src", NewSlot(&NPAPIPluginElement::GetSrc),
-                   NewSlot(&NPAPIPluginElement::SetSrc));
 }
 
 void NPAPIPluginElement::DoRegister() {

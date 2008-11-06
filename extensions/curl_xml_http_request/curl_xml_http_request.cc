@@ -408,14 +408,25 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return Send(xml.c_str(), xml.size());
   }
 
+  static void GetStatusAndEffectiveUrl(CURL *curl, unsigned short *status,
+                                       std::string *effective_url) {
+    long curl_status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curl_status);
+    *status = static_cast<unsigned short>(curl_status);
+    char *url_ptr = NULL;
+    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url_ptr);
+    *effective_url = url_ptr ? url_ptr : "";
+  }
+
   // If async, this method runs in a separate thread.
   static void *Worker(void *arg) {
     WorkerContext *context = static_cast<WorkerContext *>(arg);
 
     CURLcode code = curl_easy_perform(context->curl);
-    long curl_status = 0;
-    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
-    unsigned short status = static_cast<unsigned short>(curl_status);
+
+    unsigned short status = 0;
+    std::string effective_url;
+    GetStatusAndEffectiveUrl(context->curl, &status, &effective_url);
 
     if (context->request_headers) {
       curl_slist_free_all(context->request_headers);
@@ -427,7 +438,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            curl_easy_strerror(code));
     }
 
-    WorkerDone(status, context, code == CURLE_OK);
+    WorkerDone(status, effective_url, context, code == CURLE_OK);
     delete context;
     return reinterpret_cast<void *>(code);
   }
@@ -481,27 +492,30 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Passes the WriteBody() request from worker thread to the main thread.
   class WriteBodyTask : public WriteHeaderTask {
    public:
-    WriteBodyTask(const void *ptr, size_t size, unsigned short status,
+    WriteBodyTask(const void *ptr, size_t size,
+                  unsigned short status, const std::string &effective_url,
                   const WorkerContext *worker_context)
         : WriteHeaderTask(ptr, size, worker_context),
-          status_(status) {
+          status_(status),
+          effective_url_(effective_url) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->WriteBody(data_, status_);
+        worker_context_.this_p->WriteBody(data_, status_, effective_url_);
       return false;
     }
 
     unsigned short status_;
+    std::string effective_url_;
   };
 
   // Passes the Done() request from worker thread to the main thread.
   class DoneTask : public WriteBodyTask {
    public:
-    DoneTask(unsigned short status, const WorkerContext *worker_context,
-             bool succeeded)
+    DoneTask(unsigned short status, const std::string &effective_url,
+             const WorkerContext *worker_context, bool succeeded)
           // Write blank data to ensure the header is parsed.
-        : WriteBodyTask("", 0, status, worker_context),
+        : WriteBodyTask("", 0, status, effective_url, worker_context),
           succeeded_(succeeded) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
@@ -526,13 +540,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     bool succeeded_;
   };
 
-  static void WorkerDone(unsigned short status, WorkerContext *context,
-                         bool succeeded) {
+  static void WorkerDone(unsigned short status,
+                         const std::string &effective_url,
+                         WorkerContext *context, bool succeeded) {
     if (context->async) {
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new DoneTask(status, context, succeeded));
+          0, new DoneTask(status, effective_url, context, succeeded));
     } else {
+      // Write blank data to ensure the header is parsed.
+      context->this_p->WriteBody("", status, effective_url);
       context->this_p->Done(false, succeeded);
     }
   }
@@ -566,10 +583,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   size_t WriteHeader(const std::string &data) {
     ASSERT(state_ == OPENED && send_flag_);
     size_t size = data.length();
-    if (CheckSize(response_headers_.length(), size, 1))
+    if (CheckSize(response_headers_.length(), size, 1)) {
+      if (strncmp(data.c_str(), "HTTP/", 5) == 0) {
+        // This is a new header. We may receive multiple headers if the
+        // request is redirected.
+        response_headers_.clear();
+      }
       response_headers_ += data;
-    else
+    } else {
       size = 0;
+    }
     return size;
   }
 
@@ -583,9 +606,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu this=%p",
     //      size, mem_block, context->this_p);
 
-    long curl_status = 0;
-    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
-    unsigned short status = static_cast<unsigned short>(curl_status);
+    unsigned short status = 0;
+    std::string effective_url;
+    GetStatusAndEffectiveUrl(context->curl, &status, &effective_url);
 
     if (context->async) {
       if (context->this_p->curl_ != context->curl) {
@@ -596,18 +619,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new WriteBodyTask(ptr, data_size, status, context));
+          0, new WriteBodyTask(ptr, data_size, status, effective_url, context));
       return data_size;
     } else {
       return context->this_p->WriteBody(
-          std::string(static_cast<char *>(ptr), data_size), status);
+          std::string(static_cast<char *>(ptr), data_size),
+          status, effective_url);
     }
   }
 
-  size_t WriteBody(const std::string &data, unsigned short status) {
+  size_t WriteBody(const std::string &data, unsigned short status,
+                   const std::string &effective_url) {
     if (state_ == OPENED) {
       status_ = status;
+      effective_url_ = effective_url;
       SplitStatusFromResponseHeaders(&response_headers_, &status_text_);
+      (LOG("**** response_headers_: %s", response_headers_.c_str()));
       ParseResponseHeaders(response_headers_,
                            &response_headers_map_,
                            &response_content_type_,
@@ -823,6 +850,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return succeeded_;
   }
 
+  virtual std::string GetEffectiveUrl() {
+    return effective_url_;
+  }
+
+  virtual std::string GetResponseContentType() {
+    return response_content_type_;
+  }
+
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
@@ -927,6 +962,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_content_type_;
   std::string response_encoding_;
   unsigned short status_;
+  std::string effective_url_;
   bool succeeded_;
   std::string status_text_;
   std::string response_body_;
