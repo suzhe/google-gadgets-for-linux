@@ -59,12 +59,13 @@ class Plugin::Impl {
    public:
     StreamWriter(Impl *owner, const std::string &url,
                  const std::string &mime_type, const std::string &headers,
-                 const std::string &data, void *notify_data)
+                 const std::string &data, bool notify, void *notify_data)
         : owner_(owner), plugin_funcs_(&owner->library_info_->plugin_funcs),
           stream_(NULL), stream_type_(NP_NORMAL),
           // These fields hold string data to live during the stream's life.
           url_(url), mime_type_(mime_type), headers_(headers),
           data_(data), offset_(0),
+          notify_(notify),
           watch_id_(0), idle_count_(0),
           on_owner_destroy_connection_(owner_->on_destroy_.Connect(
               NewSlot(this, &StreamWriter::OnOwnerDestroy))) {
@@ -132,9 +133,16 @@ class Plugin::Impl {
     }
 
     void DestroyStream(NPReason reason) {
-      if (stream_ && plugin_funcs_->destroystream) {
-        plugin_funcs_->destroystream(&owner_->instance_, stream_, reason);
+      if (stream_) {
+        if (plugin_funcs_->destroystream) {
+          plugin_funcs_->destroystream(&owner_->instance_, stream_, reason);
+        }
+        if (notify_ && plugin_funcs_->urlnotify) {
+          plugin_funcs_->urlnotify(&owner_->instance_, url_.c_str(),
+                                   reason, stream_->notifyData);
+        }
         delete stream_;
+        stream_ = NULL;
       }
     }
 
@@ -179,6 +187,7 @@ class Plugin::Impl {
     uint16 stream_type_;
     std::string url_, mime_type_, headers_, data_;
     size_t offset_;
+    bool notify_;
     int watch_id_;
     int idle_count_;
     Connection *on_owner_destroy_connection_;
@@ -230,17 +239,17 @@ class Plugin::Impl {
             http_request_->GetStatus(&status) ==
                 XMLHttpRequestInterface::NO_ERR &&
             status == 200) {
-          const char *mime_type = NULL;
+          std::string mime_type = http_request_->GetResponseContentType();
+          if (mime_type.empty())
+            mime_type = owner_->mime_type_;
           const char *response = NULL;
           size_t response_size = 0;
-          http_request_->GetResponseHeader("Content-Type", &mime_type);
           http_request_->GetResponseBody(&response, &response_size);
           std::string response_str;
           if (response)
             response_str.assign(response, response_size);
-          owner_->OnStreamReady(url_,
-                                mime_type ? owner_->mime_type_ : mime_type,
-                                headers, response_str,
+          owner_->OnStreamReady(url_, http_request_->GetEffectiveUrl(),
+                                mime_type, headers, response_str,
                                 notify_, notify_data_);
         } else {
           owner_->OnStreamError(url_, notify_, notify_data_, NPRES_NETWORK_ERR);
@@ -268,7 +277,9 @@ class Plugin::Impl {
         window_(window),
         windowless_(false), transparent_(false),
         init_error_(NPERR_GENERIC_ERROR),
-        temp_file_seq_(0) {
+        temp_file_seq_(0),
+        browser_window_npobject_(this, &kBrowserWindowClass),
+        location_npobject_(this, &kLocationClass) {
     ASSERT(library_info);
     memset(&instance_, 0, sizeof(instance_));
     instance_.ndata = this;
@@ -362,16 +373,18 @@ class Plugin::Impl {
     return plugin_root_;
   }
 
-  void OnStreamReady(const std::string &url, const std::string &mime_type,
+  void OnStreamReady(const std::string &url, const std::string &effective_url,
+                     const std::string &mime_type,
                      const std::string &headers, const std::string &data,
                      bool notify, void *notify_data) {
-    if (notify && library_info_->plugin_funcs.urlnotify) {
-      library_info_->plugin_funcs.urlnotify(&instance_, url.c_str(),
-                                            NPRES_DONE, notify_data);
+    if (url == location_) {
+      // Change location to the effective URL only if the request is of
+      // top level.
+      location_ = effective_url;
     }
 
-    StreamWriter *writer = new StreamWriter(this, url, mime_type,
-                                            headers, data, notify_data);
+    StreamWriter *writer = new StreamWriter(this, effective_url, mime_type,
+                                            headers, data, notify, notify_data);
     if (writer->watch_id_ == 0) {
       // The writer encountered errors or has finished its task.
       delete writer;
@@ -421,7 +434,7 @@ class Plugin::Impl {
         OnStreamError(url, notify, notify_data, NPRES_NETWORK_ERR);
         return NPERR_FILE_NOT_FOUND;
       }
-      OnStreamReady(url, mime_type_, "", content, notify, notify_data);
+      OnStreamReady(url, url, mime_type_, "", content, notify, notify_data);
     } else {
       XMLHttpRequestInterface *request = gadget->CreateXMLHttpRequest();
       if (!request) {
@@ -614,6 +627,14 @@ class Plugin::Impl {
             XtDisplayToApplicationContext(display_);
         break;
 #endif
+      case NPNVWindowNPObject:
+        if (instance && instance->ndata) {
+          Impl *impl = static_cast<Impl *>(instance->ndata);
+          RetainNPObject(&impl->browser_window_npobject_);
+          *static_cast<NPObject **>(value) = &impl->browser_window_npobject_;
+          break;
+        }
+        // Fall through!
       case NPNVserviceManager:
       case NPNVDOMElement:
       case NPNVPluginElementNPObject:
@@ -621,7 +642,6 @@ class Plugin::Impl {
         // windowless mode is used. We must provide a parent window for
         // the plugin to show popups if we want to support.
       case NPNVnetscapeWindow:
-      case NPNVWindowNPObject:
       default:
         LOG("NPNVariable %d is not supported.", variable);
         return NPERR_GENERIC_ERROR;
@@ -774,6 +794,16 @@ class Plugin::Impl {
     void *user_data_;
   };
 
+  struct OwnedNPObject : public NPObject {
+    OwnedNPObject(Impl *a_owner, NPClass *a_class) {
+      memset(this, 0, sizeof(OwnedNPObject));
+      owner = a_owner;
+      _class = a_class;
+      referenceCount = 1;
+    }
+    Impl *owner;
+  };
+
   // According to NPAPI specification, plugins should perform appropriate
   // synchronization with the code in their NPP_Destroy routine to avoid
   // incorrect execution and memory leaks caused by the race conditions
@@ -793,6 +823,63 @@ class Plugin::Impl {
     ENSURE_MAIN_THREAD(false);
     return npp && npobj && npobj->_class && npobj->_class->construct &&
            npobj->_class->construct(npobj, args, argc, result);
+  }
+
+  // Only support window.top and window.location because the flash plugin
+  // requires them.
+  static bool BrowserWindowHasProperty(NPObject *npobj, NPIdentifier name) {
+    ENSURE_MAIN_THREAD(false);
+    std::string name_str = GetIdentifierName(name);
+    return name_str == "location" || name_str == "top";
+  }
+  static bool BrowserWindowGetProperty(NPObject *npobj, NPIdentifier name,
+                                       NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    std::string name_str = GetIdentifierName(name);
+    Impl *owner = reinterpret_cast<OwnedNPObject *>(npobj)->owner;
+    if (name_str == "location") {
+      RetainNPObject(&owner->location_npobject_);
+      OBJECT_TO_NPVARIANT(&owner->location_npobject_, *result);
+      return true;
+    } else if (name_str == "top") {
+      RetainNPObject(&owner->browser_window_npobject_);
+      OBJECT_TO_NPVARIANT(&owner->browser_window_npobject_, *result);
+      return true;
+    }
+    return false;
+  }
+
+  static bool LocationHasMethod(NPObject *npobj, NPIdentifier name) {
+    ENSURE_MAIN_THREAD(false);
+    return GetIdentifierName(name) == "toString";
+  }
+
+  static bool LocationInvoke(NPObject *npobj, NPIdentifier name,
+                             const NPVariant *args, uint32_t argCount,
+                             NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    if (GetIdentifierName(name) == "toString") {
+      Impl *owner = reinterpret_cast<OwnedNPObject *>(npobj)->owner;
+      NewNPVariantString(owner->location_, result);
+      return true;
+    }
+    return false;
+  }
+
+  static bool LocationHasProperty(NPObject *npobj, NPIdentifier name) {
+    ENSURE_MAIN_THREAD(false);
+    return GetIdentifierName(name) == "href";
+  }
+
+  static bool LocationGetProperty(NPObject *npobj, NPIdentifier name,
+                                       NPVariant *result) {
+    ENSURE_MAIN_THREAD(false);
+    if (GetIdentifierName(name) == "href") {
+      Impl *owner = reinterpret_cast<OwnedNPObject *>(npobj)->owner;
+      NewNPVariantString(owner->location_, result);
+      return true;
+    }
+    return false;
   }
 
   std::string mime_type_;
@@ -815,6 +902,31 @@ class Plugin::Impl {
   // initialization. nspluginwrapper requires this.
   static Display *display_;
 #endif
+
+  std::string location_;
+  OwnedNPObject browser_window_npobject_;
+  OwnedNPObject location_npobject_;
+  static NPClass kBrowserWindowClass;
+  static NPClass kLocationClass;
+};
+
+NPClass Plugin::Impl::kBrowserWindowClass = {
+  NP_CLASS_STRUCT_VERSION,
+  NULL, NULL, NULL, NULL, NULL, NULL,
+  BrowserWindowHasProperty,
+  BrowserWindowGetProperty,
+  NULL, NULL, NULL, NULL
+};
+
+NPClass Plugin::Impl::kLocationClass = {
+  NP_CLASS_STRUCT_VERSION,
+  NULL, NULL, NULL,
+  LocationHasMethod,
+  LocationInvoke,
+  NULL,
+  LocationHasProperty,
+  LocationGetProperty,
+  NULL, NULL, NULL, NULL
 };
 
 const NPNetscapeFuncs Plugin::Impl::kContainerFuncs = {
@@ -909,6 +1021,7 @@ bool Plugin::HandleEvent(void *event) {
 
 void Plugin::SetSrc(const char *src) {
   // Start the initial data stream.
+  impl_->location_ = src;
   impl_->HandleURL("GET", src, NULL, "", false, NULL);
 }
 

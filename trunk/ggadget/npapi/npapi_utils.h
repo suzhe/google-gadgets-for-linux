@@ -99,6 +99,7 @@ NPIdentifier GetStringIdentifier(const NPUTF8 *name);
 NPIdentifier GetIntIdentifier(int32_t int_id);
 bool IdentifierIsString(NPIdentifier identifier);
 NPUTF8 *UTF8FromIdentifier(NPIdentifier identifier);
+std::string GetIdentifierName(NPIdentifier identifier);
 int32_t IntFromIdentifier(NPIdentifier identifier);
 
 void *MemAlloc(uint32 size);

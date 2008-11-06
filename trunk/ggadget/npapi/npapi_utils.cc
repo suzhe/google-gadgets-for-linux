@@ -271,6 +271,7 @@ NPObject *CreateNPObject(NPP instance, NPClass *a_class) {
     obj = a_class->allocate(instance, a_class);
   } else {
     obj = new NPObject;
+    memset(obj, 0, sizeof(NPObject));
     obj->_class = a_class;
   }
   obj->referenceCount = 1;
@@ -382,6 +383,11 @@ NPUTF8 *UTF8FromIdentifier(NPIdentifier identifier) {
   buf[size] = '\0';
   id->name.copy(buf, size);
   return buf;
+}
+
+std::string GetIdentifierName(NPIdentifier identifier) {
+  Identifier *id = reinterpret_cast<Identifier *>(identifier);
+  return id && id->type == Identifier::TYPE_STRING ? id->name : "";
 }
 
 int32_t IntFromIdentifier(NPIdentifier identifier) {

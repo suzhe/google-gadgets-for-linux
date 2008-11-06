@@ -347,24 +347,25 @@ IF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
   HASH_PUT(xul_hash firefox-gtkmozembed firefox-js)
 
   FOREACH(pkg ${xul_hash})
-    GET_CONFIG(${pkg} 0 GTKMOZEMBED GTKMOZEMBED_FOUND)
-    IF(GTKMOZEMBED_FOUND)
-      PKG_GET_VARIABLE(${pkg} "includedir" EMBED_INCDIR)
-      LIST(APPEND GTKMOZEMBED_INCLUDE_DIR
-        ${EMBED_INCDIR}
-        ${EMBED_INCDIR}/content
-        ${EMBED_INCDIR}/dom
-        ${EMBED_INCDIR}/xpconnect
-        ${EMBED_INCDIR}/widget
-        ${EMBED_INCDIR}/gtkembedmoz
-        ${EMBED_INCDIR}/xpcom)
-      HASH_GET(xul_hash "${pkg}" LIBSMJS)
-      GET_CONFIG(${LIBSMJS} 0 SMJS SMJS_FOUND)
-      IF(SMJS_FOUND)
-        SET(SMJS_NAME ${LIBSMJS})
-      ENDIF(SMJS_FOUND)
-      BREAK()
-    ENDIF(GTKMOZEMBED_FOUND)
+    IF(NOT GTKMOZEMBED_FOUND)
+      GET_CONFIG(${pkg} 0 GTKMOZEMBED GTKMOZEMBED_FOUND)
+      IF(GTKMOZEMBED_FOUND)
+        PKG_GET_VARIABLE(${pkg} "includedir" EMBED_INCDIR)
+        LIST(APPEND GTKMOZEMBED_INCLUDE_DIR
+          ${EMBED_INCDIR}
+          ${EMBED_INCDIR}/content
+          ${EMBED_INCDIR}/dom
+          ${EMBED_INCDIR}/xpconnect
+          ${EMBED_INCDIR}/widget
+          ${EMBED_INCDIR}/gtkembedmoz
+          ${EMBED_INCDIR}/xpcom)
+        HASH_GET(xul_hash "${pkg}" LIBSMJS)
+        GET_CONFIG(${LIBSMJS} 0 SMJS SMJS_FOUND)
+        IF(SMJS_FOUND)
+          SET(SMJS_NAME ${LIBSMJS})
+        ENDIF(SMJS_FOUND)
+      ENDIF(GTKMOZEMBED_FOUND)
+    ENDIF(NOT GTKMOZEMBED_FOUND)
   ENDFOREACH(pkg ${PKG_NAMES})
 
   IF(NOT GTKMOZEMBED_FOUND AND GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)
@@ -380,13 +381,14 @@ IF(NOT SMJS_FOUND)
     xulrunner-js
     firefox2-js
     firefox-js
-    )
+  )
   FOREACH(js ${SMJS_LIST})
-    GET_CONFIG(${js} 0 SMJS SMJS_FOUND)
-    IF(SMJS_FOUND)
-      SET(SMJS_NAME ${LIBSMJS})
-      BREAK()
-    ENDIF(SMJS_FOUND)
+    IF(NOT SMJS_FOUND)
+      GET_CONFIG(${js} 0 SMJS SMJS_FOUND)
+      IF(SMJS_FOUND)
+        SET(SMJS_NAME ${LIBSMJS})
+      ENDIF(SMJS_FOUND)
+    ENDIF(NOT SMJS_FOUND)
   ENDFOREACH(js ${SMJS_LIST})
 ENDIF(NOT SMJS_FOUND)
 
