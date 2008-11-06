@@ -32,16 +32,18 @@ SET(SRCS
   js_script_runtime.cc
   json.cc
   native_js_wrapper.cc
+  libmozjs_glue.cc
 )
 
 ADD_LIBRARY(ggadget-smjs ${SRCS})
 
 ADD_MODULE(smjs-script-runtime smjs_script_runtime.cc)
 TARGET_LINK_LIBRARIES(smjs-script-runtime
-  ${SMJS_LIBRARIES}
   ggadget${GGL_EPOCH}
   ggadget-js${GGL_EPOCH}
-  ggadget-smjs)
+  ggadget-smjs
+  ${SMJS_LIBRARIES}
+  )
 OUTPUT_MODULE(smjs-script-runtime)
 
 ENDIF(GGL_BUILD_SMJS_SCRIPT_RUNTIME)
