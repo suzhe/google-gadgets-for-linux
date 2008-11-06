@@ -946,11 +946,15 @@ if test x$has_libmozjs != xno; then
     if (echo $GTKMOZEMBED_CFLAGS | grep XPCOM_GLUE) > /dev/null 2>&1; then
       AC_MSG_NOTICE([Use xulrunner's xpcomglue to load libmozjs.])
       LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS $GTKMOZEMBED_CFLAGS"
-    # Use libs of gtkmozembed instead of libmozjs's own library here to avoid
-    # direct linking to libmozjs.
-    # As xpcomglue is used, the only library shall be a static xpcomglue lib.
-    # No more library dependency will be introduced.
+      # Use libs of gtkmozembed instead of libmozjs's own library here to avoid
+      # direct linking to libmozjs.
+      # As xpcomglue is used, the only library shall be a static xpcomglue lib.
+      # No more library dependency will be introduced.
       LIBMOZJS_LIBS="$GTKMOZEMBED_LIBS"
+    else
+      # If there is no xpcomglue support, then gtkmoz_browser_element needs
+      # link to libmozjs explicitly.
+      GTKMOZEMBED_LIBS="$GTKMOZEMBED_LIBS $LIBMOZJS_LIBS"
     fi
     if test x$with_mozjs_libname != x; then
       LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DGGL_MOZJS_LIBNAME=\\\"$with_mozjs_libname\\\""
