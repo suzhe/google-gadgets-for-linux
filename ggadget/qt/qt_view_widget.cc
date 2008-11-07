@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+#include <algorithm>
 
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopWidget>
@@ -35,6 +36,8 @@
 
 namespace ggadget {
 namespace qt {
+
+static const double kDragThreshold = 3;
 
 QtViewWidget::QtViewWidget(ViewInterface *view,
                            bool composite,
@@ -213,14 +216,18 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
-  if (mouse_drag_moved_) return;
-
-  MouseEvent e(Event::EVENT_MOUSE_UP,
-               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
-  handler_result = view_->OnMouseEvent(e);
-
-  if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
-    event->accept();
+  if (mouse_drag_moved_) {
+    QPoint offset = QCursor::pos() - mouse_pos_;
+    if (std::abs(static_cast<double>(offset.x())) > kDragThreshold ||
+    	std::abs(static_cast<double>(offset.y())) > kDragThreshold)
+    return;
+  } else {
+    MouseEvent e(Event::EVENT_MOUSE_UP,
+                 event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
+    handler_result = view_->OnMouseEvent(e);
+    if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
+      event->accept();
+  }
 
   MouseEvent e1(event->button() == Qt::LeftButton ? Event::EVENT_MOUSE_CLICK :
                                                     Event::EVENT_MOUSE_RCLICK,
