@@ -51,7 +51,6 @@ const char *kFirefox3UserAgent = "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
 class Plugin::Impl {
  public:
   static const int kStreamCallbackInterval = 50;
-  static const int kCheckQueueDrawInterval = 100;
 
   // Writes a block of data to the plugin stream asynchronously if the plugin
   // can't receive the whole data at once.

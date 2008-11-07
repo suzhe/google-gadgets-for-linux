@@ -341,16 +341,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     if (data && size > 0) {
       if (method_ == HTTP_POST) {
-        curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE_LARGE,
-                         static_cast<curl_off_t>(size));
+        // CURLOPT_POSTFIELDSIZE_LARGE doesn't work on 32bit curl.
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+                         static_cast<long>(size));
         // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
         curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
                          context->request_data.c_str());
       } else if (method_ == HTTP_PUT) {
         curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
         curl_easy_setopt(curl_, CURLOPT_READDATA, context);
-        curl_easy_setopt(curl_, CURLOPT_INFILESIZE_LARGE,
-                         static_cast<curl_off_t>(size));
+        // CURLOPT_INFILESIZE_LARGE doesn't work on 32bit curl.
+        curl_easy_setopt(curl_, CURLOPT_INFILESIZE,
+                         static_cast<long>(size));
       }
     }
 

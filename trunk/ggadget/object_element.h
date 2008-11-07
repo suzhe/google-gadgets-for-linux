@@ -58,6 +58,10 @@ class ObjectElement : public BasicElement {
  protected:
   virtual void DoClassRegister();
   virtual void DoDraw(CanvasInterface *canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleDragEvent(const DragEvent &event);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  virtual EventResult HandleOtherEvent(const Event &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ObjectElement);

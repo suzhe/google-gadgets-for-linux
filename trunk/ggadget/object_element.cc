@@ -27,33 +27,8 @@ namespace ggadget {
 
 class ObjectElement::Impl {
  public:
-  Impl(ObjectElement *owner, View *view)
-      : owner_(owner), view_(view), object_(NULL) {
-  }
-  ~Impl() {
-    delete object_;
-  }
-
-  void SetObjectClassId(const std::string& classid) {
-    ASSERT(!object_);
-    if (object_) {
-      LOG("Object already had a classId: %s", classid_.c_str());
-    } else {
-      object_ = view_->GetElementFactory()->CreateElement(
-          classid.c_str(), view_, owner_->GetName().c_str());
-      if (!object_) {
-        LOG("Failed to get the object with classid: %s.", classid.c_str());
-        return;
-      }
-      object_->SetParentElement(owner_);
-      // Trigger property registration.
-      object_->GetProperty("");
-      classid_ = classid;
-    }
-  }
-
-  ObjectElement *owner_;
-  View *view_;
+  Impl() : object_(NULL) { }
+  ~Impl() { delete object_; }
 
   BasicElement *object_;
   std::string classid_;
@@ -61,7 +36,7 @@ class ObjectElement::Impl {
 
 ObjectElement::ObjectElement(View *view, const char *name)
     : BasicElement(view, "object", name, false),
-      impl_(new Impl(this, view)) {
+      impl_(new Impl()) {
   SetEnabled(true);
 }
 
@@ -90,7 +65,21 @@ const std::string& ObjectElement::GetObjectClassId() const {
 }
 
 void ObjectElement::SetObjectClassId(const std::string& classid) {
-  impl_->SetObjectClassId(classid);
+  ASSERT(!impl_->object_);
+  if (impl_->object_) {
+    LOG("Object already had a classId: %s", impl_->classid_.c_str());
+  } else {
+    impl_->object_ = GetView()->GetElementFactory()->CreateElement(
+        classid.c_str(), GetView(), GetName().c_str());
+    if (!impl_->object_) {
+      LOG("Failed to get the object with classid: %s.", classid.c_str());
+      return;
+    }
+    impl_->object_->SetParentElement(this);
+    // Trigger property registration.
+    impl_->object_->GetProperty("");
+    impl_->classid_ = classid;
+  }
 }
 
 void ObjectElement::Layout() {
@@ -102,6 +91,31 @@ void ObjectElement::Layout() {
 void ObjectElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->object_)
     impl_->object_->Draw(canvas);
+}
+
+EventResult ObjectElement::HandleMouseEvent(const MouseEvent &event) {
+  BasicElement *fired, *in;
+  ViewInterface::HitTest hittest;
+  return impl_->object_ ?
+      impl_->object_->OnMouseEvent(event, true, &fired, &in, &hittest) :
+      EVENT_RESULT_UNHANDLED;
+}
+
+EventResult ObjectElement::HandleDragEvent(const DragEvent &event) {
+  BasicElement *fired;
+  return impl_->object_ ?
+      impl_->object_->OnDragEvent(event, true, &fired) :
+      EVENT_RESULT_UNHANDLED;
+}
+
+EventResult ObjectElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return impl_->object_ ? impl_->object_->OnKeyEvent(event) :
+      EVENT_RESULT_UNHANDLED;
+}
+
+EventResult ObjectElement::HandleOtherEvent(const Event &event) {
+  return impl_->object_ ? impl_->object_->OnOtherEvent(event) :
+      EVENT_RESULT_UNHANDLED;
 }
 
 } // namespace ggadget
