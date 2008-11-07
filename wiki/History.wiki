@@ -8,7 +8,7 @@ This page is dedicated for recording notable changes of each release.
     * Following reported issues have been fixed: 215, 214, 201, 220, 216, 194, 229, 227, 224, 206, 204, 192, 193, 125, 164, 228, 225, 199, 235, 237, 226, 231, 238, 230, 240, 241
     * Most new features introduced in Google Desktop Windows 5.8 have been supported, except edit.detectUrls and personalization API. Please refer to: http://code.google.com/apis/desktop/docs/releasenotes-v58.html
     * View decorator related classes have been refactored to support KDE Plasma.
-    * The binary dependency problem of xulrunner and libmozjs has been fixed by introducing a glue layer (extensions/smjs_script_runtime/libmozjs_glue.*).
+    * The binary dependency problem of xulrunner and libmozjs has been fixed by introducing a glue layer (extensions/smjs_script_runtime/libmozjs_glue.{h,cc}).
     * analytics_usage_collector module has been added to collect anonymous usage data.
     * cmake build scripts have been included in source package, though it's still not widely tested and may have bugs.
     * Many improvements have been made for qt host.
