@@ -230,6 +230,7 @@ class SingleViewHost::Impl {
     // input event mask effective.
     binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
 
+    gtk_widget_realize(fixed_);
     gtk_widget_realize(window_);
     on_view_changed_signal_();
   }
