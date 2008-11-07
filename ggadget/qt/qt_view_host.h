@@ -29,7 +29,6 @@
 namespace ggadget {
 namespace qt {
 
-class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
   /**
@@ -75,28 +74,12 @@ class QtViewHost : public ViewHostInterface {
                              const char *default_value);
   virtual int GetDebugMode() const;
 
-  friend class QtViewHostObject;
-  QtViewHostObject *GetQObject();
+  QObject *GetQObject();
 
  private:
   class Impl;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
-};
-
-class QtViewHostObject : public QObject {
-  Q_OBJECT
- public:
-  QtViewHostObject(QtViewHost::Impl* owner) : owner_(owner) {}
-
- public slots:
-  void OnOptionViewOK();
-  void OnOptionViewCancel();
-  void OnViewWidgetClose(QObject*);
-  void OnShow(bool);
-
- private:
-  QtViewHost::Impl* owner_;
 };
 
 } // namespace qt

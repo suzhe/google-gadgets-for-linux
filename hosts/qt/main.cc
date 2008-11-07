@@ -96,6 +96,7 @@ static const char *g_help_string =
   "      smjs - spidermonkey js runtime\n"
   "      qt   - QtScript js runtime(experimental)\n"
 #endif
+  "  -bg Run in background\n"
   "  -l loglevel, --log-level loglevel\n"
   "      Specify the minimum gadget.debug log level.\n"
   "      0 - Trace(All)  1 - Info  2 - Warning  3 - Error  >=4 - No log\n"
@@ -178,27 +179,13 @@ int main(int argc, char* argv[]) {
 #endif
   bool composite = false;
   int debug_mode = 0;
+  bool background = false;
   bool enable_collector = true;
   ggadget::Gadget::DebugConsoleConfig debug_console =
       ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
-#if defined(Q_WS_X11) && defined(HAVE_X11)
-  if (InitArgb() && CheckCompositingManager(dpy)) {
-    composite = true;
-  } else {
-    visual = NULL;
-    if (colormap) {
-      XFreeColormap(dpy, colormap);
-      colormap = 0;
-    }
-  }
-  QApplication app(dpy, argc, argv,
-                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
-#else
-  QApplication app(argc, argv);
-#endif
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
@@ -241,11 +228,30 @@ int main(int argc, char* argv[]) {
     } else if (strcmp("-nc", argv[i]) == 0 ||
                strcmp("--no-collector", argv[i]) == 0) {
       enable_collector = false;
+    } else if (strcmp("-bg", argv[i]) == 0) {
+      background = true;
     } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
       gadget_paths.push_back(path);
     }
   }
+  // Parse command line before create QApplication because it will eat some
+  // argv like -bg
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+  if (InitArgb() && CheckCompositingManager(dpy)) {
+    composite = true;
+  } else {
+    visual = NULL;
+    if (colormap) {
+      XFreeColormap(dpy, colormap);
+      colormap = 0;
+    }
+  }
+  QApplication app(dpy, argc, argv,
+                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
+#else
+  QApplication app(argc, argv);
+#endif
 
   std::string profile_dir = ggadget::BuildFilePath(
       ggadget::GetHomeDirectory().c_str(),
@@ -277,6 +283,9 @@ int main(int argc, char* argv[]) {
     DLOG("Another instance already exists.");
     return 0;
   }
+
+  if (background)
+    ggadget::Daemonize();
 
   if (enable_collector) {
     ggadget::UsageCollectorFactoryInterface *collector_factory =
