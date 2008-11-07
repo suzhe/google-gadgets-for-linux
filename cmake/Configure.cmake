@@ -392,6 +392,9 @@ IF(NOT SMJS_FOUND)
   ENDFOREACH(js ${SMJS_LIST})
 ENDIF(NOT SMJS_FOUND)
 
+# Do more test with spidermonkey
+INCLUDE(SpiderMonkey)
+
 # Hell, some distributions' package of smjs is broken. We have to fix it here
 IF(SMJS_FOUND)
   STRING(REGEX MATCH "/stable" RESULT "${SMJS_INCLUDE_DIR}")

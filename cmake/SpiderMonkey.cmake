@@ -14,26 +14,6 @@
 # limitations under the License.
 #
 
-GET_CONFIG(xulrunner-js 1.8 SMJS SMJS_FOUND)
-IF(SMJS_FOUND)
-  MESSAGE("Using xulrunner-js as the JavaScript library")
-ELSE(SMJS_FOUND)
-  GET_CONFIG(firefox2-js 2.0 SMJS SMJS_FOUND)
-  IF(SMJS_FOUND)
-    MESSAGE("Using firefox2-js as the JavaScript library")
-  ELSE(SMJS_FOUND)
-    GET_CONFIG(firefox-js 1.5 SMJS SMJS_FOUND)
-    IF(SMJS_FOUND)
-      MESSAGE("Using firefox-js as the JavaScript library")
-    ELSE(SMJS_FOUND)
-      GET_CONFIG(mozilla-js 1.8 SMJS SMJS_FOUND)
-      IF(SMJS_FOUND)
-        MESSAGE("Using mozilla-js as the JavaScript library")
-      ENDIF(SMJS_FOUND)
-    ENDIF(SMJS_FOUND)
-  ENDIF(SMJS_FOUND)
-ENDIF(SMJS_FOUND)
-
 MACRO(TRY_COMPILE_SMJS _test_program _definitions _link_flags)
   TRY_COMPILE(TRY_COMPILE_SMJS_RESULT
     ${CMAKE_BINARY_DIR}/configure

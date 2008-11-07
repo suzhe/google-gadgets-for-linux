@@ -28,6 +28,7 @@ ADD_SUBDIRECTORY(tests)
 ADD_LIBRARY(ggadget-npapi${GGL_EPOCH} SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-npapi${GGL_EPOCH}
   ggadget${GGL_EPOCH}
+  dl
   ${X11_LIBRARIES}
   ${XT_LIBRARIES}
 )
