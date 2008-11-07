@@ -24,8 +24,7 @@ extensiondir		= $(GGL_MODULE_DIR)
 analytics_usage_collector_la_SOURCES = analytics_usage_collector.cc
 
 analytics_usage_collector_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS) \
-			  -fno-strict-aliasing
+			  $(DEFAULT_COMPILE_FLAGS)
 
 analytics_usage_collector_la_CPPFLAGS = \
 			  @LIBCURL_CPPFLAGS@ \
