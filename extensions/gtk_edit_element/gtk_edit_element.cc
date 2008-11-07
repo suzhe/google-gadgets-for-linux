@@ -195,6 +195,15 @@ void GtkEditElement::SetReadOnly(bool readonly) {
   impl_->SetReadOnly(readonly);
 }
 
+bool GtkEditElement::IsDetectUrls() const {
+  // TODO
+  return false;
+}
+
+void GtkEditElement::SetDetectUrls(bool /*detect_urls*/) {
+  // TODO
+}
+
 void GtkEditElement::GetIdealBoundingRect(int *width, int *height) {
   int w, h;
   impl_->GetSizeRequest(&w, &h);
