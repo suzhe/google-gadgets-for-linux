@@ -219,7 +219,7 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   if (mouse_drag_moved_) {
     QPoint offset = QCursor::pos() - mouse_pos_;
     if (std::abs(static_cast<double>(offset.x())) > kDragThreshold ||
-    	std::abs(static_cast<double>(offset.y())) > kDragThreshold)
+        std::abs(static_cast<double>(offset.y())) > kDragThreshold)
     return;
   } else {
     MouseEvent e(Event::EVENT_MOUSE_UP,
@@ -366,7 +366,7 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
 }
 
 void QtViewWidget::resizeEvent(QResizeEvent *event) {
-  
+
 }
 
 QSize QtViewWidget::sizeHint() const {
