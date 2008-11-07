@@ -312,7 +312,8 @@ static const HitTestCursorTypeMapping kHitTestCursorTypeMappings[] = {
 };
 
 GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
-  GdkCursorType gdk_type = GDK_ARROW;
+  // Use GDK_X_CURSOR as default type.
+  GdkCursorType gdk_type = GDK_X_CURSOR;
   // Try match with hittest first.
   for (size_t i = 0; i < arraysize(kHitTestCursorTypeMappings); ++i) {
     if (kHitTestCursorTypeMappings[i].hittest == hittest) {
@@ -322,7 +323,7 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
   }
 
   // No suitable mapping, try matching with cursor type.
-  if (gdk_type == GDK_ARROW) {
+  if (gdk_type == GDK_X_CURSOR) {
     for (size_t i = 0; i < arraysize(kCursorTypeMappings); ++i) {
       if (kCursorTypeMappings[i].type == type) {
         gdk_type = kCursorTypeMappings[i].gdk_type;
@@ -334,7 +335,7 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
   DLOG("Create gtk cursor for type: %d, hittest: %d, gdk: %d",
        type, hittest, gdk_type);
 
-  return gdk_cursor_new(gdk_type);
+  return gdk_type == GDK_X_CURSOR ? NULL : gdk_cursor_new(gdk_type);
 }
 
 bool DisableWidgetBackground(GtkWidget *widget) {

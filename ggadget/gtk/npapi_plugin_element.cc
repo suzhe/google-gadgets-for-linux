@@ -389,11 +389,6 @@ class NPAPIPluginElement::Impl {
 
   // Registered as dynamic property setter when in_object_element_ is true.
   bool SetProperty(const std::string &name, const Variant &value) {
-    if (name == "movie") {
-      std::string value_str;
-      value.ConvertToString(&value_str);
-      owner_->SetSrc(value_str.c_str());
-    }
     if (scriptable_plugin_)
       return scriptable_plugin_->SetProperty(name.c_str(), value);
     return SetParameter(name, value);
@@ -464,7 +459,10 @@ void NPAPIPluginElement::DoClassRegister() {
   // As noted in doc of NPAPIPluginElement::NPPluginElement(),
   // in_object_element_ should not differ among objects of the same class,
   // otherwise the integrity of DoClassRegister will be broken.
-  if (!impl_->in_object_element_) {
+  if (impl_->in_object_element_) {
+    RegisterProperty("movie", NewSlot(&NPAPIPluginElement::GetSrc),
+                     NewSlot(&NPAPIPluginElement::SetSrc));
+  } else {
     BasicElement::DoClassRegister();
     RegisterProperty("object", NewSlot(&Impl::GetObject,
                                        &NPAPIPluginElement::impl_), NULL);
@@ -479,6 +477,8 @@ void NPAPIPluginElement::DoRegister() {
   if (impl_->in_object_element_) {
     SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetProperty),
                               NewSlot(impl_, &Impl::SetProperty));
+  } else {
+    BasicElement::DoRegister();
   }
 }
 
