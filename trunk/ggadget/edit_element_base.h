@@ -123,6 +123,10 @@ class EditElementBase : public ScrollingElement {
   virtual bool IsReadOnly() const = 0;
   virtual void SetReadOnly(bool readonly) = 0;
 
+  /** Gets and sets detectUrls property, introduced in 5.8 */
+  virtual bool IsDetectUrls() const = 0;
+  virtual void SetDetectUrls(bool detect_urls) = 0;
+
   /** Gets the ideal bounding rect for the edit element which is large enough
    * for displaying the content without scrolling. */
   virtual void GetIdealBoundingRect(int *width, int *height) = 0;

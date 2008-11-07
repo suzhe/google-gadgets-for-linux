@@ -312,6 +312,15 @@ void QtEditElement::SetReadOnly(bool readonly) {
   }
 }
 
+bool QtEditElement::IsDetectUrls() const {
+  // TODO
+  return false;
+}
+
+void QtEditElement::SetDetectUrls(bool /*detect_urls*/) {
+  // TODO
+}
+
 void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
   const QSize s = doc_.pageSize().toSize();
 

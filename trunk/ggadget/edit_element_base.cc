@@ -108,6 +108,9 @@ void EditElementBase::DoClassRegister() {
   RegisterProperty("readonly",
                    NewSlot(&EditElementBase::IsReadOnly),
                    NewSlot(&EditElementBase::SetReadOnly));
+  RegisterProperty("detectUrls",
+                   NewSlot(&EditElementBase::IsDetectUrls),
+                   NewSlot(&EditElementBase::SetDetectUrls));
   RegisterProperty("idealBoundingRect",
                    NewSlot(&Impl::GetIdealBoundingRect,
                            &EditElementBase::impl_),

@@ -62,6 +62,8 @@ class GtkEditElement : public EditElementBase {
   virtual void SetWordWrap(bool wrap);
   virtual bool IsReadOnly() const;
   virtual void SetReadOnly(bool readonly);
+  virtual bool IsDetectUrls() const;
+  virtual void SetDetectUrls(bool detect_urls);
   virtual void GetIdealBoundingRect(int *width, int *height);
   virtual void Select(int start, int end);
   virtual void SelectAll();
