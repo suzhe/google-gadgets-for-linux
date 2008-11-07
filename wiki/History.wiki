@@ -4,6 +4,16 @@ This page is dedicated for recording notable changes of each release.
 
 = History =
 
+  * 0.10.3 - Nov 7th 2008
+    * Following reported issues have been fixed: 215, 214, 201, 220, 216, 194, 229, 227, 224, 206, 204, 192, 193, 125, 164, 228, 225, 199, 235, 237, 226, 231, 238, 230, 240, 241
+    * Most new features introduced in Google Desktop Windows 5.8 have been supported, except edit.detectUrls and personalization API. Please refer to: http://code.google.com/apis/desktop/docs/releasenotes-v58.html
+    * View decorator related classes have been refactored to support KDE Plasma.
+    * The binary dependency problem of xulrunner and libmozjs has been fixed by introducing a glue layer (extensions/smjs_script_runtime/libmozjs_glue.*).
+    * analytics_usage_collector module has been added to collect anonymous usage data.
+    * cmake build scripts have been included in source package, though it's still not widely tested and may have bugs.
+    * Many improvements have been made for qt host.
+    * Many other small fixes.
+
   * 0.10.2 - Sept 13th 2008
     * Lots of bugs have been fixed, including: 138, 146, 191, 203, 209, 211, 172, 200, 207, 208, 187, 202, and more.
     * Desktop Gadgets compatibility has been improved a lot. Many gadgets for GDWin can run on GGL now.
