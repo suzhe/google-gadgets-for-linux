@@ -52,9 +52,16 @@ SET(LIBGGADGET_BINARY_VERSION \"1.0.0\")
 SET(GGL_MAJOR_VERSION 0)
 SET(GGL_MINOR_VERSION 10)
 SET(GGL_MICRO_VERSION 3)
-SET(GGL_LIB_VERSION "${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}")
-SET(GGL_VERSION \"${GGL_LIB_VERSION}\")
+SET(GGL_VERSION \"${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}\")
 SET(GGL_EPOCH "-1.0")
+
+# The library version number is different than package version.
+# The number should follow the rule defined by libtool and use the same number
+# defined in configure.ac, eg.:
+# LIBGGADGET_CURRENT, LIBGGADGET_REVISION and LIBGGADGET_AGE
+# It's just a temporary value, because the API is not stable yet.
+SET(GGL_LIB_VERSION "0.0.0")
+SET(GGL_LIB_SOVERSION "0")
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
@@ -64,7 +71,10 @@ SET(GGL_VERSION_TIMESTAMP \"081107-000000\")
 SET(GGL_API_MAJOR_VERSION 5)
 SET(GGL_API_MINOR_VERSION 8)
 SET(GGL_API_VERSION \"${GGL_API_MAJOR_VERSION}.${GGL_API_MINOR_VERSION}.0.0\")
-SET(CMAKE_BUILD_TYPE "Debug")
+
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE "Release")
+ENDIF(NOT CMAKE_BUILD_TYPE)
 
 SET(GGL_PLATFORM_SHORT \"linux\")
 SET(GGL_PLATFORM \"linux\")

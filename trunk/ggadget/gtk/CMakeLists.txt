@@ -37,6 +37,8 @@ SET(SRCS
   view_widget_binder.cc
 )
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+
 if(RSVG_FOUND)
   SET(SRCS ${SRCS} rsvg_image.cc)
 endif(RSVG_FOUND)

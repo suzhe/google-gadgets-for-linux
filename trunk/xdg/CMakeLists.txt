@@ -30,7 +30,7 @@ FOREACH(icon ${ICONS})
   INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/${icon}.png"
     DESTINATION
     "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${icon}/mimetypes"
-    RENAME application-x-google-gadgets.png)
+    RENAME application-x-google-gadget.png)
 ENDFOREACH(icon ${ICONS})
 
 INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/128x128.png"

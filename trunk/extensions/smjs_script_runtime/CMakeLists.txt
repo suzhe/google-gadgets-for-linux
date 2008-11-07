@@ -43,6 +43,7 @@ TARGET_LINK_LIBRARIES(smjs-script-runtime
   ggadget-js${GGL_EPOCH}
   ggadget-smjs
   ${SMJS_LIBRARIES}
+  dl
   )
 OUTPUT_MODULE(smjs-script-runtime)
 

@@ -54,7 +54,7 @@ gtkmoz_browser_child_SOURCES    = browser_child.cc \
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \
-				  -Wno-strict-aliasing
+				  -fno-strict-aliasing
 
 gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 				  @GTKMOZEMBED_CFLAGS@ \

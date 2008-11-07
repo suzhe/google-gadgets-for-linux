@@ -393,10 +393,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     } else {
       send_flag_ = true;
       // Run the worker directly in this thread.
+      // Returns NULL means failed.
       void *result = Worker(context);
-      CURLcode code = *reinterpret_cast<CURLcode *>(&result);
       send_flag_ = false;
-      if (code != CURLE_OK)
+      if (!result)
         return NETWORK_ERR;
     }
     return NO_ERR;
@@ -442,7 +442,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     WorkerDone(status, effective_url, context, code == CURLE_OK);
     delete context;
-    return reinterpret_cast<void *>(code);
+
+    // Returns something that isn't NULL when success.
+    return code == CURLE_OK ? arg : NULL;
   }
 
   static size_t ReadCallback(void *ptr, size_t size, size_t mem_block,
