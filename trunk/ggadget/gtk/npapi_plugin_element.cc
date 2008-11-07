@@ -77,6 +77,8 @@ class NPAPIPluginElement::Impl {
       plugin_->Destroy();
     if (pixmap_)
       g_object_unref(pixmap_);
+    if (GTK_IS_WIDGET(socket_))
+      gtk_widget_destroy(socket_);
   }
 
   bool EnsurePlugin() {

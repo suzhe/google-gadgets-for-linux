@@ -522,9 +522,8 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 void ViewDecoratorBase::SetResizable(ResizableMode resizable) {
   if (impl_->resizable_mode_ != resizable) {
     // Reset the zoom factor to 1 if the child view is changed to
-    // resizable or keep_ratio.
-    if (resizable == ViewInterface::RESIZABLE_TRUE ||
-        resizable == ViewInterface::RESIZABLE_KEEP_RATIO) {
+    // resizable.
+    if (resizable == ViewInterface::RESIZABLE_TRUE) {
       impl_->view_element_->SetScale(1.0);
     }
     impl_->resizable_mode_ = resizable;

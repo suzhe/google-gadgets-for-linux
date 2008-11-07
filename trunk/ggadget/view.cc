@@ -1445,7 +1445,7 @@ class View::Impl {
       return 0;
     }
 
-    if (duration <= 0) {
+    if (duration < 0) {
       DLOG("Invalid duration %d for animation.", duration);
       delete slot;
       return 0;
