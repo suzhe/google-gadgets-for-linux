@@ -47,15 +47,15 @@ GADGET_BROWSER_FILES= \
 		thumbnail.js
 
 EXTRA_DIST = $(GADGET_BROWSER_FILES)
-
-nobase_gadget_browser_DATA = $(GADGET_BROWSER_FILES)
-gadget_browserdir	= $(GGL_RESOURCE_DIR)/google-gadget-browser
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
-install-data-hook:
-	(cd $(DESTDIR)$(GGL_RESOURCE_DIR)/google-gadget-browser; \
-	 $(ZIP) -r -u ../google-gadget-browser.gg \
-	 	gadget-browser-script-utils.so \
-		$(GADGET_BROWSER_FILES) )
-	rm -fr $(DESTDIR)$(GGL_RESOURCE_DIR)/google-gadget-browser
+gadget_browser_DATA = google-gadget-browser.gg
+gadget_browserdir=$(GGL_RESOURCE_DIR)
+
+google-gadget-browser.gg: $(GADGET_BROWSER_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(GADGET_BROWSER_FILES))
+else
+nobase_gadget_browser_DATA = $(GADGET_BROWSER_FILES)
+gadget_browserdir = $(GGL_RESOURCE_DIR)/gadget_browser
 endif
