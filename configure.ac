@@ -860,6 +860,7 @@ if test x$has_gtk2 != xyes; then
   build_gtk_flash_element=no
 else
   gtk2_target=`$PKG_CONFIG --variable=target gtk+-2.0`
+  AM_CONDITIONAL([GTK2_TARGET_X11], [test x$gtk2_target = xx11])
 fi
 
 if test x$has_qt4 != xyes; then
@@ -970,10 +971,6 @@ fi
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_GTK],
   [test x$build_libggadget_gtk = xyes])
-
-AM_CONDITIONAL(
-  [GTK2_TARGET_X11],
-  [test x$gtk2_target = xx11])
 
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_QT],

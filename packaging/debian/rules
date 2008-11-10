@@ -22,7 +22,6 @@ config.status: configure
 	(cd build; ../configure --host=$(DEB_HOST_GNU_TYPE) \
 	--build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr \
 	--mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
-	--with-browser-plugins-dir=\$${prefix}/lib/xulrunner-addons/plugins \
 	--disable-werror)
 
 

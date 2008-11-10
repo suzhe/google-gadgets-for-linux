@@ -5,8 +5,7 @@ Maintainer: Jack Coulter <jscinoz@gmail.com>
 Build-Depends: debhelper (>= 5), zlib1g-dev, libgtk2.0-dev, zip, chrpath,
  libxml2-dev, libdbus-1-dev, librsvg2-dev, libqt4-dev, libltdl3-dev,
  libcurl4-gnutls-dev | libcurl4-openssl-dev, libgstreamer-plugins-base0.10-dev, 
- xulrunner-dev | xulrunner-1.9-dev, network-manager-dev, 
- libstartup-notification0-dev
+ xulrunner-dev | xulrunner-1.9-dev
 Standards-Version: 3.8.0
 Vcs-Svn: http://google-gadgets-for-linux.googlecode.com/svn/trunk/packaging/debian
 Vcs-Browser: http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/packaging/debian
