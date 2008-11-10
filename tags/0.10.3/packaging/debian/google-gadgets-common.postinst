@@ -1,5 +1,0 @@
-#! /bin/sh -e
-update-mime-database /usr/share/mime
-
-
-#DEBHELPER#
