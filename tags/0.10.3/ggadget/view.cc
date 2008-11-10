@@ -23,8 +23,6 @@
 #include <list>
 #include <set>
 #include <vector>
-#include <cstdlib>
-#include <algorithm>
 
 #include "view.h"
 #include "basic_element.h"
@@ -55,7 +53,6 @@
 #include "scriptable_interface.h"
 #include "scriptable_menu.h"
 #include "slot.h"
-#include "string_utils.h"
 #include "texture.h"
 #include "view_host_interface.h"
 #include "xml_dom_interface.h"
@@ -90,11 +87,6 @@ class View::Impl {
           NewSlot(this, &TimerWatchCallback::OnDestroy));
     }
 
-    ~TimerWatchCallback() {
-      destroy_connection_->Disconnect();
-      delete slot_;
-    }
-
     void SetWatchId(int watch_id) {
       event_.SetToken(watch_id);
     }
@@ -123,8 +115,7 @@ class View::Impl {
 
       // If ret is false then fire, to make sure that the last event will
       // always be fired.
-      if (fire && (!ret || current_time - last_finished_time_ >
-                   kMinTimeBetweenTimerCall)) {
+      if (fire && (!ret || current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
           // Because timer events are still fired during modal dialog opened
           // in key/mouse event handlers, switch off the user interaction
@@ -147,6 +138,9 @@ class View::Impl {
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       ASSERT(event_.GetToken() == watch_id);
+
+      destroy_connection_->Disconnect();
+      delete slot_;
       delete this;
     }
 
@@ -198,12 +192,6 @@ class View::Impl {
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
-      theme_changed_(false),
-      resize_border_specified_(false),
-      resize_border_left_(0),
-      resize_border_top_(0),
-      resize_border_right_(0),
-      resize_border_bottom_(0),
 #ifdef _DEBUG
       draw_count_(0),
       view_draw_count_(0),
@@ -269,15 +257,8 @@ class View::Impl {
     obj->RegisterVariantConstant("children", Variant(&children_));
     obj->RegisterMethod("appendElement",
                         NewSlot(&children_, &Elements::AppendElementVariant));
-    // insertElement was deprecated by insertElementBehind.
     obj->RegisterMethod("insertElement",
                         NewSlot(&children_, &Elements::InsertElementVariant));
-    obj->RegisterMethod("insertElementBehind",
-                        NewSlot(&children_, &Elements::InsertElementVariant));
-    // Added in 5.8 API.
-    obj->RegisterMethod("insertElementInFrontOf",
-                        NewSlot(&children_,
-                                &Elements::InsertElementVariantAfter));
     obj->RegisterMethod("removeElement",
                         NewSlot(&children_, &Elements::RemoveElement));
     obj->RegisterMethod("removeAllElements",
@@ -298,11 +279,6 @@ class View::Impl {
 
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
     obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetSize));
-
-    // Added in GDWin 5.8
-    obj->RegisterProperty("resizeBorder",
-                          NewSlot(this, &Impl::GetResizeBorder),
-                          NewSlot(this, &Impl::SetResizeBorder));
 
     // Extended APIs.
 #if 0
@@ -328,7 +304,6 @@ class View::Impl {
     obj->RegisterSignal(kOnMouseOutEvent, &onmouseout_event_);
     obj->RegisterSignal(kOnMouseOverEvent, &onmouseover_event_);
     obj->RegisterSignal(kOnMouseUpEvent, &onmouseup_event_);
-    obj->RegisterSignal(kOnMouseWheelEvent, &onmousewheel_event_);
     obj->RegisterSignal(kOnOkEvent, &onok_event_);
     obj->RegisterSignal(kOnOpenEvent, &onopen_event_);
     obj->RegisterSignal(kOnOptionChangedEvent, &onoptionchanged_event_);
@@ -340,8 +315,6 @@ class View::Impl {
     obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
     // Not a standard signal.
     obj->RegisterSignal(kOnContextMenuEvent, &oncontextmenu_event_);
-    // 5.8 API.
-    obj->RegisterSignal(kOnThemeChangedEvent, &onthemechanged_event_);
   }
 
   void MapChildPositionEvent(const PositionEvent &org_event,
@@ -375,12 +348,10 @@ class View::Impl {
 
     BasicElement *temp, *temp1; // Used to receive unused output parameters.
     EventResult result = EVENT_RESULT_UNHANDLED;
-    ViewInterface::HitTest temp_hittest;
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE,
     // EVENT_MOUSE_UP and EVENT_MOUSE_CLICK events to it directly, until
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
     // left button down.
-    // FIXME: Is it necessary to update hittest_ when mouse is grabbing?
     if (grabmouse_element_.Get()) {
       if (grabmouse_element_.Get()->IsReallyEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
@@ -388,8 +359,8 @@ class View::Impl {
            type == Event::EVENT_MOUSE_CLICK)) {
         MouseEvent new_event(event);
         MapChildMouseEvent(event, grabmouse_element_.Get(), &new_event);
-        result = grabmouse_element_.Get()->OnMouseEvent(
-            new_event, true, &temp, &temp1, &temp_hittest);
+        result = grabmouse_element_.Get()->OnMouseEvent(new_event, true,
+                                                        &temp, &temp1);
         // Set correct mouse cursor.
         if (grabmouse_element_.Get()) {
           owner_->SetCursor(grabmouse_element_.Get()->GetCursor());
@@ -411,8 +382,8 @@ class View::Impl {
       if (mouseover_element_.Get()) {
         MouseEvent new_event(event);
         MapChildMouseEvent(event, mouseover_element_.Get(), &new_event);
-        result = mouseover_element_.Get()->OnMouseEvent(
-            new_event, true, &temp, &temp1, &temp_hittest);
+        result = mouseover_element_.Get()->OnMouseEvent(new_event, true,
+                                                        &temp, &temp1);
         mouseover_element_.Reset(NULL);
       }
       return result;
@@ -420,7 +391,7 @@ class View::Impl {
 
     BasicElement *fired_element = NULL;
     BasicElement *in_element = NULL;
-    ViewInterface::HitTest child_hittest = HT_CLIENT;
+    ElementHolder fired_element_holder, in_element_holder;
 
     // Dispatch the event to children normally,
     // unless popup is active and event is inside popup element.
@@ -431,9 +402,10 @@ class View::Impl {
         MapChildMouseEvent(event, popup_element_.Get(), &new_event);
         if (popup_element_.Get()->IsPointIn(new_event.GetX(),
                                             new_event.GetY())) {
-          // Not direct.
-          result = popup_element_.Get()->OnMouseEvent(
-              new_event, false, &fired_element, &in_element, &child_hittest);
+          result = popup_element_.Get()->OnMouseEvent(new_event,
+                                                      false, // NOT direct
+                                                      &fired_element,
+                                                      &in_element);
           outside_popup = false;
         }
       } else {
@@ -441,8 +413,7 @@ class View::Impl {
       }
     }
     if (outside_popup) {
-      result = children_.OnMouseEvent(event, &fired_element,
-                                      &in_element, &child_hittest);
+      result = children_.OnMouseEvent(event, &fired_element, &in_element);
       // The following might hit if a grabbed element is
       // turned invisible or disabled while under grab.
       if (type == Event::EVENT_MOUSE_DOWN && result != EVENT_RESULT_CANCELED) {
@@ -456,20 +427,21 @@ class View::Impl {
     if (!mouse_over_)
       return result;
 
-    ElementHolder in_element_holder(in_element);
+    fired_element_holder.Reset(fired_element);
+    in_element_holder.Reset(in_element);
 
-    if (fired_element && type == Event::EVENT_MOUSE_DOWN &&
+    if (fired_element_holder.Get() && type == Event::EVENT_MOUSE_DOWN &&
         (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
       // Start grabbing.
       grabmouse_element_.Reset(fired_element);
       // Focus is handled in BasicElement.
     }
 
-    if (fired_element != mouseover_element_.Get()) {
+    if (fired_element_holder.Get() != mouseover_element_.Get()) {
       BasicElement *old_mouseover_element = mouseover_element_.Get();
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
-      mouseover_element_.Reset(fired_element);
+      mouseover_element_.Reset(fired_element_holder.Get());
 
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
@@ -480,7 +452,7 @@ class View::Impl {
                                   event.GetModifier());
         MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
-                                            &temp, &temp1, &temp_hittest);
+                                            &temp, &temp1);
       }
 
       if (mouseover_element_.Get()) {
@@ -495,30 +467,32 @@ class View::Impl {
                                    event.GetModifier());
         MapChildMouseEvent(event, mouseover_element_.Get(), &mouseover_event);
         mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
-                                               &temp, &temp1, &temp_hittest);
+                                               &temp, &temp1);
       }
     }
 
     if (in_element_holder.Get()) {
-      hittest_ = child_hittest;
+      double x, y;
+      in_element->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
+      // Gets the hit test value of the element currently pointed by mouse.
+      // It'll be used as the hit test value of the View.
+      // hittest_ must be set before calling SetCursor(), because ViewHost
+      // might want to get view's hittest value to help determine the correct
+      // cursor type.
+      // FIXME: Integrate GetHitTest into OnMouseEvent to prevent extra
+      // coordinate translation.
+      hittest_ = in_element->GetHitTest(x, y);
+      owner_->SetCursor(in_element->GetCursor());
       if (type == Event::EVENT_MOUSE_MOVE &&
           in_element != tooltip_element_.Get()) {
-        owner_->ShowElementTooltip(in_element);
+        tooltip_element_.Reset(in_element);
+        owner_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
     } else {
       // FIXME: If HT_NOWHERE is more suitable?
       hittest_ = ViewInterface::HT_TRANSPARENT;
-      tooltip_element_.Reset(NULL);
-    }
-
-    // If in element has a special hittest value, then use its cursor instead
-    // of mouseover element's cursor.
-    if (hittest_ != HT_CLIENT && in_element_holder.Get()) {
-      owner_->SetCursor(in_element_holder.Get()->GetCursor());
-    } else if (mouseover_element_.Get()) {
-      owner_->SetCursor(mouseover_element_.Get()->GetCursor());
-    } else {
       owner_->SetCursor(CURSOR_DEFAULT);
+      tooltip_element_.Reset(NULL);
     }
 
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
@@ -539,13 +513,9 @@ class View::Impl {
     Event::Type type = event.GetType();
     double opacity;
 
-    // Main views don't handle the mouse event if the pixel under the mouse
-    // pointer is fully transparent and there is no element grabbing the mouse.
-    // Options views and details views don't have this feature because they
-    // look opaque.
-    if (view_host_ &&
-        view_host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN &&
-        type != Event::EVENT_MOUSE_OUT && !grabmouse_element_.Get() &&
+    // Don't handle the mouse event if the pixel under the mouse pointer is
+    // fully transparent and there is no element grabbing the mouse.
+    if (type != Event::EVENT_MOUSE_OUT && !grabmouse_element_.Get() &&
         enable_cache_ && canvas_cache_ && canvas_cache_->GetPointValue(
             event.GetX(), event.GetY(), NULL, &opacity) && opacity == 0) {
       // Send out fake mouse out event if the pixel is fully transparent and
@@ -629,8 +599,7 @@ class View::Impl {
         FireEvent(&scriptable_event, onmouseover_event_);
         break;
       case Event::EVENT_MOUSE_WHEEL:
-        // 5.8 API added onmousewheel for view.
-        FireEvent(&scriptable_event, onmousewheel_event_);
+        // View doesn't have mouse wheel event according to the API document.
         break;
       default:
         ASSERT(false);
@@ -663,150 +632,6 @@ class View::Impl {
     return result;
   }
 
-  void SetFocusToFirstElement() {
-    if (children_.GetCount()) {
-      BasicElement *first = children_.GetItemByIndex(0);
-      if (!first->IsTabStop())
-        first = GetNextFocusElement(first);
-      SetFocus(first);
-    }
-  }
-
-  void SetFocusToLastElement() {
-    size_t count = children_.GetCount();
-    if (count) {
-      BasicElement *last = children_.GetItemByIndex(count - 1);
-      if (!last->IsTabStop())
-        last = GetPreviousFocusElement(last);
-      SetFocus(last);
-    }
-  }
-
-  void MoveFocusForward() {
-    BasicElement *current = focused_element_.Get();
-    if (current) {
-      // Try children first.
-      BasicElement *next = GetFirstFocusInSubTrees(current);
-      if (!next)
-        next = GetNextFocusElement(current);
-      if (next && next != current)
-        SetFocus(next);
-      // Otherwise leave the focus unchanged.
-    } else {
-      SetFocusToFirstElement();
-    }
-  }
-
-  void MoveFocusBackward() {
-    BasicElement *current = focused_element_.Get();
-    if (current) {
-      BasicElement *previous = GetPreviousFocusElement(current);
-      if (previous && previous != current)
-        SetFocus(previous);
-      // Otherwise leave the focus unchanged.
-    } else {
-      SetFocusToLastElement();
-    }
-  }
-
-  // Note: this method doesn't search in descendants.
-  BasicElement *GetNextFocusElement(BasicElement *current) {
-    // Try previous siblings first.
-    BasicElement *parent = current->GetParentElement();
-    Elements *elements = parent ? parent->GetChildren() : &children_;
-    size_t index = current->GetIndex();
-    if (index != kInvalidIndex) {
-      for (size_t i = index + 1; i < elements->GetCount(); i++) {
-        BasicElement *result = GetFirstFocusInTree(elements->GetItemByIndex(i));
-        if (result)
-          return result;
-      }
-    }
-    // All next siblings and their children are not focusable, up to the parent.
-    if (parent)
-      return GetNextFocusElement(parent);
-
-    // Now at the top level, wrap back to the first element.
-    ASSERT(index != kInvalidIndex); // Otherwise it should have a parent.
-    for (size_t i = 0; i <= index; i++) {
-      BasicElement *result = GetFirstFocusInTree(children_.GetItemByIndex(i));
-      if (result)
-        return result;
-    }
-    return NULL;
-  }
-
-  BasicElement *GetPreviousFocusElement(BasicElement *current) {
-    // Try previous siblings first.
-    BasicElement *parent = current->GetParentElement();
-    Elements *elements = parent ? parent->GetChildren() : &children_;
-    size_t index = current->GetIndex();
-    if (index != kInvalidIndex) {
-      for (size_t i = index; i > 0; i--) {
-        BasicElement *result = GetLastFocusInTree(
-            elements->GetItemByIndex(i - 1));
-        if (result)
-          return result;
-      }
-    }
-    // All previous siblings and their children are not focusable, up to the
-    // parent.
-    if (parent)
-      return GetPreviousFocusElement(parent);
-
-    // Now at the top level, wrap back to the last element.
-    ASSERT(index != kInvalidIndex); // Otherwise it should have a parent.
-    for (size_t i = children_.GetCount(); i > index; i--) {
-      BasicElement *result =
-          GetLastFocusInTree(children_.GetItemByIndex(i - 1));
-      if (result)
-        return result;
-    }
-    return NULL;
-  }
-
-  BasicElement *GetFirstFocusInTree(BasicElement *current) {
-    return current->IsTabStop() ? current : GetFirstFocusInSubTrees(current);
-  }
-
-  BasicElement *GetFirstFocusInSubTrees(BasicElement *current) {
-    if (current->IsVisible()) {
-      Elements *children = current->GetChildren();
-      if (children) {
-        size_t childcount = children->GetCount();
-        for (size_t i = 0; i < childcount; i++) {
-          BasicElement *result =
-              GetFirstFocusInTree(children->GetItemByIndex(i));
-          if (result)
-            return result;
-        }
-      }
-    }
-    return NULL;
-  }
-
-  BasicElement *GetLastFocusInTree(BasicElement *current) {
-    BasicElement *result = GetLastFocusInSubTrees(current);
-    if (result)
-      return result;
-    return current->IsTabStop() ? current : NULL;
-  }
-
-  BasicElement *GetLastFocusInSubTrees(BasicElement *current) {
-    if (current->IsVisible()) {
-      Elements *children = current->GetChildren();
-      if (children) {
-        for (size_t i = children->GetCount(); i > 0; i--) {
-          BasicElement *result =
-              GetLastFocusInTree(children->GetItemByIndex(i - 1));
-          if (result)
-            return result;
-        }
-      }
-    }
-    return NULL;
-  }
-
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
@@ -816,8 +641,6 @@ class View::Impl {
 
     bool old_interactive =
         gadget_ ? gadget_->SetInUserInteraction(true) : false;
-
-    BasicElement *old_focused_element = focused_element_.Get();
 
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
@@ -842,20 +665,6 @@ class View::Impl {
         focused_element_.Reset(NULL);
       } else {
         result = focused_element_.Get()->OnKeyEvent(event);
-        if (result != EVENT_RESULT_CANCELED) {
-          // From API 5.8, tab keys are not sent to elements, but move focus.
-          if (event.GetType() == Event::EVENT_KEY_DOWN &&
-              event.GetKeyCode() == KeyboardEvent::KEY_TAB &&
-              // Only move focus when focus was not moved by the view's and
-              // the focused element's event handler.
-              old_focused_element == focused_element_.Get()) {
-            if (event.GetModifier() & Event::MOD_SHIFT)
-              MoveFocusBackward();
-            else
-              MoveFocusForward();
-            result = EVENT_RESULT_HANDLED;
-          }
-        }
       }
     }
 
@@ -948,29 +757,10 @@ class View::Impl {
 #endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
-        if (!focused_element_.Get()) {
-          SetFocusToFirstElement();
-        } else if (focused_element_.Get()->IsReallyEnabled()) {
-          // Restore focus to the original focused element if it is still there.
-          if (focused_element_.Get()->OnOtherEvent(SimpleEvent(
-              Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
-            focused_element_.Reset(NULL);
-            SetFocusToFirstElement();
-          }
-        } else {
-          focused_element_.Get()->OnOtherEvent(SimpleEvent(
-              Event::EVENT_FOCUS_OUT));
-          focused_element_.Reset(NULL);
-          SetFocusToFirstElement();
-        }
+        // For now we don't automatically set focus to some element.
         break;
       case Event::EVENT_FOCUS_OUT:
-        if (focused_element_.Get()) {
-          focused_element_.Get()->OnOtherEvent(SimpleEvent(
-              Event::EVENT_FOCUS_OUT));
-          // Don't clear focused_element_ so that when the focus come back
-          // to this view, we can restore the focus to the element.
-        }
+        SetFocus(NULL);
         break;
       case Event::EVENT_CANCEL:
         FireEvent(&scriptable_event, oncancel_event_);
@@ -1005,11 +795,6 @@ class View::Impl {
       case Event::EVENT_UNDOCK:
         FireEvent(&scriptable_event, onundock_event_);
         break;
-      case Event::EVENT_THEME_CHANGED:
-        MarkRedraw();
-        owner_->QueueDraw();
-        theme_changed_ = true;
-        break;
       default:
         ASSERT(false);
     }
@@ -1042,8 +827,9 @@ class View::Impl {
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
 
-      if (view_host_)
+      if (view_host_) {
         view_host_->QueueResize();
+      }
     }
   }
 
@@ -1057,62 +843,6 @@ class View::Impl {
 
   double GetHeight() {
     return height_;
-  }
-
-  void SetResizeBorder(const std::string &value) {
-    resize_border_specified_ = false;
-    StringVector values;
-    SplitStringList(value, " ", &values);
-    double double_values[4];
-    for (size_t i = 0; i < 4; ++i) {
-      if (!Variant(values[i]).ConvertToDouble(double_values + i)) {
-        LOG("Invalid resize border value: %s", value.c_str());
-        return;
-      }
-      if (double_values[i] < 0)
-        double_values[i] = 0;
-    }
-
-    if (values.size() == 4) {
-      resize_border_left_ = double_values[0];
-      resize_border_top_ = double_values[1];
-      resize_border_right_ = double_values[2];
-      resize_border_bottom_ = double_values[3];
-    } else if (values.size() == 2) {
-      resize_border_left_ = double_values[0];
-      resize_border_right_ = double_values[0];
-      resize_border_top_ = double_values[1];
-      resize_border_bottom_ = double_values[1];
-    } else if (values.size() == 1) {
-      resize_border_left_ = double_values[0];
-      resize_border_top_ = double_values[0];
-      resize_border_right_ = double_values[0];
-      resize_border_bottom_ = double_values[0];
-    } else {
-      LOG("Invalid resize border value: %s", value.c_str());
-      return;
-    }
-
-    resize_border_specified_ = true;
-    if (view_host_)
-      view_host_->QueueResize();
-  }
-
-  std::string GetResizeBorder() {
-    if (!resize_border_specified_) {
-      return "";
-    } else if (resize_border_left_ == resize_border_top_ &&
-               resize_border_top_ == resize_border_right_ &&
-               resize_border_right_ == resize_border_bottom_) {
-      return StringPrintf("%.0f", resize_border_left_);
-    } else if (resize_border_left_ == resize_border_right_ &&
-               resize_border_top_ == resize_border_bottom_) {
-      return StringPrintf("%.0f %.0f", resize_border_left_, resize_border_top_);
-    } else {
-      return StringPrintf("%.0f %.0f %.0f %.0f",
-                          resize_border_left_, resize_border_top_,
-                          resize_border_right_, resize_border_bottom_);
-    }
   }
 
   void MarkRedraw() {
@@ -1161,12 +891,6 @@ class View::Impl {
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedSizeEvents();
-    if (theme_changed_) {
-      SimpleEvent event(Event::EVENT_THEME_CHANGED);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
-      FireEvent(&scriptable_event, onthemechanged_event_);
-      theme_changed_ = false;
-    }
 
     CanvasInterface *target;
     if (canvas_cache_) {
@@ -1387,9 +1111,9 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
-    // Clears tooltip immediately.
-    if (element == tooltip_element_.Get() && view_host_)
-      view_host_->ShowTooltip("");
+    owner_->AddElementToClipRegion(element, NULL);
+    if (element == tooltip_element_.Get())
+      owner_->SetTooltip(NULL);
 
     std::string name = element->GetName();
     if (!name.empty()) {
@@ -1439,15 +1163,9 @@ class View::Impl {
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
-                     int duration) {
+                     unsigned int duration) {
     if (!slot) {
-      DLOG("Invalid slot for animation.");
-      return 0;
-    }
-
-    if (duration < 0) {
-      DLOG("Invalid duration %d for animation.", duration);
-      delete slot;
+      LOG("Invalid slot for animation.");
       return 0;
     }
 
@@ -1456,66 +1174,33 @@ class View::Impl {
         new TimerWatchCallback(this, slot, start_value, end_value,
                                duration, current_time, true);
     int id = main_loop_->AddTimeoutWatch(kAnimationInterval, watch);
-    if (id > 0) {
-      watch->SetWatchId(id);
-    } else {
-      DLOG("Failed to add animation timer.");
-      delete watch;
-    }
+    watch->SetWatchId(id);
     return id;
   }
 
-  int SetTimeout(Slot *slot, int timeout) {
+  int SetTimeout(Slot *slot, unsigned int duration) {
     if (!slot) {
       LOG("Invalid slot for timeout.");
       return 0;
     }
 
-    if (timeout < 0) {
-      DLOG("Invalid timeout %d.", timeout);
-      delete slot;
-      return 0;
-    }
-
-    if (timeout < kMinTimeout)
-      timeout = kMinTimeout;
-
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, 0, 0, true);
-    int id = main_loop_->AddTimeoutWatch(timeout, watch);
-    if (id > 0) {
-      watch->SetWatchId(id);
-    } else {
-      DLOG("Failed to add timeout timer.");
-      delete watch;
-    }
+    int id = main_loop_->AddTimeoutWatch(duration, watch);
+    watch->SetWatchId(id);
     return id;
   }
 
-  int SetInterval(Slot *slot, int interval) {
+  int SetInterval(Slot *slot, unsigned int duration) {
     if (!slot) {
       LOG("Invalid slot for interval.");
       return 0;
     }
 
-    if (interval < 0) {
-      DLOG("Invalid interval %d.", interval);
-      delete slot;
-      return 0;
-    }
-
-    if (interval < kMinInterval)
-      interval = kMinInterval;
-
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, -1, 0, true);
-    int id = main_loop_->AddTimeoutWatch(interval, watch);
-    if (id > 0) {
-      watch->SetWatchId(id);
-    } else {
-      DLOG("Failed to add interval timer.");
-      delete watch;
-    }
+    int id = main_loop_->AddTimeoutWatch(duration, watch);
+    watch->SetWatchId(id);
     return id;
   }
 
@@ -1527,24 +1212,21 @@ class View::Impl {
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
     if (!graphics_) return NULL;
 
-    switch (src.type()) {
-      case Variant::TYPE_STRING: {
-        const char *filename = VariantValue<const char*>()(src);
-        FileManagerInterface *fm = owner_->GetFileManager();
-        return image_cache_.LoadImage(graphics_, fm, filename, is_mask);
-      }
-      case Variant::TYPE_SCRIPTABLE: {
-        const ScriptableBinaryData *binary =
-            VariantValue<const ScriptableBinaryData *>()(src);
-        return binary ? graphics_->NewImage("", binary->data(), is_mask) : NULL;
-      }
-      case Variant::TYPE_VOID:
-        return NULL;
-      default:
-        LOG("Unsupported type of image src: '%s'", src.Print().c_str());
-        DLOG("src=%s", src.Print().c_str());
-        return NULL;
+    Variant::Type type = src.type();
+    if (type == Variant::TYPE_STRING) {
+      const char *filename = VariantValue<const char*>()(src);
+      FileManagerInterface *fm = owner_->GetFileManager();
+      return image_cache_.LoadImage(graphics_, fm, filename, is_mask);
+    } else if (type == Variant::TYPE_SCRIPTABLE) {
+      const ScriptableBinaryData *binary =
+          VariantValue<const ScriptableBinaryData *>()(src);
+      if (binary)
+        return graphics_->NewImage("", binary->data(), is_mask);
+    } else {
+      LOG("Unsupported type of image src: '%s'", src.Print().c_str());
+      DLOG("src=%s", src.Print().c_str());
     }
+    return NULL;
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
@@ -1556,8 +1238,7 @@ class View::Impl {
     double opacity;
     if (src.type() == Variant::TYPE_STRING) {
       const char *name = VariantValue<const char *>()(src);
-      if (name && !strchr(name, '.') &&
-          Color::FromString(name, &color, &opacity))
+      if (name && name[0] == '#' && Color::FromString(name, &color, &opacity))
         return new Texture(color, opacity);
     }
 
@@ -1589,7 +1270,6 @@ class View::Impl {
   EventSignal onmouseout_event_;
   EventSignal onmouseover_event_;
   EventSignal onmouseup_event_;
-  EventSignal onmousewheel_event_;
   EventSignal onok_event_;
   EventSignal onopen_event_;
   EventSignal onoptionchanged_event_;
@@ -1600,7 +1280,6 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
   EventSignal oncontextmenu_event_;
-  EventSignal onthemechanged_event_;
 
   ImageCache image_cache_;
 
@@ -1653,13 +1332,6 @@ class View::Impl {
   bool draw_queued_;
   bool events_enabled_;
   bool need_redraw_;
-  bool theme_changed_;
-
-  bool resize_border_specified_;
-  double resize_border_left_;
-  double resize_border_top_;
-  double resize_border_right_;
-  double resize_border_bottom_;
 
 #ifdef _DEBUG
   int draw_count_;
@@ -1670,16 +1342,13 @@ class View::Impl {
   bool mouse_over_;
   int last_cursor_type_;
   ViewInterface::HitTest hittest_;
-  ViewInterface::HitTest last_hittest_;
 
   Signal0<void> on_destroy_signal_;
 
   ScriptableInterface *scriptable_view_;
 
-  static const int kAnimationInterval = 40;
-  static const int kMinTimeout = 10;
-  static const int kMinInterval = 10;
-  static const uint64_t kMinTimeBetweenTimerCall = 5;
+  static const unsigned int kAnimationInterval = 33;
+  static const unsigned int kMinInterval = 5;
 };
 
 View::View(ViewHostInterface *view_host,
@@ -1772,8 +1441,8 @@ ViewInterface::ResizableMode View::GetResizable() const {
   return impl_->resizable_;
 }
 
-void View::SetCaption(const std::string &caption) {
-  impl_->caption_ = caption;
+void View::SetCaption(const char *caption) {
+  impl_->caption_ = caption ? caption : "";
   if (impl_->view_host_)
     impl_->view_host_->SetCaption(caption);
 }
@@ -1790,30 +1459,6 @@ void View::SetShowCaptionAlways(bool show_always) {
 
 bool View::GetShowCaptionAlways() const {
   return impl_->show_caption_always_;
-}
-
-void View::SetResizeBorder(double left, double top,
-                           double right, double bottom) {
-  impl_->resize_border_specified_ = true;
-  impl_->resize_border_left_ = (left > 0 ? left : 0);
-  impl_->resize_border_top_ = (top > 0 ? top : 0);
-  impl_->resize_border_right_ = (right > 0 ? right : 0);
-  impl_->resize_border_bottom_ = (bottom > 0 ? bottom : 0);
-  if (impl_->view_host_)
-    impl_->view_host_->QueueResize();
-}
-
-bool View::GetResizeBorder(double *left, double *top,
-                           double *right, double *bottom) const {
-  if (left)
-    *left = impl_->resize_border_left_;
-  if (top)
-    *top = impl_->resize_border_top_;
-  if (right)
-    *right = impl_->resize_border_right_;
-  if (bottom)
-    *bottom = impl_->resize_border_bottom_;
-  return impl_->resize_border_specified_;
 }
 
 void View::MarkRedraw() {
@@ -1957,7 +1602,7 @@ void View::IncreaseDrawCount() {
 int View::BeginAnimation(Slot0<void> *slot,
                          int start_value,
                          int end_value,
-                         int duration) {
+                         unsigned int duration) {
   return impl_->BeginAnimation(slot, start_value, end_value, duration);
 }
 
@@ -1965,16 +1610,16 @@ void View::CancelAnimation(int token) {
   impl_->RemoveTimer(token);
 }
 
-int View::SetTimeout(Slot0<void> *slot, int timeout) {
-  return impl_->SetTimeout(slot, timeout);
+int View::SetTimeout(Slot0<void> *slot, unsigned int duration) {
+  return impl_->SetTimeout(slot, duration);
 }
 
 void View::ClearTimeout(int token) {
   impl_->RemoveTimer(token);
 }
 
-int View::SetInterval(Slot0<void> *slot, int interval) {
-  return impl_->SetInterval(slot, interval);
+int View::SetInterval(Slot0<void> *slot, unsigned int duration) {
+  return impl_->SetInterval(slot, duration);
 }
 
 void View::ClearInterval(int token) {
@@ -2089,35 +1734,19 @@ uint64_t View::GetCurrentTime() const {
   return impl_->main_loop_->GetCurrentTime();
 }
 
-void View::ShowElementTooltip(BasicElement *element) {
-  ASSERT(element);
-  ASSERT(element->GetView() == this);
-  impl_->tooltip_element_.Reset(element);
+void View::SetTooltip(const char *tooltip) {
   if (impl_->view_host_)
-    impl_->view_host_->ShowTooltip(element->GetTooltip());
-}
-
-void View::ShowElementTooltipAtPosition(BasicElement *element,
-                                        double x, double y) {
-  ASSERT(element);
-  ASSERT(element->GetView() == this);
-  impl_->tooltip_element_.Reset(element);
-  if (impl_->view_host_) {
-    element->SelfCoordToViewCoord(x, y, &x, &y);
-    impl_->view_host_->ShowTooltipAtPosition(element->GetTooltip(), x, y);
-  }
+    impl_->view_host_->SetTooltip(tooltip);
 }
 
 void View::SetCursor(int type) {
-  if (impl_->view_host_ && (impl_->last_cursor_type_ != type ||
-                            impl_->last_hittest_ != impl_->hittest_)) {
+  if (impl_->view_host_ && impl_->last_cursor_type_ != type) {
     impl_->last_cursor_type_ = type;
-    impl_->last_hittest_ = impl_->hittest_;
     impl_->view_host_->SetCursor(type);
   }
 }
 
-bool View::ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler) {
+bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
   return impl_->view_host_ ?
          impl_->view_host_->ShowView(modal, flags, feedback_handler) :
          false;
@@ -2181,9 +1810,6 @@ Connection *View::ConnectOnMouseOutEvent(Slot0<void> *handler) {
 Connection *View::ConnectOnMouseUpEvent(Slot0<void> *handler) {
   return impl_->onmouseup_event_.Connect(handler);
 }
-Connection *View::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
-  return impl_->onmousewheel_event_.Connect(handler);
-}
 Connection *View::ConnectOnOkEvent(Slot0<void> *handler) {
   return impl_->onok_event_.Connect(handler);
 }
@@ -2213,9 +1839,6 @@ Connection *View::ConnectOnUndockEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnContextMenuEvent(Slot0<void> *handler) {
   return impl_->oncontextmenu_event_.Connect(handler);
-}
-Connection *View::ConnectOnThemeChangedEvent(Slot0<void> *handler) {
-  return impl_->onthemechanged_event_.Connect(handler);
 }
 
 } // namespace ggadget

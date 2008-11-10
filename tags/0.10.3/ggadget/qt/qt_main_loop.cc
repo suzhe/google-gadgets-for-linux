@@ -46,13 +46,9 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
  public:
   Impl(QtMainLoop *main_loop)
     : main_loop_(main_loop), main_thread_(pthread_self()) {
-    pipe_fd_[0] = pipe_fd_[1] = -1;
-    if (pipe(pipe_fd_) == 0) {
-      fcntl(pipe_fd_[0], F_SETFL, O_NONBLOCK);
-      AddIOWatch(IO_READ_WATCH, pipe_fd_[0], this);
-    } else {
-      LOGE("Failed to create pipe for QtMainLoop.");
-    }
+    pipe(pipe_fd_);
+    fcntl(pipe_fd_[0], F_SETFL, O_NONBLOCK);
+    AddIOWatch(IO_READ_WATCH, pipe_fd_[0], this);
   }
 
   virtual ~Impl() {
@@ -64,10 +60,6 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
       delete (*iter).second;
     }
     watches_.clear();
-    if (pipe_fd_[0] >= 0)
-      close(pipe_fd_[0]);
-    if (pipe_fd_[1] >= 0)
-      close(pipe_fd_[1]);
   }
 
   // Handle thread adding timeout watches
@@ -133,21 +125,13 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
     if (interval < 0 || !callback) return -1;
 
     if (!IsMainThread()) {
-      if (pipe_fd_[1] >= 0) {
-        int watch_id = AddWatchNode(NULL);
-        TimeoutPipeEvent e;
-        e.interval = interval;
-        e.watch_id = watch_id;
-        e.callback = callback;
-        if (write(pipe_fd_[1], &e, sizeof(e)) != sizeof(e)) {
-          // FIXME: the empty watch node shall be removed.
-          LOGE("Failed to add timeout watch.");
-          return -1;
-        }
-        return watch_id;
-      }
-      LOGE("Can't add timeout watch from another thread without pipe.");
-      return -1;
+      int watch_id = AddWatchNode(NULL);
+      TimeoutPipeEvent e;
+      e.interval = interval;
+      e.watch_id = watch_id;
+      e.callback = callback;
+      write(pipe_fd_[1], &e, sizeof(e));
+      return watch_id;
     }
 
     WatchNode *node = new WatchNode(main_loop_,
@@ -193,10 +177,6 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
     }
   }
 
-  bool IsMainThread() {
-    return pthread_equal(pthread_self(), main_thread_) != 0;
-  }
-
   std::list<WatchNode *> unused_watches_;
 
  private:
@@ -228,6 +208,10 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
       delete (*iter);
     }
     unused_watches_.clear();
+  }
+
+  bool IsMainThread() {
+    return pthread_equal(pthread_self(), main_thread_) != 0;
   }
 
   std::map<int, WatchNode*> watches_;
@@ -298,14 +282,6 @@ uint64_t QtMainLoop::GetCurrentTime() const {
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
-}
-
-bool QtMainLoop::IsMainThread() const {
-  return impl_->IsMainThread();
-}
-
-void QtMainLoop::WakeUp() {
-  // FIXME
 }
 
 void QtMainLoop::MarkUnusedWatchNode(WatchNode *node) {

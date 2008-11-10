@@ -56,12 +56,10 @@ static void SetupPainter(QPainter *p) {
 
 class QtCanvas::Impl {
  public:
-  Impl(QtCanvas *owner, const QtGraphics *g,
-       double w, double h, bool create_painter)
-      : owner_(owner),
-        width_(w), height_(h), opacity_(1.), zoom_(1.),
-        on_zoom_connection_(NULL),
-        image_(NULL), painter_(NULL), region_(NULL) {
+  Impl(const QtGraphics *g, double w, double h, bool create_painter)
+    : width_(w), height_(h), opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL),
+      image_(NULL), painter_(NULL), region_(NULL) {
     if (g){
       zoom_ = g->GetZoom();
       on_zoom_connection_ =
@@ -78,12 +76,11 @@ class QtCanvas::Impl {
     }
   }
 
-  Impl(QtCanvas *owner, const std::string &data, bool create_painter)
-      : owner_(owner),
-        width_(0), height_(0),
-        opacity_(1.), zoom_(1.),
-        on_zoom_connection_(NULL),
-        image_(NULL), painter_(NULL), region_(NULL) {
+  Impl(const std::string &data, bool create_painter)
+    : width_(0), height_(0),
+      opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL),
+      image_(NULL), painter_(NULL), region_(NULL) {
     image_ = new QImage();
     if (!image_) return;
 
@@ -104,11 +101,10 @@ class QtCanvas::Impl {
     }
   }
 
-  Impl(QtCanvas *owner, double w, double h, QPainter *painter)
-      : owner_(owner),
-        width_(w), height_(h), opacity_(1.), zoom_(1.),
-        on_zoom_connection_(NULL), image_(NULL),
-        painter_(painter), region_(NULL) {
+  Impl(double w, double h, QPainter *painter)
+    : width_(w), height_(h), opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL), image_(NULL),
+      painter_(painter), region_(NULL) {
     SetupPainter(painter_);
   }
 
@@ -226,17 +222,6 @@ class QtCanvas::Impl {
     doc->setDefaultTextOption(option);
   }
 
-  QString ElidedText(const QString &str, const FontInterface *f,
-                     double width, Trimming trimming) {
-    const QtFont *qtfont = down_cast<const QtFont*>(f);
-    QFont font = *qtfont->GetQFont();
-    QFontMetrics fm(font);
-    Qt::TextElideMode mode =
-        trimming == TRIMMING_PATH_ELLIPSIS ? Qt::ElideMiddle : Qt::ElideRight;
-
-    return fm.elidedText(str, mode, static_cast<int>(width));
-  }
-
   bool DrawText(double x, double y, double width, double height,
                 const char *text, const FontInterface *f,
                 const Color &c, Alignment align, VAlignment valign,
@@ -260,21 +245,17 @@ class QtCanvas::Impl {
     }
     // Handle trimming
     double text_width = doc.documentLayout()->documentSize().width();
-    if (trimming != TRIMMING_NONE) {
-      if (text_width > width && !(text_flags & TEXT_FLAGS_WORDWRAP)) {
-        doc.setPlainText(ElidedText(qt_text, f, width, trimming));
-      } else if (text_height > height && (text_flags & TEXT_FLAGS_WORDWRAP)) {
-        double ypos = height - 8;
-        if (ypos < 0) ypos = 0;
-        int pos = doc.documentLayout()->hitTest(
-            QPointF(width, ypos), Qt::FuzzyHit);
-        if (pos >= 4 && pos < qt_text.length()) {
-          qt_text.chop(qt_text.length() - pos + 3);
-          qt_text.append("...");
-          doc.setPlainText(qt_text);
-        } else if (pos < 4) {
-          doc.setPlainText("...");
-        }
+    if (trimming != TRIMMING_NONE
+        && (text_height > height || text_width > width)) {
+      double ypos = height - 8;
+      if ((text_flags & TEXT_FLAGS_WORDWRAP) == 0)
+        ypos = 8;
+      int pos = doc.documentLayout()->hitTest(
+          QPointF(width, ypos), Qt::FuzzyHit);
+      if (pos >= 4 && pos < qt_text.length()) {
+        qt_text.chop(qt_text.length() - pos + 3);
+        qt_text.append("...");
+        doc.setPlainText(qt_text);
       }
     }
 
@@ -380,7 +361,6 @@ class QtCanvas::Impl {
     return true;
   }
 
-  QtCanvas *owner_;
   double width_, height_;
   double opacity_;
   double zoom_;
@@ -388,19 +368,17 @@ class QtCanvas::Impl {
   QImage *image_;
   QPainter *painter_;
   QRegion *region_;
+  QtCanvas *owner_;
 };
 
 QtCanvas::QtCanvas(const QtGraphics *g, double w, double h, bool create_painter)
-    : impl_(new Impl(this, g, w, h, create_painter)) {
-}
+  : impl_(new Impl(g, w, h, create_painter)) { impl_->owner_ = this; }
 
 QtCanvas::QtCanvas(double w, double h, QPainter *painter)
-    : impl_(new Impl(this, w, h, painter)) {
-}
+  : impl_(new Impl(w, h, painter)) { impl_->owner_ = this; }
 
-QtCanvas::QtCanvas(const std::string &data, bool create_painter)
-    : impl_(new Impl(this, data, create_painter)) {
-}
+QtCanvas::QtCanvas(const std::string &data, bool create_painter) :
+  impl_(new Impl(data, create_painter)) { impl_->owner_ = this; }
 
 QtCanvas::~QtCanvas() {
   delete impl_;

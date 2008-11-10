@@ -290,7 +290,7 @@ static const CursorTypeMapping kCursorTypeMappings[] = {
   { ViewInterface::CURSOR_SIZENS, GDK_SB_V_DOUBLE_ARROW }, // FIXME
   { ViewInterface::CURSOR_SIZEALL, GDK_FLEUR }, // FIXME
   { ViewInterface::CURSOR_NO, GDK_X_CURSOR },
-  { ViewInterface::CURSOR_HAND, GDK_HAND2 },
+  { ViewInterface::CURSOR_HAND, GDK_HAND1 },
   { ViewInterface::CURSOR_BUSY, GDK_WATCH }, // FIXME
   { ViewInterface::CURSOR_HELP, GDK_QUESTION_ARROW }
 };
@@ -312,8 +312,11 @@ static const HitTestCursorTypeMapping kHitTestCursorTypeMappings[] = {
 };
 
 GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
-  // Use GDK_X_CURSOR as default type.
-  GdkCursorType gdk_type = GDK_X_CURSOR;
+  if (type < 0) return NULL;
+
+  DLOG("Create gtk cursor for type: %d, hittest: %d", type, hittest);
+
+  GdkCursorType gdk_type = GDK_ARROW;
   // Try match with hittest first.
   for (size_t i = 0; i < arraysize(kHitTestCursorTypeMappings); ++i) {
     if (kHitTestCursorTypeMappings[i].hittest == hittest) {
@@ -323,7 +326,7 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
   }
 
   // No suitable mapping, try matching with cursor type.
-  if (gdk_type == GDK_X_CURSOR) {
+  if (gdk_type == GDK_ARROW) {
     for (size_t i = 0; i < arraysize(kCursorTypeMappings); ++i) {
       if (kCursorTypeMappings[i].type == type) {
         gdk_type = kCursorTypeMappings[i].gdk_type;
@@ -332,10 +335,7 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
     }
   }
 
-  DLOG("Create gtk cursor for type: %d, hittest: %d, gdk: %d",
-       type, hittest, gdk_type);
-
-  return gdk_type == GDK_X_CURSOR ? NULL : gdk_cursor_new(gdk_type);
+  return gdk_cursor_new(gdk_type);
 }
 
 bool DisableWidgetBackground(GtkWidget *widget) {
@@ -980,12 +980,6 @@ bool OpenURL(const Gadget *gadget, const char *url) {
   }
 
   return ggadget::xdg::OpenURL(gadget, url);
-}
-
-uint64_t GetCurrentTime() {
-  GTimeVal tv;
-  g_get_current_time(&tv);
-  return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
 
 } // namespace gtk

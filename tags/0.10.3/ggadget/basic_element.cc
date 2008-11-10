@@ -41,15 +41,14 @@ namespace ggadget {
 
 class BasicElement::Impl {
  public:
-  Impl(View *view, const char *tag_name, const char *name,
-       bool allow_children, BasicElement *owner)
-      : parent_(NULL),
+  Impl(BasicElement *parent, View *view, const char *tag_name, const char *name,
+       bool children, BasicElement *owner)
+      : parent_(parent),
         owner_(owner),
-        children_(allow_children ?
+        children_(children ?
                   new Elements(view->GetElementFactory(), owner, view) :
                   NULL),
         view_(view),
-        index_(kInvalidIndex), // Invalid until set by Elements.
         hittest_(ViewInterface::HT_CLIENT),
         cursor_(ViewInterface::CURSOR_DEFAULT),
         drop_target_(false),
@@ -81,6 +80,8 @@ class BasicElement::Impl {
         content_changed_(false),
         draw_queued_(false),
         designer_mode_(false) {
+    if (parent)
+      ASSERT(parent->GetView() == view);
   }
 
   ~Impl() {
@@ -764,8 +765,7 @@ class BasicElement::Impl {
  public:
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
-                           BasicElement **in_element,
-                           ViewInterface::HitTest *hittest) {
+                           BasicElement **in_element) {
     Event::Type type = event.GetType();
     ElementHolder this_element_holder(owner_);
 
@@ -773,31 +773,24 @@ class BasicElement::Impl {
 
     // Always process direct messages because the sender wants this element
     // to process.
-    // Test visible_ and opacity_ first, to prevent from calling GetHitTest()
-    // every time.
-    if (!direct && (!visible_ || opacity_ == 0))
-      return EVENT_RESULT_UNHANDLED;
-
-    ViewInterface::HitTest this_hittest =
-        owner_->GetHitTest(event.GetX(), event.GetY());
-
     // GetHitTest() might be overrode.
     // FIXME: Verify if the hittest logic is correct.
-    if (!direct && this_hittest == ViewInterface::HT_TRANSPARENT)
+    if (!direct && (!visible_ || opacity_ == 0 ||
+         owner_->GetHitTest(event.GetX(), event.GetY()) ==
+           ViewInterface::HT_TRANSPARENT)) {
       return EVENT_RESULT_UNHANDLED;
+    }
 
     if (!direct && children_) {
       // Send to the children first.
       EventResult result = children_->OnMouseEvent(event, fired_element,
-                                                   in_element, hittest);
+                                                   in_element);
       if (!this_element_holder.Get() || *fired_element)
         return result;
     }
 
-    if (!*in_element) {
+    if (!*in_element)
       *in_element = owner_;
-      *hittest = this_hittest;
-    }
 
     if (!enabled_) {
       return EVENT_RESULT_UNHANDLED;
@@ -868,8 +861,6 @@ class BasicElement::Impl {
       result = std::max(result, owner_->HandleMouseEvent(event));
     *fired_element = this_element_holder.Get();
     *in_element = in_element_holder.Get();
-    // No need to reset hittest even if in_element get destroyed. In this case,
-    // hittest value is undefined.
     return result;
   }
 
@@ -1000,7 +991,6 @@ class BasicElement::Impl {
   BasicElement *owner_;
   Elements *children_;
   View *view_;
-  size_t index_;
   ViewInterface::HitTest hittest_;
   ViewInterface::CursorType cursor_;
   bool drop_target_;
@@ -1095,9 +1085,10 @@ static const char *kFlipNames[] = {
   "none", "horizontal", "vertical", "both",
 };
 
-BasicElement::BasicElement(View *view, const char *tag_name, const char *name,
-                           bool allow_children)
-    : impl_(new Impl(view, tag_name, name, allow_children, this)) {
+BasicElement::BasicElement(BasicElement *parent, View *view,
+                           const char *tag_name, const char *name,
+                           bool children)
+    : impl_(new Impl(parent, view, tag_name, name, children, this)) {
 }
 
 void BasicElement::DoRegister() {
@@ -1126,16 +1117,8 @@ void BasicElement::DoClassRegister() {
                          &BasicElement::GetChildren)), NULL);
     RegisterMethod("appendElement", NewSlot(&Elements::AppendElementVariant,
                                             GetElementChildren));
-    // insertElement was deprecated by insertElementBehind.
     RegisterMethod("insertElement", NewSlot(&Elements::InsertElementVariant,
                                             GetElementChildren));
-    RegisterMethod("insertElementBehind",
-                   NewSlot(&Elements::InsertElementVariant,
-                           GetElementChildren));
-    // Added in 5.8 API.
-    RegisterMethod("insertElementInFrontOf",
-                   NewSlot(&Elements::InsertElementVariantAfter,
-                           GetElementChildren));
     RegisterMethod("removeElement", NewSlot(&Elements::RemoveElement,
                                             GetElementChildren));
     RegisterMethod("removeAllElements", NewSlot(&Elements::RemoveAllElements,
@@ -1215,12 +1198,8 @@ void BasicElement::DoClassRegister() {
                              NewSlot(&BasicElement::GetFlip),
                              NewSlot(&BasicElement::SetFlip),
                              kFlipNames, arraysize(kFlipNames));
-  // Note: don't use 'index' property until it is in the public API.
-  RegisterProperty("index", NewSlot(&BasicElement::GetIndex), NULL);
-
   RegisterMethod("focus", NewSlot(&BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(&BasicElement::KillFocus));
-  RegisterMethod("showTooltip", NewSlot(&BasicElement::ShowTooltip));
 
   RegisterClassSignal(kOnClickEvent, &Impl::onclick_event_,
                       &BasicElement::impl_);
@@ -1637,14 +1616,6 @@ void BasicElement::SetParentElement(BasicElement *parent) {
   impl_->parent_ = parent;
 }
 
-size_t BasicElement::GetIndex() const {
-  return impl_->index_;
-}
-
-void BasicElement::SetIndex(size_t index) {
-  impl_->index_ = index;
-}
-
 void BasicElement::EnableCanvasCache(bool enable) {
   impl_->cache_enabled_ = enable;
   if (!enable && impl_->cache_) {
@@ -1661,14 +1632,11 @@ std::string BasicElement::GetTooltip() const {
   return impl_->tooltip_;
 }
 
-void BasicElement::SetTooltip(const std::string &tooltip) {
-  impl_->tooltip_ = tooltip;
-}
-
-void BasicElement::ShowTooltip() {
-  // Shows tooltip at center of this element.
-  impl_->view_->ShowElementTooltipAtPosition(
-      this, impl_->width_ / 2, impl_->height_ / 2);
+void BasicElement::SetTooltip(const char *tooltip) {
+  if (tooltip)
+    impl_->tooltip_ = tooltip;
+  else
+    impl_->tooltip_.clear();
 }
 
 BasicElement::FlipMode BasicElement::GetFlip() const {
@@ -1688,10 +1656,6 @@ void BasicElement::Focus() {
 
 void BasicElement::KillFocus() {
   impl_->view_->SetFocus(NULL);
-}
-
-bool BasicElement::IsTabStop() const {
-  return false;
 }
 
 void BasicElement::Layout() {
@@ -1785,9 +1749,8 @@ void BasicElement::MarkRedraw() {
 
 EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                        BasicElement **fired_element,
-                                       BasicElement **in_element,
-                                       ViewInterface::HitTest *hittest) {
-  return impl_->OnMouseEvent(event, direct, fired_element, in_element, hittest);
+                                       BasicElement **in_element) {
+  return impl_->OnMouseEvent(event, direct, fired_element, in_element);
 }
 
 EventResult BasicElement::OnDragEvent(const DragEvent &event, bool direct,

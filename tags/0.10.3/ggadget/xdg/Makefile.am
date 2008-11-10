@@ -13,15 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-EXTRA_DIST = CMakeLists.txt
-
 SUBDIRS 		= tests
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= icon_theme.h
 xdgincludedir		= $(GGL_INCLUDE_DIR)/ggadget/xdg
 xdginclude_HEADERS	= desktop_entry.h \
 			  utilities.h
@@ -30,7 +26,6 @@ lib_LTLIBRARIES		= libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_xdg@GGL_EPOCH@_la_SOURCES = \
 			  desktop_entry.cc \
-			  icon_theme.cc \
 			  utilities.cc
 
 libggadget_xdg@GGL_EPOCH@_la_CPPFLAGS = \

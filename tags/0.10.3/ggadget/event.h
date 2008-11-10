@@ -57,9 +57,6 @@ class Event {
     EVENT_FOCUS_IN,
     EVENT_FOCUS_OUT,
     EVENT_CHANGE,
-    EVENT_STATE_CHANGE,
-    EVENT_MEDIA_CHANGE,
-    EVENT_THEME_CHANGED,
     EVENT_SIMPLE_RANGE_END,
 
     EVENT_MOUSE_RANGE_START = 10000,
@@ -94,7 +91,7 @@ class Event {
     EVENT_OPTION_CHANGED,
     EVENT_TIMER,
     EVENT_PERFMON,
-    EVENT_CONTEXT_MENU,
+    EVENT_CONTEXT_MENU
   };
 
   enum Modifier {
@@ -106,8 +103,7 @@ class Event {
 
  protected:
   // This class is abstract.
-  explicit Event(Type t, void *original = NULL)
-      : type_(t), original_(original) { }
+  explicit Event(Type t) : type_(t) { }
 
  public:
   Type GetType() const { return type_; }
@@ -120,14 +116,9 @@ class Event {
                                         type_ < EVENT_KEY_RANGE_END; }
   bool IsDragEvent() const { return type_ > EVENT_DRAG_RANGE_START &&
                                     type_ < EVENT_DRAG_RANGE_END; }
-  void *GetOriginalEvent() const { return original_; }
-  void SetOriginalEvent(void *original) {
-    original_ = original;
-  }
 
  private:
   Type type_;
-  void *original_;
 };
 
 class SimpleEvent : public Event {
@@ -167,13 +158,11 @@ class MouseEvent : public PositionEvent {
 
   MouseEvent(Type t, double x, double y,
              int wheel_delta_x, int wheel_delta_y,
-             int button, int modifier,
-             void *original = NULL)
+             int button, int modifier)
       : PositionEvent(t, x, y),
         wheel_delta_x_(wheel_delta_x), wheel_delta_y_(wheel_delta_y),
         button_(button), modifier_(modifier) {
     ASSERT(IsMouseEvent());
-    SetOriginalEvent(original);
   }
 
   int GetButton() const { return button_; }
@@ -301,19 +290,25 @@ class KeyboardEvent : public Event {
   };
 
   KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)
-      : Event(t, original), key_code_(key_code), modifier_(modifier) {
+      : Event(t), key_code_(key_code), modifier_(modifier),
+        original_event_(original) {
     ASSERT(IsKeyboardEvent());
   }
 
   unsigned int GetKeyCode() const { return key_code_; }
   void SetKeyCode(unsigned int key_code) { key_code_ = key_code; }
+  void *GetOriginalEvent() const { return original_event_; }
+  void SetOriginalEvent(void *original_event) {
+    original_event_ = original_event;
+  }
 
   int GetModifier() const { return modifier_; }
   void SetModifier(int m) { modifier_ = m; }
 
  private:
-  unsigned int key_code_;
+  int key_code_;
   int modifier_;
+  void *original_event_;
 };
 
 /**

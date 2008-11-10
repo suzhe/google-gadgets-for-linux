@@ -12,15 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-EXTRA_DIST = CMakeLists.txt
+#
 
 SUBDIRS = dbus_script_class \
 	  gtk_edit_element \
 	  qt_edit_element \
 	  qt_xml_http_request \
 	  gtkmoz_browser_element \
-	  gtk_flash_element \
 	  qtwebkit_browser_element \
 	  default_framework \
 	  gst_audio_framework \
@@ -33,5 +31,4 @@ SUBDIRS = dbus_script_class \
 	  curl_xml_http_request \
 	  libxml2_xml_parser \
 	  default_options \
-	  google_gadget_manager \
-	  analytics_usage_collector
+	  google_gadget_manager

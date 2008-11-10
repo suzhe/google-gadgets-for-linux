@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST = CMakeLists.txt
-
 SUBDIRS = . gadget
 
 INCLUDES		= -I$(top_builddir) \

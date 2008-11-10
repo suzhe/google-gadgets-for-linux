@@ -56,8 +56,7 @@ void FreeNativeValue(const Variant &val);
 /**
  * Converts JavaScript arguments to native for a native slot.
  */
-bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot,
-                           int *expected_argc, Variant **argv);
+bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot, Variant **argv);
 
 /**
  * Converts a @c Variant to a @c jsval.

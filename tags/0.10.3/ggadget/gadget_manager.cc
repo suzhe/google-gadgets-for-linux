@@ -31,7 +31,7 @@ bool SetGadgetManager(GadgetManagerInterface *gadget_manager) {
 }
 
 GadgetManagerInterface *GetGadgetManager() {
-  EXPECT_M(g_gadget_manager,
+  VERIFY_M(g_gadget_manager,
            ("The global gadget manager has not been set yet."));
   return g_gadget_manager;
 }

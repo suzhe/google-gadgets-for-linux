@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_BUILD_LIBGGADGET_DBUS
 
 # Putting . into SBUDIRS list to force building current directory first.

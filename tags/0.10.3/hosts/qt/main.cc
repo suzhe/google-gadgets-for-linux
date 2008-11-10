@@ -27,24 +27,22 @@
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QPushButton>
 #include <QtGui/QMessageBox>
-#include <QtGui/QDesktopWidget>
 
+#include <ggadget/extension_manager.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/host_utils.h>
-#include <ggadget/system_utils.h>
-#include <ggadget/string_utils.h>
 #include <ggadget/messages.h>
 #include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_menu.h>
 #include <ggadget/qt/qt_main_loop.h>
-#include <ggadget/qt/utilities.h>
 #include <ggadget/run_once.h>
 #include <ggadget/script_runtime_interface.h>
-#include <ggadget/usage_collector_interface.h>
+#include <ggadget/script_runtime_manager.h>
+#include <ggadget/system_utils.h>
 #include <ggadget/xml_http_request_interface.h>
 
 #include "qt_host.h"
@@ -58,7 +56,6 @@ static ggadget::qt::QtMainLoop *g_main_loop;
 static const char kRunOnceSocketName[] = "ggl-host-socket";
 
 static const char *kGlobalExtensions[] = {
-  "smjs-script-runtime",
   "default-framework",
   "libxml2-xml-parser",
   "default-options",
@@ -66,20 +63,19 @@ static const char *kGlobalExtensions[] = {
   "qtwebkit-browser-element",
   "qt-system-framework",
   "qt-edit-element",
-  "gst-audio-framework",
+// gst and Qt may not work together.
+//  "gst-audio-framework",
   "gst-video-element",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
   "qt-xml-http-request",
-  "analytics-usage-collector",
   "google-gadget-manager",
   NULL
 };
 
 static const char *g_help_string =
-  "Google Gadgets for Linux " GGL_VERSION
-  " (Gadget API version " GGL_API_VERSION ")\n"
+  "Google Gadgets for Linux " GGL_VERSION "\n"
   "Usage: " GGL_APP_NAME " [Options] [Gadgets]\n"
   "Options:\n"
 #ifdef _DEBUG
@@ -96,7 +92,6 @@ static const char *g_help_string =
   "      smjs - spidermonkey js runtime\n"
   "      qt   - QtScript js runtime(experimental)\n"
 #endif
-  "  -bg Run in background\n"
   "  -l loglevel, --log-level loglevel\n"
   "      Specify the minimum gadget.debug log level.\n"
   "      0 - Trace(All)  1 - Info  2 - Warning  3 - Error  >=4 - No log\n"
@@ -107,8 +102,8 @@ static const char *g_help_string =
   "      0 - No debug console allowed\n"
   "      1 - Gadgets has debug console menu item\n"
   "      2 - Open debug console when gadget is added to debug startup code\n"
-  "  -nc, --no-collector\n"
-  "      Disable the usage collector\n"
+  "  -p, --plasma\n"
+  "      Install gadget into KDE4's plasma\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -178,14 +173,45 @@ int main(int argc, char* argv[]) {
   bool long_log = false;
 #endif
   bool composite = false;
+  bool with_plasma = false;
   int debug_mode = 0;
-  bool background = false;
-  bool enable_collector = true;
   ggadget::Gadget::DebugConsoleConfig debug_console =
       ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
+  const char* js_runtime = "smjs-script-runtime";
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+  if (InitArgb() && CheckCompositingManager(dpy)) {
+    composite = true;
+  } else {
+    visual = NULL;
+    if (colormap) {
+      XFreeColormap(dpy, colormap);
+      colormap = 0;
+    }
+  }
+  QApplication app(dpy, argc, argv,
+                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
+#else
+  QApplication app(argc, argv);
+#endif
+
+  // Set global main loop
+  g_main_loop = new ggadget::qt::QtMainLoop();
+  ggadget::SetGlobalMainLoop(g_main_loop);
+
+  std::string profile_dir =
+      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
+                             ggadget::kDefaultProfileDirectory, NULL);
+
+  ggadget::EnsureDirectories(profile_dir.c_str());
+
+  ggadget::RunOnce run_once(
+      ggadget::BuildFilePath(profile_dir.c_str(),
+                             kRunOnceSocketName,
+                             NULL).c_str());
+  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
   // Parse command line.
   std::vector<std::string> gadget_paths;
@@ -206,11 +232,14 @@ int main(int argc, char* argv[]) {
                strcmp("--script-runtime", argv[i]) == 0) {
       if (++i < argc) {
         if (strcmp(argv[i], "qt") == 0) {
-          kGlobalExtensions[0] = "qt-script-runtime";
+          js_runtime = "qt-script-runtime";
           printf("QtScript runtime is chosen. It's still incomplete\n");
         }
       }
 #endif
+    } else if (strcmp("-p", argv[i]) == 0 ||
+               strcmp("--plasma", argv[i]) == 0) {
+      with_plasma = true;
     } else if (strcmp("-l", argv[i]) == 0 ||
                strcmp("--log-level", argv[i]) == 0) {
       if (++i < argc)
@@ -225,91 +254,66 @@ int main(int argc, char* argv[]) {
         debug_console =
             static_cast<ggadget::Gadget::DebugConsoleConfig>(atoi(argv[i]));
       }
-    } else if (strcmp("-nc", argv[i]) == 0 ||
-               strcmp("--no-collector", argv[i]) == 0) {
-      enable_collector = false;
-    } else if (strcmp("-bg", argv[i]) == 0) {
-      background = true;
-    } else {
+   } else {
       std::string path = ggadget::GetAbsolutePath(argv[i]);
-      gadget_paths.push_back(path);
+      if (run_once.IsRunning()) {
+        run_once.SendMessage(path);
+      } else {
+        gadget_paths.push_back(path);
+      }
     }
   }
-  // Parse command line before create QApplication because it will eat some
-  // argv like -bg
-#if defined(Q_WS_X11) && defined(HAVE_X11)
-  if (InitArgb() && CheckCompositingManager(dpy)) {
-    composite = true;
-  } else {
-    visual = NULL;
-    if (colormap) {
-      XFreeColormap(dpy, colormap);
-      colormap = 0;
-    }
-  }
-  QApplication app(dpy, argc, argv,
-                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
-#else
-  QApplication app(argc, argv);
-#endif
 
-  std::string profile_dir = ggadget::BuildFilePath(
-      ggadget::GetHomeDirectory().c_str(),
-      ggadget::kDefaultProfileDirectory,
-      NULL);
+  if (run_once.IsRunning()) {
+    DLOG("Another instance already exists.");
+    exit(0);
+  }
+
+  ggadget::SetupLogger(log_level, long_log);
+
+  // Set global file manager.
+  ggadget::SetupGlobalFileManager(profile_dir.c_str());
+
+  // Load global extensions.
+  ggadget::ExtensionManager *ext_manager =
+      ggadget::ExtensionManager::CreateExtensionManager();
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+
+  // Ignore errors when loading extensions.
+  for (size_t i = 0; kGlobalExtensions[i]; ++i)
+    ext_manager->LoadExtension(kGlobalExtensions[i], false);
+  ext_manager->LoadExtension(js_runtime, false);
+
+  // Register JavaScript runtime.
+  ggadget::ScriptRuntimeManager *script_runtime_manager =
+      ggadget::ScriptRuntimeManager::get();
+  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(
+      script_runtime_manager);
+  ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   std::string error;
-  g_main_loop = new ggadget::qt::QtMainLoop();
-  if (!ggadget::qt::InitGGL(g_main_loop, GGL_APP_NAME,
-                            profile_dir.c_str(),
-                            kGlobalExtensions,
-                            log_level,
-                            long_log,
-                            &error)) {
+  if (!ggadget::CheckRequiredExtensions(&error)) {
+    // Don't use _GM here because localized messages may be unavailable.
     QMessageBox::information(NULL, "Google Gadgets",
                              QString::fromUtf8(error.c_str()));
+
     return 1;
   }
 
-  ggadget::RunOnce run_once(
-      ggadget::BuildFilePath(profile_dir.c_str(),
-                             kRunOnceSocketName,
-                             NULL).c_str());
-  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
-
-  if (run_once.IsRunning()) {
-    for (size_t i = 0; i < gadget_paths.size(); ++i)
-      run_once.SendMessage(gadget_paths[i]);
-    DLOG("Another instance already exists.");
-    return 0;
-  }
-
-  if (background)
-    ggadget::Daemonize();
-
-  if (enable_collector) {
-    ggadget::UsageCollectorFactoryInterface *collector_factory =
-        ggadget::GetUsageCollectorFactory();
-    if (collector_factory) {
-      collector_factory->SetApplicationInfo(GGL_APP_NAME, GGL_VERSION);
-      QRect rect = app.desktop()->screenGeometry();
-      std::string screen_size_param =
-          ggadget::StringPrintf("%dx%d", rect.width(), rect.height());
-      collector_factory->SetParameter(
-          ggadget::UsageCollectorFactoryInterface::PARAM_SCREEN_SIZE,
-          screen_size_param.c_str());
-    }
-  }
-
+  ext_manager->SetReadonly();
+  ggadget::InitXHRUserAgent(GGL_APP_NAME);
   // Initialize the gadget manager before creating the host.
   ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
   gadget_manager->Init();
 
-  hosts::qt::QtHost host(composite, debug_mode, debug_console);
+  hosts::qt::QtHost host = hosts::qt::QtHost(composite, debug_mode,
+                                             debug_console, with_plasma);
 
   // Load gadget files.
-  for (size_t i = 0; i < gadget_paths.size(); ++i)
-    gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+  if (gadget_paths.size()) {
+    for (size_t i = 0; i < gadget_paths.size(); ++i)
+      gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+  }
 
   // Hook popular signals to exit gracefully.
   signal(SIGHUP, DefaultSignalHandler);

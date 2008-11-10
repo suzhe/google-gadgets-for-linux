@@ -30,7 +30,7 @@ class ContentAreaElement : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0xa16cc04f24b24cce, BasicElement);
 
-  ContentAreaElement(View *view, const char *name);
+  ContentAreaElement(BasicElement *parent, View *view, const char *name);
   virtual ~ContentAreaElement();
 
  protected:
@@ -122,7 +122,8 @@ class ContentAreaElement : public ScrollingElement {
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void Layout();

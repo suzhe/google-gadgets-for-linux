@@ -85,13 +85,13 @@ class CheckBoxElement::Impl {
 
   void ResetPeerRadioButtons() {
     BasicElement *parent = owner_->GetParentElement();
-    Elements *peers = parent ?
+    Elements *peers = parent ? 
                       parent->GetChildren() : owner_->GetView()->GetChildren();
     // Radio buttons under the same parent should transfer checked
     // state automatically. This function should only be called
     // when this radio button's value is set to true.
-    size_t childcount = peers->GetCount();
-    for (size_t i = 0; i < childcount; i++) {
+    int childcount = peers->GetCount();
+    for (int i = 0; i < childcount; i++) {
       BasicElement *child = peers->GetItemByIndex(i);
       if (child != owner_ && child->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
         CheckBoxElement *radio = down_cast<CheckBoxElement *>(child);
@@ -185,8 +185,9 @@ class CheckBoxElement::Impl {
   EventSignal onchange_event_;
 };
 
-CheckBoxElement::CheckBoxElement(View *view, const char *name, bool is_checkbox)
-    : BasicElement(view, is_checkbox ? "checkbox" : "radio", name, false),
+CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
+                                 const char *name, bool is_checkbox)
+    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
 }
@@ -458,14 +459,16 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   *height = std::max(image_height, text_height);
 }
 
-BasicElement *CheckBoxElement::CreateCheckBoxInstance(View *view,
+BasicElement *CheckBoxElement::CreateCheckBoxInstance(BasicElement *parent,
+                                                      View *view,
                                                       const char *name) {
-  return new CheckBoxElement(view, name, true);
+  return new CheckBoxElement(parent, view, name, true);
 }
 
-BasicElement *CheckBoxElement::CreateRadioInstance(View *view,
+BasicElement *CheckBoxElement::CreateRadioInstance(BasicElement *parent,
+                                                   View *view,
                                                    const char *name) {
-  return new CheckBoxElement(view, name, false);
+  return new CheckBoxElement(parent, view, name, false);
 }
 
 } // namespace ggadget

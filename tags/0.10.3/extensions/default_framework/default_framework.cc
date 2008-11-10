@@ -112,25 +112,13 @@ class DefaultWireless : public WirelessInterface {
   virtual std::string GetName() const { return "Unknown"; }
   virtual std::string GetNetworkName() const  { return "Unknwon"; }
   virtual int GetSignalStrength() const { return 0; }
-  virtual void ConnectAP(const char *ap_name, Slot1<void, bool> *callback) {
-    if (callback) {
-      (*callback)(false);
-      delete callback;
-    }
-  }
-  virtual void DisconnectAP(const char *ap_name, Slot1<void, bool> *callback) {
-    if (callback) {
-      (*callback)(false);
-      delete callback;
-    }
-  }
 };
 
 class DefaultNetwork : public NetworkInterface {
  public:
   virtual bool IsOnline() { return true; }
   virtual ConnectionType GetConnectionType() {
-    return NetworkInterface::CONNECTION_TYPE_802_3;
+    return NetworkInterface::CONNECTION_TYPE_UNKNOWN;
   }
   virtual PhysicalMediaType GetPhysicalMediaType() {
     return NetworkInterface::PHYSICAL_MEDIA_TYPE_UNSPECIFIED;

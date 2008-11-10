@@ -28,7 +28,7 @@ class ComboBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x848a2f5e84144915, BasicElement);
 
-  ComboBoxElement(View *view, const char *name);
+  ComboBoxElement(BasicElement *parent, View *view, const char *name);
   virtual ~ComboBoxElement();
 
  protected:
@@ -51,8 +51,8 @@ class ComboBoxElement : public BasicElement {
   /**
    * Gets and sets the maximum # of items to show before scrollbar is displayed.
    */
-  size_t GetMaxDroplistItems() const;
-  void SetMaxDroplistItems(size_t max_droplist_items);
+  int GetMaxDroplistItems() const;
+  void SetMaxDroplistItems(int max_droplist_items);
 
 
   /** Gets and sets the type of this combobox. */
@@ -72,24 +72,15 @@ class ComboBoxElement : public BasicElement {
 
   EditElementBase *GetEdit();
   const EditElementBase *GetEdit() const;
-  ListBoxElement *GetDroplist();
-  const ListBoxElement *GetDroplist() const;
-
-  /**
-   * Gets or sets the background texture of the item under the mouse cursor.
-   * Comboboxes have no itemSelectedColor. itemOverColor is for both mouse
-   * over color and item selected with the keyboard or by program.
-   */
-  Variant GetItemOverColor() const;
-  void SetItemOverColor(const Variant &color);
+  ListBoxElement *GetListBox();
+  const ListBoxElement *GetListBox() const;
 
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
 
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element,
-                                   ViewInterface::HitTest *hittest);
+                                   BasicElement **in_element);
   virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
                                   BasicElement **fired_element);
 
@@ -99,17 +90,15 @@ class ComboBoxElement : public BasicElement {
 
   virtual double GetPixelHeight() const;
 
-  virtual bool IsTabStop() const;
-
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-  virtual EventResult HandleOtherEvent(const Event &event);
 
  public:
   virtual bool IsChildInVisibleArea(const BasicElement *child) const;

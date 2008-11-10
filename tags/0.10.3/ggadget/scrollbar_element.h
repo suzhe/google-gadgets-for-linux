@@ -34,7 +34,7 @@ class ScrollBarElement : public BasicElement {
     ORIENTATION_HORIZONTAL
   };
 
-  ScrollBarElement(View *view, const char *name);
+  ScrollBarElement(BasicElement *parent, View *view, const char *name);
   virtual ~ScrollBarElement();
 
  public:
@@ -126,7 +126,8 @@ class ScrollBarElement : public BasicElement {
   virtual bool HasOpaqueBackground() const;
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScrollBarElement);

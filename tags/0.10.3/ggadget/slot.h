@@ -61,15 +61,10 @@ class Slot : public SmallObject<> {
   virtual Variant::Type GetReturnType() const { return Variant::TYPE_VOID; }
   /**
    * Get the number of arguments of the @c Slot target.
-   * If some derived class wants to accept any number of arguments,
-   * returns INT_MAX, and it should not have any default argument;
    */
   virtual int GetArgCount() const { return 0; }
   /**
    * Get the type list of the arguments of the @c Slot target.
-   * If GetArgCount() returns INT_MAX, then GetArgTypes() shall return
-   * a an array terminated by TYPE_VOID, or just NULL if the arguments can have
-   * any type.
    */
   virtual const Variant::Type *GetArgTypes() const { return NULL; }
 

@@ -17,7 +17,6 @@
 #ifndef GGADGET_VIEW_HOST_INTERFACE_H__
 #define GGADGET_VIEW_HOST_INTERFACE_H__
 
-#include <string>
 #include <ggadget/view_interface.h>
 
 namespace ggadget {
@@ -129,7 +128,7 @@ class ViewHostInterface {
    * Sets a caption to be shown when the View is in floating or expanded
    * mode.
    */
-  virtual void SetCaption(const std::string &caption) = 0;
+  virtual void SetCaption(const char *caption) = 0;
 
   /** Sets whether to always show the caption for this view. */
   virtual void SetShowCaptionAlways(bool always) = 0;
@@ -145,20 +144,10 @@ class ViewHostInterface {
   /**
    * Shows a tooltip popup after certain initial delay at the current mouse
    * position . The implementation should handle tooltip auto-hiding.
-   * @param tooltip the tooltip to display. If it's empty, currently
+   * @param tooltip the tooltip to display. If @c NULL or blank, currently
    *     displayed tooltip will be hidden.
    */
-  virtual void ShowTooltip(const std::string &tooltip) = 0;
-
-  /**
-   * Shows a tooltip popup at a specified position in view's coordinates.
-   * The tooltip will be showed immediately.
-   * @param tooltip the tooltip to display. If it's empty, currently
-   *     displayed tooltip will be hidden.
-   * @param x, y position to show the tooltip, in view's coordinates.
-   */
-  virtual void ShowTooltipAtPosition(const std::string &tooltip,
-                                     double x, double y) = 0;
+  virtual void SetTooltip(const char *tooltip) = 0;
 
   /**
    * Shows the associated View by proper method according to type of the View.
@@ -186,7 +175,7 @@ class ViewHostInterface {
    * @return true if the View is shown correctly. Otherwise returns false.
    */
   virtual bool ShowView(bool modal, int flags,
-                        Slot1<bool, int> *feedback_handler) = 0;
+                        Slot1<void, int> *feedback_handler) = 0;
 
   /**
    * Closes the view if it's opened by calling ShowView().

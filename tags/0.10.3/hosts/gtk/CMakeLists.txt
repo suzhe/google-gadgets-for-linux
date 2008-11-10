@@ -16,9 +16,6 @@
 
 IF(GGL_BUILD_GTK_HOST)
 
-# Generates ggl-gtk.desktop file
-INSTALL_BINARY_DESKTOP(ggl-gtk)
-
 APPLY_CONFIG(CAIRO)
 APPLY_CONFIG(GTK2)
 

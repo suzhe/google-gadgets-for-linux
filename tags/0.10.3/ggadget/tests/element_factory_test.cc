@@ -47,15 +47,24 @@ TEST_F(ElementFactoryTest, TestCreate) {
   factory.RegisterElementClass("muffin", Muffin::CreateInstance);
   factory.RegisterElementClass("pie", Pie::CreateInstance);
 
-  ggadget::BasicElement *e1 = factory.CreateElement("muffin", &view, NULL);
+  ggadget::BasicElement *e1 = factory.CreateElement("muffin",
+                                                    NULL,
+                                                    &view,
+                                                    NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ("muffin", e1->GetTagName());
 
-  ggadget::BasicElement *e2 = factory.CreateElement("pie", &view, NULL);
+  ggadget::BasicElement *e2 = factory.CreateElement("pie",
+                                                    e1,
+                                                    &view,
+                                                    NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ("pie", e2->GetTagName());
 
-  ggadget::BasicElement *e3 = factory.CreateElement("bread", &view, NULL);
+  ggadget::BasicElement *e3 = factory.CreateElement("bread",
+                                                    e2,
+                                                    &view,
+                                                    NULL);
   ASSERT_TRUE(e3 == NULL);
   delete ggadget::down_cast<Muffin *>(e1);
   delete ggadget::down_cast<Pie *>(e2);

@@ -91,7 +91,7 @@ class TextFrame::Impl {
     // The FontInterface object is cached on draw.
     if (!font_) {
       font_ = view_->GetGraphics()->NewFont(
-          font_name_.empty() ? kDefaultFontName : font_name_,
+          font_name_.empty() ? kDefaultFontName : font_name_.c_str(),
           size_,
           italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
           bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL);
@@ -126,7 +126,7 @@ class TextFrame::Impl {
   CanvasInterface::Trimming trimming_;
   bool bold_, italic_;
   int flags_;
-  double size_;
+  int size_;
   bool size_is_default_;
   std::string font_name_, color_, text_;
   double width_, height_;
@@ -250,11 +250,11 @@ void TextFrame::SetItalic(bool italic) {
   }
 }
 
-double TextFrame::GetSize() const {
+int TextFrame::GetSize() const {
   return impl_->size_is_default_ ? -1 : impl_->size_;
 }
 
-void TextFrame::SetSize(double size) {
+void TextFrame::SetSize(int size) {
   if (size == -1) {
     impl_->size_is_default_ = true;
     size = impl_->view_->GetDefaultFontSize();
@@ -267,7 +267,7 @@ void TextFrame::SetSize(double size) {
   }
 }
 
-double TextFrame::GetCurrentSize() const {
+int TextFrame::GetCurrentSize() const {
   return impl_->size_;
 }
 

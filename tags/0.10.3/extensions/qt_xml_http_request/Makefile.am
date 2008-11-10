@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_BUILD_QT_XML_HTTP_REQUEST
 
 MOC_FILES		= qt_xml_http_request_internal.moc

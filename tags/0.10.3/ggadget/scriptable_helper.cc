@@ -58,7 +58,6 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
     ASSERT(false); return false;
   }
   virtual bool IsStrict() const { ASSERT(false); return false; }
-  virtual bool IsEnumeratable() const { ASSERT(false); return false; }
 
   virtual void Ref() const;
   virtual void Unref(bool transient) const;
@@ -376,8 +375,6 @@ class StringEnumSetter : public Slot1<void, const char *> {
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
     const char *name = VariantValue<const char *>()(argv[0]);
-    if (!name)
-      return ResultVariant();
     for (int i = 0; i < count_; i++) {
       if (strcmp(name, names_[i]) == 0) {
         Variant param(i);
@@ -512,12 +509,8 @@ void ScriptableHelperImpl::SetArrayHandler(Slot *getter, Slot *setter) {
 void ScriptableHelperImpl::SetDynamicPropertyHandler(
     Slot *getter, Slot *setter) {
   ASSERT(!registering_class_);
-  ASSERT(getter &&
-         ((getter->GetArgCount() == 1 &&
-           getter->GetArgTypes()[0] == Variant::TYPE_STRING) ||
-          (getter->GetArgCount() == 2 &&
-           getter->GetArgTypes()[0] == Variant::TYPE_STRING &&
-           getter->GetArgTypes()[1] == Variant::TYPE_BOOL)));
+  ASSERT(getter && getter->GetArgCount() == 1 &&
+         getter->GetArgTypes()[0] == Variant::TYPE_STRING);
   ASSERT(!setter || (setter->GetArgCount() == 2 &&
                      setter->GetArgTypes()[0] == Variant::TYPE_STRING &&
                      setter->GetReturnType() == Variant::TYPE_BOOL));
@@ -576,20 +569,12 @@ ScriptableInterface::PropertyType ScriptableHelperImpl::GetPropertyInfo(
 
   // Try dynamic properties.
   if (dynamic_property_getter_) {
-    // The second parameter means get property's info.
-    Variant params[] = { Variant(name), Variant(true) };
-    int argc = dynamic_property_getter_->GetArgCount();
-    Variant dynamic_value = dynamic_property_getter_->Call(
-        owner_->GetScriptable(), argc, params).v();
+    Variant param(name);
+    Variant dynamic_value =
+        dynamic_property_getter_->Call(owner_->GetScriptable(), 1, &param).v();
     if (dynamic_value.type() != Variant::TYPE_VOID) {
-      if (prototype) {
-        // Returns the slot as prototype, in case this dynamic property is
-        // a signal.
-        if (dynamic_value.type() == Variant::TYPE_SLOT)
-          *prototype = dynamic_value;
-        else
-          *prototype = Variant(dynamic_value.type());
-      }
+      if (prototype)
+        *prototype = Variant(dynamic_value.type());
       return PROPERTY_DYNAMIC;
     }
   }
@@ -617,11 +602,9 @@ ResultVariant ScriptableHelperImpl::GetProperty(const char *name) {
     }
   } else {
     if (dynamic_property_getter_) {
-      // The second parameter means get property's value.
-      Variant params[] = { Variant(name), Variant(false) };
-      int argc = dynamic_property_getter_->GetArgCount();
+      Variant param(name);
       ResultVariant result =
-          dynamic_property_getter_->Call(owner_->GetScriptable(), argc, params);
+          dynamic_property_getter_->Call(owner_->GetScriptable(), 1, &param);
       if (result.v().type() != Variant::TYPE_VOID)
         return result;
     }

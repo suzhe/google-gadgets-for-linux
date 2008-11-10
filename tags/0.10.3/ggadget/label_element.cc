@@ -34,8 +34,8 @@ class LabelElement::Impl {
   TextFrame text_;
 };
 
-LabelElement::LabelElement(View *view, const char *name)
-    : BasicElement(view, "label", name, false),
+LabelElement::LabelElement(BasicElement *parent, View *view, const char *name)
+    : BasicElement(parent, view, "label", name, false),
       impl_(new Impl(this, view)) {
 }
 
@@ -64,8 +64,9 @@ void LabelElement::DoDraw(CanvasInterface *canvas) {
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
 }
 
-BasicElement *LabelElement::CreateInstance(View *view, const char *name) {
-  return new LabelElement(view, name);
+BasicElement *LabelElement::CreateInstance(BasicElement *parent, View *view,
+                                           const char *name) {
+  return new LabelElement(parent, view, name);
 }
 
 void LabelElement::GetDefaultSize(double *width, double *height) const {

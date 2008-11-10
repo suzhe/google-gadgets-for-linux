@@ -61,9 +61,6 @@ const char kOnUndockEvent[]        = "onundock";
 const char kOnChangeEvent[]        = "onchange";
 const char kOnTextChangeEvent[]    = "ontextchange";
 const char kOnContextMenuEvent[]   = "oncontextmenu";
-const char kOnStateChangeEvent[]   = "onstatechange";
-const char kOnMediaChangeEvent[]   = "onmediachange";
-const char kOnThemeChangedEvent[]  = "onthemechanged";
 
 /**
  * Scriptable decorator for @c Event.
@@ -73,7 +70,7 @@ class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
   /**
    * Not using DEFINE_CLASS_ID because we use dynamic CLASS_IDs according to
    * actual type of the input event.
-   */
+   */ 
   static const uint64_t CLASS_ID = UINT64_C(0x6732238aacb4468a);
 
  public:

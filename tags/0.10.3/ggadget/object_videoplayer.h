@@ -17,11 +17,11 @@
 #ifndef GGADGET_OBJECT_VIDEOPLAYER_H__
 #define GGADGET_OBJECT_VIDEOPLAYER_H__
 
+#include <ggadget/view.h>
+#include <ggadget/signals.h>
 #include <ggadget/basic_element.h>
 
 namespace ggadget {
-
-class View;
 
 /**
  * This class is a wrapper of video element, but provides more functionalities
@@ -37,19 +37,25 @@ class View;
 class ObjectVideoPlayer : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x8D5F2E792816428F, BasicElement);
-  ObjectVideoPlayer(View *view, const char *name);
+  ObjectVideoPlayer(BasicElement *parent, View *view,
+                    const char *tag_name, const char *name, bool children);
   virtual ~ObjectVideoPlayer();
 
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
+  /**
+   * We have video element as child element, but cannot expose it to the
+   * outside code. So we must override Layout to delegate layout operation
+   * to the video element.
+   */
   void Layout();
 
  protected:
   /**
    * Register properties, methods, and signals. The real mediaplayer element
-   * doesn't need to do any registration, and should never call this function.
+   * doesn't need to do any registation, and should never call this function.
    */
-  virtual void DoClassRegister();
   virtual void DoRegister();
 
   /**

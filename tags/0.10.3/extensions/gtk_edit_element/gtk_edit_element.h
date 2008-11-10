@@ -30,7 +30,7 @@ class GtkEditElement : public EditElementBase {
  public:
   DEFINE_CLASS_ID(0xc321ec8aeb4142c4, EditElementBase);
 
-  GtkEditElement(View *view, const char *name);
+  GtkEditElement(BasicElement *parent, View *view, const char *name);
   virtual ~GtkEditElement();
 
   virtual void Layout();
@@ -52,6 +52,8 @@ class GtkEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
+  virtual double GetSize() const;
+  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;
@@ -62,8 +64,6 @@ class GtkEditElement : public EditElementBase {
   virtual void SetWordWrap(bool wrap);
   virtual bool IsReadOnly() const;
   virtual void SetReadOnly(bool readonly);
-  virtual bool IsDetectUrls() const;
-  virtual void SetDetectUrls(bool detect_urls);
   virtual void GetIdealBoundingRect(int *width, int *height);
   virtual void Select(int start, int end);
   virtual void SelectAll();
@@ -71,7 +71,8 @@ class GtkEditElement : public EditElementBase {
   virtual void SetAlign(CanvasInterface::Alignment align);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
@@ -79,7 +80,6 @@ class GtkEditElement : public EditElementBase {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
   virtual void GetDefaultSize(double *width, double *height) const;
-  virtual void OnFontSizeChange();
 
  private:
   void OnScrolled();

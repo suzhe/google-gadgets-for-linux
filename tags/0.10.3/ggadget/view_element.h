@@ -33,7 +33,8 @@ class ViewElement : public BasicElement {
    * If no_transparent is true, then the ViewElement will never return
    * HT_TRANSPARENT hittest value.
    */
-  ViewElement(View *parent_view, View *child_view, bool no_transparent);
+  ViewElement(BasicElement *parent, View *parent_view,
+              View *child_view, bool no_transparent);
   virtual ~ViewElement();
 
   void SetChildView(View *child_view);
@@ -85,8 +86,7 @@ class ViewElement : public BasicElement {
   virtual EventResult OnMouseEvent(const MouseEvent &event,
                                    bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element,
-                                   ViewInterface::HitTest *hittest);
+                                   BasicElement **in_element);
   virtual EventResult OnDragEvent(const DragEvent &event,
                                   bool direct,
                                   BasicElement **fired_element);

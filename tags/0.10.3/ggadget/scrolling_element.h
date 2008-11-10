@@ -22,14 +22,13 @@
 
 namespace ggadget {
 
-class ScrollBarElement;
-
 class ScrollingElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x17107e53044c40f2, BasicElement);
 
  protected:
-  ScrollingElement(View *view, const char *tag_name, const char *name,
+  ScrollingElement(BasicElement *parent, View *view,
+                   const char *tag_name, const char *name,
                    bool children);
   virtual ~ScrollingElement();
   virtual void DoRegister();
@@ -77,8 +76,7 @@ class ScrollingElement : public BasicElement {
   virtual double GetClientHeight() const;
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element,
-                                   ViewInterface::HitTest *hittest);
+                                   BasicElement **in_element);
 
   /**
    * Overrides because this element supports scrolling.
@@ -103,18 +101,10 @@ class ScrollingElement : public BasicElement {
                                      double *self_x, double *self_y) const;
 
 
-  /**
-   * Register a slot to listen to on-scrolled event.
+  /** Register a slot to listen to on-scrolled event.
    * When the scrollbar is scrolled by user, this slot will be called.
    */
   Connection *ConnectOnScrolledEvent(Slot0<void> *slot);
-
-  /**
-   * Returns the vertical scrollbar element.
-   * It will be @c NULL if autoScroll is @c false.
-   */
-  ScrollBarElement *GetScrollBar();
-  const ScrollBarElement *GetScrollBar() const;
 
  protected:
   /**
@@ -132,6 +122,8 @@ class ScrollingElement : public BasicElement {
    *     @c Layout() again. Otherwise, returns @c false.
    */
   bool UpdateScrollBar(int x_range, int y_range);
+
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScrollingElement);

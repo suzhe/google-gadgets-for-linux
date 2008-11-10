@@ -50,7 +50,7 @@ class ImageCache {
    * @param is_mask If the image is a mask or not.
    */
   ImageInterface *LoadImage(GraphicsInterface *gfx, FileManagerInterface *fm,
-                            const std::string &filename, bool is_mask);
+                            const char *filename, bool is_mask);
 
  private:
   class Impl;

@@ -109,30 +109,8 @@ class ViewDecoratorBase : public View {
   /** Sets cursor type required by child view. */
   void SetChildViewCursor(ViewInterface::CursorType type);
 
-  /** Shows tooltip required by child view. */
-  void ShowChildViewTooltip(const std::string &tooltip);
-
-  /**
-   * Shows tooltip required by child view at specific position in child view's
-   * coordinates.
-   */
-  void ShowChildViewTooltipAtPosition(const std::string &tooltip,
-                                      double x, double y);
-
-  /** Sets the option prefix **/
-  void SetOptionPrefix(const char *option_prefix);
-
-  /** Gets the option prefix **/
-  std::string GetOptionPrefix() const;
-
-  /** Checks if options are available **/
-  bool HasOptions() const;
-
-  /** Gets value of an option **/
-  Variant GetOption(const std::string &name) const;
-
-  /** Sets value of an option **/
-  void SetOption(const std::string &name, Variant value) const;
+  /** Sets tooltip required by child view. */
+  void SetChildViewTooltip(const char *tooltip);
 
   /**
    * Gets the size of child view.
@@ -182,7 +160,7 @@ class ViewDecoratorBase : public View {
    * It delegates to real view host's ShowView() method.
    */
   virtual bool ShowDecoratedView(bool modal, int flags,
-                                 Slot1<bool, int> *feedback_handler);
+                                 Slot1<void, int> *feedback_handler);
   /** Closes this ViewDecorator. */
   virtual void CloseDecoratedView();
 
@@ -209,9 +187,6 @@ class ViewDecoratorBase : public View {
   /** Gets resizable mode of current child view. */
   ResizableMode GetChildViewResizable() const;
 
-  /* Add zoom menu item to context menu */
-  void AddZoomMenuItem(MenuInterface *menu) const;
-
  protected:
   /**
    * This method will be called if child view is changed.
@@ -237,8 +212,8 @@ class ViewDecoratorBase : public View {
    * The default implementation returns zero for all sides.
    * Derived class shall override this method to provide correct values.
    */
-  virtual void GetMargins(double *left, double *top,
-                          double *right, double *bottom) const;
+  virtual void GetMargins(double *top, double *left,
+                          double *bottom, double *right) const;
 
   /**
    * Gets the minimum size of client area, the area to show child view or

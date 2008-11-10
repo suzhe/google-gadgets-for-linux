@@ -44,12 +44,10 @@ class MainLoop : public MainLoopInterface {
   virtual bool IsRunning() const;
   virtual uint64_t GetCurrentTime() const;
   virtual bool IsMainThread() const;
-  virtual void WakeUp();
 
  private:
   class Impl;
   Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(MainLoop);
 };
 
 } // namespace gtk

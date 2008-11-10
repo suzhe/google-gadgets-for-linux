@@ -44,8 +44,7 @@ class ScrollingElement::Impl {
 
   void CreateScrollBar() {
     if (!scrollbar_) {
-      scrollbar_ = new ScrollBarElement(owner_->GetView(), "");
-      scrollbar_->SetParentElement(owner_);
+      scrollbar_ = new ScrollBarElement(owner_, owner_->GetView(), "");
       scrollbar_->SetPixelHeight(owner_->GetPixelHeight());
       scrollbar_->SetPixelWidth(12); // width of default images
       scrollbar_->SetEnabled(true);
@@ -54,10 +53,8 @@ class ScrollingElement::Impl {
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
       scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
-      // When user clicks the scroll bar, let the view give focus to
-      // this element.
-      scrollbar_->ConnectOnFocusInEvent(
-          NewSlot(implicit_cast<BasicElement *>(owner_), &BasicElement::Focus));
+      scrollbar_->ConnectOnFocusInEvent(NewSlot(this,
+                                                &Impl::OnScrollBarFocusIn));
       // Inform the view of this scrollbar to let the view handle mouse
       // grabbing and mouse over/out logics of the scrollbar.
       owner_->GetView()->OnElementAdd(scrollbar_);
@@ -107,6 +104,11 @@ class ScrollingElement::Impl {
     owner_->QueueDraw();
   }
 
+  void OnScrollBarFocusIn() {
+    // When user clicks the scroll bar, let the view give focus to this element.
+    owner_->Focus();
+  }
+
   void MarkRedraw() {
     if (scrollbar_)
       scrollbar_->MarkRedraw();
@@ -119,9 +121,10 @@ class ScrollingElement::Impl {
   EventSignal on_scrolled_event_;
 };
 
-ScrollingElement::ScrollingElement(View *view, const char *tag_name,
-                                   const char *name, bool children)
-    : BasicElement(view, tag_name, name, children),
+ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
+                                   const char *tag_name, const char *name,
+                                   bool children)
+    : BasicElement(parent, view, tag_name, name, children),
       impl_(new Impl(this)) {
 }
 
@@ -131,10 +134,6 @@ void ScrollingElement::DoRegister() {
 
 void ScrollingElement::DoClassRegister() {
   BasicElement::DoClassRegister();
-  RegisterProperty("scrollbar",
-                   NewSlot(static_cast<ScrollBarElement *(ScrollingElement::*)
-                       ()>(&ScrollingElement::GetScrollBar)),
-                   NULL);
 }
 
 ScrollingElement::~ScrollingElement() {
@@ -236,8 +235,7 @@ void ScrollingElement::SetYLineStep(int value) {
 
 EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                            BasicElement **fired_element,
-                                           BasicElement **in_element,
-                                           ViewInterface::HitTest *hittest) {
+                                           BasicElement **in_element) {
   if (!direct && impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
     double new_x = event.GetX() - impl_->scrollbar_->GetPixelX();
     double new_y = event.GetY() - impl_->scrollbar_->GetPixelY();
@@ -246,20 +244,21 @@ EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
       MouseEvent new_event(event);
       new_event.SetX(new_x);
       new_event.SetY(new_y);
-      return impl_->scrollbar_->OnMouseEvent(new_event, direct, fired_element,
-                                             in_element, hittest);
+      return impl_->scrollbar_->OnMouseEvent(new_event, direct,
+                                             fired_element, in_element);
     }
   }
 
-  ElementHolder self_holder(this);
-  EventResult result = BasicElement::OnMouseEvent(event, direct, fired_element,
-                                                  in_element, hittest);
-  if (result == EVENT_RESULT_UNHANDLED &&
-      event.GetType() == Event::EVENT_MOUSE_WHEEL &&
-      impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
-    return impl_->scrollbar_->HandleMouseEvent(event);
+  return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+}
+
+EventResult ScrollingElement::HandleMouseEvent(const MouseEvent &event) {
+  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
+    if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
+      return impl_->scrollbar_->HandleMouseEvent(event);
+    }
   }
-  return result;
+  return EVENT_RESULT_UNHANDLED;
 }
 
 void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,
@@ -318,14 +317,6 @@ double ScrollingElement::GetClientHeight() const {
 
 Connection *ScrollingElement::ConnectOnScrolledEvent(Slot0<void> *slot) {
   return impl_->on_scrolled_event_.Connect(slot);
-}
-
-ScrollBarElement *ScrollingElement::GetScrollBar() {
-  return impl_->scrollbar_;
-}
-
-const ScrollBarElement *ScrollingElement::GetScrollBar() const {
-  return impl_->scrollbar_;
 }
 
 } // namespace ggadget

@@ -46,136 +46,86 @@ class Elements::Impl {
     RemoveAllElements();
   }
 
-#define ASSERT_ELEMENT_INDEX(element, index) \
-  ASSERT((element)->GetIndex() == (index))
-
-#define ASSERT_ELEMENT_INTEGRITY(element) \
-  ASSERT((element)->GetIndex() < children_.size() && \
-         children_[(element)->GetIndex()] == (element))
-
-#ifdef _DEBUG
-#define ASSERT_ELEMENTS_INTEGRITY \
-  do { for (size_t i_i = 0; i_i < children_.size(); i_i++) \
-    ASSERT_ELEMENT_INDEX(children_[i_i], i_i); } while (false)
-#else
-#define ASSERT_ELEMENTS_INTEGRITY do; while (false)
-#endif
-
-  size_t GetCount() {
-    return children_.size();
+  int GetCount() {
+    return static_cast<int>(children_.size());
   }
 
-  void UpdateIndexes(size_t index_after) {
-    size_t size = children_.size();
-    for (size_t i = index_after; i < size; i++)
-      children_[i]->SetIndex(i);
-  }
+  BasicElement *AppendElement(const char *tag_name, const char *name) {
+    if (!factory_) return NULL;
 
-  bool IsChild(const BasicElement *element) {
-    return element->GetIndex() != kInvalidIndex &&
-           element->GetParentElement() == owner_;
-  }
-
-  const BasicElement *GetBeforeFromAfter(const BasicElement *after) {
-    if (after) {
-      ASSERT(IsChild(after));
-      size_t index = after->GetIndex();
-      if (index + 1 < children_.size())
-        return children_[index + 1];
-    } else if (children_.size()) {
-      return children_[0];
+    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
+    if (e == NULL)
+      return NULL;
+    if (view_->OnElementAdd(e)) {
+      e->QueueDraw();
+      children_.push_back(e);
+    } else {
+      delete e;
+      e = NULL;
     }
-    return NULL;
-  }
-
-  bool InsertElementInternal(BasicElement *element,
-                             const BasicElement *before) {
-    element->SetParentElement(owner_);
-    if (view_->OnElementAdd(element)) {
-      element->QueueDraw();
-      if (before) {
-        ASSERT_ELEMENT_INTEGRITY(before);
-        size_t index = before->GetIndex();
-        children_.insert(children_.begin() + index, element);
-        UpdateIndexes(index);
-      } else {
-        element->SetIndex(children_.size());
-        children_.push_back(element);
-      }
-      ASSERT_ELEMENTS_INTEGRITY;
-      return true;
-    }
-    delete element;
-    ASSERT_ELEMENTS_INTEGRITY;
-    return false;
-  }
-
-  void RemoveElementInternal(BasicElement *element) {
-    ASSERT_ELEMENT_INTEGRITY(element);
-    element->QueueDraw();
-    view_->OnElementRemove(element);
-    size_t index = element->GetIndex();
-    children_.erase(children_.begin() + index);
-    UpdateIndexes(index);
-    element_removed_ = true;
-    ASSERT_ELEMENTS_INTEGRITY;
+    return e;
   }
 
   bool InsertElement(BasicElement *element, const BasicElement *before) {
-    ASSERT(element);
-    if (element == before)
-      return false;
-    if (before) {
-      if (!IsChild(before))
-        return false;
-      if (IsChild(element) && element->GetIndex() + 1 == before->GetIndex())
-        return true;
-    }
-    if (element->GetView() != view_)
-      return false;
-    for (BasicElement *e = owner_; e; e = e->GetParentElement()) {
-      if (e == element) {
-        LOG("Can't insert an element under itself.");
-        return false;
-      }
+    BasicElement *parent = element->GetParentElement();
+    // Detach the element from its original parent.
+    Elements *elements = parent ? parent->GetChildren() : view_->GetChildren();
+    Children::iterator first = std::find(elements->impl_->children_.begin(),
+                                         elements->impl_->children_.end(),
+                                         element);
+    if (first != elements->impl_->children_.end()) {
+      elements->impl_->children_.erase(first);
+      elements->impl_->element_removed_ = true;
+      view_->OnElementRemove(element);
     }
 
-    if (element->GetIndex() == kInvalidIndex) {
-      if (element->GetParentElement()) {
-        LOG("Inner child can't be moved.");
-        return false;
+    // Reparent and insert the element.
+    element->SetParentElement(owner_);
+    Children::iterator second = std::find(children_.begin(), children_.end(),
+                                          before);
+    if (view_->OnElementAdd(element)) {
+      element->QueueDraw();
+      if (!before || second == children_.end()) {
+        children_.push_back(element);
+      } else {
+        children_.insert(second, element);
       }
+      return true;
     } else {
-      BasicElement *parent = element->GetParentElement();
-      // Detach the element from its original parent.
-      Elements *elements = parent ?
-                           parent->GetChildren() : view_->GetChildren();
-      elements->impl_->RemoveElementInternal(element);
+      delete element;
     }
-
-    return InsertElementInternal(element, before);
+    return false;
   }
 
   BasicElement *InsertElement(const char *tag_name,
                               const BasicElement *before,
                               const char *name) {
-    if (!factory_)
-      return NULL;
-    if (before && !IsChild(before))
-      return NULL;
+    if (!factory_) return NULL;
 
-    BasicElement *e = factory_->CreateElement(tag_name, view_, name);
+    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;
-    return InsertElementInternal(e, before) ? e : NULL;
+    if (view_->OnElementAdd(e)) {
+      e->QueueDraw();
+      Children::iterator ite = std::find(children_.begin(), children_.end(),
+                                         before);
+      children_.insert(ite, e);
+    } else {
+      delete e;
+      e = NULL;
+    }
+    return e;
   }
 
   bool RemoveElement(BasicElement *element) {
-    if (!element || !IsChild(element))
+    Children::iterator ite = std::find(children_.begin(), children_.end(),
+                                       element);
+    if (ite == children_.end())
       return false;
-
-    RemoveElementInternal(element);
-    delete element;
+    view_->OnElementRemove(*ite);
+    delete *ite;
+    children_.erase(ite);
+    element_removed_ = true;
     return true;
   }
 
@@ -190,40 +140,41 @@ class Elements::Impl {
       children_.swap(v);
       element_removed_ = true;
     }
-    // The caller should call QueueDraw() at proper time.
   }
 
   BasicElement *GetItem(const Variant &index_or_name) {
     switch (index_or_name.type()) {
       case Variant::TYPE_INT64:
-        return GetItemByIndex(VariantValue<size_t>()(index_or_name));
+        return GetItemByIndex(VariantValue<int>()(index_or_name));
       case Variant::TYPE_STRING:
         return GetItemByName(VariantValue<const char *>()(index_or_name));
       case Variant::TYPE_DOUBLE:
         return GetItemByIndex(
-            static_cast<size_t>(VariantValue<double>()(index_or_name)));
+            static_cast<int>(VariantValue<double>()(index_or_name)));
       default:
         return NULL;
     }
   }
 
-  BasicElement *GetItemByIndex(size_t index) {
-    if (index < children_.size()) {
-      ASSERT_ELEMENT_INDEX(children_[index], index);
+  BasicElement *GetItemByIndex(int index) {
+    if (index >= 0 && index < static_cast<int>(children_.size()))
       return children_[index];
-    }
     return NULL;
   }
 
   BasicElement *GetItemByName(const char *name) {
-    if (!name || !*name)
-      return NULL;
+    return GetItemByIndex(GetIndexByName(name));
+  }
+
+  int GetIndexByName(const char *name) {
+    if (name == NULL || strlen(name) == 0)
+      return -1;
     for (Children::const_iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
       if (GadgetStrCmp((*ite)->GetName().c_str(), name) == 0)
-        return *ite;
+        return static_cast<int>(ite - children_.begin());
     }
-    return NULL;
+    return -1;
   }
 
   void MapChildPositionEvent(const PositionEvent &org_event,
@@ -250,15 +201,13 @@ class Elements::Impl {
 
   EventResult OnMouseEvent(const MouseEvent &event,
                            BasicElement **fired_element,
-                           BasicElement **in_element,
-                           ViewInterface::HitTest *hittest) {
+                           BasicElement **in_element) {
     // The following event types are processed directly in the view.
     ASSERT(event.GetType() != Event::EVENT_MOUSE_OVER &&
            event.GetType() != Event::EVENT_MOUSE_OUT);
 
     ElementHolder in_element_holder(*in_element);
     *fired_element = NULL;
-    ViewInterface::HitTest in_hittest = *hittest;
     MouseEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
     for (Children::reverse_iterator ite = children_.rbegin();
@@ -273,30 +222,24 @@ class Elements::Impl {
         BasicElement *child = *ite;
         ElementHolder child_holder(*ite);
         BasicElement *descendant_in_element = NULL;
-        ViewInterface::HitTest descendant_hittest = *hittest;
         EventResult result = child->OnMouseEvent(new_event, false,
                                                  fired_element,
-                                                 &descendant_in_element,
-                                                 &descendant_hittest);
+                                                 &descendant_in_element);
         // The child has been removed by some event handler, can't continue.
         if (!child_holder.Get()) {
           *in_element = in_element_holder.Get();
-          *hittest = in_hittest;
           return result;
         }
         if (!in_element_holder.Get()) {
           in_element_holder.Reset(descendant_in_element);
-          in_hittest = descendant_hittest;
         }
         if (*fired_element) {
           *in_element = in_element_holder.Get();
-          *hittest = in_hittest;
           return result;
         }
       }
     }
     *in_element = in_element_holder.Get();
-    *hittest = in_hittest;
     return EVENT_RESULT_UNHANDLED;
   }
 
@@ -479,11 +422,11 @@ Elements::~Elements() {
   delete impl_;
 }
 
-size_t Elements::GetCount() const {
+int Elements::GetCount() const {
   return impl_->GetCount();
 }
 
-BasicElement *Elements::GetItemByIndex(size_t child) {
+BasicElement *Elements::GetItemByIndex(int child) {
   return impl_->GetItemByIndex(child);
 }
 
@@ -491,7 +434,7 @@ BasicElement *Elements::GetItemByName(const char *child) {
   return impl_->GetItemByName(child);
 }
 
-const BasicElement *Elements::GetItemByIndex(size_t child) const {
+const BasicElement *Elements::GetItemByIndex(int child) const {
   return impl_->GetItemByIndex(child);
 }
 
@@ -499,22 +442,15 @@ const BasicElement *Elements::GetItemByName(const char *child) const {
   return impl_->GetItemByName(child);
 }
 
-BasicElement *Elements::AppendElement(const char *tag_name, const char *name) {
-  return impl_->InsertElement(tag_name, NULL, name);
+BasicElement *Elements::AppendElement(const char *tag_name,
+                                          const char *name) {
+  return impl_->AppendElement(tag_name, name);
 }
 
 BasicElement *Elements::InsertElement(const char *tag_name,
                                       const BasicElement *before,
                                       const char *name) {
   return impl_->InsertElement(tag_name, before, name);
-}
-
-BasicElement *Elements::InsertElementAfter(const char *tag_name,
-                                           const BasicElement *after,
-                                           const char *name) {
-  if (after && !impl_->IsChild(after))
-    return NULL;
-  return impl_->InsertElement(tag_name, impl_->GetBeforeFromAfter(after), name);
 }
 
 bool Elements::AppendElement(BasicElement *element) {
@@ -526,27 +462,12 @@ bool Elements::InsertElement(BasicElement *element,
   return impl_->InsertElement(element, before);
 }
 
-bool Elements::InsertElementAfter(BasicElement *element,
-                                  const BasicElement *after) {
-  if (after && !impl_->IsChild(after))
-    return false;
-  if (after == element)
-    return false;
-  const BasicElement *before = impl_->GetBeforeFromAfter(after);
-  if (before == element)
-    return true;
-  return impl_->InsertElement(element, before);
-}
-
 BasicElement *Elements::AppendElementFromXML(const std::string &xml) {
   return InsertElementFromXML(xml, NULL);
 }
 
 BasicElement *Elements::InsertElementFromXML(const std::string &xml,
                                              const BasicElement *before) {
-  if (before && !impl_->IsChild(before))
-    return NULL;
-
   DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
   xmldoc->Ref();
   Gadget *gadget = impl_->view_->GetGadget();
@@ -577,35 +498,24 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
   return result;
 }
 
-BasicElement *Elements::InsertElementFromXMLAfter(const std::string &xml,
-                                             const BasicElement *after) {
-  if (after && !impl_->IsChild(after))
-    return NULL;
-  return InsertElementFromXML(xml, impl_->GetBeforeFromAfter(after));
-}
-
-BasicElement *Elements::AppendElementVariant(const Variant &element) {
+Variant Elements::AppendElementVariant(const Variant &element) {
   return InsertElementVariant(element, NULL);
 }
 
-BasicElement *Elements::InsertElementVariant(const Variant &element,
-                                             const BasicElement *before) {
-  BasicElement *result = NULL;
+Variant Elements::InsertElementVariant(const Variant &element,
+                                       const BasicElement *before) {
   if (element.type() == Variant::TYPE_STRING) {
-    result = InsertElementFromXML(VariantValue<std::string>()(element), before);
+    BasicElement *result = InsertElementFromXML(
+        VariantValue<std::string>()(element), before);
+    return Variant(result);
   } else if (element.type() == Variant::TYPE_SCRIPTABLE) {
     BasicElement *elm = VariantValue<BasicElement *>()(element);
-    if (elm && InsertElement(elm, before))
-      result = elm;
+    bool result = false;
+    if (elm)
+      result = InsertElement(elm, before);
+    return Variant(result);
   }
-  return result;
-}
-
-BasicElement *Elements::InsertElementVariantAfter(const Variant &element,
-                                                  const BasicElement *after) {
-  if (after && !impl_->IsChild(after))
-    return NULL;
-  return InsertElementVariant(element, impl_->GetBeforeFromAfter(after));
+  return Variant();
 }
 
 bool Elements::RemoveElement(BasicElement *element) {
@@ -614,12 +524,8 @@ bool Elements::RemoveElement(BasicElement *element) {
 
 void Elements::RemoveAllElements() {
   impl_->RemoveAllElements();
-  if (impl_->element_removed_) {
-    if (impl_->owner_)
-      impl_->owner_->QueueDraw();
-    else
-      impl_->view_->QueueDraw();
-  }
+  if (impl_->element_removed_)
+    impl_->owner_->QueueDraw();
 }
 
 void Elements::Layout() {
@@ -632,9 +538,8 @@ void Elements::Draw(CanvasInterface *canvas) {
 
 EventResult Elements::OnMouseEvent(const MouseEvent &event,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element,
-                                   ViewInterface::HitTest *hittest) {
-  return impl_->OnMouseEvent(event, fired_element, in_element, hittest);
+                                   BasicElement **in_element) {
+  return impl_->OnMouseEvent(event, fired_element, in_element);
 }
 
 EventResult Elements::OnDragEvent(const DragEvent &event,

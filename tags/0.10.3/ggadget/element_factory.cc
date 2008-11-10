@@ -41,12 +41,13 @@ namespace ggadget {
 class ElementFactory::Impl {
  public:
   BasicElement *CreateElement(const char *tag_name,
+                              BasicElement *parent,
                               View *view,
                               const char *name) {
     CreatorMap::iterator ite = creators_.find(tag_name);
     if (ite == creators_.end())
       return NULL;
-    return ite->second(view, name);
+    return ite->second(parent, view, name);
   }
 
   bool RegisterElementClass(const char *tag_name,
@@ -86,8 +87,6 @@ ElementFactory::ElementFactory()
                        &ObjectVideoPlayer::CreateInstance);
   RegisterElementClass("progid:WMPlayer.OCX.7",
                        &ObjectVideoPlayer::CreateInstance);
-  RegisterElementClass("progid:WMPlayer.OCX",
-                       &ObjectVideoPlayer::CreateInstance);
   RegisterElementClass("progressbar", &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
@@ -98,10 +97,11 @@ ElementFactory::~ElementFactory() {
 }
 
 BasicElement *ElementFactory::CreateElement(const char *tag_name,
+                                            BasicElement *parent,
                                             View *view,
                                             const char *name) {
   ASSERT(impl_);
-  return impl_->CreateElement(tag_name, view, name);
+  return impl_->CreateElement(tag_name, parent, view, name);
 }
 
 bool ElementFactory::RegisterElementClass(const char *tag_name,

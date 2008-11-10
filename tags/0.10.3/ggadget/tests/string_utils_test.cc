@@ -63,7 +63,7 @@ TEST(StringUtils, StringPrintf) {
   EXPECT_STREQ("123", StringPrintf("%d", 123).c_str());
   char *buf = new char[100000];
   for (int i = 0; i < 100000; i++)
-    buf[i] = static_cast<char>((i % 50) + '0');
+    buf[i] = (i % 50) + '0';
   buf[99999] = 0;
   EXPECT_STREQ(buf, StringPrintf("%s", buf).c_str());
   delete buf;
@@ -306,13 +306,9 @@ TEST(StringUtils, SimpleMatchXPath) {
 
 TEST(StringUtils, CompareVersion) {
   int result = 0;
-  ASSERT_FALSE(CompareVersion("1234.", "5678.", &result));
-  ASSERT_TRUE(CompareVersion("12.34", "56.78", &result));
-  ASSERT_EQ(-1, result);
-  ASSERT_TRUE(CompareVersion("1.2.3.4", "5678", &result));
-  ASSERT_EQ(-1, result);
-  ASSERT_TRUE(CompareVersion("5678", "1.2.3.4", &result));
-  ASSERT_EQ(1, result);
+  ASSERT_FALSE(CompareVersion("1234", "5678", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "5678", &result));
+  ASSERT_FALSE(CompareVersion("5678", "1.2.3.4", &result));
   ASSERT_FALSE(CompareVersion("1.2.3.4", "abcd", &result));
   ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.5", &result));
   ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.", &result));
@@ -329,8 +325,6 @@ TEST(StringUtils, CompareVersion) {
   ASSERT_EQ(1, result);
   ASSERT_TRUE(CompareVersion("14.3.2.1", "1.2.3.4", &result));
   ASSERT_EQ(1, result);
-  ASSERT_TRUE(CompareVersion("1.2", "1.2.0.0", &result));
-  ASSERT_EQ(0, result);
 }
 
 TEST(StringUtils, StartEndWith) {
@@ -390,24 +384,6 @@ TEST(StringUtils, ValidURL) {
   EXPECT_TRUE(IsValidRSSURL("feed:///abcdef"));
   EXPECT_TRUE(IsValidRSSURL("http:///abcdef"));
   EXPECT_TRUE(IsValidRSSURL("https:///abcdef"));
-}
-
-TEST(StringUtils, URLScheme) {
-  EXPECT_STREQ("http", GetURLScheme("http://abc.com").c_str());
-  EXPECT_STREQ("h323", GetURLScheme("h323://abc.com").c_str());
-  EXPECT_STREQ("iris.beep", GetURLScheme("iris.beep://abc.com").c_str());
-  EXPECT_STREQ("A+B.C-D", GetURLScheme("A+B.C-D://abc.com").c_str());
-  EXPECT_STREQ("", GetURLScheme("http//abc.com").c_str());
-  EXPECT_STREQ("", GetURLScheme("323://abc.com").c_str());
-  EXPECT_STREQ("", GetURLScheme("h*tp://abc.com").c_str());
-
-  EXPECT_TRUE(IsValidURLScheme("http"));
-  EXPECT_TRUE(IsValidURLScheme("https"));
-  EXPECT_TRUE(IsValidURLScheme("feed"));
-  EXPECT_TRUE(IsValidURLScheme("file"));
-  EXPECT_TRUE(IsValidURLScheme("mailto"));
-  EXPECT_FALSE(IsValidURLScheme("ftp"));
-  EXPECT_FALSE(IsValidURLScheme("javascript"));
 }
 
 int main(int argc, char **argv) {

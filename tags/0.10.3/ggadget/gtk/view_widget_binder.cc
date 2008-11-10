@@ -47,10 +47,6 @@ static const char kPlainTextTarget[] = "text/plain";
 // treated as window move or resize.
 static const double kDragThreshold = 3;
 
-#ifdef _DEBUG
-static const uint64_t kFPSCountDuration = 5000;
-#endif
-
 class ViewWidgetBinder::Impl {
  public:
   Impl(ViewInterface *view,
@@ -70,10 +66,6 @@ class ViewWidgetBinder::Impl {
       button_pressed_(false),
 #ifdef GRAB_POINTER_EXPLICITLY
       pointer_grabbed_(false),
-#endif
-#ifdef _DEBUG
-      draw_count_(0),
-      last_fps_time_(0),
 #endif
       zoom_(1.0),
       mouse_down_x_(-1),
@@ -172,7 +164,7 @@ class ViewWidgetBinder::Impl {
     EventResult result = EVENT_RESULT_UNHANDLED;
 
     impl->button_pressed_ = true;
-    impl->host_->ShowTooltip("");
+    impl->host_->SetTooltip(NULL);
 
     if (!impl->focused_) {
       impl->focused_ = true;
@@ -204,7 +196,7 @@ class ViewWidgetBinder::Impl {
 
     if (button != MouseEvent::BUTTON_NONE && type != Event::EVENT_INVALID) {
       MouseEvent e(type, event->x / impl->zoom_, event->y / impl->zoom_,
-                   0, 0, button, mod, event);
+                   0, 0, button, mod);
 
       result = impl->view_->OnMouseEvent(e);
 
@@ -234,7 +226,7 @@ class ViewWidgetBinder::Impl {
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
     impl->button_pressed_ = false;
-    impl->host_->ShowTooltip("");
+    impl->host_->SetTooltip(NULL);
 #ifdef GRAB_POINTER_EXPLICITLY
     if (impl->pointer_grabbed_) {
       gdk_pointer_ungrab(event->time);
@@ -251,7 +243,7 @@ class ViewWidgetBinder::Impl {
     if (button != MouseEvent::BUTTON_NONE) {
       MouseEvent e(Event::EVENT_MOUSE_UP,
                    event->x / impl->zoom_, event->y / impl->zoom_,
-                   0, 0, button, mod, event);
+                   0, 0, button, mod);
       result = impl->view_->OnMouseEvent(e);
 
       if (!impl->dbl_click_) {
@@ -279,7 +271,7 @@ class ViewWidgetBinder::Impl {
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
-    impl->host_->ShowTooltip("");
+    impl->host_->SetTooltip(NULL);
 
     int mod = ConvertGdkModifierToModifier(event->state);
     unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
@@ -371,9 +363,10 @@ class ViewWidgetBinder::Impl {
       GdkBitmap *bitmap =
         static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
       cairo_t *mask = gdk_cairo_create(bitmap);
-      CairoCanvas *mask_canvas =
-          new CairoCanvas(mask, impl->view_->GetGraphics()->GetZoom(),
-                          impl->view_->GetWidth(), impl->view_->GetHeight());
+      CairoCanvas *mask_canvas = new CairoCanvas(mask,
+                                                 impl->view_->GetGraphics()->GetZoom(),
+                                                 impl->view_->GetWidth(),
+                                                 impl->view_->GetHeight());
       mask_canvas->ClearCanvas();
       impl->view_->Draw(mask_canvas);
       mask_canvas->Destroy();
@@ -387,18 +380,6 @@ class ViewWidgetBinder::Impl {
     canvas->Destroy();
     cairo_destroy(cr);
 
-#ifdef _DEBUG
-    ++impl->draw_count_;
-    uint64_t current_time = GetCurrentTime();
-    uint64_t duration = current_time - impl->last_fps_time_;
-    if (duration >= kFPSCountDuration) {
-      impl->last_fps_time_ = current_time;
-      DLOG("FPS of View %s: %f", impl->view_->GetCaption().c_str(),
-           static_cast<double>(impl->draw_count_ * 1000) /
-           static_cast<double>(duration));
-      impl->draw_count_ = 0;
-    }
-#endif
     return TRUE;
   }
 
@@ -522,7 +503,7 @@ class ViewWidgetBinder::Impl {
     if (impl->button_pressed_)
       return FALSE;
 
-    impl->host_->ShowTooltip("");
+    impl->host_->SetTooltip(NULL);
 
     MouseEvent e(Event::EVENT_MOUSE_OUT,
                  event->x / impl->zoom_, event->y / impl->zoom_, 0, 0,
@@ -538,7 +519,7 @@ class ViewWidgetBinder::Impl {
       return FALSE;
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->host_->ShowTooltip("");
+    impl->host_->SetTooltip(NULL);
 
     MouseEvent e(Event::EVENT_MOUSE_OVER,
                  event->x / impl->zoom_, event->y / impl->zoom_, 0, 0,
@@ -768,10 +749,6 @@ class ViewWidgetBinder::Impl {
   bool button_pressed_;
 #ifdef GRAB_POINTER_EXPLICITLY
   bool pointer_grabbed_;
-#endif
-#ifdef _DEBUG
-  int draw_count_;
-  uint64_t last_fps_time_;
 #endif
   double zoom_;
   double mouse_down_x_;

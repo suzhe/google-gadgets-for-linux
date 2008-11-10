@@ -21,8 +21,8 @@ limitations under the License.
 #include <vector>
 #include <string>
 
+#include "dbus_proxy.h"
 #include <ggadget/common.h>
-#include <ggadget/string_utils.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_holder.h>
 
@@ -41,9 +41,8 @@ namespace dbus {
 class ScriptableDBusContainer : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x7829c86eb35a4168, ScriptableInterface);
-
-  /** Allows script to enumerate this object. */
-  virtual bool IsEnumeratable() const { return true; }
+  ScriptableDBusContainer() {
+  }
 
   /**
    * Don't use @c RegisterConstant() directly, since we want to register
@@ -51,36 +50,33 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
    * for the map used in scriptable_helper object, which use const char*
    * not std::string as the key.
    */
-  void AddProperty(const std::string &name, const Variant &value) {
-    if (name.empty()) return;
+  void AddProperty(const char *name, const Variant &value) {
+    if (!name || *name == 0) return;
     keys_.push_back(name);
     RegisterConstant((keys_.end() - 1)->c_str(), value);
   }
 
  private:
-  StringVector keys_;
+  std::vector<std::string> keys_;
 };
 
 typedef ScriptableHolder<ScriptableDBusContainer> ScriptableDBusContainerHolder;
 
 std::string GetVariantSignature(const Variant &value);
-Variant::Type GetVariantTypeFromSignature(const std::string &signature);
-bool ValidateObjectPath(const char *path);
-bool ValidateInterface(const char *interface);
-bool ValidateBusName(const char *name);
 
 struct Argument {
   Argument() {}
   explicit Argument(const Variant& v) : value(v) {}
   explicit Argument(const ResultVariant& v) : value(v) {}
-  explicit Argument(const std::string &sig) : signature(sig) {}
-  Argument(const std::string &sig, const Variant &v)
-    : signature(sig), value(v) {
-  }
-  Argument(const std::string &sig, const ResultVariant &v)
-    : signature(sig), value(v){
+  explicit Argument(const char *sig) : signature(sig) {}
+  Argument(const char *n, const char *sig) : name(n), signature(sig) {}
+  Argument(const char *sig, const Variant &v) : signature(sig), value(v) {}
+  Argument(const char *sig, const ResultVariant &v) : signature(sig), value(v){}
+  bool operator!=(const Argument& another) const {
+    return signature != another.signature;
   }
 
+  std::string name;
   std::string signature;
   ResultVariant value;
 };
@@ -137,7 +133,6 @@ class DBusMainLoopClosure {
  private:
   class Impl;
   Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(DBusMainLoopClosure);
 };
 
 }  // namespace dbus

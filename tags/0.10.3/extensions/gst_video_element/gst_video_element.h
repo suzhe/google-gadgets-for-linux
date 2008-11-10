@@ -37,11 +37,13 @@ class GstVideoElement: public VideoElementBase {
  public:
   DEFINE_CLASS_ID(0xc67e3d7bbc7283a9, VideoElementBase);
 
-  GstVideoElement(View *view, const char *name);
+  GstVideoElement(BasicElement *parent, View *view, const char *name);
   virtual ~GstVideoElement();
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent,
+                                      View *view,
+                                      const char *name);
 
   virtual bool IsAvailable(const std::string& name);
 
@@ -49,24 +51,24 @@ class GstVideoElement: public VideoElementBase {
   virtual void Pause();
   virtual void Stop();
 
-  virtual double GetCurrentPosition() const;
+  virtual double GetCurrentPosition();
   virtual void SetCurrentPosition(double position);
 
-  virtual double GetDuration() const;
-  virtual ErrorCode GetErrorCode() const;
-  virtual State GetState() const;
-  virtual bool IsSeekable() const;
+  virtual double GetDuration();
+  virtual ErrorCode GetErrorCode();
+  virtual State GetState();
+  virtual bool Seekable();
 
-  virtual std::string GetSrc() const;
+  virtual std::string GetSrc();
   virtual void SetSrc(const std::string &src);
 
-  virtual int GetVolume() const;
+  virtual int GetVolume();
   virtual void SetVolume(int volume);
 
-  virtual std::string GetTagInfo(TagType tag) const;
-  virtual int GetBalance() const;
+  virtual std::string GetTagInfo(TagType tag);
+  virtual int GetBalance();
   virtual void SetBalance(int balance);
-  virtual bool IsMute() const;
+  virtual bool GetMute();
   virtual void SetMute(bool mute);
 
  protected:
@@ -85,10 +87,6 @@ class GstVideoElement: public VideoElementBase {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(GstVideoElement);
 
-  void SetCurrentPositionInternal(double position);
-  void StopInternal(bool fire_state_change);
-  GstStateChangeReturn SetPlayState(GstState state);
-
   std::string src_;  // Media source to play.
 
   bool geometry_initialized_;
@@ -103,6 +101,8 @@ class GstVideoElement: public VideoElementBase {
   GstTagList *tag_list_;
 
   bool media_changed_;
+  bool position_changed_;
+
   State local_state_;
   ErrorCode local_error_;
 };

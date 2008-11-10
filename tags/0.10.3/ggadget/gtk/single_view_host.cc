@@ -46,12 +46,6 @@ static const double kMaximumZoom = 2.0;
 static const int kStopMoveDragTimeout = 200;
 static const char kMainViewWindowRole[] = "Google-Gadgets";
 
-// Minimal interval between queue draws.
-static const unsigned int kQueueDrawInterval = 40;
-
-// Maximum live duration of queue draw timer.
-static const uint64_t kQueueDrawTimerDuration = 1000;
-
 class SingleViewHost::Impl {
  public:
   Impl(ViewHostInterface::Type type,
@@ -97,11 +91,7 @@ class SingleViewHost::Impl {
       is_keep_above_(false),
       move_dragging_(false),
       enable_signals_(true),
-      draw_queued_(false),
-      queue_draw_timer_(0),
-      last_queue_draw_time_(0),
-      feedback_handler_(NULL),
-      can_close_dialog_(false) {
+      feedback_handler_(NULL) {
     ASSERT(owner);
   }
 
@@ -115,10 +105,6 @@ class SingleViewHost::Impl {
   void Detach() {
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
-
-    if (queue_draw_timer_)
-      g_source_remove(queue_draw_timer_);
-    queue_draw_timer_ = 0;
 
     if (stop_move_drag_source_)
       g_source_remove(stop_move_drag_source_);
@@ -230,7 +216,6 @@ class SingleViewHost::Impl {
     // input event mask effective.
     binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
 
-    gtk_widget_realize(fixed_);
     gtk_widget_realize(window_);
     on_view_changed_signal_();
   }
@@ -299,40 +284,20 @@ class SingleViewHost::Impl {
 
   void QueueDraw() {
     ASSERT(GTK_IS_WIDGET(widget_));
-    if (queue_draw_timer_) {
-      draw_queued_ = true;
-      return;
-    }
-
-    uint64_t current_time = GetCurrentTime();
-    if (current_time - last_queue_draw_time_ >= kQueueDrawInterval) {
-      gtk_widget_queue_draw(widget_);
-      draw_queued_ = false;
-      last_queue_draw_time_ = current_time;
-    } else {
-      draw_queued_ = true;
-    }
-
-    // Can't call view's GetCaption() here, because at this point, view might
-    // not be fully initialized yet.
-    DLOG("Install queue draw timer of view: %p", view_);
-    queue_draw_timer_ = g_timeout_add(kQueueDrawInterval,
-                                      QueueDrawTimeoutHandler,
-                                      this);
+    gtk_widget_queue_draw(widget_);
   }
 
   void SetResizable(ViewInterface::ResizableMode mode) {
     ASSERT(GTK_IS_WINDOW(window_));
     bool resizable = (mode == ViewInterface::RESIZABLE_TRUE ||
-                      mode == ViewInterface::RESIZABLE_KEEP_RATIO ||
                       (mode == ViewInterface::RESIZABLE_ZOOM &&
                        type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
     gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
   }
 
-  void SetCaption(const std::string &caption) {
+  void SetCaption(const char *caption) {
     ASSERT(GTK_IS_WINDOW(window_));
-    gtk_window_set_title(GTK_WINDOW(window_), caption.c_str());
+    gtk_window_set_title(GTK_WINDOW(window_), caption);
   }
 
   void SetShowCaptionAlways(bool always) {
@@ -350,34 +315,11 @@ class SingleViewHost::Impl {
       gdk_cursor_unref(cursor);
   }
 
-  void ShowTooltip(const std::string &tooltip) {
-    DLOG("SingleViewHost::ShowTooltip(%s)", tooltip.c_str());
-    tooltip_->Show(tooltip.c_str());
+  void SetTooltip(const char *tooltip) {
+    tooltip_->Show(tooltip);
   }
 
-  void ShowTooltipAtPosition(const std::string &tooltip, double x, double y) {
-    ASSERT(window_);
-    ViewCoordToNativeWidgetCoord(x, y, &x, &y);
-    gint screen_x = static_cast<gint>(x) + win_x_;
-    gint screen_y = static_cast<gint>(y) + win_y_;
-    // It's in options dialog, the native widget is not the toplevel window.
-    if (widget_ != window_) {
-      GdkWindow *window = widget_->window;
-      GdkWindow *toplevel = gdk_window_get_toplevel(window);
-      for (; window != toplevel; window = gdk_window_get_parent(window)) {
-        gint pos_x, pos_y;
-        gdk_window_get_position(window, &pos_x, &pos_y);
-        screen_x += pos_x;
-        screen_y += pos_y;
-      }
-    }
-    DLOG("SingleViewHost::ShowTooltipAtPosition(%s, %d, %d)",
-         tooltip.c_str(), screen_x, screen_y);
-    tooltip_->ShowAtPosition(tooltip.c_str(), gtk_widget_get_screen(window_),
-                             screen_x, screen_y);
-  }
-
-  bool ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler) {
+  bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
     ASSERT(window_);
 
@@ -422,10 +364,7 @@ class SingleViewHost::Impl {
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
-      can_close_dialog_ = false;
-      while (!can_close_dialog_)
-        gtk_dialog_run(GTK_DIALOG(window_));
-      CloseView();
+      gtk_dialog_run(GTK_DIALOG(window_));
     }
     return true;
   }
@@ -776,19 +715,13 @@ class SingleViewHost::Impl {
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->feedback_handler_) {
-      bool result = (*impl->feedback_handler_)(
-          response == GTK_RESPONSE_OK ?
-              ViewInterface::OPTIONS_VIEW_FLAG_OK :
-              ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
-      // 5.8 API allows the onok handler to cancel the default action.
-      if (response != GTK_RESPONSE_OK || result) {
-        delete impl->feedback_handler_;
-        impl->feedback_handler_ = NULL;
-        impl->can_close_dialog_ = true;
-      }
-    } else {
-      impl->can_close_dialog_ = true;
+      (*impl->feedback_handler_)(response == GTK_RESPONSE_OK ?
+                                 ViewInterface::OPTIONS_VIEW_FLAG_OK :
+                                 ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
+      delete impl->feedback_handler_;
+      impl->feedback_handler_ = NULL;
     }
+    impl->CloseView();
   }
 
   static gboolean MotionNotifyHandler(GtkWidget *widget, GdkEventMotion *event,
@@ -928,25 +861,6 @@ class SingleViewHost::Impl {
     return FALSE;
   }
 
-  static gboolean QueueDrawTimeoutHandler(gpointer data) {
-    Impl *impl = reinterpret_cast<Impl *>(data);
-    uint64_t current_time = GetCurrentTime();
-    if (impl->draw_queued_) {
-      ASSERT(GTK_IS_WIDGET(impl->widget_));
-      gtk_widget_queue_draw(impl->widget_);
-      impl->draw_queued_ = false;
-      impl->last_queue_draw_time_ = current_time;
-    }
-
-    if (current_time - impl->last_queue_draw_time_ > kQueueDrawTimerDuration) {
-      DLOG("Remove queue draw timer of view: %p (%s)", impl->view_,
-           impl->view_->GetCaption().c_str());
-      impl->queue_draw_timer_ = 0;
-      return FALSE;
-    }
-    return TRUE;
-  }
-
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
@@ -1000,12 +914,7 @@ class SingleViewHost::Impl {
   bool move_dragging_;
   bool enable_signals_;
 
-  bool draw_queued_;
-  guint queue_draw_timer_;
-  uint64_t last_queue_draw_time_;
-
-  Slot1<bool, int> *feedback_handler_;
-  bool can_close_dialog_; // Only useful when a model dialog is running.
+  Slot1<void, int> *feedback_handler_;
 
   Signal0<void> on_view_changed_signal_;
   Signal1<void, bool> on_show_hide_signal_;
@@ -1084,7 +993,7 @@ void SingleViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   impl_->SetResizable(mode);
 }
 
-void SingleViewHost::SetCaption(const std::string &caption) {
+void SingleViewHost::SetCaption(const char *caption) {
   impl_->SetCaption(caption);
 }
 
@@ -1096,17 +1005,12 @@ void SingleViewHost::SetCursor(int type) {
   impl_->SetCursor(type);
 }
 
-void SingleViewHost::ShowTooltip(const std::string &tooltip) {
-  impl_->ShowTooltip(tooltip);
-}
-
-void SingleViewHost::ShowTooltipAtPosition(const std::string &tooltip,
-                                           double x, double y) {
-  impl_->ShowTooltipAtPosition(tooltip, x, y);
+void SingleViewHost::SetTooltip(const char *tooltip) {
+  impl_->SetTooltip(tooltip);
 }
 
 bool SingleViewHost::ShowView(bool modal, int flags,
-                              Slot1<bool, int> *feedback_handler) {
+                              Slot1<void, int> *feedback_handler) {
   return impl_->ShowView(modal, flags, feedback_handler);
 }
 

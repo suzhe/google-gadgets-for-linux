@@ -51,8 +51,7 @@ ADD_MODULE(gtkmoz-browser-element ${LIB_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget${GGL_EPOCH} ${GTK_LIBRARIES})
 OUTPUT_MODULE(gtkmoz-browser-element)
 
-SET(CMAKE_CXX_FLAGS
-  "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor -fno-strict-aliasing")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
 
 IF(NOT GTKMOZEMBED_FOUND)
   MESSAGE(FATAL "gtkmozembed library not found!")
@@ -61,8 +60,7 @@ ENDIF(NOT GTKMOZEMBED_FOUND)
 SET(CHILD_SRCS
   browser_child.cc
   ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/json.cc
-  ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/libmozjs_glue.cc
-  #${CMAKE_SOURCE_DIR}/ggadget/js/js_utils.cc
+  ${CMAKE_SOURCE_DIR}/ggadget/js/js_utils.cc
 )
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-child
@@ -72,7 +70,6 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${GTHREAD_LIBRARIES}
   ggadget-js${GGL_EPOCH}
   ggadget${GGL_EPOCH}
-  dl
 )
 OUTPUT_EXECUTABLE(gtkmoz-browser-child)
 INSTALL(TARGETS gtkmoz-browser-child

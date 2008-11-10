@@ -16,19 +16,14 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <glob.h>
-#include <iterator>
 #include <string>
-#include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <vector>
-#include "ggadget/gadget_consts.h"
-#include "ggadget/slot.h"
+#include <iterator>
+#include <errno.h>
+#include <glob.h>
 #include "ggadget/string_utils.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/xdg/utilities.h"
@@ -40,45 +35,18 @@ namespace framework {
 namespace linux_system {
 
 static const size_t kBlockSize = 8192;
-static const size_t kMaxFileSize = 10 * 1024 * 1024;
 
-void FixCRLF(std::string *data) {
-  ASSERT(data);
-  size_t position = 0;
-  bool in_cr = false;
-  for (size_t i = 0; i < data->size(); ++i) {
-    if (in_cr) {
-      switch ((*data)[i]) {
-        case '\n':
-          (*data)[position++] = '\n';
-          break;
-        default:
-          (*data)[position++] = '\n';
-          (*data)[position++] = (*data)[i];
-          break;
-      }
-      in_cr = false;
-    } else {
-      switch ((*data)[i]) {
-        case '\r':
-          in_cr = true;
-          break;
-        default:
-          if (i != position) {
-            (*data)[position] = (*data)[i];
-          }
-          ++position;
-          break;
-      }
-    }
-  }
-  if (in_cr)
-    (*data)[position++] = '\n';
-  data->resize(position);
+// utility function for replace all char1 to char2
+static void ReplaceAll(std::string *str_ptr,
+                       const char char1,
+                       const char char2) {
+  for (size_t i = 0; i < str_ptr->size(); ++i)
+    if ((*str_ptr)[i] == char1)
+      (*str_ptr)[i] = char2;
 }
 
 // utility function for initializing the file path
-static bool InitFilePath(const char *filename,
+static void InitFilePath(const char *filename,
                          std::string *base_ptr,
                          std::string *name_ptr,
                          std::string *path_ptr) {
@@ -88,29 +56,27 @@ static bool InitFilePath(const char *filename,
   ASSERT(name_ptr);
   ASSERT(path_ptr);
 
-  *path_ptr = ggadget::GetAbsolutePath(filename);
-  return !path_ptr->empty() &&
-         SplitFilePath(path_ptr->c_str(), base_ptr, name_ptr);
-}
+  std::string str_path(filename);
+  ReplaceAll(&str_path, '\\', '/');
+  str_path = ggadget::GetAbsolutePath(str_path.c_str());
 
-// Returns normalized dest if dest is not ended with dir separator, otherwise
-// returns dest/source_name.
-bool NormalizeSourceAndDest(const char *source, const char *dest,
-                            std::string *result_source,
-                            std::string *result_dest) {
-  std::string base, name;
-  if (!InitFilePath(source, &base, &name, result_source))
-    return false;
+  while (str_path.size() > 0 && str_path[str_path.size() - 1] == '/')
+    str_path.resize(str_path.size() - 1);
 
-  char last = dest[strlen(dest) - 1];
-  if (last == '\\' || last == ggadget::kDirSeparator) {
-    // Copy the source under the dest dir.
-    *result_dest = ggadget::GetAbsolutePath(
-         ggadget::BuildFilePath(dest, name.c_str(), NULL).c_str());
-  } else {
-    *result_dest = ggadget::GetAbsolutePath(dest);
+  if (str_path.empty()) {
+    *name_ptr = "/";
+    *base_ptr = "/";
+    *path_ptr = "/";
+    return;
   }
-  return !result_dest->empty();
+
+  size_t last_index = str_path.find_last_of('/');
+
+  // filename is in absolute path
+  *name_ptr = str_path.substr(last_index + 1,
+                              str_path.size() - last_index - 1);
+  *base_ptr = str_path.substr(0, last_index + 1);
+  *path_ptr = str_path;
 }
 
 static bool CopyFile(const char *source, const char *dest, bool overwrite) {
@@ -119,19 +85,62 @@ static bool CopyFile(const char *source, const char *dest, bool overwrite) {
   ASSERT(dest);
   ASSERT(*dest);
 
-  std::string sourcefile, destfile;
-  if (!NormalizeSourceAndDest(source, dest, &sourcefile, &destfile))
+  struct stat stat_value;
+  std::string sourcefile = ggadget::NormalizeFilePath(source);
+  std::string destfile;
+  memset(&stat_value, 0, sizeof(stat_value));
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        // Destination exists.
+        if (!overwrite)
+          return false;
+        // Destination is a directory.
+        if (S_ISDIR(stat_value.st_mode))
+          return false;
+      }
+    } else {
+      // Destination is a file.
+      destfile = dest;
+      if (!overwrite)
+        return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
+  }
+
+  destfile = ggadget::NormalizeFilePath(destfile.c_str());
+  if (sourcefile == destfile)
     return false;
 
-  struct stat stat_value;
-  memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(destfile.c_str(), &stat_value) == 0) {
-    if (!overwrite)
-      return false;
-    if (S_ISDIR(stat_value.st_mode))
-      return false;
+  FILE *in = fopen(sourcefile.c_str(), "rb");
+  if (in == NULL)
+    return false;
+  FILE *out = fopen(destfile.c_str(), "wb");
+  if (out == NULL) {
+    fclose(in);
+    return false;
   }
-  return ggadget::CopyFile(sourcefile.c_str(), destfile.c_str());
+
+  ggadget::scoped_ptr<char> p(new char[kBlockSize]);
+  size_t size = 0;
+  while ((size = fread(p.get(), 1, kBlockSize, in)) > 0) {
+    if (fwrite(p.get(), 1, size, out) != size) {
+      fclose(in);
+      fclose(out);
+      return false;
+    }
+  }
+
+  fclose(in);
+  fclose(out);
+  return true;
 }
 
 static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
@@ -140,52 +149,71 @@ static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
   ASSERT(dest);
   ASSERT(*dest);
 
-  std::string sourcedir, destdir;
-  if (!NormalizeSourceAndDest(source, dest, &sourcedir, &destdir))
-    return false;
-
   struct stat stat_value;
+  std::string sourcefile = ggadget::NormalizeFilePath(source);
+  std::string destfile;
   memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(destdir.c_str(), &stat_value) == 0) {
-    if (!overwrite)
-      return false;
-    if (!S_ISDIR(stat_value.st_mode))
-      return false;
-  } else if (mkdir(destdir.c_str(), 0755) != 0) {
-    return false;
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        // Destination exists.
+        if (!overwrite)
+          return false;
+        // Destination is a directory.
+        if (S_ISDIR(stat_value.st_mode)) {
+          if (!overwrite)
+            return false;
+        }
+      }
+    } else {
+      // Destination is a file.
+      destfile = dest;
+      if (!overwrite)
+        return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
   }
 
-  if (destdir.size() > sourcedir.size() &&
-      destdir[sourcedir.size()] == '/' &&
-      strncmp(sourcedir.c_str(), destdir.c_str(), sourcedir.size()) == 0)
+  destfile = ggadget::NormalizeFilePath(destfile.c_str());
+  if (destfile.size() > sourcefile.size() &&
+      destfile[sourcefile.size()] == '/' &&
+      strncmp(sourcefile.c_str(), destfile.c_str(), sourcefile.size()) == 0)
+    return false;
+  if (sourcefile == destfile)
     return false;
 
-  DIR *dir = opendir(sourcedir.c_str());
+  mkdir(destfile.c_str(), 0755);
+
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+
+  dir = opendir(source);
   if (dir == NULL)
     return false;
 
-  if (sourcedir == destdir) {
-    closedir(dir);
-    return overwrite;
-  }
-  struct dirent *entry = NULL;
   while ((entry = readdir(dir)) != NULL) {
     if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
       continue;
 
+    struct stat stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
     std::string file =
-        ggadget::BuildFilePath(sourcedir.c_str(), entry->d_name, NULL);
+        ggadget::BuildFilePath(source, entry->d_name, NULL);
     if (stat(file.c_str(), &stat_value) == 0) {
-      std::string dest_file =
-          ggadget::BuildFilePath(destdir.c_str(), entry->d_name, NULL);
       if (S_ISDIR(stat_value.st_mode)) {
-        if (!CopyFolder(file.c_str(), dest_file.c_str(), overwrite)) {
+        if (!CopyFolder(file.c_str(), destfile.c_str(), overwrite)) {
           closedir(dir);
           return false;
         }
       } else {
-        if (!CopyFile(file.c_str(), dest_file.c_str(), overwrite)) {
+        if (!CopyFile(file.c_str(), destfile.c_str(), overwrite)) {
           closedir(dir);
           return false;
         }
@@ -197,79 +225,83 @@ static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
   return true;
 }
 
-// The no_use parameter eases wildcard handling. See OperateWildcard.
-static bool MoveFile(const char *source, const char *dest, bool no_use) {
+static bool Move(const char *source, const char *dest) {
   ASSERT(source);
   ASSERT(*source);
   ASSERT(dest);
   ASSERT(*dest);
 
-  std::string sourcefile, destfile;
-  if (!NormalizeSourceAndDest(source, dest, &sourcefile, &destfile))
-    return false;
-
   struct stat stat_value;
+  std::string destfile;
   memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(sourcefile.c_str(), &stat_value) != 0 || S_ISDIR(stat_value.st_mode))
-    return false;
-  if (sourcefile == destfile)
-    return true;
-  memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(destfile.c_str(), &stat_value) == 0)
-    return false;
+  if (stat(dest, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode)) {
+      // Destination is a folder.
+      std::string base, name, realpath;
+      InitFilePath(source, &base, &name, &realpath);
+      destfile = ggadget::BuildFilePath(dest, name.c_str(), NULL);
+      memset(&stat_value, 0, sizeof(stat_value));
+      if (stat(destfile.c_str(), &stat_value) == 0) {
+        return false;
+      }
+    } else {
+      // Destination is a file.
+      return false;
+    }
+  } else {
+    // File doesn't exist.
+    destfile = dest;
+  }
 
-  if (rename(sourcefile.c_str(), destfile.c_str()) == 0)
-    return true;
-
-  // Otherwise try to copy to dest and remove source.
-  return CopyFile(source, dest, false) && unlink(source) == 0;
+  return rename(source, destfile.c_str()) == 0;
 }
 
-// The no_use parameter eases wildcard handling. See OperateWildcard.
-static bool MoveFolder(const char *source, const char *dest, bool no_use) {
-  ASSERT(source);
-  ASSERT(*source);
-  ASSERT(dest);
-  ASSERT(*dest);
-
-  std::string sourcedir, destdir;
-  if (!NormalizeSourceAndDest(source, dest, &sourcedir, &destdir))
-    return false;
-
-  struct stat stat_value;
-  memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(sourcedir.c_str(), &stat_value) != 0 || !S_ISDIR(stat_value.st_mode))
-    return false;
-  if (sourcedir == destdir)
-    return true;
-  memset(&stat_value, 0, sizeof(stat_value));
-  if (stat(destdir.c_str(), &stat_value) == 0)
-    return false;
-
-  if (rename(sourcedir.c_str(), destdir.c_str()) == 0)
-    return true;
-
-  // Otherwise try to copy to dest and remove source.
-  return CopyFolder(source, dest, false) &&
-         ggadget::RemoveDirectory(source, true);
-}
-
-// The no_use parameter eases wildcard handling. See OperateWildcard.
-static bool DeleteFile(const char *filename, const char *no_use, bool force) {
+static bool DeleteFile(const char *filename, bool force) {
   ASSERT(filename);
   ASSERT(*filename);
 
-  if (!force && access(filename, W_OK) != 0)
-    return false;
-  return unlink(filename) == 0;
+  if (unlink(filename) == 0) {
+    return true;
+  }
+  return false;
 }
 
-// The no_use parameter eases wildcard handling. See OperateWildcard.
-static bool DeleteFolder(const char *filename, const char *no_use, bool force) {
+static bool DeleteFolder(const char *filename, bool force) {
   ASSERT(filename);
   ASSERT(*filename);
 
-  return ggadget::RemoveDirectory(filename, force);
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+
+  dir = opendir(filename);
+  if (dir == NULL)
+    return 0;
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+      continue;
+
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    std::string file =
+        ggadget::BuildFilePath(filename, entry->d_name, NULL);
+    if (stat(file.c_str(), &stat_value) == 0) {
+      if (S_ISDIR(stat_value.st_mode)) {
+        if (!DeleteFolder(file.c_str(), force)) {
+          closedir(dir);
+          return false;
+        }
+      } else {
+        if (!DeleteFile(file.c_str(), force)) {
+          closedir(dir);
+          return false;
+        }
+      }
+    }
+  }
+
+  closedir(dir);
+  return rmdir(filename) == 0;
 }
 
 static bool SetName(const char *path, const char *dir, const char *name) {
@@ -335,193 +367,6 @@ static int64_t GetFolderSize(const char *filename) {
   return size;
 }
 
-class TextStream : public TextStreamInterface {
- public:
-  TextStream(int fd, IOMode mode, bool unicode)
-      : fd_(fd),
-        mode_(mode),
-        line_(-1),
-        col_(-1),
-        readingptr_(0) {
-    if (fd_ != -1) {
-      line_ = 1;
-      col_ = 1;
-    }
-  }
-  ~TextStream() {
-    Close();
-  }
-
-  bool Init() {
-    if (mode_ == IO_MODE_READING) {
-      scoped_ptr<char> buffer(new char[kMaxFileSize]);
-      ssize_t size = read(fd_, buffer.get(), kMaxFileSize - 1);
-      if (size == -1)
-        return false;
-      if (size == 0)
-        return true;
-      buffer.get()[size] = '\0';
-      if (!ConvertLocaleStringToUTF8(buffer.get(), &content_)) {
-        if (!DetectAndConvertStreamToUTF8(std::string(buffer.get(), size),
-                                          &content_,
-                                          &encoding_))
-          return false;
-      }
-      FixCRLF(&content_);
-    }
-    return true;
-  }
-
-  virtual void Destroy() { delete this; }
-
- public:
-  virtual int GetLine() {
-    return line_;
-  }
-  virtual int GetColumn() {
-    return col_;
-  }
-
-  virtual bool IsAtEndOfStream() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return true;
-    return readingptr_ >= content_.size();
-  }
-  virtual bool IsAtEndOfLine() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return true;
-    return content_[readingptr_] == '\n';
-  }
-  virtual std::string Read(int characters) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
-
-    size_t size = GetUTF8CharsLength(&content_[readingptr_],
-                                     characters,
-                                     content_.size() - readingptr_);
-    std::string result = content_.substr(readingptr_, size);
-    readingptr_ += size;
-    UpdatePosition(result);
-    return result;
-  }
-
-  virtual std::string ReadLine() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
-
-    std::string result;
-    std::string::size_type position = content_.find('\n', readingptr_);
-    if (position == std::string::npos) {
-      result = content_.substr(readingptr_);
-      readingptr_ = content_.size();
-      UpdatePosition(result);
-    } else {
-      result = content_.substr(readingptr_, position - readingptr_);
-      readingptr_ = position + 1;
-      col_ = 1;
-      ++line_;
-    }
-    return result;
-  }
-  virtual std::string ReadAll() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
-
-    std::string result;
-    result = content_.substr(readingptr_);
-    readingptr_ = content_.size();
-    UpdatePosition(result);
-    return result;
-  }
-
-  virtual void Write(const std::string &text) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ == IO_MODE_READING)
-      return;
-
-    std::string copy = text;
-    FixCRLF(&copy);
-    WriteString(copy);
-    UpdatePosition(copy);
-  }
-  virtual void WriteLine(const std::string &text) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ == IO_MODE_READING)
-      return;
-
-    Write(text);
-    Write("\n");
-  }
-  virtual void WriteBlankLines(int lines) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ == IO_MODE_READING)
-      return;
-
-    for (int i = 0; i < lines; ++i)
-      Write("\n");
-  }
-
-  virtual void Skip(int characters) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return;
-    Read(characters);
-  }
-  virtual void SkipLine() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return;
-    ReadLine();
-  }
-
-  virtual void Close() {
-    if (fd_ == -1)
-      return;
-    if (fd_ > STDERR_FILENO) {
-      close(fd_);
-    }
-    fd_ = -1;
-  }
-
- private:
-  void UpdatePosition(const std::string &character) {
-    size_t position = 0;
-    while (position < character.size()) {
-      if (character[position] == '\n') {
-        col_ = 1;
-        ++line_;
-        ++position;
-      } else {
-        position += GetUTF8CharLength(&character[position]);
-        ++col_;
-      }
-    }
-  }
-
-  bool WriteString(const std::string &data) {
-    std::string buffer;
-    if (ConvertUTF8ToLocaleString(data.c_str(), &buffer)) {
-      return write(fd_, buffer.c_str(), buffer.size()) ==
-          static_cast<ssize_t>(buffer.size());
-    }
-    return true;
-  }
-
- private:
-  int fd_;
-  IOMode mode_;
-  int line_;
-  int col_;
-  std::string content_;
-  std::string encoding_;
-  size_t readingptr_;
-};
-
 static TextStreamInterface *OpenTextFile(const char *filename,
                                          IOMode mode,
                                          bool create,
@@ -530,39 +375,7 @@ static TextStreamInterface *OpenTextFile(const char *filename,
   ASSERT(filename);
   ASSERT(*filename);
 
-  int flags = 0;
-
-  switch (mode) {
-  case IO_MODE_READING:
-    flags = O_RDONLY;
-    break;
-  case IO_MODE_APPENDING:
-    flags = O_APPEND | O_WRONLY;
-    break;
-  case IO_MODE_WRITING:
-    flags = O_TRUNC | O_WRONLY;
-    break;
-  default:
-    ASSERT(false);
-    break;
-  }
-
-  if (create) {
-    flags |= O_CREAT;
-  }
-
-  if (!overwrite) {
-    flags |= O_EXCL;
-  }
-
-  int fd = open(filename, flags, S_IRUSR | S_IWUSR);
-  if (fd == -1)
-    return NULL;
-
-  TextStream *stream = new TextStream(fd, mode, format == TRISTATE_TRUE);
-  if (stream->Init())
-    return stream;
-  stream->Destroy();
+  // XXX:
   return NULL;
 }
 
@@ -857,7 +670,7 @@ class File : public FileInterface {
   virtual bool Delete(bool force) {
     if (path_.empty())
       return false;
-    bool result = linux_system::DeleteFile(path_.c_str(), "no_use", force);
+    bool result = linux_system::DeleteFile(path_.c_str(), force);
     if (result)
       path_.clear();
     return result;
@@ -876,7 +689,7 @@ class File : public FileInterface {
       return false;
     if (!dest || !*dest)
       return false;
-    bool result = linux_system::MoveFile(path_.c_str(), dest, false);
+    bool result = linux_system::Move(path_.c_str(), dest);
     if (result) {
       std::string path = ggadget::GetAbsolutePath(dest);
       InitFilePath(path.c_str(), &base_, &name_, &path_);
@@ -1187,7 +1000,7 @@ class Folder : public FolderInterface {
   virtual bool Delete(bool force) {
     if (path_.empty())
       return false;
-    return linux_system::DeleteFolder(path_.c_str(), "no_use", force);
+    return linux_system::DeleteFolder(path_.c_str(), force);
   }
 
   virtual bool Copy(const char *dest, bool overwrite) {
@@ -1203,7 +1016,7 @@ class Folder : public FolderInterface {
       return false;
     if (!dest || !*dest)
       return false;
-    bool result = linux_system::MoveFolder(path_.c_str(), dest, false);
+    bool result = linux_system::Move(path_.c_str(), dest);
     if (result) {
       std::string path = ggadget::GetAbsolutePath(dest);
       InitFilePath(path.c_str(), &base_, &name_, &path_);
@@ -1253,7 +1066,8 @@ class Folder : public FolderInterface {
     if (path_.empty())
       return NULL;
 
-    std::string str_path(ggadget::NormalizeFilePath(filename));
+    std::string str_path(filename);
+    ReplaceAll(&str_path, '\\', '/');
     std::string file;
 
     if (ggadget::IsAbsolutePath(str_path.c_str())) {
@@ -1286,6 +1100,208 @@ FolderInterface *Folders::GetItem() {
     return NULL;
   return new Folder(current_folder_.c_str());
 }
+
+class TextStream : public TextStreamInterface {
+ public:
+  explicit TextStream(const char *filename) {
+    fp_ = fopen(filename, "r+b");
+    column_ = line_ = 1;
+  }
+
+  TextStream(StandardStreamType type) {
+    switch (type) {
+      case STD_STREAM_IN: fp_ = stdin; break;
+      case STD_STREAM_OUT: fp_ = stdout; break;
+      case STD_STREAM_ERR: fp_ = stderr; break;
+    }
+  }
+
+  ~TextStream() {
+    if (fp_) {
+      fclose(fp_);
+      fp_ = NULL;
+    }
+  }
+
+  virtual void Destroy() { delete this; }
+
+ public:
+  virtual int GetLine() {
+    if (!fp_)
+      return 0;
+    return line_;
+  }
+
+  virtual int GetColumn() {
+    if (!fp_)
+      return 0;
+    return column_;
+  }
+
+  virtual bool IsAtEndOfStream() {
+    if (!fp_)
+      return true;
+    return feof(fp_);
+  }
+
+  virtual bool IsAtEndOfLine() {
+    if (!fp_)
+      return true;
+    if (IsAtEndOfStream())
+      return true;
+
+    bool result = '\n' == fgetc(fp_);
+    if (!fseek(fp_, -1, SEEK_CUR))
+      return result;
+    return false;
+  }
+
+  virtual std::string Read(int characters) {
+    if (characters <= 0)
+      return "";
+
+    if (!fp_)
+      return "";
+
+    char buffer[characters + 1];
+    std::string result("");
+
+    while (result.size() < (size_t) characters) {
+      // since fgets reads at most size - 1 characters,
+      // so characters + 1 is used here.
+      if (!fgets(buffer, characters + 1, fp_)) {
+        if (feof(fp_))
+          // if end of stream
+          return result;
+
+        // otherwise, error occurs when reading
+        return "";
+      }
+      result = result + std::string(buffer);
+    }
+
+    // update member variable line_ and column_
+    UpdateLineAndColumn(result.c_str());
+
+    return result;
+  }
+
+  virtual std::string ReadLine() {
+    if (!fp_)
+      return "";
+
+    int ch = 0;
+    std::string result = "";
+    while ((ch = fgetc(fp_)) != EOF) {
+      result.append(1, ch);
+      if ('\n' == ch)
+        break;
+    }
+
+    // update member variable line_ and column_
+    line_ ++;
+    column_ = 1;
+
+    return result;
+  }
+
+  virtual std::string ReadAll() {
+    if (!fp_)
+      return "";
+
+    int ch = 0;
+    std::string result = "";
+    while ((ch = fgetc(fp_)) != EOF) {
+      result.append(1, ch);
+
+      // update member variable line_ and column_
+      if (ch == '\n')
+        line_ ++, column_ = 1;
+      else
+        column_ ++;
+    }
+
+    return result;
+  }
+
+  virtual void Write(const char *text) {
+    if (!fp_ || !text || !*text)
+      return;
+
+    fputs(text, fp_);
+
+    // update member variable line_ and column_
+    UpdateLineAndColumn(text);
+  }
+
+  virtual void WriteLine(const char *text) {
+    if (!fp_ || !text || !*text)
+      return;
+
+    Write(text);
+    Write("\n");
+
+    // update member variable line_ and column_
+    line_ ++, column_ = 1;
+  }
+
+  virtual void WriteBlankLines(int lines) {
+    if (lines <= 0)
+      return;
+
+    for (int i = 0; i < lines; ++i) {
+      Write("\n");
+    }
+
+    // update member variable line_ and column_
+    if (lines > 0)
+      line_ += lines, column_ = 1;
+  }
+
+  virtual void Skip(int characters) {
+    Read(characters);
+  }
+
+  virtual void SkipLine() {
+    ReadLine();
+  }
+
+  virtual void Close() {
+    if (fp_) {
+      fclose(fp_);
+      fp_ = NULL;
+    }
+  }
+
+ private:
+  void UpdateLineAndColumn(const char *str) {
+    if (!str)
+      return;
+
+    size_t length = strlen(str);
+    if (!length)
+      return;
+
+    // update member variable line_ and column_
+    bool col_flag = false;
+    for (size_t i = 1; i <= length; ++i) {
+      if (str[length - i] == '\n') {
+        line_ ++;
+        if (col_flag)
+          continue;
+        column_ = static_cast<int>(i);
+        col_flag = true;
+      } else {
+        if (!col_flag)
+          column_ ++;
+      }
+    }
+  }
+
+ private:
+  FILE *fp_;
+  int column_, line_;
+};
 
 // Implementation of FileSystem
 FileSystem::FileSystem() {
@@ -1397,7 +1413,9 @@ bool FileSystem::FileExists(const char *file_spec) {
   if (!file_spec || !*file_spec)
     return false;
 
-  std::string str_path(ggadget::NormalizeFilePath(file_spec));
+  std::string str_path(file_spec);
+  ReplaceAll(&str_path, '\\', '/');
+
   if (access(str_path.c_str(), F_OK))
     return false;
 
@@ -1417,7 +1435,9 @@ bool FileSystem::FolderExists(const char *folder_spec) {
   if (!folder_spec || !*folder_spec)
     return false;
 
-  std::string str_path(ggadget::NormalizeFilePath(folder_spec));
+  std::string str_path(folder_spec);
+  ReplaceAll(&str_path, '\\', '/');
+
   if (access(str_path.c_str(), F_OK))
     return false;
 
@@ -1463,70 +1483,235 @@ FolderInterface *FileSystem::GetSpecialFolder(SpecialFolder special_folder) {
   return new Folder("/tmp");
 }
 
-static bool OperateWildcard(
-    const char *source, const char *dest, bool bool_param,
-    bool (*operation)(const char *, const char *, bool)) {
-  if (!source || !*source || !dest || !*dest)
+bool FileSystem::DeleteFile(const char *file_spec, bool force) {
+  if (!file_spec || !*file_spec)
     return false;
 
-  if (!strchr(source, '*') && !strchr(source, '?'))
-    return operation(source, dest, bool_param);
-
-  // If source contains wildcard, the dest must be a directory.
-  // Microsoft FileSystemObject requires that the target directory name must
-  // be ended with a directory separator.
-  std::string dest_str(dest);
-  dest_str += ggadget::kDirSeparator;
   glob_t globbuf;
-  if (glob(source,
-           // GLOB_NOESCAPE because we have treated '\'s differently.
-           GLOB_NOSORT | GLOB_NOCHECK | GLOB_NOESCAPE,
+  if (glob(file_spec,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
            NULL, &globbuf) != 0) {
     globfree(&globbuf);
     return false;
   }
 
+  if (globbuf.gl_pathc == 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  size_t count = 0;
   for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-    if (!operation(globbuf.gl_pathv[i], dest_str.c_str(), bool_param)) {
-      globfree(&globbuf);
-      return false;
+    if (FileExists(globbuf.gl_pathv[i])) {
+      ++count;
+      if (!linux_system::DeleteFile(globbuf.gl_pathv[i], force)) {
+        globfree(&globbuf);
+        return false;
+      }
     }
   }
-  globfree(&globbuf);
-  return true;
-}
 
-bool FileSystem::DeleteFile(const char *file_spec, bool force) {
-  return OperateWildcard(file_spec, "no_use", force, linux_system::DeleteFile);
+  globfree(&globbuf);
+  return count > 0;
 }
 
 bool FileSystem::DeleteFolder(const char *folder_spec, bool force) {
-  return OperateWildcard(folder_spec, "no_use", force,
-                         linux_system::DeleteFolder);
+  if (!folder_spec || !*folder_spec)
+    return false;
+
+  glob_t globbuf;
+  if (glob(folder_spec,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  if (globbuf.gl_pathc == 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  size_t count = 0;
+  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+    if (FolderExists(globbuf.gl_pathv[i])) {
+      ++count;
+      if (!linux_system::DeleteFolder(globbuf.gl_pathv[i], force)) {
+        globfree(&globbuf);
+        return false;
+      }
+    }
+  }
+
+  globfree(&globbuf);
+  return count > 0;
 }
 
 bool FileSystem::MoveFile(const char *source, const char *dest) {
-  return OperateWildcard(source, dest, false, linux_system::MoveFile);
+  if (!source || !*source || !dest || !*dest)
+    return false;
+
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
+
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FileExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::Move(source, dest);
+  }
+
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::MoveFolder(const char *source, const char *dest) {
-  return OperateWildcard(source, dest, false, linux_system::MoveFolder);
+  if (!source || !dest || !*source || !*dest)
+    return false;
+  if (!source || !*source || !dest || !*dest)
+    return false;
+
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
+
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FolderExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::Move(globbuf.gl_pathv[i], dest)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::Move(source, dest);
+  }
+
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::CopyFile(const char *source, const char *dest,
                           bool overwrite) {
-  return OperateWildcard(source, dest, overwrite, linux_system::CopyFile);
+  if (!source || !*source || !dest || !*dest)
+    return false;
+
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
+
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FileExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::CopyFile(globbuf.gl_pathv[i], dest, overwrite)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::CopyFile(source, dest, overwrite);
+  }
+
+  globfree(&globbuf);
+  return false;
 }
 
 bool FileSystem::CopyFolder(const char *source, const char *dest,
                             bool overwrite) {
-  return OperateWildcard(source, dest, overwrite, linux_system::CopyFolder);
+  if (!source || !*source || !dest || !*dest)
+    return false;
+
+  glob_t globbuf;
+  if (glob(source,
+           GLOB_NOSORT | GLOB_PERIOD | GLOB_TILDE,
+           NULL, &globbuf) != 0) {
+    globfree(&globbuf);
+    return false;
+  }
+
+  if (globbuf.gl_pathc > 1) {
+    if (!FolderExists(dest)) {
+      globfree(&globbuf);
+      return false;
+    }
+
+    size_t count = 0;
+    for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
+      if (FolderExists(globbuf.gl_pathv[i])) {
+        ++count;
+        if (!linux_system::CopyFolder(globbuf.gl_pathv[i], dest, overwrite)) {
+          globfree(&globbuf);
+          return false;
+        }
+      }
+    }
+    globfree(&globbuf);
+    return count > 0;
+  } else if (globbuf.gl_pathc == 1) {
+    globfree(&globbuf);
+    return linux_system::CopyFolder(source, dest, overwrite);
+  }
+
+  globfree(&globbuf);
+  return false;
 }
 
 FolderInterface *FileSystem::CreateFolder(const char *path) {
   if (!path || !*path)
     return NULL;
-  std::string str_path(ggadget::NormalizeFilePath(path));
+  std::string str_path(path);
+  ReplaceAll(&str_path, '\\', '/');
   struct stat stat_value;
   memset(&stat_value, 0, sizeof(stat_value));
   if (stat(str_path.c_str(), &stat_value) == 0)
@@ -1559,24 +1744,11 @@ TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
 
 TextStreamInterface *
 FileSystem::GetStandardStream(StandardStreamType type, bool unicode) {
-  TextStream *stream = NULL;
-  switch (type) {
-  case STD_STREAM_IN:
-    stream = new TextStream(STDIN_FILENO, IO_MODE_READING, unicode);
-    break;
-  case STD_STREAM_OUT:
-    stream = new TextStream(STDOUT_FILENO, IO_MODE_WRITING, unicode);
-    break;
-  case STD_STREAM_ERR:
-    stream = new TextStream(STDERR_FILENO, IO_MODE_WRITING, unicode);
-  default:
+  if (type != STD_STREAM_IN &&
+      type != STD_STREAM_OUT &&
+      type != STD_STREAM_ERR)
     return NULL;
-  }
-  if (!stream->Init()) {
-    stream->Destroy();
-    return NULL;
-  }
-  return stream;
+  return new TextStream(type);
 }
 
 std::string FileSystem::GetFileVersion(const char *filename) {

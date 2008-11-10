@@ -34,7 +34,7 @@ class QtEditElement : public EditElementBase {
  public:
   DEFINE_CLASS_ID(0xea8a5426cb544282, EditElementBase);
 
-  QtEditElement(View *view, const char *name);
+  QtEditElement(BasicElement *parent, View *view, const char *name);
   virtual ~QtEditElement();
 
   virtual void Layout();
@@ -55,6 +55,8 @@ class QtEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
+  virtual double GetSize() const;
+  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;
@@ -65,8 +67,6 @@ class QtEditElement : public EditElementBase {
   virtual void SetWordWrap(bool wrap);
   virtual bool IsReadOnly() const;
   virtual void SetReadOnly(bool readonly);
-  virtual bool IsDetectUrls() const;
-  virtual void SetDetectUrls(bool detect_urls);
   virtual void GetIdealBoundingRect(int *width, int *height);
   virtual void Select(int start, int end);
   virtual void SelectAll();
@@ -74,7 +74,8 @@ class QtEditElement : public EditElementBase {
   virtual void SetAlign(CanvasInterface::Alignment align);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
@@ -82,7 +83,6 @@ class QtEditElement : public EditElementBase {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
   virtual void GetDefaultSize(double *width, double *height) const;
-  virtual void OnFontSizeChange();
 
  private:
   void GetScrollBarInfo(int *x_range, int *y_range,
@@ -125,6 +125,7 @@ class QtEditElement : public EditElementBase {
   Texture *background_;
   Color text_color_;
   std::string font_family_;
+  double font_size_;
   QString password_char_;
   QAbstractTextDocumentLayout::PaintContext paint_ctx_;
   DISALLOW_EVIL_CONSTRUCTORS(QtEditElement);

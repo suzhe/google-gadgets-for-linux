@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include <locale.h>
 #include <pwd.h>
-#include <ggadget/file_manager_factory.h>
 #include "system_utils.h"
 #include "string_utils.h"
 #include "common.h"
@@ -120,8 +119,7 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
 
   const char *last_sep = path + len - sep_len;
   bool has_sep = false;
-
-  for (; last_sep >= path; --last_sep) {
+  for (; last_sep != path; --last_sep) {
     if (strncmp(last_sep, kDirSeparatorStr, sep_len) == 0) {
       has_sep = true;
       break;
@@ -140,8 +138,6 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
       dir->assign(path, (first_sep == path ? sep_len : first_sep - path));
     }
     last_sep += sep_len;
-  } else {
-    last_sep++;
   }
 
   if (filename && *last_sep)
@@ -230,29 +226,6 @@ bool ReadFileContents(const char *path, std::string *content) {
   return true;
 }
 
-bool WriteFileContents(const char *path, const std::string &content) {
-  if (!path || !*path)
-    return false;
-
-  FILE *out_fp = fopen(path, "w");
-  if (!out_fp) {
-    DLOG("Can't open file %s for writing: %s", path, strerror(errno));
-    return false;
-  }
-
-  bool result = true;
-  if (fwrite(content.c_str(), content.size(), 1, out_fp) != 1) {
-    result = false;
-    LOG("Error when writing to file %s: %s", path, strerror(errno));
-  }
-  // fclose() is placed first to ensure it's always called.
-  result = (fclose(out_fp) == 0 && result);
-
-  if (!result)
-    unlink(path);
-  return result;
-}
-
 std::string NormalizeFilePath(const char *path) {
   if (!path || !*path)
     return std::string("");
@@ -320,7 +293,7 @@ std::string NormalizeFilePath(const char *path) {
 
 std::string GetCurrentDirectory() {
   char buf[4096];
-  if (::getcwd(buf, sizeof(buf)) == buf) {
+  if (::getcwd(buf, 1024) == buf) {
     // it's fit.
     return std::string(buf);
   } else {
@@ -366,14 +339,14 @@ std::string GetAbsolutePath(const char *path) {
   if (!path || !*path)
     return "";
 
+  // Normalizes the file path.
   std::string result = path;
   // Not using kDirSeparator because Windows version should have more things
   // to do than simply replace the path separator.
   if (result[0] != '/') {
-    std::string current_dir = GetCurrentDirectory();
-    if (current_dir.empty())
-      return "";
-    result = current_dir + "/" + result;
+    char buffer[PATH_MAX];
+    getcwd(buffer, PATH_MAX);
+    result = std::string(buffer) + "/" + result;
   }
   result = NormalizeFilePath(result.c_str());
   return result;
@@ -418,7 +391,7 @@ bool CreateTempDirectory(const char *prefix, std::string *path) {
   return result;
 }
 
-bool RemoveDirectory(const char *path, bool remove_readonly_files) {
+bool RemoveDirectory(const char *path) {
   if (!path || !*path)
     return false;
 
@@ -443,12 +416,10 @@ bool RemoveDirectory(const char *path, bool remove_readonly_files) {
           BuildFilePath(dir_path.c_str(), pfile->d_name, NULL);
       struct stat file_stat;
       bool result = false;
-      if (!remove_readonly_files && access(file_path.c_str(), W_OK) != 0)
-        return false;
       // Don't use dirent.d_type, it's a non-standard field.
       if (lstat(file_path.c_str(), &file_stat) == 0) {
         if (S_ISDIR(file_stat.st_mode))
-          result = RemoveDirectory(file_path.c_str(), remove_readonly_files);
+          result = RemoveDirectory(file_path.c_str());
         else
           result = (::unlink(file_path.c_str()) == 0);
       }
@@ -496,9 +467,7 @@ bool GetSystemLocaleInfo(std::string *language, std::string *territory) {
 void Daemonize() {
   // FIXME: How about other systems?
 #ifdef GGL_HOST_LINUX
-  if (daemon(0, 0) != 0) {
-    LOGE("Failed to daemonize.");
-  }
+  daemon(0, 0);
 #endif
 }
 
@@ -506,9 +475,6 @@ bool CopyFile(const char *src, const char *dest) {
   ASSERT(src && dest);
   if (!src || !dest)
     return false;
-
-  if (strcmp(src, dest) == 0)
-    return true;
 
   FILE *in_fp = fopen(src, "r");
   if (!in_fp) {
@@ -545,7 +511,7 @@ bool CopyFile(const char *src, const char *dest) {
   }
 
   fclose(in_fp);
-  result = (fclose(out_fp) == 0 && result);
+  fclose(out_fp);
 
   if (!result)
     unlink(dest);
@@ -561,46 +527,15 @@ std::string GetFullPathOfSystemCommand(const char *command) {
   if (env_path_value == NULL)
     return "";
 
-  StringVector paths;
+  std::vector<std::string> paths;
   SplitStringList(env_path_value, ":", &paths);
-  for (StringVector::iterator i = paths.begin();
+  for (std::vector<std::string>::iterator i = paths.begin();
        i != paths.end(); ++i) {
     std::string path = BuildFilePath(i->c_str(), command, NULL);
     if (access(path.c_str(), X_OK) == 0)
       return path;
   }
   return "";
-}
-
-static std::string GetSystemGadgetPathInResourceDir(const char *resource_dir,
-                                                    const char *basename) {
-  std::string path;
-  FileManagerInterface *file_manager = GetGlobalFileManager();
-  path = BuildFilePath(resource_dir, basename, NULL) + kGadgetFileSuffix;
-  if (file_manager->FileExists(path.c_str(), NULL) &&
-      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
-    return file_manager->GetFullPath(path.c_str());
-
-  path = BuildFilePath(resource_dir, basename, NULL);
-  if (file_manager->FileExists(path.c_str(), NULL) &&
-      file_manager->IsDirectlyAccessible(path.c_str(), NULL))
-    return file_manager->GetFullPath(path.c_str());
-
-  return std::string();
-}
-
-std::string GetSystemGadgetPath(const char *basename) {
-  std::string result;
-#ifdef _DEBUG
-  // Try current directory first in debug mode, to ease in place build/debug.
-  result = GetSystemGadgetPathInResourceDir(".", basename);
-  if (!result.empty())
-    return result;
-#endif
-#ifdef GGL_RESOURCE_DIR
-  result = GetSystemGadgetPathInResourceDir(GGL_RESOURCE_DIR, basename);
-#endif
-  return result;
 }
 
 }  // namespace ggadget

@@ -26,11 +26,11 @@ class ObjectElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x5b128d3ef8da40e8, BasicElement);
 
-  ObjectElement(View *view, const char *name);
+  ObjectElement(BasicElement *parent, View *view, const char *name);
   virtual ~ObjectElement();
 
-  static BasicElement *CreateInstance(View *view, const char *name);
-
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
  public:
   /**
    * This class can not expose the real object to scripts, and so can not have
@@ -58,10 +58,6 @@ class ObjectElement : public BasicElement {
  protected:
   virtual void DoClassRegister();
   virtual void DoDraw(CanvasInterface *canvas);
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
-  virtual EventResult HandleDragEvent(const DragEvent &event);
-  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-  virtual EventResult HandleOtherEvent(const Event &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ObjectElement);

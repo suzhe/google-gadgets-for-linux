@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = npapi CMakeLists.txt
-SUBDIRS = codesighs unzip xdgmime editline
+EXTRA_DIST=valgrind
+SUBDIRS = codesighs editline unzip xdgmime

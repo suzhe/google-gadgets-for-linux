@@ -21,7 +21,6 @@
 #include <glib/gthread.h>
 #include <ggadget/common.h>
 #include "main_loop.h"
-#include "utilities.h"
 
 namespace ggadget {
 namespace gtk {
@@ -184,6 +183,12 @@ class MainLoop::Impl {
     return gtk_main_level() > 0;
   }
 
+  uint64_t GetCurrentTime() const {
+    GTimeVal tv;
+    g_get_current_time(&tv);
+    return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+  }
+
   bool IsMainThread() const {
     return g_thread_self() == main_thread_;
   }
@@ -336,15 +341,11 @@ bool MainLoop::IsRunning() const {
   return impl_->IsRunning();
 }
 uint64_t MainLoop::GetCurrentTime() const {
-  return ggadget::gtk::GetCurrentTime();
+  return impl_->GetCurrentTime();
 }
 bool MainLoop::IsMainThread() const {
   return impl_->IsMainThread();
 }
-void MainLoop::WakeUp() {
-  g_main_context_wakeup(g_main_context_default());
-}
-
 
 } // namespace gtk
 } // namespace ggadget

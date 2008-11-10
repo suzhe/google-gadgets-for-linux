@@ -38,6 +38,7 @@ class QtViewWidget : public QWidget {
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
   void SkipTaskBar();
+  void Center();
   void AdjustToViewSize();
   void SetKeepAbove(bool above);
   virtual QSize sizeHint () const;
@@ -80,9 +81,6 @@ class QtViewWidget : public QWidget {
  signals:
   void moved(int x, int y);
   void geometryChanged(int dleft, int dtop, int dw, int dh);
-
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(QtViewWidget);
 };
 
 

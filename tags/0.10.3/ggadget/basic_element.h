@@ -40,13 +40,15 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
  public:
   /**
    * Constructor.
+   *
+   * @param parent The parent element.
    * @param view The View which this element belongs to.
    * @param tag_name Type name of this element, must be static const string.
    * @param name Name of this element.
-   * @param allow_children If this element can have children elements.
+   * @param children If this element can have children elements.
    */
-  BasicElement(View *view, const char *tag_name, const char *name,
-               bool allow_children);
+  BasicElement(BasicElement *parent, View *view,
+               const char *tag_name, const char *name, bool children);
   virtual ~BasicElement();
 
  protected:
@@ -90,21 +92,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   const BasicElement *GetParentElement() const;
 
-  /**
-   * Sets the parent element.
-   * Only for @c Elements class or who knows how to keep integrity.
-   */
+  /** Sets the parent element. */
   void SetParentElement(BasicElement *parent);
-
-  /**
-   * Gets and sets the index of the element in parent.
-   * This is not used to change Z-order etc., but is only used by the parent
-   * to let the element cache the current index, which must be synchronized
-   * with the element tree structure.
-   * Only for @c Elements class which knows how to keep integrity.
-   */
-  size_t GetIndex() const;
-  void SetIndex(size_t index);
 
   /**
    * Enables or disables canvas cache of this element. It can make rendering
@@ -290,13 +279,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * element.
    */
   std::string GetTooltip() const;
-  void SetTooltip(const std::string &tooltip);
-
-  /**
-   * Shows tooltip of this basicElement immediately.
-   * The tooltip will be showed just below this element.
-   */
-  void ShowTooltip();
+  void SetTooltip(const char *tooltip);
 
   /**
    * Gets and sets the flip mode. Default flip mode is @c FLIP_NONE.
@@ -342,10 +325,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Removes the keyboard focus from the element.
    */
   void KillFocus();
-  /**
-   * Checks if the element can be focused with the Tab key.
-   */
-  virtual bool IsTabStop() const;
 
  public:
   /** Get the associated View of the current element. */
@@ -540,15 +519,12 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    *     @c NULL if no one.
    * @param[out] in_element the child element where the mouse is in (including
    *     disabled child elements, but not invisible child elements).
-   * @param[out] hittest result of this mouse event. It's the hittest value of
-   *     in_element, if there is no in_element, the return value is undefined.
    * @return result of event handling.
    */
   virtual EventResult OnMouseEvent(const MouseEvent &event,
                                    bool direct,
                                    BasicElement **fired_element,
-                                   BasicElement **in_element,
-                                   ViewInterface::HitTest *hittest);
+                                   BasicElement **in_element);
 
   /**
    * Handler of the drag and drop events.

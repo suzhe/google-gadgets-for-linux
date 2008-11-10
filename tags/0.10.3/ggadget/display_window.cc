@@ -97,8 +97,8 @@ class DisplayWindow::Impl {
 
     ScriptableArray *GetListBoxItems(ListBoxElement *listbox) {
       ScriptableArray *array = new ScriptableArray();
-      size_t count = listbox->GetChildren()->GetCount();
-      for (size_t i = 0; i < count; ++i) {
+      int count = listbox->GetChildren()->GetCount();
+      for (int i = 0; i < count; ++i) {
         BasicElement *item = listbox->GetChildren()->GetItemByIndex(i);
         if (item->IsInstanceOf(ItemElement::CLASS_ID))
           array->Append(Variant(down_cast<ItemElement*>(item)->GetLabelText()));
@@ -131,7 +131,7 @@ class DisplayWindow::Impl {
       }
       if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        return Variant(GetListBoxItems(combobox->GetDroplist()));
+        return Variant(GetListBoxItems(combobox->GetListBox()));
       }
       if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
         EditElementBase *edit = down_cast<EditElementBase *>(element_);
@@ -173,7 +173,7 @@ class DisplayWindow::Impl {
             SetListBoxItems(down_cast<ListBoxElement *>(element_), array);
           } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
             SetListBoxItems(
-                down_cast<ComboBoxElement *>(element_)->GetDroplist(), array);
+                down_cast<ComboBoxElement *>(element_)->GetListBox(), array);
           } else {
             invalid = true;
           }
@@ -200,7 +200,7 @@ class DisplayWindow::Impl {
               LabelElement *label = down_cast<LabelElement *>(element_);
               TextFrame *text_frame = label->GetTextFrame();
               text_frame->SetText(text_str.c_str());
-
+  
               text_frame->SetSize(kLabelTextSize);
               // Shrink the font size if the given rect can't enclose the text.
               double text_width, text_height;
@@ -244,7 +244,7 @@ class DisplayWindow::Impl {
       }
       if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        return Variant(GetListBoxValue(combobox->GetDroplist()));
+        return Variant(GetListBoxValue(combobox->GetListBox()));
       }
       // For others it is the displayed text.
       return GetText();
@@ -270,7 +270,7 @@ class DisplayWindow::Impl {
         valid = SetListBoxValue(down_cast<ListBoxElement *>(element_), value);
       } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-        valid = SetListBoxValue(combobox->GetDroplist(), value);
+        valid = SetListBoxValue(combobox->GetListBox(), value);
       } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
         bool value_bool;
         if (value.ConvertToBool(&value_bool)) {
@@ -374,6 +374,7 @@ class DisplayWindow::Impl {
           element->SetPasswordChar("*");
         control = new Control(owner_, element);
         element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
+        element->ConnectOnKeyPressEvent(NewSlot(this, &Impl::OnKeyDown));
         break;
       }
       case CLASS_LIST:
@@ -396,8 +397,8 @@ class DisplayWindow::Impl {
             ComboBoxElement *element = down_cast<ComboBoxElement *>(
                 elements->AppendElement("combobox", ctrl_id));
             element->SetType(ComboBoxElement::COMBO_DROPLIST);
-            element->GetDroplist()->SetItemWidth(Variant("100%"));
-            element->GetDroplist()->SetItemHeight(Variant(kListItemHeight));
+            element->GetListBox()->SetItemWidth(Variant("100%"));
+            element->GetListBox()->SetItemHeight(Variant(kListItemHeight));
             element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
@@ -471,6 +472,40 @@ class DisplayWindow::Impl {
   Control *GetControl(const char *ctrl_id) {
     ControlsMap::iterator it = controls_.find(ctrl_id);
     return it == controls_.end() ? NULL : it->second;
+  }
+
+  void OnKeyDown() {
+    ScriptableEvent *event = view_->GetEvent();
+    ASSERT(event->GetEvent()->GetType() == Event::EVENT_KEY_PRESS);
+    if (static_cast<const KeyboardEvent *>(event->GetEvent())->GetKeyCode() ==
+        '\t') {
+      ASSERT(event->GetSrcElement()->IsInstanceOf(BasicElement::CLASS_ID));
+      BasicElement *src_element =
+          down_cast<BasicElement *>(event->GetSrcElement());
+      Elements *top_elements = view_->GetChildren();
+      int count = top_elements->GetCount();
+      // Get the index of the current focused element.
+      int index = 0;
+      for (; index < count; index++) {
+        if (top_elements->GetItemByIndex(index) == src_element)
+          break;
+      }
+      if (index < count) {
+        // Give focus to the next focusable element.
+        while (true) {
+          if (++index == count) index = 0;
+          BasicElement *element = top_elements->GetItemByIndex(index);
+          if (element == src_element)
+            break;
+          // For now only EditElementBase is focusable in a DisplayWindow.
+          if (element->IsInstanceOf(EditElementBase::CLASS_ID)) {
+            view_->SetFocus(element);
+            break;
+          }
+        }
+      }
+      view_->GetEvent()->SetReturnValue(EVENT_RESULT_CANCELED);
+    }
   }
 
   void OnOk() {

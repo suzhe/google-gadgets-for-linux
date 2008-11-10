@@ -25,14 +25,12 @@
 #include <gtk/gtk.h>
 
 #define MOZILLA_CLIENT
-#include <mozilla-config.h>
 
 #ifdef XPCOM_GLUE
-#include <nsXPCOMGlue.h>
 #include <gtkmozembed_glue.cpp>
-#include "../smjs_script_runtime/libmozjs_glue.h"
 #endif
 
+#include <mozilla-config.h>
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
@@ -40,11 +38,7 @@
 
 #include <nsComponentManagerUtils.h>
 #include <nsCOMPtr.h>
-#ifdef XPCOM_GLUE
-#include <nsCRTGlue.h>
-#else
 #include <nsCRT.h>
-#endif
 #include <nsEvent.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
@@ -69,7 +63,6 @@
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
-
 #include "../smjs_script_runtime/json.h"
 #include "browser_child.h"
 
@@ -172,11 +165,7 @@ static int FindBrowserIdByJSContext(JSContext *cx) {
 }
 
 static std::string SendFeedbackBuffer(const std::string &buffer) {
-  if (write(g_up_fd, buffer.c_str(), buffer.size()) !=
-      static_cast<ssize_t>(buffer.size())) {
-    fprintf(stderr, "browser_child: Failed to send feedback buffer.");
-    return "";
-  }
+  write(g_up_fd, buffer.c_str(), buffer.size());
 
   std::string reply;
   char ch;
@@ -255,11 +244,7 @@ class ExternalObject : public nsIXPCScriptable {
 
   NS_IMETHOD GetClassName(char **class_name) {
     NS_ENSURE_ARG_POINTER(class_name);
-#ifdef XPCOM_GLUE
-    *class_name = NS_strdup(EXTOBJ_CLASSNAME);
-#else
     *class_name = nsCRT::strdup(EXTOBJ_CLASSNAME);
-#endif
     return NS_OK;
   }
 
@@ -484,9 +469,7 @@ class ContentPolicy : public nsIContentPolicy {
                         nsIURI *request_origin, nsISupports *context,
                         const nsACString &mime_type_guess, nsISupports *extra,
                         PRInt16 *retval) {
-    NS_ENSURE_ARG_POINTER(content_location);
-    NS_ENSURE_ARG_POINTER(retval);
-    nsCString url_spec, origin_spec, url_scheme;
+    nsCString url_spec, origin_spec;
     content_location->GetSpec(url_spec);
     if (content_type == TYPE_DOCUMENT && g_embed_for_new_window) {
       // Handle a new window request.
@@ -506,15 +489,13 @@ class ContentPolicy : public nsIContentPolicy {
     }
 
     *retval = ACCEPT;
-    content_location->GetScheme(url_scheme);
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       // If the URL is opened the first time in a blank window or frame,
       // request_origin is NULL or "about:blank".
-      if (request_origin) {
+      if (content_location && request_origin) {
         request_origin->GetSpec(origin_spec);
         if (!origin_spec.Equals(nsCString("about:blank")) &&
-            !origin_spec.Equals(url_spec) &&
-            !url_scheme.Equals(nsCString("javascript"))) {
+            !origin_spec.Equals(url_spec)) {
           PRBool is_loading = PR_FALSE;
           int browser_id = FindBrowserIdByContentPolicyContext(context,
                                                                &is_loading);
@@ -832,20 +813,18 @@ static bool InitGecko() {
 #ifdef XPCOM_GLUE
   nsresult rv;
 
+  NS_LogInit();
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.0.*", PR_TRUE
+    "1.9.*", PR_TRUE
   };
 
   char xpcom_location[4096];
-  rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0,
-                                    xpcom_location, 4096);
+  rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0, xpcom_location, 4096);
   if (NS_FAILED(rv)) {
     g_warning("Failed to find proper Gecko Runtime Environment!");
     return false;
   }
-
-  printf("XPCOM location: %s\n", xpcom_location);
 
   // Startup the XPCOM Glue that links us up with XPCOM.
   rv = XPCOMGlueStartup(xpcom_location);
@@ -863,12 +842,6 @@ static bool InitGecko() {
   rv = GTKEmbedGlueStartupInternal();
   if (NS_FAILED(rv)) {
     g_warning("Failed to startup Gtk Embed Glue (internal)!");
-    return false;
-  }
-
-  rv = ggadget::libmozjs::LibmozjsGlueStartupWithXPCOM();
-  if (NS_FAILED(rv)) {
-    g_warning("Failed to startup SpiderMonkey Glue!");
     return false;
   }
 

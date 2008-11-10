@@ -107,13 +107,13 @@ class MockedGraphics : public ggadget::GraphicsInterface {
   virtual ggadget::CanvasInterface *NewCanvas(double w, double h) const {
     return new MockedCanvas(w, h);
   }
-  virtual ggadget::ImageInterface *NewImage(const std::string &tag,
+  virtual ggadget::ImageInterface *NewImage(const char *tag,
                                             const std::string &data,
                                             bool is_mask) const {
       return NULL;
   }
   virtual ggadget::FontInterface *NewFont(
-      const std::string &family, double pt_size,
+      const char *family, double pt_size,
       ggadget::FontInterface::Style style,
       ggadget::FontInterface::Weight weight) const {
     return NULL;
@@ -150,14 +150,12 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void QueueResize() { resize_queued_ = true; }
   virtual void EnableInputShapeMask(bool enable) { };
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
-  virtual void SetCaption(const std::string &caption) { }
+  virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(int type) { }
-  virtual void ShowTooltip(const std::string &tooltip) { }
-  virtual void ShowTooltipAtPosition(const std::string &tooltip,
-                                     double x, double y) { }
+  virtual void SetTooltip(const char *tooltip) { }
   virtual bool ShowView(bool modal, int flags,
-                        ggadget::Slot1<bool, int> *feedback_handler) {
+                        ggadget::Slot1<void, int> *feedback_handler) {
     delete feedback_handler;
     return false;
   }

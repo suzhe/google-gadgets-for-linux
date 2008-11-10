@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_BUILD_SMJS_SCRIPT_RUNTIME
 SUBDIRS = . tests
 
@@ -28,8 +26,7 @@ noinst_HEADERS		= converter.h \
 			  js_script_context.h \
 			  js_script_runtime.h \
 			  json.h \
-			  native_js_wrapper.h \
-			  libmozjs_glue.h
+			  native_js_wrapper.h
 
 noinst_LTLIBRARIES	= libggadget-smjs.la
 
@@ -40,8 +37,7 @@ libggadget_smjs_la_SOURCES = \
 			  js_script_context.cc \
 			  js_script_runtime.cc \
 			  json.cc \
-			  native_js_wrapper.cc \
-			  libmozjs_glue.cc
+			  native_js_wrapper.cc
 
 # add "-fcheck-new" to avoid 'operator new' warning when building jscntxt.h
 libggadget_smjs_la_CXXFLAGS = \
@@ -49,12 +45,16 @@ libggadget_smjs_la_CXXFLAGS = \
 			  -fcheck-new
 
 libggadget_smjs_la_CPPFLAGS = \
-			  $(PREDEFINED_MACROS) \
-			  $(LIBMOZJS_CFLAGS)
+			  @SPIDERMONKEY_CPPFLAGS@ \
+			  $(PREDEFINED_MACROS)
 
 libggadget_smjs_la_LIBADD = \
+			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@
+
 
 extension_LTLIBRARIES	= smjs-script-runtime.la
 extensiondir		= $(GGL_MODULE_DIR)
@@ -66,16 +66,17 @@ smjs_script_runtime_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 smjs_script_runtime_la_CPPFLAGS = \
-			  $(PREDEFINED_MACROS) \
-			  $(LIBMOZJS_CFLAGS)
+			  @SPIDERMONKEY_CPPFLAGS@ \
+			  $(PREDEFINED_MACROS)
 
 smjs_script_runtime_la_LIBADD = \
+			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  libggadget-smjs.la \
-			  $(LIBMOZJS_LIBS) \
-			  -ldl
+			  libggadget-smjs.la
 
 smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \
-			  -module
+			  -module \
+			  @SPIDERMONKEY_LDFLAGS@
+
 endif

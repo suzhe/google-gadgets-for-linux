@@ -19,7 +19,6 @@
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
-
 #include "native_js_wrapper.h"
 #include "converter.h"
 #include "js_function_slot.h"
@@ -656,13 +655,7 @@ class NameCollector {
 
 JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
                                   jsval *statep, jsid *idp) {
-  if (!scriptable_->IsEnumeratable()) {
-    *statep = JSVAL_NULL;
-    if (idp)
-      *idp = JS_ValueToId(js_context_, INT_TO_JSVAL(0), idp);
-    return JS_TRUE;
-  }
-
+#ifdef GGADGET_SMJS_ENUMERATE_SUPPORTED
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   std::vector<std::string> *properties;
   switch (enum_op) {
@@ -696,6 +689,11 @@ JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
     default:
       return JS_FALSE;
   }
+#else
+  *statep = JSVAL_NULL;
+  if (idp)
+    *idp = JS_ValueToId(js_context_, INT_TO_JSVAL(0), idp);
+#endif
   return JS_TRUE;
 }
 
@@ -788,17 +786,9 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
                              JSPROP_READONLY | JSPROP_PERMANENT);
   }
 
-  uintN property_attrs = 0;
-  if (type == ScriptableInterface::PROPERTY_NORMAL) {
-    // Don't set JSPROP_SHARED for slot properties, because we want the JS
-    // engine to cache the value so that the script can read it back without
-    // native code intervention. This is a required feature of the 5.8 API.
-    if (prototype.type() != Variant::TYPE_SLOT)
-      property_attrs |= JSPROP_SHARED;
+  uintN property_attrs = JSPROP_SHARED;
+  if (type == ScriptableInterface::PROPERTY_NORMAL)
     property_attrs |= JSPROP_PERMANENT;
-  } else {
-    property_attrs |= JSPROP_SHARED;
-  }
   return JS_DefineProperty(js_context_, js_object_, name, js_val,
                            GetWrapperPropertyByName,
                            SetWrapperPropertyByName,

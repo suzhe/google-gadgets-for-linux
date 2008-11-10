@@ -27,7 +27,7 @@ class BrowserElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xa4fae95864ae4d89, BasicElement);
 
-  BrowserElement(View *view, const char *name);
+  BrowserElement(BasicElement *parent, View *view, const char *name);
   virtual ~BrowserElement();
   class Impl;
 
@@ -44,10 +44,11 @@ class BrowserElement : public BasicElement {
   void SetContentType(const char *content_type);
 
   /** Sets the content displayed in this element. */
-  void SetContent(const std::string &content);
+  void SetContent(const JSONString &content);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void Layout();

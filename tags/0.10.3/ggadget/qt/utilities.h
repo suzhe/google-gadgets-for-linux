@@ -20,13 +20,9 @@
 #include <string>
 #include <QtGui/QCursor>
 
-#include <ggadget/gadget_manager_interface.h>
-#include <ggadget/permissions.h>
-
 namespace ggadget {
 
 class Gadget;
-class MainLoopInterface;
 namespace qt {
 
 /**
@@ -51,34 +47,6 @@ bool OpenURL(const Gadget *gadget, const char *url);
 QPixmap GetGadgetIcon(const Gadget *gadget);
 
 void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
-
-/* Get the proper popup position to show a rectangle of @param size for an existing
- * rectangle with geometry @param rect
- */
-QPoint GetPopupPosition(const QRect &rect, const QSize &size);
-
-/* Initialize the GGL runtime system.
- *
- * @main_loop If null, InitGGL will create main_loop itself
- * @user_agent Application name
- * @profile_dir If null, kDefaultProfileDirectory will be used
- * @extensions Extensions to be loaded. 
- */
-bool InitGGL(
-    MainLoopInterface *main_loop,
-    const char *user_agent,
-    const char *profile_dir,
-    const char *extensions[],
-    int log_level,
-    bool long_log,
-    std::string *error_msg
-    );
-/*
- * Show a dialog asking user confirm gadget installation
- */
-bool ConfirmGadget(GadgetManagerInterface *gadget_manager,
-                   int gadget_id);
-
 } // namespace qt
 } // namespace ggadget
 

@@ -25,7 +25,6 @@
 #include <QtGui/QTextBlock>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/event.h>
-#include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/scrolling_element.h>
 #include <ggadget/slot.h>
@@ -69,6 +68,9 @@ static const int kDefaultEditElementHeight = 16;
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 
+static const double kDefaultFontSize = 10;
+static const char *kDefaultFontFamily = "Sans";
+
 static const Color kDefaultTextColor(0, 0, 0);
 static const Color kDefaultBackgroundColor(1, 1, 1);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
@@ -79,8 +81,8 @@ static void SetCursorSelection(QTextCursor *cur, int start, int end) {
   cur->setPosition(end, QTextCursor::KeepAnchor);
 }
 
-QtEditElement::QtEditElement(View *view, const char *name)
-    : EditElementBase(view, name),
+QtEditElement::QtEditElement(BasicElement *parent, View *view, const char *name)
+    : EditElementBase(parent, view, name),
       cursor_(NULL),
       multiline_(false),
       bold_(false),
@@ -96,15 +98,15 @@ QtEditElement::QtEditElement(View *view, const char *name)
       height_(kDefaultEditElementHeight),
       scroll_offset_x_(0),
       scroll_offset_y_(0),
-      background_(NULL) {
+      background_(NULL),
+      font_size_(kDefaultFontSize) {
   ConnectOnScrolledEvent(NewSlot(this, &QtEditElement::OnScrolled));
   cursor_ = new QTextCursor(&doc_);
-  SetFont(NULL);
+  SetFont(kDefaultFontFamily);
+  SetSize(kDefaultFontSize);
 }
 
 QtEditElement::~QtEditElement() {
-  delete cursor_;
-  delete background_;
 }
 
 void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
@@ -129,7 +131,7 @@ void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
 }
 
 void QtEditElement::Layout() {
-  EditElementBase::Layout();
+  ScrollingElement::Layout();
 
   int x_range, y_range, line_step, page_step, cur_pos;
   GetScrollBarInfo(&x_range, &y_range, &line_step, &page_step, &cur_pos);
@@ -144,7 +146,7 @@ void QtEditElement::Layout() {
 }
 
 void QtEditElement::MarkRedraw() {
-  EditElementBase::MarkRedraw();
+  ScrollingElement::MarkRedraw();
 }
 
 Variant QtEditElement::GetBackground() const {
@@ -152,7 +154,6 @@ Variant QtEditElement::GetBackground() const {
 }
 
 void QtEditElement::SetBackground(const Variant &background) {
-  delete background_;
   background_ = GetView()->LoadTexture(background);
 }
 
@@ -188,9 +189,10 @@ std::string QtEditElement::GetFont() const {
 }
 
 void QtEditElement::SetFont(const char *font) {
-  if (AssignIfDiffer(font, &font_family_)) {
-    QFont font(font_family_.empty() ? kDefaultFontName : font_family_.c_str(),
-               D2I(GetCurrentSize()));
+  std::string new_font((font && *font) ? font : kDefaultFontFamily);
+  if (font_family_ != new_font) {
+    font_family_ = new_font;
+    QFont font(font_family_.c_str(), D2I(font_size_));
     doc_.setDefaultFont(font);
     QueueDraw();
   }
@@ -235,10 +237,17 @@ void QtEditElement::SetPasswordChar(const char *c) {
   }
 }
 
-void QtEditElement::OnFontSizeChange() {
-  QFont font = doc_.defaultFont();
-  font.setPixelSize(D2I(GetCurrentSize()));
-  doc_.setDefaultFont(font);
+double QtEditElement::GetSize() const {
+  return font_size_;
+}
+
+void QtEditElement::SetSize(double size) {
+  if (font_size_ != size) {
+    font_size_ = size;
+    QFont font = doc_.defaultFont();
+    font.setPixelSize(D2I(size));
+    doc_.setDefaultFont(font);
+  }
 }
 
 bool QtEditElement::IsStrikeout() const {
@@ -310,15 +319,6 @@ void QtEditElement::SetReadOnly(bool readonly) {
     readonly_ = readonly;
     QueueDraw();
   }
-}
-
-bool QtEditElement::IsDetectUrls() const {
-  // TODO
-  return false;
-}
-
-void QtEditElement::SetDetectUrls(bool /*detect_urls*/) {
-  // TODO
 }
 
 void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
@@ -453,7 +453,7 @@ void QtEditElement::DoDraw(CanvasInterface *canvas) {
 }
 
 EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
-  if (EditElementBase::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
+  if (ScrollingElement::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
     return EVENT_RESULT_HANDLED;
   if (event.GetButton() != MouseEvent::BUTTON_LEFT)
     return EVENT_RESULT_UNHANDLED;
@@ -636,8 +636,10 @@ void QtEditElement::OnScrolled() {
   }
 }
 
-BasicElement *QtEditElement::CreateInstance(View *view, const char *name) {
-  return new QtEditElement(view, name);
+BasicElement *QtEditElement::CreateInstance(BasicElement *parent,
+                                             View *view,
+                                             const char *name) {
+  return new QtEditElement(parent, view, name);
 }
 
 void QtEditElement::MoveCursor(QTextCursor::MoveOperation op, int count,

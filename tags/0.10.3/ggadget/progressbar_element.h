@@ -33,7 +33,7 @@ class ProgressBarElement : public BasicElement {
     ORIENTATION_HORIZONTAL
   };
 
-  ProgressBarElement(View *view, const char *name);
+  ProgressBarElement(BasicElement *parent, View *view, const char *name);
   virtual ~ProgressBarElement();
 
  public:
@@ -93,7 +93,8 @@ class ProgressBarElement : public BasicElement {
   virtual bool HasOpaqueBackground() const;
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ProgressBarElement);

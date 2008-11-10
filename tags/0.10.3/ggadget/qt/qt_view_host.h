@@ -29,15 +29,12 @@
 namespace ggadget {
 namespace qt {
 
+class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
-  /**
-   * @param parent If not null, this view host will be shown at the popup
-   *               position of parent
-   */
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool composite, bool decorated,
-             bool record_states, int debug_mode, QWidget* parent);
+             bool record_states, int debug_mode);
   virtual ~QtViewHost();
 
   virtual Type GetType() const;
@@ -54,14 +51,12 @@ class QtViewHost : public ViewHostInterface {
   virtual void QueueResize();
   virtual void EnableInputShapeMask(bool enable);
   virtual void SetResizable(ViewInterface::ResizableMode mode);
-  virtual void SetCaption(const std::string &caption);
+  virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
   virtual void SetCursor(int type);
-  virtual void ShowTooltip(const std::string &tooltip);
-  virtual void ShowTooltipAtPosition(const std::string &tooltip,
-                                     double x, double y);
+  virtual void SetTooltip(const char *tooltip);
   virtual bool ShowView(bool modal, int flags,
-                        Slot1<bool, int> *feedback_handler);
+                        Slot1<void, int> *feedback_handler);
   virtual void CloseView();
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
@@ -74,12 +69,28 @@ class QtViewHost : public ViewHostInterface {
                              const char *default_value);
   virtual int GetDebugMode() const;
 
-  QObject *GetQObject();
+  friend class QtViewHostObject;
+  QtViewHostObject *GetQObject();
 
  private:
   class Impl;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
+};
+
+class QtViewHostObject : public QObject {
+  Q_OBJECT
+ public:
+  QtViewHostObject(QtViewHost::Impl* owner) : owner_(owner) {}
+
+ public slots:
+  void OnOptionViewOK();
+  void OnOptionViewCancel();
+  void OnViewWidgetClose(QObject*);
+  void OnShow(bool);
+
+ private:
+  QtViewHost::Impl* owner_;
 };
 
 } // namespace qt

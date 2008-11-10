@@ -64,7 +64,7 @@ class SideBar {
    * @param index The index in sidebar of the new ViewHost instance.
    * @return a new Viewhost instance.
    */
-  ViewHostInterface *NewViewHost(size_t index);
+  ViewHostInterface *NewViewHost(int index);
 
   /**
    * @return the ViewHost instance associated with the sidebar instance.
@@ -108,17 +108,16 @@ class SideBar {
 
   /**
    * Retrieves the index of the view in the sidebar at sepcified vertical
-   * position. If the position is below all of the views, the count of view
-   * will be returned, indicating that a new view can be inserted here.
+   * position.
    * @param y the vertical position in sidebar.
    */
-  size_t GetIndexOfPosition(double y) const;
+  int GetIndexOfPosition(double y) const;
 
   /**
    * Retrieves the index of a specified view, if the view is not in the sidebar
-   * then @c kInvalidIndex will be returned.
+   * then -1 will be returned.
    */
-  size_t GetIndexOfView(const ViewInterface *view) const;
+  int GetIndexOfView(const ViewInterface *view) const;
 
   /**
    * Insert a place holder in the side bar.
@@ -126,7 +125,7 @@ class SideBar {
    * @param index The index of position in the sidebar of the place holder.
    * @param height The height of the place holder.
    */
-  void InsertPlaceholder(size_t index, double height);
+  void InsertPlaceholder(int index, double height);
 
   /**
    * Clear place holder
@@ -140,7 +139,7 @@ class SideBar {
    * true if it wants the enumeration to continue, or false to break the
    * enumeration.
    */
-  void EnumerateViews(Slot2<bool, size_t, View *> *slot);
+  void EnumerateViews(Slot2<bool, int, View *> *slot);
 
   /**
    * Event connection methods.
@@ -153,7 +152,7 @@ class SideBar {
    * The third and fourth parameter are the mouse position relative to the
    * child view's coordinates.
    */
-  Connection *ConnectOnUndock(Slot4<void, View*, size_t, double, double> *slot);
+  Connection *ConnectOnUndock(Slot4<void, View*, int, double, double> *slot);
 
   /**
    * Connects a slot to OnClick signal, which will be emitted when a mouse

@@ -58,6 +58,10 @@ class DockedMainViewDecorator::Impl {
       resize_borders_[i] = NULL;
   }
 
+  void CollapseExpandMenuCallback(const char *) {
+    owner_->SetMinimized(!owner_->IsMinimized());
+  }
+
   void UndockMenuCallback(const char *) {
     on_undock_signal_();
   }
@@ -69,7 +73,7 @@ class DockedMainViewDecorator::Impl {
         owner_->GetChildren()->RemoveElement(resize_borders_[i]);
         resize_borders_[i] = NULL;
       } else if (visibles[i] && !resize_borders_[i]) {
-        resize_borders_[i] = new ImgElement(owner_, NULL);
+        resize_borders_[i] = new ImgElement(NULL, owner_, NULL);
         resize_borders_[i]->SetStretchMiddle(true);
         resize_borders_[i]->SetVisible(false);
         resize_borders_[i]->SetEnabled(false);
@@ -133,8 +137,8 @@ Connection *DockedMainViewDecorator::ConnectOnUndock(Slot0<void> *slot) {
   return impl_->on_undock_signal_.Connect(slot);
 }
 
-void DockedMainViewDecorator::GetMargins(double *left, double *top,
-                                         double *right, double *bottom) const {
+void DockedMainViewDecorator::GetMargins(double *top, double *left,
+                                         double *bottom, double *right) const {
   ButtonBoxPosition button_position = GetButtonBoxPosition();
   ButtonBoxOrientation button_orientation = GetButtonBoxOrientation();
 
@@ -157,10 +161,10 @@ void DockedMainViewDecorator::GetMargins(double *left, double *top,
       btn_edge = right;
   }
 
-  *left = (impl_->resize_borders_[1] ? kVDMainDockedResizeBorderWidth : 0);
   *top = (impl_->resize_borders_[0] ? kVDMainDockedResizeBorderWidth : 0);
-  *right = (impl_->resize_borders_[3] ? kVDMainDockedResizeBorderWidth : 0);
+  *left = (impl_->resize_borders_[1] ? kVDMainDockedResizeBorderWidth : 0);
   *bottom = (impl_->resize_borders_[2] ? kVDMainDockedResizeBorderWidth : 0);
+  *right = (impl_->resize_borders_[3] ? kVDMainDockedResizeBorderWidth : 0);
 
   if (!IsMinimized())
     *btn_edge = btn_margin;
@@ -168,8 +172,9 @@ void DockedMainViewDecorator::GetMargins(double *left, double *top,
 
 void DockedMainViewDecorator::OnAddDecoratorMenuItems(MenuInterface *menu) {
   int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
-
-  AddCollapseExpandMenuItem(menu);
+  menu->AddItem(
+      GM_(IsMinimized() ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0, 0,
+      NewSlot(impl_, &Impl::CollapseExpandMenuCallback), priority);
 
   if (impl_->on_undock_signal_.HasActiveConnections()) {
     menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0, 0,

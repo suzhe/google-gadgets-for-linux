@@ -19,25 +19,16 @@
 #include <unistd.h>
 #include <algorithm>
 #include <string>
-#include <QtCore/QMutex>
 #include <QtGui/QMessageBox>
 #include <QtGui/QPixmap>
-#include <QtGui/QDesktopWidget>
 
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
-#include <ggadget/host_utils.h>
 #include <ggadget/file_manager_interface.h>
-#include <ggadget/extension_manager.h>
-#include <ggadget/options_interface.h>
-#include <ggadget/locales.h>
-#include <ggadget/script_runtime_manager.h>
-#include <ggadget/qt/qt_main_loop.h>
 #include <ggadget/file_manager_factory.h>
-#include <ggadget/system_utils.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/xdg/utilities.h>
 #include "utilities.h"
@@ -302,20 +293,6 @@ unsigned int GetKeyCode(int qt_key) {
   return pos->qt_key == qt_key ? pos->key_code : 0;
 }
 
-static std::string EscapeHtmlText(const std::string str) {
-  std::string output;
-  std::string::size_type pos;
-  for (pos = 0; pos < str.length(); pos++) {
-    if (str[pos] == '<')
-      output.append("&lt;");
-    else if (str[pos] == '>')
-      output.append("&gt;");
-    else
-      output.push_back(str[pos]);
-  }
-  return output;
-}
-
 void ShowGadgetAboutDialog(Gadget *gadget) {
   ASSERT(gadget);
 
@@ -354,9 +331,9 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
     about_text = ExtractTextFromHTML(about_text.c_str());
 
   std::string title_copyright = "<b>";
-  title_copyright.append(EscapeHtmlText(title_text));
+  title_copyright.append(title_text);
   title_copyright.append("</b><br>");
-  title_copyright.append(EscapeHtmlText(copyright_text));
+  title_copyright.append(copyright_text);
 
   // Load icon
   std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
@@ -409,167 +386,6 @@ QPixmap GetGadgetIcon(const Gadget *gadget) {
 
 void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget) {
   widget->setWindowIcon(GetGadgetIcon(gadget));
-}
-
-QPoint GetPopupPosition(const QRect &rect, const QSize &size) {
-  int x, y;
-  QDesktopWidget desktop;
-  QRect r = desktop.screenGeometry();
-  ggadget::GetPopupPosition(rect.x(), rect.y(), rect.width(), rect.height(),
-                            size.width(), size.height(),
-                            r.width(), r.height(),
-                            &x, &y);
-  return QPoint(x, y);
-}
-
-static bool ggl_initialized = false;
-static bool ggl_status = false;
-static QMutex ggl_mutex;
-
-static bool InitGGLInternal(
-    MainLoopInterface *main_loop,
-    const char *user_agent,
-    const char *profile_dir,
-    const char *extensions[],
-    int log_level,
-    bool long_log,
-    std::string *error) {
-  if (!main_loop)
-    main_loop = new QtMainLoop();
-  ggadget::SetGlobalMainLoop(main_loop);
-  ggadget::EnsureDirectories(profile_dir);
-  ggadget::SetupLogger(log_level, long_log);
-
-  // Set global file manager.
-  ggadget::SetupGlobalFileManager(profile_dir);
-
-  // Load global extensions.
-  ggadget::ExtensionManager *ext_manager =
-      ggadget::ExtensionManager::CreateExtensionManager();
-  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
-
-  for (size_t i = 0; extensions[i]; ++i)
-    ext_manager->LoadExtension(extensions[i], false);
-
-  // Register JavaScript runtime.
-  ggadget::ScriptRuntimeManager *script_runtime_manager =
-      ggadget::ScriptRuntimeManager::get();
-  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(
-      script_runtime_manager);
-  ext_manager->RegisterLoadedExtensions(&script_runtime_register);
-
-  if (!ggadget::CheckRequiredExtensions(error)) {
-    return false;
-  }
-
-  // Make the global extension manager readonly to avoid the potential
-  // danger that a bad gadget register local extensions into the global
-  // extension manager.
-  ext_manager->SetReadonly();
-
-  ggadget::InitXHRUserAgent(user_agent);
-
-  // Initialize the gadget manager before creating the host.
-  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
-  gadget_manager->Init();
-
-  return true;
-}
-
-bool InitGGL(
-    MainLoopInterface *main_loop,
-    const char *user_agent,
-    const char *profile_dir,
-    const char *extensions[],
-    int log_level,
-    bool long_log,
-    std::string *error
-    ) {
-  if (!ggl_initialized) {
-    QMutexLocker lock(&ggl_mutex);
-    if (!ggl_initialized) {
-      if (InitGGLInternal(main_loop, user_agent, profile_dir, extensions,
-                          log_level, long_log, error)) {
-       ggl_status = true;
-      }
-      ggl_initialized = true;
-    }
-  }
-  return ggl_status;
-}
-
-static bool GetPermissionsDescriptionCallback(int permission,
-                                              std::string *msg) {
-  if (msg->length())
-    msg->append("\n");
-  msg->append("  ");
-  msg->append(Permissions::GetDescription(permission));
-  return true;
-}
-
-static bool PromptGadgetPermission(
-    GadgetManagerInterface *gadget_manager,
-    int id,
-    Permissions *permissions) {
-  std::string path = gadget_manager->GetGadgetInstancePath(id);
-  std::string download_url, title, description;
-  if (!gadget_manager->GetGadgetInstanceInfo(id,
-                                             GetSystemLocaleName().c_str(),
-                                             NULL, &download_url,
-                                             &title, &description))
-    return false;
-
-  // Get required permissions description.
-  std::string permissions_msg;
-  permissions->EnumerateAllRequired(
-      NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
-
-  std::string message = GM_("GADGET_CONFIRM_MESSAGE");
-  message.append("\n\n")
-      .append(title).append("\n")
-      .append(download_url).append("\n\n")
-      .append(GM_("GADGET_DESCRIPTION"))
-      .append(description)
-      .append("\n\n")
-      .append(GM_("GADGET_REQUIRED_PERMISSIONS"))
-      .append("\n")
-      .append(permissions_msg);
-  int ret = QMessageBox::question(
-      NULL,
-      QString::fromUtf8(GM_("GADGET_CONFIRM_TITLE")),
-      QString::fromUtf8(message.c_str()),
-      QMessageBox::Yes| QMessageBox::No,
-      QMessageBox::Yes);
-
-  if (ret == QMessageBox::Yes) {
-    // TODO: Is it necessary to let user grant individual permissions
-    // separately?
-    permissions->GrantAllRequired();
-    return true;
-  }
-  return false;
-}
-
-bool ConfirmGadget(GadgetManagerInterface *gadget_manager,
-                   int id) {
-  Permissions permissions;
-  if (gadget_manager->GetGadgetDefaultPermissions(id, &permissions)) {
-    if (!permissions.HasUngranted()
-        || PromptGadgetPermission(gadget_manager, id, &permissions)) {
-      // Save initial permissions.
-      std::string options_name =
-          gadget_manager->GetGadgetInstanceOptionsName(id);
-      OptionsInterface *options = CreateOptions(options_name.c_str());
-      // Don't save required permissions.
-      permissions.RemoveAllRequired();
-      options->PutInternalValue(kPermissionsOption,
-                                Variant(permissions.ToString()));
-      options->Flush();
-      delete options;
-      return true;
-    }
-  }
-  return false;
 }
 
 } // namespace qt

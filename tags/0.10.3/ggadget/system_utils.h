@@ -104,16 +104,6 @@ bool EnsureDirectories(const char *path);
 bool ReadFileContents(const char *path, std::string *content);
 
 /**
- * Write memory data into a file.
- *
- * @param path the path of a directory. Normally it should be a absolute path,
- *     but relative path is also supported.
- * @param data the data to be written.
- * @return true if success.
- */
-bool WriteFileContents(const char *path, const std::string &content);
-
-/**
  * Gets the current working directory.
  *
  * @return the absolute path of the current working directory.
@@ -152,12 +142,9 @@ bool CreateTempDirectory(const char *prefix, std::string *path);
  * Removes a directory tree, all files under the specified directory will be
  * removed.
  *
- * @param path the path of the directory tree.
- * @param remove_readonly_files @c true if also force to remove readonly files,
- *     otherwise readonly files cause error.
  * @return true if succeeded.
  */
-bool RemoveDirectory(const char *path, bool remove_readonly_files);
+bool RemoveDirectory(const char *path);
 
 /**
  * Returns the current system locale information. In most cases,
@@ -191,16 +178,6 @@ bool CopyFile(const char *src, const char *dest);
  * available and executable.
  */
 std::string GetFullPathOfSystemCommand(const char *command);
-
-/**
- * Get the path of a gadget which was pre-installed into the system.
- * Such as the path of rss_gadget.gg, etc.
- *
- * @param basename of the gadget, without ".gg" suffix.
- * @return the full path of the gadget, or an empty string if the gadget is
- *     not available.
- */
-std::string GetSystemGadgetPath(const char *basename);
 
 } // namespace ggadget
 

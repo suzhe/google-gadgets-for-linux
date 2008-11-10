@@ -24,7 +24,6 @@
 #include "gadget_consts.h"
 #include "logger.h"
 #include "system_utils.h"
-#include "string_utils.h"
 
 #ifdef _DEBUG
 // Uncomment the following line to get verbose debug logs.
@@ -72,7 +71,7 @@ class Module::Impl {
 
     lt_dlhandle new_handle = NULL;
     std::string module_name;
-    StringVector paths;
+    std::vector<std::string> paths;
 
     std::string module_path;
     if (!PrepareModuleName(name, &paths, &module_name)) {
@@ -85,7 +84,7 @@ class Module::Impl {
 #endif
     } else {
       // name is a relative path, search in module paths.
-      for (StringVector::iterator it = paths.begin();
+      for (std::vector<std::string>::iterator it = paths.begin();
            it != paths.end(); ++it) {
         module_path = BuildFilePath(it->c_str(), module_name.c_str(), NULL);
         new_handle = lt_dlopenext(module_path.c_str());
@@ -213,7 +212,7 @@ class Module::Impl {
   // searching paths from GGL_MODULE_PATH env and built-in GGL_MODULE_DIR
   // macro, and append dir to each path.
   static size_t GetModulePaths(const char *dir,
-                               StringVector *paths) {
+                               std::vector<std::string> *paths) {
     if (dir && *dir == kDirSeparator) {
       paths->push_back(dir);
       return paths->size();
@@ -255,8 +254,8 @@ class Module::Impl {
   // Get all modules found in the specified subdir in each module searching
   // path.
   static size_t GetModuleList(const char *path,
-                              StringVector *mod_list) {
-    StringVector paths;
+                              std::vector<std::string> *mod_list) {
+    std::vector<std::string> paths;
 
     GetModulePaths(path, &paths);
     std::string search_path = PathListToString(paths);
@@ -269,15 +268,15 @@ class Module::Impl {
 
  private:
   static int GetModuleListCallback(const char *filename, lt_ptr data) {
-    StringVector *vec =
-        reinterpret_cast<StringVector*>(data);
+    std::vector<std::string> *vec =
+        reinterpret_cast<std::vector<std::string>*>(data);
     vec->push_back(filename);
     return 0;
   }
 
-  static std::string PathListToString(const StringVector &paths) {
+  static std::string PathListToString(const std::vector<std::string> &paths) {
     std::string result;
-    for (StringVector::const_iterator it = paths.begin();
+    for (std::vector<std::string>::const_iterator it = paths.begin();
          it != paths.end(); ++it) {
       result.append(*it);
       if (it != paths.end() - 1)
@@ -290,7 +289,7 @@ class Module::Impl {
   // relative path, returns true and sets module search path and the name
   // without directory components. Returns false if name is an absolute path.
   static bool PrepareModuleName(const char *name,
-                                StringVector *search_paths,
+                                std::vector<std::string> *search_paths,
                                 std::string *module_name) {
     std::string dirname;
     if (name && *name) {
@@ -436,11 +435,11 @@ void *Module::GetSymbol(const char *symbol_name) const {
 bool Module::EnumerateModulePaths(Slot1<bool, const char *> *callback) {
   ASSERT(callback);
 
-  StringVector paths;
+  std::vector<std::string> paths;
   Impl::GetModulePaths(NULL, &paths);
 
   bool result = false;
-  for (StringVector::iterator it = paths.begin();
+  for (std::vector<std::string>::iterator it = paths.begin();
        it != paths.end(); ++it) {
     result = (*callback)(it->c_str());
     if (!result) break;
@@ -454,11 +453,11 @@ bool Module::EnumerateModuleFiles(const char *path,
                                   Slot1<bool, const char *> *callback) {
   ASSERT(callback);
 
-  StringVector modules;
+  std::vector<std::string> modules;
   Impl::GetModuleList(path, &modules);
 
   bool result = false;
-  for (StringVector::iterator it = modules.begin();
+  for (std::vector<std::string>::iterator it = modules.begin();
        it != modules.end(); ++it) {
     result = (*callback)(it->c_str());
     if (!result) break;

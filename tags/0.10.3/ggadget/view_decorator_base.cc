@@ -14,24 +14,22 @@
   limitations under the License.
 */
 
+#include "view_decorator_base.h"
+
 #include <string>
 #include <algorithm>
 #include "logger.h"
 #include "common.h"
 #include "elements.h"
-#include "messages.h"
 #include "gadget_consts.h"
 #include "gadget.h"
 #include "main_loop_interface.h"
-#include "menu_interface.h"
 #include "options_interface.h"
 #include "signals.h"
 #include "slot.h"
 #include "view.h"
-#include "view_host_interface.h"
 #include "view_element.h"
 #include "copy_element.h"
-#include "view_decorator_base.h"
 
 namespace ggadget {
 
@@ -57,16 +55,15 @@ class ViewDecoratorBase::Impl {
       allow_y_margin_(allow_y_margin),
       child_frozen_(false),
       child_visible_(true),
-      resizable_mode_(ViewInterface::RESIZABLE_TRUE),
+      child_resizable_(ViewInterface::RESIZABLE_TRUE),
+      option_prefix_(option_prefix),
       owner_(owner),
-      view_element_(new ViewElement(owner, NULL, false)),
-      snapshot_(new CopyElement(owner, NULL)) {
+      view_element_(new ViewElement(NULL, owner, NULL, false)),
+      snapshot_(new CopyElement(NULL, owner, NULL)) {
     view_element_->SetVisible(true);
     snapshot_->SetVisible(false);
     owner->GetChildren()->InsertElement(view_element_, NULL);
     owner->GetChildren()->InsertElement(snapshot_, NULL);
-    if (option_prefix)
-      option_prefix_ = option_prefix;
   }
 
   void GetClientSize(double *width, double *height) {
@@ -128,8 +125,8 @@ class ViewDecoratorBase::Impl {
 
   void UpdateClientPosition() {
     if (view_element_->IsVisible() || snapshot_->IsVisible()) {
-      double left, top, right, bottom;
-      owner_->GetMargins(&left, &top, &right, &bottom);
+      double top, left, bottom, right;
+      owner_->GetMargins(&top, &left, &bottom, &right);
       double client_width;
       double client_height;
       GetClientSize(&client_width, &client_height);
@@ -150,9 +147,9 @@ class ViewDecoratorBase::Impl {
   void UpdateClientSize() {
     double width = owner_->GetWidth();
     double height = owner_->GetHeight();
-    double left, top, right, bottom;
+    double top, left, bottom, right;
     double min_width, min_height;
-    owner_->GetMargins(&left, &top, &right, &bottom);
+    owner_->GetMargins(&top, &left, &bottom, &right);
     owner_->GetMinimumClientExtents(&min_width, &min_height);
     double client_width = std::max(width - left - right, min_width);
     double client_height = std::max(height - top - bottom, min_height);
@@ -196,16 +193,12 @@ class ViewDecoratorBase::Impl {
     }
   }
 
-  void OnZoomMenuCallback(const char *, double zoom) {
-    owner_->SetChildViewScale(zoom == 0 ? 1.0 : zoom);
-  }
-
   bool allow_x_margin_;
   bool allow_y_margin_;
   bool child_frozen_;
   bool child_visible_;
-  ViewInterface::ResizableMode resizable_mode_;
-  std::string option_prefix_;
+  ViewInterface::ResizableMode child_resizable_;
+  const char *option_prefix_;
   ViewDecoratorBase *owner_;
   ViewElement *view_element_;
   CopyElement *snapshot_;
@@ -229,17 +222,11 @@ ViewDecoratorBase::~ViewDecoratorBase() {
 }
 
 void ViewDecoratorBase::SetChildView(View *child_view) {
-  View *old = GetChildView();
-  if (old != child_view) {
+  View *old_ = GetChildView();
+  if (old_ != child_view) {
     impl_->view_element_->SetChildView(child_view);
-
     if (child_view)
-      SetResizable(child_view->GetResizable());
-
-    // TODO: when child view switchs out, RESIZABLE_FALSE should be used
-    // else
-    //   SetResizable(RESIZABLE_FALSE);
-
+      impl_->child_resizable_ = child_view->GetResizable();
     OnChildViewChanged();
     UpdateViewSize();
   }
@@ -265,8 +252,8 @@ void ViewDecoratorBase::SetAllowYMargin(bool allow) {
 
 void ViewDecoratorBase::UpdateViewSize() {
   // DLOG("DecoratedView::UpdateViewSize()");
-  double left, top, right, bottom;
-  GetMargins(&left, &top, &right, &bottom);
+  double top, left, bottom, right;
+  GetMargins(&top, &left, &bottom, &right);
   double width = GetWidth();
   double height = GetHeight();
   double client_width = width - left - right;
@@ -283,10 +270,16 @@ void ViewDecoratorBase::UpdateViewSize() {
 }
 
 bool ViewDecoratorBase::LoadChildViewSize() {
-  if (HasOptions()) {
-    Variant vw = GetOption("width");
-    Variant vh = GetOption("height");
-    Variant vs = GetOption("scale");
+  Gadget *gadget = GetGadget();
+  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
+    std::string option_prefix(impl_->option_prefix_);
+    OptionsInterface *opt = gadget->GetOptions();
+    Variant vw =
+        opt->GetInternalValue((option_prefix + "_width").c_str());
+    Variant vh =
+        opt->GetInternalValue((option_prefix + "_height").c_str());
+    Variant vs =
+        opt->GetInternalValue((option_prefix + "_scale").c_str());
 
     if (vs.type() == Variant::TYPE_DOUBLE) {
       impl_->view_element_->SetScale(VariantValue<double>()(vs));
@@ -294,8 +287,7 @@ bool ViewDecoratorBase::LoadChildViewSize() {
       impl_->view_element_->SetScale(1.0);
     }
     // view size is only applicable to resizable view.
-    if (GetChildViewResizable() == RESIZABLE_TRUE ||
-        GetChildViewResizable() == RESIZABLE_KEEP_RATIO) {
+    if (GetChildViewResizable() == ViewInterface::RESIZABLE_TRUE) {
       double width, height;
       if (vw.type() == Variant::TYPE_DOUBLE &&
           vh.type() == Variant::TYPE_DOUBLE) {
@@ -308,9 +300,8 @@ bool ViewDecoratorBase::LoadChildViewSize() {
       if (impl_->view_element_->OnSizing(&width, &height))
         impl_->view_element_->SetSize(width, height);
     }
-
     DLOG("LoadChildViewSize(%d): w:%.0lf h:%.0lf s: %.2lf",
-         GetGadget()->GetInstanceID(),
+         gadget->GetInstanceID(),
          impl_->view_element_->GetPixelWidth(),
          impl_->view_element_->GetPixelHeight(),
          impl_->view_element_->GetScale());
@@ -321,13 +312,18 @@ bool ViewDecoratorBase::LoadChildViewSize() {
 }
 
 bool ViewDecoratorBase::SaveChildViewSize() const {
-  if (HasOptions()) {
-    SetOption("width", Variant(impl_->view_element_->GetPixelWidth()));
-    SetOption("height", Variant(impl_->view_element_->GetPixelHeight()));
-    SetOption("scale", Variant(impl_->view_element_->GetScale()));
-
+  Gadget *gadget = GetGadget();
+  if (gadget && impl_->option_prefix_ && *impl_->option_prefix_) {
+    std::string option_prefix(impl_->option_prefix_);
+    OptionsInterface *opt = gadget->GetOptions();
+    opt->PutInternalValue((option_prefix + "_width").c_str(),
+                          Variant(impl_->view_element_->GetPixelWidth()));
+    opt->PutInternalValue((option_prefix + "_height").c_str(),
+                          Variant(impl_->view_element_->GetPixelHeight()));
+    opt->PutInternalValue((option_prefix + "_scale").c_str(),
+                          Variant(impl_->view_element_->GetScale()));
     DLOG("SaveChildViewSize(%d): w:%.0lf h:%.0lf s: %.2lf",
-         GetGadget()->GetInstanceID(),
+         gadget->GetInstanceID(),
          impl_->view_element_->GetPixelWidth(),
          impl_->view_element_->GetPixelHeight(),
          impl_->view_element_->GetScale());
@@ -385,57 +381,10 @@ void ViewDecoratorBase::SetChildViewCursor(ViewInterface::CursorType type) {
   impl_->view_element_->SetCursor(type);
 }
 
-void ViewDecoratorBase::ShowChildViewTooltip(const std::string &tooltip) {
+void ViewDecoratorBase::SetChildViewTooltip(const char *tooltip) {
   impl_->view_element_->SetTooltip(tooltip);
   // Make sure the tooltip is updated immediately.
-  ShowElementTooltip(impl_->view_element_);
-}
-
-void ViewDecoratorBase::ShowChildViewTooltipAtPosition(
-    const std::string &tooltip, double x, double y) {
-  impl_->view_element_->SetTooltip(tooltip);
-  // Make sure the tooltip is updated immediately.
-  if (impl_->view_element_->IsVisible()) {
-    double scale = impl_->view_element_->GetScale();
-    ShowElementTooltipAtPosition(impl_->view_element_, x * scale, y * scale);
-  }
-}
-
-void ViewDecoratorBase::SetOptionPrefix(const char *option_prefix) {
-  if (option_prefix)
-    impl_->option_prefix_ = option_prefix;
-  else
-    impl_->option_prefix_ = "";
-}
-
-std::string ViewDecoratorBase::GetOptionPrefix() const {
-  return impl_->option_prefix_;
-}
-
-bool ViewDecoratorBase::HasOptions() const {
-  Gadget *gadget = GetGadget();
-  if (gadget && !impl_->option_prefix_.empty())
-    return true;
-  else
-    return false;
-}
-
-Variant ViewDecoratorBase::GetOption(const std::string &name) const {
-  Gadget *gadget = GetGadget();
-  if (gadget && !impl_->option_prefix_.empty()) {
-    OptionsInterface *opt = gadget->GetOptions();
-    return opt->GetInternalValue((impl_->option_prefix_ + "_" + name).c_str());
-  } else {
-    return Variant();
-  }
-}
-void ViewDecoratorBase::SetOption(const std::string &name,
-                                  Variant value) const {
-  Gadget *gadget = GetGadget();
-  if (gadget && !impl_->option_prefix_.empty()) {
-    OptionsInterface *opt = gadget->GetOptions();
-    opt->PutInternalValue((impl_->option_prefix_ + "_" + name).c_str(), value);
-  }
+  SetTooltip(tooltip);
 }
 
 void ViewDecoratorBase::GetChildViewSize(double *width, double *height) const {
@@ -495,10 +444,10 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 
   double orig_width = *width;
   double orig_height = *height;
-  double left, top, right, bottom;
+  double top, left, bottom, right;
   double min_width, min_height;
   double client_width, client_height;
-  GetMargins(&left, &top, &right, &bottom);
+  GetMargins(&top, &left, &bottom, &right);
   GetMinimumClientExtents(&min_width, &min_height);
 
   client_width = std::max(*width - left - right, min_width);
@@ -520,15 +469,15 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 }
 
 void ViewDecoratorBase::SetResizable(ResizableMode resizable) {
-  if (impl_->resizable_mode_ != resizable) {
+  if (impl_->child_resizable_ != resizable) {
     // Reset the zoom factor to 1 if the child view is changed to
     // resizable.
-    if (resizable == ViewInterface::RESIZABLE_TRUE) {
+    if (impl_->child_resizable_ != ViewInterface::RESIZABLE_TRUE &&
+        resizable == ViewInterface::RESIZABLE_TRUE) {
       impl_->view_element_->SetScale(1.0);
     }
-    impl_->resizable_mode_ = resizable;
+    impl_->child_resizable_ = resizable;
     UpdateViewSize();
-    GetViewHost()->SetResizable(resizable);
   }
 }
 
@@ -541,9 +490,9 @@ void ViewDecoratorBase::SetSize(double width, double height) {
   if (GetWidth() == width && GetHeight() == height)
     return;
 
-  double left, top, right, bottom;
+  double top, left, bottom, right;
   double min_width, min_height;
-  GetMargins(&left, &top, &right, &bottom);
+  GetMargins(&top, &left, &bottom, &right);
   GetMinimumClientExtents(&min_width, &min_height);
   double client_width = std::max(width - left - right, min_width);
   double client_height = std::max(height - top - bottom, min_height);
@@ -561,7 +510,7 @@ void ViewDecoratorBase::SetSize(double width, double height) {
 }
 
 bool ViewDecoratorBase::ShowDecoratedView(bool modal, int flags,
-                                          Slot1<bool, int> *feedback_handler) {
+                                          Slot1<void, int> *feedback_handler) {
   // Derived class shall override this method to do more things.
   return ShowView(modal, flags, feedback_handler);
 }
@@ -584,50 +533,7 @@ bool ViewDecoratorBase::InsertDecoratorElement(BasicElement *element,
 }
 
 ViewInterface::ResizableMode ViewDecoratorBase::GetChildViewResizable() const {
-  View *child = GetChildView();
-  return child ? child->GetResizable() : impl_->resizable_mode_;
-}
-
-void ViewDecoratorBase::AddZoomMenuItem(MenuInterface *menu) const {
-  static const struct {
-    const char *label;
-    double zoom;
-  } kZoomMenuItems[] = {
-    { "MENU_ITEM_AUTO_FIT", 0 },
-    { "MENU_ITEM_50P", 0.5 },
-    { "MENU_ITEM_75P", 0.75 },
-    { "MENU_ITEM_100P", 1.0 },
-    { "MENU_ITEM_125P", 1.25 },
-    { "MENU_ITEM_150P", 1.50 },
-    { "MENU_ITEM_175P", 1.75 },
-    { "MENU_ITEM_200P", 2.0 },
-  };
-  static const int kNumZoomMenuItems = 8;
-  double scale = GetChildViewScale();
-  int flags[kNumZoomMenuItems];
-  bool has_checked = false;
-
-  for (int i = 0; i < kNumZoomMenuItems; ++i) {
-    flags[i] = 0;
-    if (kZoomMenuItems[i].zoom == scale) {
-      flags[i] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
-      has_checked = true;
-    }
-  }
-
-  // Check "Auto Fit" item if the current scale doesn't match with any
-  // other menu items.
-  if (!has_checked)
-    flags[0] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
-
-  int priority =  MenuInterface::MENU_ITEM_PRI_DECORATOR;
-  MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
-  for (int i = 0; i < kNumZoomMenuItems; ++i) {
-    zoom->AddItem(GM_(kZoomMenuItems[i].label), flags[i], 0,
-                  NewSlot(impl_, &Impl::OnZoomMenuCallback,
-                          kZoomMenuItems[i].zoom), priority);
-  }
-
+  return impl_->child_resizable_;
 }
 
 void ViewDecoratorBase::OnChildViewChanged() {
@@ -641,12 +547,12 @@ void ViewDecoratorBase::DoLayout() {
   // To be implemented by derived classes, when the window size is changed.
 }
 
-void ViewDecoratorBase::GetMargins(double *left, double *top,
-                                   double *right, double *bottom) const {
-  *left = 0;
+void ViewDecoratorBase::GetMargins(double *top, double *left,
+                                   double *bottom, double *right) const {
   *top = 0;
-  *right = 0;
+  *left = 0;
   *bottom = 0;
+  *right = 0;
 }
 
 void ViewDecoratorBase::GetMinimumClientExtents(double *width,

@@ -20,7 +20,7 @@
 using namespace ggadget;
 
 // Hold the result of test functions/methods.
-std::string result;
+char result[1024];
 
 Slot *TestClass::TestSlotMethod(int i) {
   switch (i) {

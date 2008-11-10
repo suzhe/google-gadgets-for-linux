@@ -79,7 +79,7 @@ ggl-qt.desktop : ggl-qt.desktop.in
 	$(top_builddir)/xdg/intl-desktop-file.sh $@.tmp $@
 	rm -f $@.tmp
 
-EXTRA_DIST = $(desktop_in_files) CMakeLists.txt
+EXTRA_DIST = $(desktop_in_files)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:

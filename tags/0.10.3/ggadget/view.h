@@ -117,14 +117,10 @@ class View : public ViewInterface {
 
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
-  virtual void SetCaption(const std::string &caption);
+  virtual void SetCaption(const char *caption);
   virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
-  virtual void SetResizeBorder(double left, double top,
-                               double right, double bottom);
-  virtual bool GetResizeBorder(double *left, double *top,
-                               double *right, double *bottom) const;
   virtual void MarkRedraw();
 
   virtual void Draw(CanvasInterface *canvas);
@@ -280,7 +276,7 @@ class View : public ViewInterface {
    * @return the animation token that can be used in @c CancelAnimation().
    */
   int BeginAnimation(Slot0<void> *slot, int start_value, int end_value,
-                     int duration);
+                     unsigned int duration);
 
   /**
    * Cancels a currently running animation.
@@ -295,7 +291,7 @@ class View : public ViewInterface {
    * @param duration the duration of the timer in milliseconds.
    * @return the timeout token that can be used in @c ClearTimeout().
    */
-  int SetTimeout(Slot0<void> *slot, int duration);
+  int SetTimeout(Slot0<void> *slot, unsigned int duration);
 
   /**
    * Cancels a run-once timer.
@@ -310,7 +306,7 @@ class View : public ViewInterface {
    * @param duration the period between calls in milliseconds.
    * @return the interval token than can be used in @c ClearInterval().
    */
-  int SetInterval(Slot0<void> *slot, int duration);
+  int SetInterval(Slot0<void> *slot, unsigned int duration);
 
   /**
    * Cancels a run-forever timer.
@@ -414,18 +410,10 @@ class View : public ViewInterface {
   uint64_t GetCurrentTime() const;
 
   /**
-   * Shows an element's tooltip at current cursor position. The tooltip will be
+   * Display tooltip at the current cursor position. The tooltip will be
    * automatically hidden when appropriate.
    */
-  void ShowElementTooltip(BasicElement *element);
-
-  /**
-   * Shows an element's tooltip at specific position in element's coordinates.
-   * @param element The element for which tooltip will be shown. Must belong to
-   *     this view.
-   * @param x, y Position to show the tooltip, in element's coordinates.
-   */
-  void ShowElementTooltipAtPosition(BasicElement *element, double x, double y);
+  void SetTooltip(const char *tooltip);
 
   /**
    * Sets the current mouse cursor.
@@ -457,7 +445,7 @@ class View : public ViewInterface {
    *        closed. It has no effect for main view.
    * @return true if the View is shown correctly. Otherwise returns false.
    */
-  bool ShowView(bool modal, int flags, Slot1<bool, int> *feedback_handler);
+  bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler);
 
   /** Closes the view if it's opened by calling ShowView(). */
   void CloseView();
@@ -485,7 +473,6 @@ class View : public ViewInterface {
   Connection *ConnectOnMouseOverEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseOutEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);
-  Connection *ConnectOnMouseWheelEvent(Slot0<void> *handler);
   Connection *ConnectOnOkEvent(Slot0<void> *handler);
   Connection *ConnectOnOpenEvent(Slot0<void> *handler);
   Connection *ConnectOnOptionChangedEvent(Slot0<void> *handler);
@@ -496,7 +483,6 @@ class View : public ViewInterface {
   Connection *ConnectOnSizingEvent(Slot0<void> *handler);
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
   Connection *ConnectOnContextMenuEvent(Slot0<void> *handler);
-  Connection *ConnectOnThemeChangedEvent(Slot0<void> *handler);
 
  public:
   /** For performance testing. */

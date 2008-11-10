@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 # libggadget-dbus is mandatory for linux-system-framework.
 if GGL_HOST_LINUX
 
@@ -33,8 +31,9 @@ noinst_HEADERS		= file_system.h \
 			  perfmon.h \
 			  power.h \
 			  process.h \
-			  user.h \
 			  wireless.h \
+			  wireless_access_point.h \
+			  user.h \
 			  hal_strings.h
 
 noinst_LTLIBRARIES	= libggadget-linux.la
@@ -49,14 +48,11 @@ libggadget_linux_la_SOURCES = \
 if GGL_BUILD_LIBGGADGET_DBUS
 libggadget_linux_la_SOURCES += \
 			  machine.cc \
-			  power.cc \
-			  user.cc
-
-if GGL_HAVE_NETWORK_MANAGER
-libggadget_linux_la_SOURCES += \
 			  network.cc \
-			  wireless.cc
-endif
+			  power.cc \
+			  user.cc \
+			  wireless.cc \
+			  wireless_access_point.cc
 endif
 
 libggadget_linux_la_CXXFLAGS = \
@@ -73,9 +69,6 @@ libggadget_linux_la_LIBADD = \
 
 if GGL_BUILD_LIBGGADGET_DBUS
 libggadget_linux_la_CPPFLAGS += $(DBUS_CFLAGS)
-if GGL_HAVE_NETWORK_MANAGER
-libggadget_linux_la_CPPFLAGS += $(NETWORK_MANAGER_CFLAGS)
-endif
 libggadget_linux_la_LIBADD += \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
 			  $(DBUS_LIB)

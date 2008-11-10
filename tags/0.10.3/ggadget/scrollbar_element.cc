@@ -31,10 +31,9 @@ namespace ggadget {
 enum DisplayState {
   STATE_NORMAL,
   STATE_DOWN,
-  STATE_OVER
+  STATE_OVER,
+  STATE_COUNT
 };
-
-static const int kStateCount = STATE_OVER + 1;
 
 enum ScrollBarImage {
   IMAGE_BACKGROUND,
@@ -51,9 +50,8 @@ enum ScrollBarImage {
   IMAGE_RIGHT_NORMAL = IMAGE_RIGHT_START,
   IMAGE_RIGHT_DOWN,
   IMAGE_RIGHT_OVER,
+  IMAGE_COUNT
 };
-
-static const int kImageCount = IMAGE_RIGHT_OVER + 1;
 
 static const char *kHorizontalImages[] = {
   kScrollDefaultBackgroundH,
@@ -114,20 +112,20 @@ class ScrollBarElement::Impl {
         // Windows default to horizontal for orientation,
         // but puzzlingly use vertical images as default.
         orientation_(ORIENTATION_VERTICAL) {
-    for (int i = 0; i < kImageCount; i++) {
+    for (int i = 0; i < IMAGE_COUNT; i++) {
       images_[i] = NULL;
       image_is_default_[i] = true;
     }
   }
 
   ~Impl() {
-    for (int i = 0; i < kImageCount; i++)
+    for (int i = 0; i < IMAGE_COUNT; i++)
       DestroyImage(images_[i]);
   }
 
   // Called when the orientation changes or default rendering is switched off.
   void DestroyDefaultImages() {
-    for (int i = 0; i < kImageCount; i++) {
+    for (int i = 0; i < IMAGE_COUNT; i++) {
       if (image_is_default_[i]) {
         DestroyImage(images_[i]);
         images_[i] = NULL;
@@ -140,7 +138,7 @@ class ScrollBarElement::Impl {
       View *view = owner_->GetView();
       const char **images_src = orientation_ == ORIENTATION_HORIZONTAL ?
                                 kHorizontalImages : kVerticalImages;
-      for (int i = 0; i < kImageCount; i++) {
+      for (int i = 0; i < IMAGE_COUNT; i++) {
         if (!images_[i] && image_is_default_[i])
           images_[i] = view->LoadImageFromGlobal(images_src[i], false);
       }
@@ -339,8 +337,8 @@ class ScrollBarElement::Impl {
   // All the following rects are in horizontal coordinates, that is,
   // x and y, w and h are swapped when the orientation is vertical.
   Rectangle left_rect_, right_rect_, thumb_rect_;
-  ImageInterface *images_[kImageCount];
-  bool image_is_default_[kImageCount];
+  ImageInterface *images_[IMAGE_COUNT];
+  bool image_is_default_[IMAGE_COUNT];
   bool default_rendering_;
   int min_, max_, value_, pagestep_, linestep_;
   int accum_wheel_delta_;
@@ -349,8 +347,9 @@ class ScrollBarElement::Impl {
   EventSignal onchange_event_;
 };
 
-ScrollBarElement::ScrollBarElement(View *view, const char *name)
-  : BasicElement(view, "scrollbar", name, false),
+ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
+                                   const char *name)
+  : BasicElement(parent, view, "scrollbar", name, false),
     impl_(new Impl(this)) {
   SetEnabled(true);
 }
@@ -568,7 +567,7 @@ Variant ScrollBarElement::GetRightOverImage() const {
 }
 
 void ScrollBarElement::SetRightOverImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_RIGHT_OVER,
+  impl_->LoadImage(img, IMAGE_RIGHT_OVER, 
                    impl_->right_state_ == STATE_OVER);
 }
 
@@ -611,10 +610,11 @@ void ScrollBarElement::SetDefaultRendering(bool default_rendering) {
   }
 }
 
-BasicElement *ScrollBarElement::CreateInstance(View *view, const char *name) {
+BasicElement *ScrollBarElement::CreateInstance(BasicElement *parent,
+                                               View *view, const char *name) {
   // Keep backward compatibility, default not to use grippy unless it is set
   // by the gadget.
-  return new ScrollBarElement(view, name);
+  return new ScrollBarElement(parent, view, name);
 }
 
 EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {

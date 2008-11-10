@@ -22,7 +22,6 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/variant.h>
-#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -57,7 +56,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   /**
    * @return number of children.
    */
-  size_t GetCount() const;
+  int GetCount() const;
 
   /**
    * Returns the element identified by the index.
@@ -65,8 +64,8 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * @return the pointer to the specified element. If the parameter is out of
    *     range, @c NULL is returned.
    */
-  BasicElement *GetItemByIndex(size_t child);
-  const BasicElement *GetItemByIndex(size_t child) const;
+  BasicElement *GetItemByIndex(int child);
+  const BasicElement *GetItemByIndex(int child) const;
 
   /**
    * Returns the element identified by the name.
@@ -104,14 +103,6 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                               const char *name);
 
   /**
-   * Create a new element after the specified element.
-   * @see InsertElement()
-   */
-  BasicElement *InsertElementAfter(const char *tag_name,
-                                   const BasicElement *after,
-                                   const char *name);
-
-  /**
    * Appends an existing element to the end of the children list.
    * The specified element can be owned by another parent element, in this
    * case, it'll be reparented appropriately.
@@ -138,12 +129,6 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   bool InsertElement(BasicElement *element, const BasicElement *before);
 
   /**
-   * Inserts an existing element after the specified element.
-   * @see InsertElement()
-   */
-  bool InsertElementAfter(BasicElement *element, const BasicElement *after);
-
-  /**
    * Create a new element from XML definition and add it to the end of the
    * children list.
    * @param xml the XML definition of the element.
@@ -167,14 +152,6 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                                      const BasicElement *before);
 
   /**
-   * Create a new element from XML definition and insert it after the
-   * specified element.
-   * @see InsertElementFromXML()
-   */
-  BasicElement *InsertElementFromXMLAfter(const std::string &xml,
-                                          const BasicElement *after);
-
-  /**
    * Appends an element holded in a variant to the end of the children list.
    *
    * The specified variant may hold a pointer to an existing element, or the
@@ -182,12 +159,14 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *
    * @param element A variant holding an existing element or the XML definition
    *                of a new element.
-   * @return the pointer to the new element on success, or @c NULL on failure.
+   * @return If element parameter holds an existing element, then returns
+   *         boolean value indicating success or failure. Otherwise returns
+   *         the pointer to the new element on success, or null on failure.
    */
-  BasicElement *AppendElementVariant(const Variant &element);
+  Variant AppendElementVariant(const Variant &element);
 
   /**
-   * Inserts an element held in a variant before the specified element.
+   * Inserts an element holded in a variant before the specified element.
    * The element to be inserted can be owned by another parent element, in this
    * case, it'll be reparented appropriately.
    *
@@ -200,17 +179,12 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *     before this element. If the specified element is not the direct child
    *     of the container or this parameter is @c NULL, this method will insert
    *     the element at the end of the children list.
-   * @return the pointer to the new element on success, or @c NULL on failure.
+   * @return If element parameter holds an existing element, then returns
+   *         boolean value indicating success or failure. Otherwise returns
+   *         the pointer to the new element on success, or null on failure.
    */
-  BasicElement *InsertElementVariant(const Variant &element,
-                                     const BasicElement *before);
-
-  /**
-   * Inserts an element held in a variant after the specified element.
-   * @see InsertElementVariant()
-   */
-  BasicElement *InsertElementVariantAfter(const Variant &element,
-                                          const BasicElement *after);
+  Variant InsertElementVariant(const Variant &element,
+                               const BasicElement *before);
 
   /**
    * Remove the specified element from the container.
@@ -246,14 +220,11 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    *     @c NULL if no one.
    * @param[out] in_element the child element where the mouse is in (including
    *     disabled child elements, but not invisible child elements).
-   * @param[out] hittest result of this mouse event. It's the hittest value of
-   *     in_element, if there is no in_element, the return value is undefined.
    * @return result of event handling.
    */
   EventResult OnMouseEvent(const MouseEvent &event,
                            BasicElement **fired_element,
-                           BasicElement **in_element,
-                           ViewInterface::HitTest *hittest);
+                           BasicElement **in_element);
 
   /**
    * Handler of the drag and drop events.

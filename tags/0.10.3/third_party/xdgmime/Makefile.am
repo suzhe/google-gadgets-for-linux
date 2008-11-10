@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 AM_CPPFLAGS = $(PREDEFINED_MACROS) -DXDG_PREFIX=_ggl_xdg
 AM_CFLAGS = $(DEFAULT_COMPILE_FLAGS)
 

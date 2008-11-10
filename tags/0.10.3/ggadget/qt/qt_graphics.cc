@@ -70,7 +70,7 @@ CanvasInterface *QtGraphics::NewCanvas(double w, double h) const {
   return canvas;
 }
 
-ImageInterface *QtGraphics::NewImage(const std::string &tag,
+ImageInterface *QtGraphics::NewImage(const char *tag,
                                      const std::string &data,
                                      bool is_mask) const {
   if (data.empty()) return NULL;
@@ -84,8 +84,7 @@ ImageInterface *QtGraphics::NewImage(const std::string &tag,
   return img;
 }
 
-FontInterface *QtGraphics::NewFont(const std::string &family,
-                                   double pt_size,
+FontInterface *QtGraphics::NewFont(const char *family, double pt_size,
                                    FontInterface::Style style,
                                    FontInterface::Weight weight) const {
   return new QtFont(family, pt_size, style, weight);

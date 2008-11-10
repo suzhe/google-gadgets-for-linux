@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_BUILD_LIBGGADGET_QT
 
 # Putting . into SBUDIRS list to force building current directory first.
@@ -24,7 +22,7 @@ SUBDIRS = . tests
 MOC_FILES		= qt_main_loop.moc \
 			  qt_menu_internal.moc \
 			  utilities_internal.moc \
-			  qt_view_host_internal.moc \
+			  qt_view_host.moc \
 			  qt_view_widget.moc
 
 INCLUDES		= -I$(top_builddir) \
@@ -36,8 +34,7 @@ noinst_HEADERS		= qt_canvas.h \
 			  qt_font.h \
 			  qt_image.h \
 			  utilities_internal.h \
-			  qt_menu_internal.h \
-			  qt_view_host_internal.h
+			  qt_menu_internal.h
 
 qtincludedir		= $(GGL_INCLUDE_DIR)/ggadget/qt
 qtinclude_HEADERS	= qt_view_widget.h \
@@ -87,7 +84,7 @@ qt_main_loop.moc:qt_main_loop.h
 	$(MOC) $< -o $@
 qt_menu_internal.moc:qt_menu_internal.h
 	$(MOC) $< -o $@
-qt_view_host_internal.moc:qt_view_host_internal.h
+qt_view_host.moc:qt_view_host.h
 	$(MOC) $< -o $@
 utilities_internal.moc:utilities_internal.h
 	$(MOC) $< -o $@

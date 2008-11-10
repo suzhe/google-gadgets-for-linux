@@ -151,7 +151,6 @@ class ElementExtensionRegister : public ExtensionRegisterInterface {
   typedef bool (*RegisterElementExtensionFunc)(ElementFactory *);
  private:
   ElementFactory *factory_;
-  DISALLOW_EVIL_CONSTRUCTORS(ElementExtensionRegister);
 };
 
 /**
@@ -168,7 +167,6 @@ class ScriptExtensionRegister : public ExtensionRegisterInterface {
  private:
   ScriptContextInterface *context_;
   Gadget *gadget_;
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptExtensionRegister);
 };
 
 /**
@@ -189,7 +187,6 @@ class FrameworkExtensionRegister : public ExtensionRegisterInterface {
  private:
   ScriptableInterface *framework_;
   Gadget *gadget_;
-  DISALLOW_EVIL_CONSTRUCTORS(FrameworkExtensionRegister);
 };
 
 /**
@@ -207,7 +204,6 @@ class ScriptRuntimeExtensionRegister : public ExtensionRegisterInterface {
 
  private:
   ScriptRuntimeManager *manager_;
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptRuntimeExtensionRegister);
 };
 
 /**
@@ -222,7 +218,6 @@ class FileManagerExtensionRegister : public ExtensionRegisterInterface {
 
  private:
   FileManagerWrapper *fm_wrapper_;
-  DISALLOW_EVIL_CONSTRUCTORS(FileManagerExtensionRegister);
 };
 
 /**
@@ -257,7 +252,6 @@ class MultipleExtensionRegisterWrapper : public ExtensionRegisterInterface {
  private:
   class Impl;
   Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(MultipleExtensionRegisterWrapper);
 };
 
 /**

@@ -61,8 +61,6 @@ void CairoImageBase::StretchDraw(CanvasInterface *canvas,
                                  double width, double height) const {
   const CanvasInterface *image = GetCanvas();
   ASSERT(canvas && image);
-  if (!canvas || !image)
-    return;
   double image_width = image->GetWidth();
   double image_height = image->GetHeight();
   if (image && canvas && image_width > 0 && image_height > 0) {

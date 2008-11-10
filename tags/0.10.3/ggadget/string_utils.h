@@ -89,8 +89,6 @@ struct CaseInsensitiveStringComparator {
 typedef std::map<std::string, std::string,
                  CaseInsensitiveStringComparator> CaseInsensitiveStringMap;
 
-typedef std::vector<std::string> StringVector;
-
 /**
  * Assigns a <code>const char *</code> string to a std::string if they are
  * different.
@@ -155,19 +153,8 @@ std::string DecodeURL(const std::string &source);
 bool IsValidURLChar(char c);
 bool IsValidURLComponentChar(char c);
 
-/** Returns the scheme of a url, eg. http, https, etc. */
-std::string GetURLScheme(const char *url);
-
 /**
- * Returns whether the given url scheme is valid or not.
- *
- * Valid url schemes are:
- * http, https, feed, file, mailto
- */
-bool IsValidURLScheme(const char *scheme);
-
-/**
- * Returns whether the given string has a valid url prefixes.
+ * Returns whether the given string has a valid url prefix.
  *
  * Valid url prefixes are:
  * http://
@@ -236,7 +223,6 @@ std::string GetUsernamePasswordFromURL(const char *url);
  * ending quotes), by escaping special characters in the source string.
  */
 std::string EncodeJavaScriptString(const UTF16Char *source);
-std::string EncodeJavaScriptString(const std::string &source);
 
 /**
  * Splits a string into two parts. For convenience, the impl allows
@@ -264,7 +250,7 @@ bool SplitString(const std::string &source, const std::string &separator,
  * @return @c true if separator found.
  */
 bool SplitStringList(const std::string &source, const std::string &separator,
-                     StringVector *result);
+                     std::vector<std::string> *result);
 
 /**
  * Compresses white spaces in a string using the rule like HTML formatting:
@@ -312,8 +298,7 @@ bool SimpleMatchXPath(const char *xpath, const char *pattern);
 
 /**
  * Compares two versions.
- * @param version1 version string in "x", "x.x", "x.x.x" or "x.x.x.x" format
- *     where 'x' is an integer.
+ * @param version1 version string in "x.x.x.x" format where 'x' is an integer.
  * @param version2
  * @param[out] result on success: -1 if version1 < version2, 0 if
  *     version1 == version2, or 1 if version1 > version2.

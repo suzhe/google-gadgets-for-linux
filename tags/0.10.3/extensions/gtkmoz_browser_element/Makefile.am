@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_BUILD_GTKMOZ_BROWSER_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \
@@ -49,12 +47,11 @@ ggllibexec_PROGRAMS	= gtkmoz-browser-child
 ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
 gtkmoz_browser_child_SOURCES    = browser_child.cc \
-				  ../smjs_script_runtime/json.cc \
-				  ../smjs_script_runtime/libmozjs_glue.cc
+				  ../smjs_script_runtime/json.cc
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \
-				  -fno-strict-aliasing
+				  -Wno-strict-aliasing
 
 gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 				  @GTKMOZEMBED_CFLAGS@ \
@@ -63,8 +60,7 @@ gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
 				  @GTKMOZEMBED_LIBS@ \
 				  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
-				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-				  -ldl
+				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gtkmoz_browser_child_LDFLAGS	= @GTKMOZEMBED_LDFLAGS@
 

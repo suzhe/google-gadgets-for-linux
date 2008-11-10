@@ -31,7 +31,7 @@ class CopyElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x21507d12bbc44fd9, BasicElement);
 
-  CopyElement(View *view, const char *name);
+  CopyElement(BasicElement *parent, View *view, const char *name);
   virtual ~CopyElement();
 
   /**
@@ -62,7 +62,8 @@ class CopyElement : public BasicElement {
   void SetSrc(const Variant &src);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

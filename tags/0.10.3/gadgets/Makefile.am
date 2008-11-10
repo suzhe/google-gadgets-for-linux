@@ -14,12 +14,9 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 SUBDIRS = analog_clock \
 	  designer \
 	  digital_alarm_clock \
 	  igoogle \
 	  rss \
-	  photos \
-	  gadget_browser
+		photos

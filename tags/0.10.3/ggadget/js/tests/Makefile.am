@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-EXTRA_DIST = CMakeLists.txt
-
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -I$(top_srcdir)/third_party/editline
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/third_party/editline/libeditline.la
 
 check_PROGRAMS		= jscript_massager_test \
 			  massager

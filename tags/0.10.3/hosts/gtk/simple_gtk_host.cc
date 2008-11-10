@@ -308,12 +308,6 @@ class SimpleGtkHost::Impl {
         delete options;
         return LoadGadgetInstance(id);
       }
-    } else {
-      ShowAlertDialog(
-          GM_("GOOGLE_GADGETS"),
-          StringPrintf(
-              GM_("GADGET_LOAD_FAILURE"),
-              gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str());
     }
     return false;
   }
@@ -503,16 +497,21 @@ class SimpleGtkHost::Impl {
       ShowAllMenuCallback(NULL);
   }
 
-  void OnThemeChanged() {
-    SimpleEvent event(Event::EVENT_THEME_CHANGED);
+  void MarkRedrawAll() {
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      if (it->second.main)
-        it->second.main->GetView()->OnOtherEvent(event);
-      if (it->second.details)
-        it->second.details->GetView()->OnOtherEvent(event);
-      if (it->second.popout)
-        it->second.popout->GetView()->OnOtherEvent(event);
+      if (it->second.main) {
+        it->second.main->GetView()->MarkRedraw();
+        it->second.main->QueueDraw();
+      }
+      if (it->second.details) {
+        it->second.details->GetView()->MarkRedraw();
+        it->second.details->QueueDraw();
+      }
+      if (it->second.popout) {
+        it->second.popout->GetView()->MarkRedraw();
+        it->second.popout->QueueDraw();
+      }
     }
   }
 
@@ -528,7 +527,7 @@ class SimpleGtkHost::Impl {
       font_size_ = new_font_size;
       if (options_)
         options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
-      OnThemeChanged();
+      MarkRedrawAll();
     }
   }
 

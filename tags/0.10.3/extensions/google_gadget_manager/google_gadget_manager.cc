@@ -34,17 +34,12 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_map.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/usage_collector_interface.h>
 #include <ggadget/view.h>
 #include <ggadget/xml_http_request_interface.h>
 #include <ggadget/xml_parser_interface.h>
 
 namespace ggadget {
 namespace google {
-
-// Daily pings are sent every 25~28 hours.
-static const int kDailyPingIntervalBase = 25 * 3600 * 1000;
-static const int kWeeklyPingIntervalBase = kDailyPingIntervalBase * 7;
 
 // Note: The backoff and randomization features in this implementation is
 // very important for proper server-side operation. Please do *NOT* disable
@@ -73,12 +68,11 @@ GoogleGadgetManager::GoogleGadgetManager()
       global_options_(GetGlobalOptions()),
       file_manager_(GetGlobalFileManager()),
       last_update_time_(0), last_try_time_(0), retry_timeout_(0),
-      update_timer_(0), free_metadata_timer_(0), daily_ping_timer_(0),
+      update_timer_(0), free_metadata_timer_(0),
       full_download_(false),
       updating_metadata_(false),
       browser_gadget_(NULL),
-      first_run_(false),
-      collector_(NULL) {
+      first_run_(false) {
   ASSERT(main_loop_);
   ASSERT(global_options_);
   ASSERT(file_manager_);
@@ -93,11 +87,6 @@ GoogleGadgetManager::~GoogleGadgetManager() {
   if (free_metadata_timer_) {
     main_loop_->RemoveWatch(free_metadata_timer_);
     free_metadata_timer_ = 0;
-  }
-
-  if (daily_ping_timer_) {
-    main_loop_->RemoveWatch(daily_ping_timer_);
-    daily_ping_timer_ = 0;
   }
 
   if (browser_gadget_) {
@@ -137,36 +126,12 @@ void GoogleGadgetManager::Init() {
   first_run_ = (run_count == 0 && instance_statuses_.empty());
   global_options_->PutValue(kRunCountOption, Variant(run_count + 1));
 
-  UsageCollectorFactoryInterface *uc_factory = GetUsageCollectorFactory();
-  if (uc_factory)
-    collector_ = uc_factory->GetPlatformUsageCollector();
-  if (collector_) {
-    int64_t last_daily_ping_time = 0;
-    global_options_->GetValue(kLastDailyPingTimeOption)
-        .ConvertToInt64(&last_daily_ping_time);
-    int64_t current_time = static_cast<int64_t>(main_loop_->GetCurrentTime());
-    int64_t interval = current_time - last_daily_ping_time;
-    if (interval <= 0) {
-      // In case of options data error or timer error.
-      ScheduleDailyPing();
-    } else {
-      int timeout = interval > kDailyPingIntervalBase ? 1000 + rand() % 100000 :
-                    kDailyPingIntervalBase - static_cast<int>(interval);
-      daily_ping_timer_ = main_loop_->AddTimeoutWatch(
-          timeout,
-          new WatchCallbackSlot(
-              NewSlot(this, &GoogleGadgetManager::OnFirstDailyPing)));
-    }
-  }
-
   if (first_run_) {
     // Add some default built-in gadgets.
     NewGadgetInstance("analog_clock");
     NewGadgetInstance("rss");
     // Schedule an immediate update if it is first run.
     ScheduleUpdate(0);
-    if (collector_)
-      collector_->ReportFirstUse();
   } else {
     ScheduleNextUpdate();
   }
@@ -178,6 +143,10 @@ bool GoogleGadgetManager::OnFreeMetadataTimer(int timer) {
     metadata_.FreeMemory();
   }
   return true;
+}
+
+const char *GoogleGadgetManager::GetImplTag() {
+  return kGoogleGadgetManagerTag;
 }
 
 void GoogleGadgetManager::ScheduleNextUpdate() {
@@ -415,7 +384,7 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
   instance_options->PutInternalValue(kInstanceGadgetIdOption,
                                      Variant(gadget_id));
   const GadgetInfo *info = GetGadgetInfo(gadget_id);
-  if (info && info->source == SOURCE_PLUGINS_XML) {
+  if (info->source == SOURCE_PLUGINS_XML) {
     StringMap::const_iterator module_id =
         info->attributes.find(kModuleIDAttrib);
     if (module_id != info->attributes.end()) {
@@ -455,6 +424,8 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   if (!gadget_id || !*gadget_id)
     return -1;
 
+  if (GetGadgetInfo(gadget_id) == NULL)
+    return -1;
   global_options_->PutValue(
       (std::string(kGadgetAddedTimeOptionPrefix) + gadget_id).c_str(),
       Variant(main_loop_->GetCurrentTime()));
@@ -470,10 +441,9 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
         return -1;
       if (!new_instance_signal_.HasActiveConnections() ||
           new_instance_signal_(i)) {
-        SendGadgetUsagePing(1, gadget_id);
         return i;
       } else {
-        RemoveGadgetInstanceInternal(i, false);
+        RemoveGadgetInstance(i);
         return -1;
       }
     }
@@ -493,12 +463,10 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
   SaveInstanceGadgetId(instance_id, gadget_id);
   active_gadgets_.insert(gadget_id);
   if (!new_instance_signal_.HasActiveConnections() ||
-      new_instance_signal_(instance_id)) {
-    SendGadgetUsagePing(1, gadget_id);
+      new_instance_signal_(instance_id))
     return instance_id;
-  }
 
-  RemoveGadgetInstanceInternal(instance_id, false);
+  RemoveGadgetInstance(instance_id);
   TrimInstanceStatuses();
   return -1;
 }
@@ -507,8 +475,7 @@ int GoogleGadgetManager::NewGadgetInstanceFromFile(const char *file) {
   return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file) : -1;
 }
 
-bool GoogleGadgetManager::RemoveGadgetInstanceInternal(int instance_id,
-                                                       bool send_ping) {
+bool GoogleGadgetManager::RemoveGadgetInstance(int instance_id) {
   if (instance_id == kGoogleGadgetBrowserInstanceId && browser_gadget_) {
     delete browser_gadget_;
     browser_gadget_ = NULL;
@@ -543,15 +510,8 @@ bool GoogleGadgetManager::RemoveGadgetInstanceInternal(int instance_id,
   }
   TrimInstanceStatuses();
 
-  if (send_ping)
-    SendGadgetUsagePing(2, gadget_id.c_str());
-
   remove_instance_signal_(instance_id);
   return true;
-}
-
-bool GoogleGadgetManager::RemoveGadgetInstance(int instance_id) {
-  return RemoveGadgetInstanceInternal(instance_id, true);
 }
 
 void GoogleGadgetManager::UpdateGadgetInstances(const char *gadget_id) {
@@ -1012,31 +972,25 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
     return false;
   }
 
-  static bool Register(GoogleGadgetManager *manager,
-                       ScriptContextInterface *script_context) {
-    ASSERT(script_context);
-    if (script_context) {
-      GadgetBrowserScriptUtils *utils = new GadgetBrowserScriptUtils(manager);
-      if (!script_context->AssignFromNative(NULL, NULL, "gadgetBrowserUtils",
-                                            Variant(utils))) {
-        LOG("Failed to register gadgetBrowserUtils.");
-        return false;
-      }
-      return true;
-    }
-    return false;
-  }
   GoogleGadgetManager *gadget_manager_;
 };
 
-void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
-  if (browser_gadget_) {
-    if (host != browser_gadget_->GetHost()) {
-      delete browser_gadget_;
-      browser_gadget_ = NULL;
+bool GoogleGadgetManager::RegisterGadgetBrowserScriptUtils(
+    ScriptContextInterface *script_context) {
+  ASSERT(script_context);
+  if (script_context) {
+    GadgetBrowserScriptUtils *utils = new GadgetBrowserScriptUtils(this);
+    if (!script_context->AssignFromNative(NULL, NULL, "gadgetBrowserUtils",
+                                          Variant(utils))) {
+      LOG("Failed to register gadgetBrowserUtils.");
+      return false;
     }
+    return true;
   }
+  return false;
+}
 
+void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   if (!browser_gadget_) {
     Permissions permissions;
     permissions.SetGranted(Permissions::ALL_ACCESS, true);
@@ -1048,10 +1002,8 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
                    permissions, Gadget::DEBUG_CONSOLE_DISABLED);
 
     if (browser_gadget_ && browser_gadget_->IsValid()) {
-      View *main_view = browser_gadget_->GetMainView();
-      main_view->ConnectOnCloseEvent(
+      browser_gadget_->GetMainView()->ConnectOnCloseEvent(
           NewSlot(&metadata_, &GadgetsMetadata::FreeMemory));
-      GadgetBrowserScriptUtils::Register(this, main_view->GetScriptContext());
     }
   }
 
@@ -1061,70 +1013,6 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
     delete browser_gadget_;
     browser_gadget_ = NULL;
     LOG("Failed to load Google Gadget Browser.");
-  }
-}
-
-void GoogleGadgetManager::ScheduleDailyPing() {
-  daily_ping_timer_ = main_loop_->AddTimeoutWatch(
-      kDailyPingIntervalBase + rand() % (kDailyPingIntervalBase / 10),
-      new WatchCallbackSlot(NewSlot(this, &GoogleGadgetManager::OnDailyPing)));
-}
-
-bool GoogleGadgetManager::OnFirstDailyPing(int timer) {
-  if (OnDailyPing(timer))
-    ScheduleDailyPing();
-  return false;
-}
-
-bool GoogleGadgetManager::OnDailyPing(int timer) {
-  ASSERT(collector_);
-  global_options_->PutValue(kLastDailyPingTimeOption,
-                            Variant(main_loop_->GetCurrentTime()));
-  collector_->ReportUsage();
-
-  int64_t last_weekly_time = 0;
-  global_options_->GetValue(kLastWeeklyPingTimeOption).ConvertToInt64(
-      &last_weekly_time);
-  int64_t current_time = static_cast<int64_t>(main_loop_->GetCurrentTime());
-  if (current_time > last_weekly_time + kWeeklyPingIntervalBase) {
-    // Report gadget usage weekly.
-    int size = static_cast<int>(instance_statuses_.size());
-    for (int i = 0; i < size; i++) {
-      if (instance_statuses_[i] == kInstanceStatusActive)
-        SendGadgetUsagePing(0, GetInstanceGadgetId(i).c_str());
-    }
-    global_options_->PutValue(kLastWeeklyPingTimeOption, Variant(current_time));
-  } else if (current_time < last_weekly_time) {
-    // In case of options data error or timer error.
-    global_options_->PutValue(kLastWeeklyPingTimeOption, Variant(current_time));
-  }
-  return true;
-}
-
-void GoogleGadgetManager::SendGadgetUsagePing(int type, const char *gadget_id) {
-  if (!collector_)
-    return;
-
-  const GadgetInfo *info = GetGadgetInfo(gadget_id);
-  if (info &&
-      (info->source == SOURCE_PLUGINS_XML || info->source == SOURCE_BUILTIN)) {
-    // Don't send usage pings for local gadgets.
-    std::string version;
-    StringMap::const_iterator it = info->attributes.find("version");
-    if (it != info->attributes.end())
-      version = it->second;
-
-    switch (type) {
-      case 0:
-        collector_->ReportGadgetUsage(gadget_id, version.c_str());
-        break;
-      case 1:
-        collector_->ReportGadgetInstall(gadget_id, version.c_str());
-        break;
-      case 2:
-        collector_->ReportGadgetUninstall(gadget_id, version.c_str());
-        break;
-    }
   }
 }
 

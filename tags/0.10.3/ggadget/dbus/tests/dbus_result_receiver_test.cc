@@ -22,7 +22,6 @@ limitations under the License.
 #include "ggadget/logger.h"
 #include "ggadget/slot.h"
 #include "ggadget/scriptable_array.h"
-#include "ggadget/string_utils.h"
 #include "unittest/gtest.h"
 
 using namespace ggadget;
@@ -57,7 +56,7 @@ TEST(DBusResultReceiver, SingleResultReceiver) {
 }
 
 TEST(DBusResultReceiver, ArrayResultReceiver) {
-  StringVector result;
+  std::vector<std::string> result;
   DBusStringArrayReceiver result_receiver(&result);
   static const char *values[] = {
     "Hello",

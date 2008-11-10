@@ -28,7 +28,7 @@ class LabelElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x4b128d3ef8da40e6, BasicElement);
 
-  LabelElement(View *view, const char *name);
+  LabelElement(BasicElement *parent, View *view, const char *name);
   virtual ~LabelElement();
 
   /** Gets the text frame containing the text content of this label. */
@@ -36,7 +36,8 @@ class LabelElement : public BasicElement {
   const TextFrame *GetTextFrame() const;
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoClassRegister();

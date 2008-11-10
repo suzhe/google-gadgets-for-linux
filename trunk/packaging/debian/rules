@@ -26,14 +26,14 @@ config.status: configure
 	--disable-werror)
 
 
-#Architecture
+#Architecture 
 build: build-arch build-indep
 
 build-arch: build-arch-stamp
 build-arch-stamp:  config.status
 
 	# Add here commands to compile the arch part of the package.
-	#$(MAKE)
+	#$(MAKE) 
 	touch $@
 
 build-indep: build-indep-stamp
@@ -47,25 +47,25 @@ clean:
 	dh_testdir
 	dh_testroot
 	
-	rm -f build-arch-stamp build-indep-stamp
+	rm -f build-arch-stamp build-indep-stamp 
 
 	rm -rf build debian/google-gadgets
 
 
-	dh_clean
+	dh_clean 
 
 install: install-indep install-arch
 install-indep:
 	dh_testdir
 	dh_testroot
-	dh_clean -k -i
+	dh_clean -k -i 
 	dh_installdirs -i
 	dh_install -i
 
 install-arch:
 	dh_testdir
 	dh_testroot
-	dh_clean -k -s
+	dh_clean -k -s 
 	dh_installdirs -s
 	
 	(cd build; $(MAKE) DESTDIR=$(CURDIR)/debian/google-gadgets install)
@@ -98,7 +98,7 @@ binary-common:
 	dh_installmenu
 	dh_link
 	dh_strip
-	dh_compress
+	dh_compress 
 	dh_fixperms
 	dh_installdeb
 	dh_gencontrol
@@ -114,4 +114,4 @@ binary-arch: build-arch install-arch
 	$(MAKE) -f debian/rules DH_OPTIONS=-s binary-common
 
 binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch 

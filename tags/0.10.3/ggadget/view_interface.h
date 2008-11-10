@@ -39,9 +39,8 @@ class ViewInterface {
   enum ResizableMode {
     RESIZABLE_FALSE,
     RESIZABLE_TRUE,
-    RESIZABLE_ZOOM,
     /** The user can resize the view while keeping the original aspect ratio. */
-    RESIZABLE_KEEP_RATIO
+    RESIZABLE_ZOOM
   };
 
   /** Flags used in detail view. */
@@ -54,10 +53,7 @@ class ViewInterface {
     /** Adds a "Remove" button in the details view. */
     DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
     /** Adds a button to display the friends list. */
-    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
-    DETAILS_VIEW_FLAG_DISABLE_AUTO_CLOSE = 16,
-    /** Disables decoration frame. */
-    DETAILS_VIEW_FLAG_NO_FRAME = 32
+    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8
   };
 
   /** Flags used in options view. */
@@ -201,7 +197,7 @@ class ViewInterface {
    * floating/expanded mode but not shown when the gadget is in the Sidebar.
    * @see SetShowCaptionAlways()
    */
-  virtual void SetCaption(const std::string &caption) = 0;
+  virtual void SetCaption(const char *caption) = 0;
   virtual std::string GetCaption() const = 0;
 
   /**
@@ -212,29 +208,10 @@ class ViewInterface {
   virtual bool GetShowCaptionAlways() const = 0;
 
   /**
-   * Sets the view's rectangular resize area.
-   *
-   * It's only valid for resizable view.
-   * To define a non-rectangular resize border, use regular UI elements
-   * (such as img) and the hitTest property.
-   */
-  virtual void SetResizeBorder(double left, double top,
-                               double right, double bottom) = 0;
-
-  /**
-   * Gets the view's rectangular resize ares.
-   *
-   * If resize area is not defined yet, then this method returns false.
-   */
-  virtual bool GetResizeBorder(double *left, double *top,
-                               double *right, double *bottom) const = 0;
-
-  /**
    * Sets a redraw mark, so that all things of this view will be redrawed
    * during the next draw.
    */
   virtual void MarkRedraw() = 0;
-
   /**
    * Draws the current view to a canvas.
    * The specified canvas shall already be prepared to be drawn directly

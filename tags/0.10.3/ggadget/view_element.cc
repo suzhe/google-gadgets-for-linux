@@ -102,10 +102,10 @@ class ViewElement::Impl {
   Connection *onopen_connection_;
 };
 
-ViewElement::ViewElement(View *parent_view, View *child_view,
-                         bool no_transparent)
+ViewElement::ViewElement(BasicElement *parent, View *parent_view,
+                         View *child_view, bool no_transparent)
   // Only 1 child so no need to involve Elements here.
-  : BasicElement(parent_view, "view", NULL, false),
+  : BasicElement(parent, parent_view, "view", NULL, false),
     impl_(new Impl(this, no_transparent)) {
   SetEnabled(true);
   SetChildView(child_view);
@@ -178,8 +178,7 @@ bool ViewElement::OnSizing(double *width, double *height) {
   // If child view is resizable then just delegate OnSizing request to child
   // view.
   // The resizable view might also be zoomed, so count the scale factor in.
-  if (mode == ViewInterface::RESIZABLE_TRUE ||
-      mode == ViewInterface::RESIZABLE_KEEP_RATIO) {
+  if (mode == ViewInterface::RESIZABLE_TRUE) {
     child_width = *width / impl_->scale_;
     child_height = *height / impl_->scale_;
     ret = impl_->child_view_->OnSizing(&child_width, &child_height);
@@ -232,8 +231,7 @@ void ViewElement::SetSize(double width, double height) {
   }
 
   ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_TRUE ||
-      mode == ViewInterface::RESIZABLE_KEEP_RATIO) {
+  if (mode == ViewInterface::RESIZABLE_TRUE) {
     // The resizable view might also be zoomed, so count the scale factor in.
     impl_->child_view_->SetSize(width / impl_->scale_, height / impl_->scale_);
     impl_->UpdateScaleAndSize();
@@ -346,11 +344,9 @@ void ViewElement::DoDraw(CanvasInterface *canvas) {
 EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
                                       bool direct,
                                       BasicElement **fired_element,
-                                      BasicElement **in_element,
-                                      ViewInterface::HitTest *hittest) {
+                                      BasicElement **in_element) {
   if (!impl_->child_view_)
-    return BasicElement::OnMouseEvent(event, direct, fired_element,
-                                      in_element, hittest);
+    return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
 
   // child view must process the mouse event first, so that the hittest value
   // can be updated correctly.
@@ -364,8 +360,8 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
     result1 = impl_->child_view_->OnMouseEvent(event);
   }
 
-  EventResult result2 = BasicElement::OnMouseEvent(event, direct, fired_element,
-                                                   in_element, hittest);
+  EventResult result2 = BasicElement::OnMouseEvent(event, direct,
+                                                   fired_element, in_element);
 
   return std::max(result1, result2);
 }

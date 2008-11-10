@@ -28,7 +28,6 @@
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request_interface.h"
 #include "ggadget/xml_parser_interface.h"
-#include "ggadget/memory_options.h"
 #include "native_main_loop.h"
 #include "unittest/gtest.h"
 #include "init_extensions.h"
@@ -39,9 +38,6 @@ using ggadget::DOMDocumentInterface;
 using ggadget::NativeMainLoop;
 using ggadget::XMLParserInterface;
 using ggadget::GetXMLParser;
-using ggadget::OptionsInterface;
-using ggadget::MemoryOptions;
-using ggadget::SetGlobalOptions;
 
 static NativeMainLoop g_main_loop;
 
@@ -53,27 +49,22 @@ XMLHttpRequestInterface *CreateXMLHttpRequest(int session_id) {
 TEST(XMLHttpRequest, States) {
   XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
             request->Open("DELETE", "http://localhost", false, NULL, NULL));
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid state.
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->Send(static_cast<const char *>(NULL), 0));
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Valid request.
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->Open("GET", "http://localhost", false, NULL, NULL));
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->SetRequestHeader("aaa", "bbb"));
   request->Abort();
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->SetRequestHeader("ccc", "ddd"));
@@ -88,20 +79,16 @@ class Callback {
     callback_count_++;
     switch (callback_count_) {
       case 1:
-        ASSERT_FALSE(request_->IsSuccessful());
         ASSERT_EQ(XMLHttpRequestInterface::OPENED, request_->GetReadyState());
         break;
       case 2:
-        ASSERT_FALSE(request_->IsSuccessful());
         ASSERT_EQ(XMLHttpRequestInterface::OPENED, request_->GetReadyState());
         break;
       case 3:
-        ASSERT_FALSE(request_->IsSuccessful());
         ASSERT_EQ(XMLHttpRequestInterface::HEADERS_RECEIVED,
                   request_->GetReadyState());
         break;
       case 4:
-        ASSERT_FALSE(request_->IsSuccessful());
         ASSERT_EQ(XMLHttpRequestInterface::LOADING,
                   request_->GetReadyState());
         break;
@@ -326,7 +313,6 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
             request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
-  ASSERT_TRUE(request->IsSuccessful());
 
   ASSERT_EQ(0U, server.request_.find("GET /test HTTP/"));
   ASSERT_NE(std::string::npos,
@@ -382,7 +368,6 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
 TEST(XMLHttpRequest, AsyncNetworkFile) {
   XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
-  ASSERT_FALSE(request->IsSuccessful());
 
   Server server(true);
   Callback callback(request);
@@ -394,16 +379,13 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->Open("GET", url, true, NULL, NULL));
   ASSERT_EQ(1, callback.callback_count_);
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
-  ASSERT_FALSE(request->IsSuccessful());
 
   const char *str;
   size_t size;
@@ -425,18 +407,15 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->GetStatusText(&str));
   ASSERT_EQ(0u, size);
-  ASSERT_FALSE(request->IsSuccessful());
 
   server.instruction_ = 2;
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_FALSE(request->IsSuccessful());
 
   server.instruction_ = 3;
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::LOADING, request->GetReadyState());
   ASSERT_EQ(4, callback.callback_count_);
-  ASSERT_FALSE(request->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->GetAllResponseHeaders(&str));
@@ -465,13 +444,11 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->GetResponseHeader("TestHeader2", &str));
   ASSERT_STREQ("Value2a, Value2b", str);
-  ASSERT_FALSE(request->IsSuccessful());
 
   server.instruction_ = 4;
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
-  ASSERT_TRUE(request->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->GetAllResponseHeaders(&str));
@@ -498,7 +475,6 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
                dom->GetDocumentElement()->GetTextContent().c_str());
 
   ASSERT_EQ(1, request->GetRefCount());
-  ASSERT_TRUE(request->IsSuccessful());
   request->Unref();
 }
 
@@ -572,7 +548,6 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
             request3->Send(static_cast<const char *>(NULL), 0));
   Wait(100);
   request3->Abort();
-  ASSERT_FALSE(request3->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request3->Open("GET", url3, true, NULL, NULL));
@@ -580,7 +555,6 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
             request3->Send(static_cast<const char *>(NULL), 0));
   Wait(100);
   request3->Abort();
-  ASSERT_FALSE(request3->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request3->Open("GET", url3, true, NULL, NULL));
@@ -600,18 +574,12 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
   ggadget::GetXMLHttpRequestFactory()->DestroySession(session);
 }
 
-static OptionsInterface *MemoryOptionsFactory(const char *name) {
-  return new MemoryOptions();
-}
-
 int main(int argc, char **argv) {
   ggadget::SetGlobalMainLoop(&g_main_loop);
   testing::ParseGTestFlags(&argc, argv);
 
   // To prevent the server from calling exit when meet SIGPIPE.
   signal(SIGPIPE, SIG_IGN);
-
-  SetOptionsFactory(MemoryOptionsFactory);
 
   static const char *kExtensions[] = {
     "curl_xml_http_request/curl-xml-http-request",

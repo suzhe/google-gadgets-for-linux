@@ -26,7 +26,7 @@ class DivElement : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0xfca426268a584176, ScrollingElement);
 
-  DivElement(View *view, const char *name);
+  DivElement(BasicElement *parent, View *view, const char *name);
   virtual ~DivElement();
 
  protected:
@@ -50,14 +50,16 @@ class DivElement : public ScrollingElement {
   void SetBackgroundMode(BackgroundMode mode);
 
  public:
-  static BasicElement *CreateInstance(View *view, const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   /**
    * Used to subclass div elements.
    * No scriptable interfaces will be registered in this constructor.
    */
-  DivElement(View *view, const char *tag_name, const char *name);
+  DivElement(BasicElement *parent, View *view,
+             const char *tag_name, const char *name);
 
   virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas);

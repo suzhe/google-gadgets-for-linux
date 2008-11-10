@@ -180,7 +180,9 @@ class GadgetVideoSink::ImageQueue {
   static const int kMaxLength = 4;
 
   ImageQueue() : p_(0), c_(0) {
-    pthread_mutex_init(&mutex_, NULL);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutex_init(&mutex_, &attr);
     for (int i = 0; i < kMaxLength; i++)
       images_[i] = NULL;
   }
@@ -189,10 +191,9 @@ class GadgetVideoSink::ImageQueue {
     // Maybe consumer is holding the lock.
     pthread_mutex_lock(&mutex_);
     pthread_mutex_destroy(&mutex_);
-    for (int i = 0; i < kMaxLength; i++) {
+    for (int i = 0; i < kMaxLength; i++)
       if (images_[i])
         ImageBuffer::FreeInstance(images_[i]);
-    }
   }
 
   // Only provided to producer. It can help avoid passing in duplicated image
@@ -618,7 +619,7 @@ GstFlowReturn GadgetVideoSink::BufferAlloc(GstBaseSink * bsink,
   ImageBuffer *image = NULL;
   GstStructure *structure = NULL;
   GstFlowReturn ret = GST_FLOW_OK;
-  gint width = 0, height = 0;
+  gint width, height;
   GadgetVideoSink *videosink = GADGET_VIDEOSINK(bsink);
 
   GST_LOG_OBJECT(videosink,
@@ -802,10 +803,10 @@ no_image:
   return GST_FLOW_ERROR;
 }
 
-void GadgetVideoSink::SetProperty(GObject *object,
+void GadgetVideoSink::SetProperty(GObject * object,
                                   guint prop_id,
-                                  const GValue *value,
-                                  GParamSpec *pspec) {
+                                  const GValue * value,
+                                  GParamSpec * pspec) {
   g_return_if_fail(IS_GADGET_VIDEOSINK(object));
   GadgetVideoSink *videosink = GADGET_VIDEOSINK(object);
 

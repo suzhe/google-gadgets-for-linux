@@ -36,14 +36,9 @@ namespace ggadget {
 
 class LocalizedFileManager::Impl {
  public:
-  Impl(FileManagerInterface *file_manager, const char *locale)
+  Impl(FileManagerInterface *file_manager)
     : file_manager_(file_manager) {
-    std::string locale_name;
-    if (locale && *locale)
-      locale_name = locale;
-    else
-      locale_name = GetSystemLocaleName();
-
+    std::string locale_name = GetSystemLocaleName();
     prefixes_.push_back(locale_name);
     std::string lower_locale_name = ToLower(locale_name);
     if (lower_locale_name != locale_name)
@@ -75,13 +70,13 @@ class LocalizedFileManager::Impl {
     file_manager_ = NULL;
   }
 
-  StringVector prefixes_;
+  std::vector<std::string> prefixes_;
   FileManagerInterface *file_manager_;
 };
 
 
 LocalizedFileManager::LocalizedFileManager()
-  : impl_(new Impl(NULL, NULL)){
+  : impl_(new Impl(NULL)){
 }
 
 LocalizedFileManager::~LocalizedFileManager() {
@@ -89,12 +84,7 @@ LocalizedFileManager::~LocalizedFileManager() {
 }
 
 LocalizedFileManager::LocalizedFileManager(FileManagerInterface *file_manager)
-  : impl_(new Impl(file_manager, NULL)){
-}
-
-LocalizedFileManager::LocalizedFileManager(FileManagerInterface *file_manager,
-                                           const char *locale)
-  : impl_(new Impl(file_manager, locale)){
+  : impl_(new Impl(file_manager)){
 }
 
 bool LocalizedFileManager::Attach(FileManagerInterface *file_manager) {
@@ -128,7 +118,7 @@ bool LocalizedFileManager::ReadFile(const char *file, std::string *data) {
       return true;
 
     // Then try localized file.
-    for (StringVector::iterator it = impl_->prefixes_.begin();
+    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ReadFile(path.c_str(), data))
@@ -158,7 +148,7 @@ bool LocalizedFileManager::RemoveFile(const char *file) {
     if (impl_->file_manager_->RemoveFile(file))
       result = true;
 
-    for (StringVector::iterator it = impl_->prefixes_.begin();
+    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->RemoveFile(path.c_str()))
@@ -180,7 +170,7 @@ bool LocalizedFileManager::ExtractFile(const char *file, std::string *into_file)
       return true;
 
     // Then try localized file.
-    for (StringVector::iterator it = impl_->prefixes_.begin();
+    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ExtractFile(path.c_str(), into_file))
@@ -201,7 +191,7 @@ bool LocalizedFileManager::FileExists(const char *file, std::string *path) {
     if (impl_->file_manager_->FileExists(file, path))
       return true;
 
-    for (StringVector::iterator it = impl_->prefixes_.begin();
+    for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->FileExists(path.c_str(), NULL))

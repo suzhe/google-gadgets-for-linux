@@ -38,8 +38,7 @@ ggl_gtk_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
 ggl_gtk_LDADD	= @GTK2_LIBS@ \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la \
-		  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
+		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
 ggl_gtk_LDFLAGS = -R$(libdir)
 
@@ -74,7 +73,7 @@ ggl-gtk.desktop : ggl-gtk.desktop.in
 	$(top_builddir)/xdg/intl-desktop-file.sh $@.tmp $@
 	rm -f $@.tmp
 
-EXTRA_DIST = $(desktop_in_files) CMakeLists.txt
+EXTRA_DIST = $(desktop_in_files)
 CLEANFILES = $(desktop_DATA)
 
 if ENABLE_UPDATE_DESKTOP_DATABASE

@@ -213,34 +213,18 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
 
     // Create gadget FileManager
-    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str(),
-                                                       NULL);
-    if (fm == NULL)
-      return false;
+    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
+    if (fm == NULL) return false;
     file_manager_->RegisterFileManager("", fm);
 
     // Create system FileManager
     fm = CreateFileManager(kDirSeparatorStr);
     if (fm) file_manager_->RegisterFileManager(kDirSeparatorStr, fm);
 
-    std::string error_msg;
     // Load strings and manifest.
     if (!ReadStringsAndManifest(file_manager_, &strings_map_,
-                                &manifest_info_map_)) {
-      error_msg = StringPrintf(GM_("GADGET_LOAD_FAILURE"), base_path_.c_str());
-    }
-    // Create main view early to allow Alert() during initialization.
-    main_view_ = new ViewBundle(
-        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
-        owner_, element_factory_, &global_, NULL, true);
-    ASSERT(main_view_);
-
-    if (!error_msg.empty()) {
-      main_view_->view()->Alert(error_msg.c_str());
+                                &manifest_info_map_))
       return false;
-    }
-
-    main_view_->view()->SetCaption(GetManifestInfo(kManifestName));
 
     std::string min_version = GetManifestInfo(kManifestMinVersion);
     DLOG("Gadget min version: %s", min_version.c_str());
@@ -253,9 +237,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (!CompareVersion(min_version.c_str(), GGL_API_VERSION,
                         &compare_result) ||
         compare_result > 0) {
-      main_view_->view()->Alert(
-          StringPrintf(GM_("GADGET_REQUIRE_API_VERSION"),
-                       min_version.c_str(), base_path_.c_str()).c_str());
+      LOG("Gadget required version %s higher than supported version %s",
+          min_version.c_str(), GGL_API_VERSION);
       return false;
     }
 
@@ -284,6 +267,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     // permissions.
     permissions_.SetGrantedByPermissions(global_permissions, false);
     DLOG("Permissions: %s", permissions_.ToString().c_str());
+
+    // main view must be created before calling RegisterProperties();
+    main_view_ = new ViewBundle(
+        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
+        owner_, element_factory_, &global_, NULL, true);
+    ASSERT(main_view_);
 
     if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
       host_->ShowGadgetDebugConsole(owner_);
@@ -319,17 +308,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
         if (i->second == "no") {
-          main_view_->view()->Alert(
-              StringPrintf(GM_("GADGET_PLATFORM_NOT_SUPPORTED"),
-                           base_path_.c_str()).c_str());
+          LOG("Gadget doesn't support platform %s", GGL_PLATFORM);
           return false;
         }
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformMinVersion)) {
         if (!CompareVersion(i->second.c_str(), GGL_VERSION, &compare_result) ||
             compare_result > 0) {
-          main_view_->view()->Alert(
-              StringPrintf(GM_("GADGET_REQUIRE_HOST_VERSION"),
-                           i->second.c_str(), base_path_.c_str()).c_str());
+          LOG("Gadget required platform version %s higher than supported "
+              "version %s", i->second.c_str(), GGL_VERSION);
           return false;
         }
       }
@@ -356,17 +342,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     std::string main_xml;
     if (!file_manager_->ReadFile(kMainXML, &main_xml)) {
       LOG("Failed to load main.xml.");
-      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
-                                             base_path_.c_str()).c_str());
       return false;
     }
 
+    main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
     RegisterScriptExtensions(main_view_->context());
 
     if (!main_view_->scriptable()->InitFromXML(main_xml, kMainXML)) {
       LOG("Failed to setup the main view");
-      main_view_->view()->Alert(StringPrintf(GM_("GADGET_LOAD_FAILURE"),
-                                             base_path_.c_str()).c_str());
       return false;
     }
 
@@ -433,24 +416,22 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // Register properties of plugin.
     plugin_.RegisterProperty("plugin_flags", NULL, // No getter.
-                             NewSlot(this, &Impl::SetPluginFlags));
+                NewSlot(this, &Impl::SetPluginFlags));
     plugin_.RegisterProperty("title", NULL, // No getter.
-                             NewSlot(main_view_->view(), &View::SetCaption));
+                NewSlot(main_view_->view(), &View::SetCaption));
     plugin_.RegisterProperty("window_width",
-                             NewSlot(main_view_->view(), &View::GetWidth),
-                             NULL);
+                NewSlot(main_view_->view(), &View::GetWidth), NULL);
     plugin_.RegisterProperty("window_height",
-                             NewSlot(main_view_->view(), &View::GetHeight),
-                             NULL);
+                NewSlot(main_view_->view(), &View::GetHeight), NULL);
 
     plugin_.RegisterMethod("RemoveMe",
-                           NewSlot(this, &Impl::RemoveMe));
+                NewSlot(this, &Impl::RemoveMe));
     plugin_.RegisterMethod("ShowDetailsView",
-                           NewSlot(this, &Impl::ShowDetailsViewProxy));
+                NewSlot(this, &Impl::ShowDetailsViewProxy));
     plugin_.RegisterMethod("CloseDetailsView",
-                           NewSlot(this, &Impl::CloseDetailsView));
+                NewSlot(this, &Impl::CloseDetailsView));
     plugin_.RegisterMethod("ShowOptionsDialog",
-                           NewSlot(this, &Impl::ShowOptionsDialog));
+                NewSlot(this, &Impl::ShowOptionsDialog));
 
     plugin_.RegisterSignal("onShowOptionsDlg",
                            &onshowoptionsdlg_signal_);
@@ -535,6 +516,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   }
 
+  void AboutMenuCallback(const char *) {
+    host_->ShowGadgetAboutDialog(owner_);
+  }
+
+  void OptionsMenuCallback(const char *) {
+    ShowOptionsDialog();
+  }
+
   void DebugConsoleMenuCallback(const char *) {
     host_->ShowGadgetDebugConsole(owner_);
   }
@@ -545,11 +534,25 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     onaddcustommenuitems_signal_(smenu);
     // Some of the menu handler slots may still hold the reference.
     smenu->Unref();
+    if (HasOptionsDialog()) {
+      menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
+                    MenuInterface::MENU_ITEM_ICON_PREFERENCES,
+                    NewSlot(this, &Impl::OptionsMenuCallback),
+                    MenuInterface::MENU_ITEM_PRI_GADGET);
+      menu->AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
+    }
+    bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
+                         !oncommand_signal_.HasActiveConnections();
     if (debug_console_config_ != DEBUG_CONSOLE_DISABLED) {
       menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0, 0,
                     NewSlot(this, &Impl::DebugConsoleMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
     }
+    menu->AddItem(GM_("MENU_ITEM_ABOUT"),
+                  disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
+                  MenuInterface::MENU_ITEM_ICON_ABOUT,
+                  NewSlot(this, &Impl::AboutMenuCallback),
+                  MenuInterface::MENU_ITEM_PRI_GADGET);
     // Remove item is added in view decorator.
   }
 
@@ -647,7 +650,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                            ScriptContextInterface *context) {
     std::string real_message;
     std::string script_filename;
-    int script_line = 0;
+    int script_line;
     if (context)
       context->GetCurrentFileAndLine(&script_filename, &script_line);
     if (script_filename.empty() ||
@@ -701,13 +704,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return has_options_xml_ || onshowoptionsdlg_signal_.HasActiveConnections();
   }
 
-  static bool OptionsDialogCallback(int flag, ViewBundle *options_view) {
+  static void OptionsDialogCallback(int flag, ViewBundle *options_view) {
     if (options_view) {
       SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
                         Event::EVENT_OK : Event::EVENT_CANCEL);
-      return options_view->view()->OnOtherEvent(event) != EVENT_RESULT_CANCELED;
+      options_view->view()->OnOtherEvent(event);
     }
-    return true;
   }
 
   bool ShowOptionsDialog() {
@@ -726,7 +728,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
            VariantValue<bool>()(result)) && window->AdjustSize()) {
         view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
-          view->SetCaption(main_view_->view()->GetCaption());
+          view->SetCaption(main_view_->view()->GetCaption().c_str());
         ret = view->ShowView(true, flags,
                              NewSlot(OptionsDialogCallback, &options_view));
       } else {
@@ -758,7 +760,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
           view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
-          view->SetCaption(main_view_->view()->GetCaption());
+          view->SetCaption(main_view_->view()->GetCaption().c_str());
 
         if (param) {
           // Set up the param variable in the opened options view.
@@ -777,37 +779,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return ret;
   }
 
-  class DetailsViewCallbackProxy : public Slot1<bool, int> {
-   public:
-    explicit DetailsViewCallbackProxy(Slot *callback) : callback_(callback) {}
-    ~DetailsViewCallbackProxy() { delete callback_; }
-    virtual ResultVariant Call(ScriptableInterface *object,
-                               int argc, const Variant argv[]) const {
-      ASSERT(argc == 1);
-      bool result = true;
-      callback_->Call(object, argc, argv).v().ConvertToBool(&result);
-      return ResultVariant(Variant(result));
-    }
-    virtual bool operator==(const Slot &another) const {
-      return false;
-    }
-   private:
-    Slot *callback_;
-  };
-
   bool ShowDetailsViewProxy(DetailsViewData *details_view_data,
                             const char *title, int flags,
                             Slot *callback) {
-    // Can't use SlotProxy<bool, int> here, because it can't handle return
-    // value type conversion.
-    Slot1<bool, int> *feedback_handler =
-        callback ? new DetailsViewCallbackProxy(callback) : NULL;
+    Slot1<void, int> *feedback_handler =
+        callback ? new SlotProxy1<void, int>(callback) : NULL;
     return ShowDetailsView(details_view_data, title, flags, feedback_handler);
   }
 
   bool ShowDetailsView(DetailsViewData *details_view_data,
                        const char *title, int flags,
-                       Slot1<bool, int> *feedback_handler) {
+                       Slot1<void, int> *feedback_handler) {
     // Reference details_view_data to prevent it from being destroyed by
     // JavaScript GC.
     if (details_view_data)
@@ -866,10 +848,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (title && *title) {
       details_view_->view()->SetCaption(title);
     } else if (details_view_->view()->GetCaption().empty()) {
-      details_view_->view()->SetCaption(main_view_->view()->GetCaption());
+      details_view_->view()->SetCaption(
+          main_view_->view()->GetCaption().c_str());
     }
 
-    details_view_->view()->ShowView(false, flags, feedback_handler);
+    details_view_->view()->ShowView(title, flags, feedback_handler);
     return true;
   }
 
@@ -971,8 +954,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return true;
   }
 
-  static FileManagerInterface *CreateGadgetFileManager(const char *base_path,
-                                                       const char *locale) {
+  static FileManagerInterface *CreateGadgetFileManager(const char *base_path) {
     std::string path, filename;
     SplitFilePath(base_path, &path, &filename);
 
@@ -981,7 +963,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       path = base_path;
 
     FileManagerInterface *fm = CreateFileManager(path.c_str());
-    return fm ? new LocalizedFileManager(fm, locale) : NULL;
+    return fm ? new LocalizedFileManager(fm) : NULL;
   }
 
   NativeOwnedScriptable<UINT64_C(0x4edfd94b70f04da6)> global_;
@@ -1130,7 +1112,7 @@ bool Gadget::ShowXMLOptionsDialog(int flags, const char *xml_file,
 
 bool Gadget::ShowDetailsView(DetailsViewData *details_view_data,
                              const char *title, int flags,
-                             Slot1<bool, int> *feedback_handler) {
+                             Slot1<void, int> *feedback_handler) {
   return impl_->ShowDetailsView(details_view_data, title, flags,
                                 feedback_handler);
 }
@@ -1203,24 +1185,12 @@ int Gadget::GetDefaultFontSize() const {
   return impl_->host_->GetDefaultFontSize();
 }
 
-bool Gadget::HasAboutDialog() const {
-  return !GetManifestInfo(kManifestAboutText).empty() ||
-      impl_->oncommand_signal_.HasActiveConnections();
-}
-
 // static methods
 bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
-  return GetGadgetManifestForLocale(base_path, NULL, data);
-}
-
-bool Gadget::GetGadgetManifestForLocale(const char *base_path,
-                                        const char *locale,
-                                        StringMap *data) {
   ASSERT(base_path);
   ASSERT(data);
 
-  FileManagerInterface *file_manager =
-      Impl::CreateGadgetFileManager(base_path, locale);
+  FileManagerInterface *file_manager = Impl::CreateGadgetFileManager(base_path);
   if (!file_manager)
     return false;
 
@@ -1228,12 +1198,6 @@ bool Gadget::GetGadgetManifestForLocale(const char *base_path,
   bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
   delete file_manager;
   return result;
-}
-
-FileManagerInterface *Gadget::GetGadgetFileManagerForLocale(
-    const char *base_path,
-    const char *locale) {
-  return Impl::CreateGadgetFileManager(base_path, locale);
 }
 
 bool Gadget::GetGadgetRequiredPermissions(const StringMap *manifest,

@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#include <algorithm>
 
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopWidget>
@@ -36,8 +35,6 @@
 
 namespace ggadget {
 namespace qt {
-
-static const double kDragThreshold = 3;
 
 QtViewWidget::QtViewWidget(ViewInterface *view,
                            bool composite,
@@ -216,18 +213,14 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
-  if (mouse_drag_moved_) {
-    QPoint offset = QCursor::pos() - mouse_pos_;
-    if (std::abs(static_cast<double>(offset.x())) > kDragThreshold ||
-        std::abs(static_cast<double>(offset.y())) > kDragThreshold)
-    return;
-  } else {
-    MouseEvent e(Event::EVENT_MOUSE_UP,
-                 event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
-    handler_result = view_->OnMouseEvent(e);
-    if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
-      event->accept();
-  }
+  if (mouse_drag_moved_) return;
+
+  MouseEvent e(Event::EVENT_MOUSE_UP,
+               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
+  handler_result = view_->OnMouseEvent(e);
+
+  if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
+    event->accept();
 
   MouseEvent e1(event->button() == Qt::LeftButton ? Event::EVENT_MOUSE_CLICK :
                                                     Event::EVENT_MOUSE_RCLICK,
@@ -327,10 +320,7 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
     if (!drag_files_) return;
 
     for (int i = 0; i < urls.size(); i++) {
-      std::string url = urls[i].toString().toUtf8().data();
-      if (url.substr(0, 7) == "file://")
-        url = url.substr(7);
-      drag_urls_.push_back(url);
+      drag_urls_.push_back(urls[i].toString().toUtf8().data());
       drag_files_[i] = drag_urls_[i].c_str();
     }
     drag_files_[urls.size()] = NULL;
@@ -366,7 +356,7 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
 }
 
 void QtViewWidget::resizeEvent(QResizeEvent *event) {
-
+  
 }
 
 QSize QtViewWidget::sizeHint() const {
@@ -464,6 +454,15 @@ void QtViewWidget::SkipTaskBar() {
                   XA_ATOM, 32, PropModeAppend,
                   (unsigned char *)&net_wm_state_skip_taskbar, 1);
 #endif
+}
+
+// Move the widget to the center of the screen inaccurately.
+void QtViewWidget::Center() {
+  QDesktopWidget desktop;
+  QRect rect = desktop.screenGeometry();
+  int x = rect.x() + rect.width() / 2;
+  int y = rect.y() + rect.height() / 2;
+  move(x, y);
 }
 
 void QtViewWidget::SetChild(QWidget *widget) {

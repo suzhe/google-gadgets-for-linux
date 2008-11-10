@@ -172,7 +172,7 @@ ProcessInfoInterface *Process::GetForeground() {
   }
 
   XSetErrorHandler(old_error_handler);
-  return pid == -1 ? NULL : GetInfo(pid);
+  return pid == -1 ? NULL : GetInfo(pid); 
 }
 
 ProcessInfoInterface *Process::GetInfo(int pid) {
@@ -203,10 +203,7 @@ static bool ReadCmdPath(int pid, std::string *cmdline) {
   snprintf(filename, sizeof(filename) - 1, "%s/%d/exe", kDirName, pid);
 
   char command[PATH_MAX + 2] = {0};
-  if (readlink(filename, command, sizeof(command) - 1) < 0) {
-    *cmdline = "";
-    return false;
-  }
+  readlink(filename, command, sizeof(command) - 1);
 
   for (int i = 0; command[i]; i++) {
     if (command[i] == ' ' || command[i] == '\n') {

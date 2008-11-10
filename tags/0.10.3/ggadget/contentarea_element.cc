@@ -511,7 +511,7 @@ class ContentAreaElement::Impl {
     DetailsViewFeedbackHandler(Impl *impl, ContentItem *item)
       : impl_(impl), item_(item), content_area_(impl->owner_) {
     }
-    bool operator()(int flags) const {
+    void operator()(int flags) const {
       if (content_area_.Get() && item_.Get()) {
         impl_->details_open_item_ = NULL;
         if (flags & ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
@@ -521,7 +521,6 @@ class ContentAreaElement::Impl {
         if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
           impl_->OnItemRemove(item_.Get());
       }
-      return true;
     }
     // Not used.
     bool operator==(const DetailsViewFeedbackHandler &) const {
@@ -572,15 +571,14 @@ class ContentAreaElement::Impl {
       if (mouse_over_item_ != new_mouse_over_item) {
         mouse_over_item_ = new_mouse_over_item;
         mouse_over_pin_ = new_mouse_over_pin;
-        std::string tooltip;
-        if (tooltip_required)
-          tooltip = new_mouse_over_item->GetTooltip();
+        const char *tooltip = tooltip_required ?
+                              new_mouse_over_item->GetTooltip().c_str() : NULL;
         // Store the tooltip to let view display it when appropriate using
         // the default mouse-in logic.
         owner_->SetTooltip(tooltip);
         // Display the tooltip now, because view only displays tooltip when
         // the mouse-in element changes.
-        owner_->GetView()->ShowElementTooltip(owner_);
+        owner_->GetView()->SetTooltip(tooltip);
         queue_draw = true;
       } else if (new_mouse_over_pin != mouse_over_pin_) {
         mouse_over_pin_ = new_mouse_over_pin;
@@ -613,7 +611,7 @@ class ContentAreaElement::Impl {
                     details_view_data) {
                   owner_->GetView()->GetGadget()->ShowDetailsView(
                       details_view_data, title.c_str(), flags,
-                      NewFunctorSlot<bool, int>(DetailsViewFeedbackHandler(
+                      NewFunctorSlot<void, int>(DetailsViewFeedbackHandler(
                           this, mouse_over_item_)));
                   details_open_item_ = mouse_over_item_;
                 }
@@ -759,8 +757,9 @@ class ContentAreaElement::Impl {
   Color background_color_, mouseover_color_, mousedown_color_;
 };
 
-ContentAreaElement::ContentAreaElement(View *view, const char *name)
-    : ScrollingElement(view, "contentarea", name, false),
+ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
+                                       const char *name)
+    : ScrollingElement(parent, view, "contentarea", name, false),
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);
@@ -934,8 +933,10 @@ EventResult ContentAreaElement::HandleMouseEvent(const MouseEvent &event) {
          ScrollingElement::HandleMouseEvent(event) : result;
 }
 
-BasicElement *ContentAreaElement::CreateInstance(View *view, const char *name) {
-  return new ContentAreaElement(view, name);
+BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
+                                                 View *view,
+                                                 const char *name) {
+  return new ContentAreaElement(parent, view, name);
 }
 
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {

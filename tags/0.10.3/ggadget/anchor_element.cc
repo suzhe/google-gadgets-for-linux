@@ -52,8 +52,8 @@ class AnchorElement::Impl {
   std::string href_;
 };
 
-AnchorElement::AnchorElement(View *view, const char *name)
-    : BasicElement(view, "a", name, false),
+AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
+    : BasicElement(parent, view, "a", name, false),
       impl_(new Impl(this, view)) {
   SetCursor(ViewInterface::CURSOR_HAND);
   SetEnabled(true);
@@ -143,8 +143,9 @@ EventResult AnchorElement::HandleMouseEvent(const MouseEvent &event) {
   return result;
 }
 
-BasicElement *AnchorElement::CreateInstance(View *view, const char *name) {
-  return new AnchorElement(view, name);
+BasicElement *AnchorElement::CreateInstance(BasicElement *parent, View *view,
+                                            const char *name) {
+  return new AnchorElement(parent, view, name);
 }
 
 void AnchorElement::GetDefaultSize(double *width, double *height) const {

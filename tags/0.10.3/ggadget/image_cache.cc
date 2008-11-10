@@ -31,31 +31,35 @@ class ImageCache::Impl {
 
   class SharedImage : public ImageInterface {
    public:
-    SharedImage(const std::string &key, const std::string &tag,
-                ImageMap *owner, ImageInterface *image)
-        : key_(key), tag_(tag), owner_(owner), image_(image), ref_(1) {
+    SharedImage(const std::string &tag, ImageMap *owner, ImageInterface *image)
+        : tag_(tag), owner_(owner), image_(image), ref_(1) {
       ASSERT(owner_);
     }
+
     virtual ~SharedImage() {
-      DLOG("Destroy image %s", key_.c_str());
-      if (owner_)
-        owner_->erase(key_);
       if (image_)
         image_->Destroy();
     }
+
     void Ref() {
       ASSERT(ref_ >= 0);
       ++ref_;
     }
+
     void Unref() {
       ASSERT(ref_ > 0);
       --ref_;
-      if (ref_ == 0)
+      if (ref_ == 0) {
+        if (owner_)
+          owner_->erase(tag_);
         delete this;
+      }
     }
+
     virtual void Destroy() {
       Unref();
     }
+
     virtual const CanvasInterface *GetCanvas() const {
       return image_ ? image_->GetCanvas() : NULL;
     }
@@ -100,7 +104,6 @@ class ImageCache::Impl {
       return image_ ? image_->IsFullyOpaque() : false;
     }
    public:
-    std::string key_;
     std::string tag_;
     ImageMap *owner_;
     ImageInterface *image_;
@@ -108,22 +111,21 @@ class ImageCache::Impl {
   };
 
  public:
-  Impl() : ref_(0) {
+  Impl() {
 #ifdef _DEBUG
-    num_new_local_images_ = 0;
-    num_shared_local_images_ = 0;
-    num_new_global_images_ = 0;
-    num_shared_global_images_ = 0;
+    num_new_images_ = 0;
+    num_shared_images_ = 0;
 #endif
   }
 
   ~Impl() {
 #ifdef _DEBUG
-    DLOG("Image statistics(new/shared): "
-         "local: %d/%d, global: %d/%d, remained: %zd",
-         num_new_local_images_, num_shared_local_images_,
-         num_new_global_images_, num_shared_global_images_,
-         images_.size() + mask_images_.size());
+    DLOG("Image statistics(new/shared): local %d/%d;"
+         " global %d/%d remain local %zd global %zd",
+         num_new_images_, num_shared_images_,
+         global_num_new_images_, global_num_shared_images_,
+         images_.size() + mask_images_.size(),
+         global_images_.size() + global_mask_images_.size());
 #endif
     for (ImageMap::const_iterator it = images_.begin();
          it != images_.end(); ++it) {
@@ -140,125 +142,94 @@ class ImageCache::Impl {
   }
 
   ImageInterface *LoadImage(GraphicsInterface *gfx, FileManagerInterface *fm,
-                            const std::string &filename, bool is_mask) {
-    if (!gfx || filename.empty())
+                            const char *filename, bool is_mask) {
+    if (!gfx || !filename || !*filename)
       return NULL;
 
-    FileManagerInterface *global_fm = GetGlobalFileManager();
-    ImageMap *image_map = is_mask ? &mask_images_ : &images_;
-    ImageMap::const_iterator it;
-    std::string local_key;
-    std::string global_key;
+    std::string tag(filename);
 
-    // Find image in cache first.
-    if (fm) {
-      local_key = fm->GetFullPath(filename.c_str());
-      it = image_map->find(local_key);
-      if (it != image_map->end()) {
+    // Search in local cache first, then in global cache.
+    ImageMap *image_map = is_mask ? &mask_images_ : &images_;
+    ImageMap::iterator it = image_map->find(tag);
+    if (it != image_map->end()) {
 #ifdef _DEBUG
-        num_shared_local_images_++;
-        DLOG("Local image %s found in cache.", local_key.c_str());
+      num_shared_images_++;
 #endif
-        it->second->Ref();
-        return it->second;
-      }
+      it->second->Ref();
+      return it->second;
     }
 
-    if (global_fm) {
-      global_key = global_fm->GetFullPath(filename.c_str());
-      it = image_map->find(global_key);
-      if (it != image_map->end()) {
+    image_map = is_mask ? &global_mask_images_ : &global_images_;
+    it = image_map->find(tag);
+    if (it != image_map->end()) {
 #ifdef _DEBUG
-        num_shared_global_images_++;
-        DLOG("Global image %s found in cache.", global_key.c_str());
+      global_num_shared_images_++;
 #endif
-        it->second->Ref();
-        return it->second;
-      }
+      it->second->Ref();
+      return it->second;
     }
 
     // The image was not loaded yet.
     ImageInterface *img = NULL;
     std::string data;
-    std::string key;
-    if (fm && fm->ReadFile(filename.c_str(), &data)) {
-      key = local_key;
+    FileManagerInterface *global_fm = GetGlobalFileManager();
+
+    if (fm && fm->ReadFile(filename, &data)) {
       img = gfx->NewImage(filename, data, is_mask);
+      image_map = is_mask ? &mask_images_ : &images_;
 #ifdef _DEBUG
-      DLOG("Local image %s loaded.", key.c_str());
-      num_new_local_images_++;
+      num_new_images_++;
 #endif
-    } else if (global_fm && global_fm->ReadFile(filename.c_str(), &data)) {
-      key = global_key;
+    } else if (global_fm && global_fm->ReadFile(filename, &data)) {
       img = gfx->NewImage(filename, data, is_mask);
+      image_map = is_mask ? &global_mask_images_ : &global_images_;
 #ifdef _DEBUG
-      DLOG("Global image %s loaded.", key.c_str());
-      num_new_global_images_++;
+      global_num_new_images_++;
 #endif
     } else {
       // Still return a SharedImage because the gadget wants the src of an
       // image even if the image can't be loaded.
-      key = "Invalid:" + filename;
-      DLOG("Failed to load image %s.", filename.c_str());
+      image_map = is_mask ? &mask_images_ : &images_;
     }
 
-    SharedImage *shared_img = new SharedImage(key, filename, image_map, img);
-    (*image_map)[key] = shared_img;
+    SharedImage *shared_img = new SharedImage(tag, image_map, img);
+    (*image_map)[tag] = shared_img;
     return shared_img;
-  }
-
-  void Ref() {
-    ASSERT(ref_ >= 0);
-    ASSERT(this == impl_);
-    ++ref_;
-  }
-
-  void Unref() {
-    ASSERT(ref_ > 0);
-    ASSERT(this == impl_);
-    --ref_;
-    if (ref_ == 0) {
-      impl_ = NULL;
-      delete this;
-    }
-  }
-
-  static Impl *Get() {
-    if (!impl_)
-      impl_ = new Impl();
-    impl_->Ref();
-    return impl_;
   }
 
  private:
   ImageMap images_;
   ImageMap mask_images_;
-  int ref_;
+
+  static ImageMap global_images_;
+  static ImageMap global_mask_images_;
 
 #ifdef _DEBUG
-  int num_new_local_images_;
-  int num_shared_local_images_;
-  int num_new_global_images_;
-  int num_shared_global_images_;
+  int num_new_images_;
+  int num_shared_images_;
+  static int global_num_new_images_;
+  static int global_num_shared_images_;
 #endif
-
- private:
-  static Impl *impl_;
 };
 
-ImageCache::Impl *ImageCache::Impl::impl_ = NULL;
+ImageCache::Impl::ImageMap ImageCache::Impl::global_images_;
+ImageCache::Impl::ImageMap ImageCache::Impl::global_mask_images_;
+#ifdef _DEBUG
+int ImageCache::Impl::global_num_new_images_ = 0;
+int ImageCache::Impl::global_num_shared_images_ = 0;
+#endif
 
-ImageCache::ImageCache() : impl_(Impl::Get()) {
+ImageCache::ImageCache()
+  : impl_(new Impl()) {
 }
 
 ImageCache::~ImageCache() {
-  impl_->Unref();
+  delete impl_;
+  impl_ = NULL;
 }
 
-ImageInterface *ImageCache::LoadImage(GraphicsInterface *gfx,
-                                      FileManagerInterface *fm,
-                                      const std::string &filename,
-                                      bool is_mask) {
+ImageInterface *ImageCache::LoadImage(GraphicsInterface *gfx, FileManagerInterface *fm,
+                                      const char *filename, bool is_mask) {
   return impl_->LoadImage(gfx, fm, filename, is_mask);
 }
 

@@ -235,7 +235,7 @@ class Gadget {
    */
   bool ShowDetailsView(DetailsViewData *details_view_data,
                        const char *title, int flags,
-                       Slot1<bool, int> *feedback_handler);
+                       Slot1<void, int> *feedback_handler);
 
   /**
    * Close the details view if it is opened.
@@ -323,9 +323,6 @@ class Gadget {
    */
   int GetDefaultFontSize() const;
 
-  /* Check if about dialog can be shown */
-  bool HasAboutDialog() const;
-
  public:
   /**
    * A utility to get the manifest infomation of a gadget without
@@ -335,25 +332,6 @@ class Gadget {
    * @return @c true if succeeds.
    */
   static bool GetGadgetManifest(const char *base_path, StringMap *data);
-
-  /**
-   * Locale version of GetGadgetManifest. You can specify locale other than
-   * using system locale.
-   */
-  static bool GetGadgetManifestForLocale(const char *base_path,
-                                         const char *locale,
-                                         StringMap *data);
-  /**
-   * A utility to get an FileManagerInterface of a gadget without constructing a
-   * Gadget object.
-   * @param base_path see document for Gadget constructor.
-   * @param locale Locale to be used, system locale will be used if it's NULL
-   *               or is "".
-   * @return the file manager of the gadget
-   */
-  static FileManagerInterface *GetGadgetFileManagerForLocale(
-      const char *base_path,
-      const char *locale);
 
   /**
    * A utility to get required permissions of a gadget from its manifest

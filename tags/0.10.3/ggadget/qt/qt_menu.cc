@@ -116,7 +116,6 @@ QtMenu::QtMenu(QMenu *qmenu)
 }
 
 QtMenu::~QtMenu() {
-  delete impl_;
 }
 
 void QtMenu::AddItem(const char *item_text, int style, int stock_icon,

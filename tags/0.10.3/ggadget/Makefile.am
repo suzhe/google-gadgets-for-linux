@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTRA_DIST = CMakeLists.txt
-
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . tests js xdg npapi
-
+SUBDIRS = . tests js xdg
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
@@ -112,7 +109,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_event.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
-			  scriptable_function.h \
 			  scriptable_helper.h \
 			  scriptable_holder.h \
 			  scriptable_image.h \
@@ -133,7 +129,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
-			  usage_collector_interface.h \
 			  variant.h \
 			  video_element_base.h \
 			  view.h \
@@ -144,7 +139,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom_interface.h \
 			  xml_dom.h \
 			  xml_http_request_interface.h \
-			  xml_http_request_utils.h \
 			  xml_parser_interface.h \
 			  xml_utils.h \
 			  zip_file_manager.h
@@ -212,7 +206,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_event.cc \
 			  scriptable_file_system.cc \
 			  scriptable_framework.cc \
-			  scriptable_function.cc \
 			  scriptable_helper.cc \
 			  scriptable_image.cc \
 			  scriptable_menu.cc \
@@ -230,7 +223,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  text_frame.cc \
 			  texture.cc \
 			  unicode_utils.cc \
-			  usage_collector_factory.cc \
 			  variant.cc \
 			  video_element_base.cc \
 			  view.cc \
@@ -238,7 +230,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  view_element.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
-			  xml_http_request_utils.cc \
 			  xml_parser.cc \
 			  xml_utils.cc \
 			  zip_file_manager.cc

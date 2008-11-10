@@ -18,7 +18,11 @@ IF(GGL_BUILD_LIBGGADGET_GTK)
 
 APPLY_CONFIG(CAIRO)
 APPLY_CONFIG(GTK2)
-APPLY_CONFIG(RSVG)
+
+IF(RSVG_FOUND)
+  APPLY_CONFIG(RSVG)
+  ADD_DEFINITIONS(-DHAVE_RSVG_LIBRARY)
+ENDIF(RSVG_FOUND)
 
 SET(SRCS
   cairo_canvas.cc
@@ -29,15 +33,12 @@ SET(SRCS
   key_convert.cc
   main_loop.cc
   menu_builder.cc
-  npapi_plugin_element.cc
   pixbuf_image.cc
   single_view_host.cc
   tooltip.cc
   utilities.cc
   view_widget_binder.cc
 )
-
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
 
 if(RSVG_FOUND)
   SET(SRCS ${SRCS} rsvg_image.cc)
@@ -48,7 +49,6 @@ ADD_SUBDIRECTORY(tests)
 ADD_LIBRARY(ggadget-gtk${GGL_EPOCH} SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-gtk${GGL_EPOCH}
   ggadget-xdg${GGL_EPOCH}
-  ggadget-npapi${GGL_EPOCH}
   ${CAIRO_LIBRARIES}
   ${GTK2_LIBRARIES}
   ${GTHREAD_LIBRARIES}
@@ -63,7 +63,6 @@ INSTALL(FILES
   key_convert.h
   main_loop.h
   menu_builder.h
-  npapi_plugin_element.h
   single_view_host.h
   tooltip.h
   utilities.h

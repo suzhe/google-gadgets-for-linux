@@ -230,9 +230,6 @@ class MainLoopInterface {
 
   /** Checks if the calling thread is the main thread. */
   virtual bool IsMainThread() const = 0;
-
-  /** Wakes up the main loop from another thread. */
-  virtual void WakeUp() = 0;
 };
 
 /**

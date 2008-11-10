@@ -19,7 +19,6 @@ ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(qt)
 ADD_SUBDIRECTORY(js)
 ADD_SUBDIRECTORY(xdg)
-ADD_SUBDIRECTORY(npapi)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
@@ -54,7 +53,6 @@ SET(SRCS
   scriptable_event.cc
   scriptable_file_system.cc
   scriptable_framework.cc
-  scriptable_function.cc
   scriptable_helper.cc
   scriptable_image.cc
   scriptable_menu.cc
@@ -70,12 +68,10 @@ SET(SRCS
   texture.cc
   text_frame.cc
   unicode_utils.cc
-  usage_collector_factory.cc
   variant.cc
   view.cc
   xml_dom.cc
   xml_http_request_factory.cc
-  xml_http_request_utils.cc
   xml_parser.cc
   xml_utils.cc
 
@@ -221,7 +217,6 @@ INSTALL(FILES
   text_frame.h
   texture.h
   unicode_utils.h
-  usage_collector_interface.h
   video_element_base.h
   variant.h
   view.h

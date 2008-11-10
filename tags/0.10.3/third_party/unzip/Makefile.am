@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST = CMakeLists.txt
-
 if GGL_HOST_WINDOWS
   WIN32_INC=iowin32.h
   WIN32_SRC=iowin32.c

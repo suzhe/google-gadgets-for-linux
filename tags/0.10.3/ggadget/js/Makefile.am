@@ -19,8 +19,7 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 EXTRA_DIST		= jscript_massager.l \
-			  test_scripts \
-			  CMakeLists.txt
+			  test_scripts
 
 jsincludedir		= $(GGL_INCLUDE_DIR)/ggadget/js
 jsinclude_HEADERS	= jscript_massager.h \

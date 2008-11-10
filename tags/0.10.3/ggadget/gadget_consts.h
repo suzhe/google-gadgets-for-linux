@@ -271,7 +271,7 @@ const char kPermissionsOption[] = "permissions";
 const char kDefaultFontName[] = "sans-serif";
 const int kDefaultFontSize = 8;
 
-const char kGoogleGadgetsMimeType[] = "application/x-google-gadget";
+const char kGoogleGadgetsMimeType[] = "application/x-google-gadgets";
 
 } // namespace ggadget
 

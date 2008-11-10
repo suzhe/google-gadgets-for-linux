@@ -311,14 +311,38 @@ class ScriptableWireless : public ScriptableHelperNativeOwnedDefault {
     return array;
   }
 
+  WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
+    if (!ap_name) return NULL;
+
+    int count = wireless_->GetAPCount();
+    ASSERT(count >= 0);
+    for (int i = 0; i < count; i++) {
+      WirelessAccessPointInterface *ap = wireless_->GetWirelessAccessPoint(i);
+      if (ap) {
+        if (ap->GetName() == ap_name)
+          return ap;
+        ap->Destroy();
+      }
+    }
+    return NULL;
+  }
+
   void ConnectAP(const char *ap_name, Slot *method) {
-    wireless_->ConnectAP(ap_name,
-                         method ? new SlotProxy1<void, bool>(method) : NULL);
+    WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+    if (ap) {
+      ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
+    } else {
+      delete method;
+    }
   }
 
   void DisconnectAP(const char *ap_name, Slot *method) {
-    wireless_->DisconnectAP(ap_name,
-                            method ? new SlotProxy1<void, bool>(method) : NULL);
+    WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+    if (ap) {
+      ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
+    } else {
+      delete method;
+    }
   }
 
   WirelessInterface *wireless_;
@@ -645,9 +669,9 @@ ScriptableScreen::~ScriptableScreen() {
 ScriptableUser::ScriptableUser(UserInterface *user) {
   RegisterProperty("idle",
                    NewSlot(user, &UserInterface::IsUserIdle), NULL);
-  /* RegisterProperty("idle_period",
+  RegisterProperty("idle_period",
                    NewSlot(user, &UserInterface::GetIdlePeriod),
-                   NewSlot(user, &UserInterface::SetIdlePeriod)); */
+                   NewSlot(user, &UserInterface::SetIdlePeriod));
 }
 
 ScriptableUser::~ScriptableUser() {

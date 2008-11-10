@@ -223,68 +223,29 @@ std::string EncodeURLComponent(const std::string &source) {
 }
 
 std::string DecodeURL(const std::string &source) {
-#define DECODE_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
-                            (((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : \
-                             (((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : \
-                              -1)))
+#define VALID_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') || \
+                           ((c) >= 'A' && (c) <= 'F') || \
+                           ((c) >= 'a' && (c) <= 'f'))
+#define DECODE_HEX_CHAR(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : ( \
+                            ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : ( \
+                            ((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : 0)))
   std::string dest;
   std::string::const_iterator end = source.end();
   for (std::string::const_iterator i = source.begin(); i != end; ++i) {
-    char src = *i;
-    if (src == '%' && i + 1 != end && i + 2 != end) {
-      int decoded1 = DECODE_HEX_CHAR(*(i + 1));
-      int decoded2 = DECODE_HEX_CHAR(*(i + 2));
-      if (decoded1 != -1 && decoded2 != -1) {
-        dest.append(1, static_cast<char>((decoded1 << 4) | decoded2));
-        i += 2;
-      } else {
-        dest.append(1, src);
-      }
+    unsigned char src = *i;
+    if (src == '%' && i + 1 != end && i + 2 != end &&
+        VALID_HEX_CHAR(*(i + 1)) && VALID_HEX_CHAR(*(i + 2))) {
+      src = (DECODE_HEX_CHAR(*(i + 1)) << 4) | DECODE_HEX_CHAR(*(i + 2));
+      dest.append(1, src);
+      i += 2;
     } else {
       // not a special char: just copy
       dest.append(1, src);
     }
   }
   return dest;
+#undef VALID_HEX_CHAR
 #undef DECODE_HEX_CHAR
-}
-
-static bool IsValidSchemeStartChar(char ch) {
-  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
-}
-
-static bool IsValidSchemeChar(char ch) {
-  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
-         (ch >= '0' && ch <= '9') || ch == '+' || ch == '.' || ch == '-';
-}
-
-std::string GetURLScheme(const char *url) {
-  if (!url || !IsValidSchemeStartChar(*url))
-    return std::string();
-
-  const char *colon = strchr(url, ':');
-  if (colon) {
-    for (const char *p = url; p != colon; ++p) {
-      if (!IsValidSchemeChar(*p))
-        return std::string();
-    }
-    return std::string(url, colon);
-  }
-
-  return std::string();
-}
-
-bool IsValidURLScheme(const char *scheme) {
-  static const char *kValidURLSchemes[] = {
-    "http", "https", "feed", "file", "mailto", NULL
-  };
-  if (scheme && *scheme) {
-    for(size_t i = 0; kValidURLSchemes[i]; ++i) {
-      if (strcasecmp(scheme, kValidURLSchemes[i]) == 0)
-        return true;
-    }
-  }
-  return false;
 }
 
 bool HasValidURLPrefix(const char *url) {
@@ -429,12 +390,6 @@ std::string EncodeJavaScriptString(const UTF16Char *source) {
   return dest;
 }
 
-std::string EncodeJavaScriptString(const std::string &source) {
-  UTF16String utf16;
-  ConvertStringUTF8ToUTF16(source, &utf16);
-  return EncodeJavaScriptString(utf16.c_str());
-}
-
 bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right) {
   std::string::size_type pos = source.find(separator);
@@ -456,7 +411,7 @@ bool SplitString(const std::string &source, const std::string &separator,
 }
 
 bool SplitStringList(const std::string &source, const std::string &separator,
-                     StringVector *result) {
+                     std::vector<std::string> *result) {
   if (result)
     result->clear();
   if (!source.length())
@@ -734,11 +689,8 @@ static bool ParseVersion(const char *version,
     parsed_version[i] = static_cast<int>(v);
 
     if (i < kNumVersionParts - 1) {
-      if (*end_ptr != '.') {
-        for (int j = i + 1; j < kNumVersionParts; j++)
-          parsed_version[j] = 0;
-        break;
-      }
+      if (*end_ptr != '.')
+        return false;
       version = end_ptr + 1;
     }
   }

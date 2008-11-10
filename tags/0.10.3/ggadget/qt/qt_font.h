@@ -29,7 +29,8 @@ namespace qt {
  */
 class QtFont : public FontInterface {
  public:
-  QtFont(const std::string &family, double size, Style style, Weight weight);
+  QtFont(const char *family, double size, Style style,
+         Weight weight);
   virtual ~QtFont();
 
   virtual Style GetStyle() const { return style_; };
@@ -45,8 +46,6 @@ class QtFont : public FontInterface {
   double size_;
   Style style_;
   Weight weight_;
-
-  DISALLOW_EVIL_CONSTRUCTORS(QtFont);
 };
 
 } // namespace qt

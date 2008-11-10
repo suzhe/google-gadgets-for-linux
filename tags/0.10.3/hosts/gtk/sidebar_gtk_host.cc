@@ -99,7 +99,7 @@ class SideBarGtkHost::Impl {
     SingleViewHost *floating;
     SingleViewHost *popout;
 
-    size_t index_in_sidebar;
+    int  index_in_sidebar;
     bool undock_by_drag;
     bool old_keep_above;
     bool details_on_right;
@@ -407,7 +407,7 @@ class SideBarGtkHost::Impl {
   }
 
   // Handle gadget undock by dragging out of sidebar
-  void OnSideBarUndock(View *view, size_t index,
+  void OnSideBarUndock(View *view, int index,
                        double offset_x, double offset_y) {
     ASSERT(view);
     int gadget_id = view->GetGadget()->GetInstanceID();
@@ -440,10 +440,7 @@ class SideBarGtkHost::Impl {
     ViewHostInterface *old = main_view->SwitchViewHost(new_host);
     // DisplayTarget and undock event will be set in OnMainViewEndMove();
     // FIXME: How to make sure the browser element can reparent correctly?
-    if (old) {
-      CopyMinimizedState(old, new_host);
-      old->Destroy();
-    }
+    if (old) old->Destroy();
 
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
                          (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
@@ -547,7 +544,7 @@ class SideBarGtkHost::Impl {
       gadgets_shown_ = VariantValue<bool>()(value);
   }
 
-  bool SaveGadgetOrder(size_t index, View *view) {
+  bool SaveGadgetOrder(int index, View *view) {
     Gadget *gadget = view->GetGadget();
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue(kOptionPositionInSideBar, Variant(index));
@@ -713,12 +710,6 @@ class SideBarGtkHost::Impl {
         delete options;
         return LoadGadgetInstance(id);
       }
-    } else {
-      ShowAlertDialog(
-          GM_("GOOGLE_GADGETS"),
-          StringPrintf(
-              GM_("GADGET_LOAD_FAILURE"),
-              gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str());
     }
     return false;
   }
@@ -838,17 +829,6 @@ class SideBarGtkHost::Impl {
       info->details = NULL;
     }
   }
-  void CopyMinimizedState(ViewHostInterface *from, ViewHostInterface *to) {
-    DecoratedViewHost *from_dvh = static_cast<DecoratedViewHost*>(from);
-    DecoratedViewHost *to_dvh = static_cast<DecoratedViewHost*>(to);
-    MainViewDecoratorBase *from_vd =
-        static_cast<MainViewDecoratorBase*>(from_dvh->GetViewDecorator());
-    MainViewDecoratorBase *to_vd =
-        static_cast<MainViewDecoratorBase*>(to_dvh->GetViewDecorator());
-    DLOG("From is %s", from_vd->IsMinimized()? "false":"true");
-    DLOG("To is %s", to_vd->IsMinimized()? "false":"true");
-    to_vd->SetMinimized(from_vd->IsMinimized());
-  }
 
   // Handle undock event triggered by clicking undock menu item.
   // Only for docked main view.
@@ -873,10 +853,7 @@ class SideBarGtkHost::Impl {
     // host.
     view->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    if (old) {
-      CopyMinimizedState(old, new_host);
-      old->Destroy();
-    }
+    if (old) old->Destroy();
 
     info->floating->ShowView(false, 0, NULL);
     // Move the floating gadget to the center of the monitor, if the gadget
@@ -911,10 +888,7 @@ class SideBarGtkHost::Impl {
     // host.
     view->OnOtherEvent(SimpleEvent(Event::EVENT_DOCK));
     info->gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-    if (old) {
-      CopyMinimizedState(old, new_host);
-      old->Destroy();
-    }
+    if (old) old->Destroy();
     new_host->ShowView(false, 0, NULL);
     info->floating = NULL;
   }
@@ -974,7 +948,7 @@ class SideBarGtkHost::Impl {
         gdk_window_raise(info->floating->GetWindow()->window);
       }
 
-      size_t index = sidebar_->GetIndexOfPosition(h);
+      int index = sidebar_->GetIndexOfPosition(h);
       int width, height;
       info->floating->GetWindowSize(&width, &height);
       sidebar_->InsertPlaceholder(index, static_cast<double>(height));
@@ -1486,18 +1460,12 @@ class SideBarGtkHost::Impl {
     OptionsInterface *opt = gadget->GetOptions();
     Variant value = opt->GetInternalValue(kOptionDisplayTarget);
     int target;
-    // Load gadget into a floating view host if sidebar is closed.
-    if (closed_ ||
-        (value.ConvertToInt(&target) && target == Gadget::TARGET_FLOATING_VIEW))
+    if (value.ConvertToInt(&target) && target == Gadget::TARGET_FLOATING_VIEW)
       gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     else  // default value is TARGET_SIDEBAR
       gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     value = opt->GetInternalValue(kOptionPositionInSideBar);
-    int temp_int = 0;
-    if (value.ConvertToInt(&temp_int)) {
-      gadgets_[gadget->GetInstanceID()].index_in_sidebar =
-          static_cast<size_t>(std::max(0, temp_int));
-    }
+    value.ConvertToInt(&gadgets_[gadget->GetInstanceID()].index_in_sidebar);
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget, ViewHostInterface::Type type) {
@@ -1621,16 +1589,23 @@ class SideBarGtkHost::Impl {
     ShowOrHideSideBar(!closed_);
   }
 
-  void OnThemeChanged() {
-    SimpleEvent event(Event::EVENT_THEME_CHANGED);
-    sidebar_->GetSideBarViewHost()->GetView()->OnOtherEvent(event);
+  void MarkRedrawAll() {
+    sidebar_->GetSideBarViewHost()->GetView()->MarkRedraw();
+    sidebar_->GetSideBarViewHost()->QueueDraw();
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
-      it->second.main_decorator->GetView()->OnOtherEvent(event);
-      if (it->second.details)
-        it->second.details->GetView()->OnOtherEvent(event);
-      if (it->second.popout)
-        it->second.popout->GetView()->OnOtherEvent(event);
+      if (it->second.details) {
+        it->second.details->GetView()->MarkRedraw();
+        it->second.details->QueueDraw();
+      }
+      if (it->second.floating) {
+        it->second.floating->GetView()->MarkRedraw();
+        it->second.floating->QueueDraw();
+      }
+      if (it->second.popout) {
+        it->second.popout->GetView()->MarkRedraw();
+        it->second.popout->QueueDraw();
+      }
     }
   }
 
@@ -1645,7 +1620,7 @@ class SideBarGtkHost::Impl {
     if (new_font_size != font_size_) {
       font_size_ = new_font_size;
       options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
-      OnThemeChanged();
+      MarkRedrawAll();
     }
   }
 

@@ -58,7 +58,7 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /** Possible directions where the pop out view will be shown. */
   enum PopOutDirection {
     POPOUT_TO_LEFT = 0,
-    POPOUT_TO_RIGHT
+    POPOUT_TO_RIGHT,
   };
 
   /**
@@ -80,23 +80,11 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   /** Checks if a specified button is visible. */
   bool IsButtonVisible(ButtonId button_id) const;
 
-  /** Shows or hides the button box. */
+  /** Show sor hides the button box. */
   void SetButtonBoxVisible(bool visible);
 
   /** Checks if the button box is visible. */
   bool IsButtonBoxVisible() const;
-
-  /** Shows or hides the minimized icon. */
-  void SetMinimizedIconVisible(bool visible);
-
-  /** Checks if the minimized icon is visible. */
-  bool IsMinimizedIconVisible() const;
-
-  /** Shows or hides the minimized caption. */
-  void SetMinimizedCaptionVisible(bool visible);
-
-  /** Checks if the minimized caption is visible. */
-  bool IsMinimizedCaptionVisible() const;
 
   /** Sets display position of the button box. */
   void SetButtonBoxPosition(ButtonBoxPosition position);
@@ -171,11 +159,10 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual Gadget *GetGadget() const;
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual EventResult OnOtherEvent(const Event &event);
-  virtual void SetResizable(ResizableMode resizable);
-  virtual void SetCaption(const std::string &caption);
+  virtual void SetCaption(const char *caption);
 
   virtual bool ShowDecoratedView(bool modal, int flags,
-                                 Slot1<bool, int> *feedback_handler);
+                                 Slot1<void, int> *feedback_handler);
 
  protected:
   virtual void OnChildViewChanged();
@@ -183,9 +170,6 @@ class MainViewDecoratorBase : public ViewDecoratorBase {
   virtual void GetMinimumClientExtents(double *width, double *height) const;
   virtual void GetClientExtents(double *width, double *height) const;
   virtual bool OnClientSizing(double *width, double *height);
-
-  /* Add Collapse/Expand menu item to menu */
-  void AddCollapseExpandMenuItem(MenuInterface *menu) const;
 
  protected:
   /**

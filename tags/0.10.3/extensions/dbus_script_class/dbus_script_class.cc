@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-#include <string>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/element_factory.h>
@@ -31,9 +30,11 @@
 #define RegisterScriptExtension dbus_script_class_LTX_RegisterScriptExtension
 
 using ggadget::dbus::ScriptableDBusObject;
+using ggadget::dbus::DBusProxyFactory;
 using ggadget::dbus::DBusProxy;
 using ggadget::Variant;
 using ggadget::NewSlot;
+using ggadget::NewSlotWithDefaultArgs;
 using ggadget::ScriptContextInterface;
 using ggadget::Gadget;
 using ggadget::Permissions;
@@ -41,28 +42,45 @@ using ggadget::Permissions;
 static const char *kDBusSystemObjectName = "DBusSystemObject";
 static const char *kDBusSessionObjectName = "DBusSessionObject";
 
-static ScriptableDBusObject* NewSystemObject(const std::string &name,
-                                             const std::string &path,
-                                             const std::string &interface) {
-  DBusProxy *proxy = DBusProxy::NewSystemProxy(name, path, interface);
+static const Variant kDefaultArgs[] = {
+  Variant(), // name
+  Variant(), // path
+  Variant(), // interface
+  Variant(false) // only bind to current owner
+};
+
+static DBusProxyFactory *ggl_dbus_factory = NULL;
+
+static ScriptableDBusObject* NewSystemObject(const char *name,
+                                             const char *path,
+                                             const char *interface,
+                                             bool bind_object) {
+  DBusProxy *proxy =
+      ggl_dbus_factory->NewSystemProxy(name, path, interface, bind_object);
   return new ScriptableDBusObject(proxy);
 }
 
-static ScriptableDBusObject* NewSessionObject(const std::string &name,
-                                              const std::string &path,
-                                              const std::string &interface) {
-  DBusProxy *proxy = DBusProxy::NewSessionProxy(name, path, interface);
+static ScriptableDBusObject* NewSessionObject(const char *name,
+                                              const char *path,
+                                              const char *interface,
+                                              bool bind_object) {
+  DBusProxy *proxy =
+      ggl_dbus_factory->NewSessionProxy(name, path, interface, bind_object);
   return new ScriptableDBusObject(proxy);
 }
 
 extern "C" {
   bool Initialize() {
     LOGI("Initialize dbus_script_class extension.");
+    if (!ggl_dbus_factory)
+      ggl_dbus_factory = new DBusProxyFactory(ggadget::GetGlobalMainLoop());
     return true;
   }
 
   void Finalize() {
     LOGI("Finalize dbus_script_class extension.");
+    delete ggl_dbus_factory;
+    ggl_dbus_factory = NULL;
   }
 
   bool RegisterScriptExtension(ScriptContextInterface *context,
@@ -78,12 +96,14 @@ extern "C" {
     }
     if (context) {
       if (!context->RegisterClass(
-          kDBusSystemObjectName, NewSlot(NewSystemObject))) {
+          kDBusSystemObjectName, NewSlotWithDefaultArgs(
+              NewSlot(NewSystemObject), kDefaultArgs))) {
         LOG("Failed to register %s class.", kDBusSystemObjectName);
         return false;
       }
       if (!context->RegisterClass(
-          kDBusSessionObjectName, NewSlot(NewSessionObject))) {
+          kDBusSessionObjectName, NewSlotWithDefaultArgs(
+              NewSlot(NewSessionObject), kDefaultArgs))) {
         LOG("Failed to register %s class.", kDBusSessionObjectName);
         return false;
       }

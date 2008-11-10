@@ -64,9 +64,8 @@ struct LogHelper {
 
 #ifdef NDEBUG
 #define ASSERT_M(x, y)
-#define EXPECT_M(x, y)
-#define VERIFY(x) (x)
-#define VERIFY_M(x, y) (x)
+#define VERIFY(x)
+#define VERIFY_M(x, y)
 #define DLOG  true ? (void) 0 : LOGT
 #else // NDEBUG
 
@@ -75,31 +74,20 @@ struct LogHelper {
  * It only works in debug versions.
  * Sample usage: <code>ASSERT_M(a==b, ("%d==%d failed\n", a, b));</code>
  */
-#define ASSERT_M(x, y) do { if (!(x)) { LOGE y; ASSERT(false); } } while(0)
+#define ASSERT_M(x, y) do { if (!(x)) { LOGE y; ASSERT(x); } } while (0)
 
 /**
- * Prints a message in printf format if an expression is not true.
+ * Verify an expression and print a message if the expression is not true.
  * It only works in debug versions.
- * Sample usage: <code>EXPECT_M(a==b, ("%d==%d failed\n", a, b));</code>
  */
-#define EXPECT_M(x, y) do { if (!(x)) LOGW y; } while(0)
-
-/**
- * Verify an expression.
- * In debug mode, it's same as ASSERT(x), in release mode, it executes (x) as
- * normal. So it's suitable for verifying code with side effects.
- * For simple statement use ASSERT instead.
- */
-#define VERIFY(x) ASSERT(x)
+#define VERIFY(x) do { if (!(x)) LOGW("VERIFY FAILED: %s", #x); } while (0)
 
 /**
  * Verify an expression with a message in printf format.
- * In debug mode, it's same as ASSERT(x), in release mode, it executes (x) as
- * normal. So it's suitable for verifying code with side effects.
- * For simple statement use ASSERT_M instead.
+ * It only works in debug versions.
  * Sample usage: <code>VERIFY_M(a==b, ("%d==%d failed\n", a, b));</code>
  */
-#define VERIFY_M(x, y) ASSERT_M(x, y)
+#define VERIFY_M(x, y) do { if (!(x)) { DLOG y; VERIFY(x); } } while (0)
 
 /**
  * Print debug log with printf format parameters.

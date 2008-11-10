@@ -373,34 +373,6 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
   if (slot->HasMetadata()) {
     arg_types = slot->GetArgTypes();
     *expected_argc = static_cast<uintN>(slot->GetArgCount());
-    if (*expected_argc == INT_MAX) {
-      // Simply converts each arguments to native.
-      *params = new Variant[argc];
-      *expected_argc = argc;
-      uintN arg_type_idx = 0;
-      for (uintN i = 0; i < argc; i++) {
-        JSBool result = false;
-        if (arg_types && arg_types[arg_type_idx] != Variant::TYPE_VOID) {
-          result = ConvertJSToNative(cx, owner,
-                                     Variant(arg_types[arg_type_idx]),
-                                     argv[i], &(*params)[i]);
-          ++arg_type_idx;
-        } else {
-          result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
-        }
-        if (!result) {
-          for (uintN j = 0; j < i; j++)
-            FreeNativeValue((*params)[j]);
-          delete [] *params;
-          *params = NULL;
-          RaiseException(cx,
-                         "Failed to convert argument %d(%s) of function(%s) to"
-                         " native", i, PrintJSValue(cx, argv[i]).c_str(), name);
-          return JS_FALSE;
-        }
-      }
-      return JS_TRUE;
-    }
     default_args = slot->GetDefaultArgs();
     if (argc != *expected_argc) {
       uintN min_argc = *expected_argc;
@@ -451,8 +423,8 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
           delete [] *params;
           *params = NULL;
           RaiseException(cx,
-                         "Failed to convert argument %d(%s) of function(%s) to"
-                         " native", i, PrintJSValue(cx, argv[i]).c_str(), name);
+               "Failed to convert argument %d(%s) of function(%s) to native",
+               i, PrintJSValue(cx, argv[i]).c_str(), name);
           return JS_FALSE;
         }
       }
@@ -645,8 +617,9 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
-  DLOG("Reading native function in JavaScript");
-  // Just leave the value that SpiderMonkey recorded in SetProperty.
+  // To be compatible with the Windows version, we don't support returning
+  // native Slots to JavaScript.
+  *js_val = JSVAL_VOID;
   return JS_TRUE;
 }
 

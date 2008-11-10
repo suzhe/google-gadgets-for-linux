@@ -20,16 +20,17 @@
 #include <pthread.h>
 #include <vector>
 
+#include <ggadget/backoff.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/signals.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_http_request_interface.h>
-#include <ggadget/xml_http_request_utils.h>
 #include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_parser_interface.h>
 
@@ -39,6 +40,11 @@ namespace curl {
 static const long kMaxRedirections = 10;
 static const long kConnectTimeoutSec = 20;
 
+// The name of the options to store backoff data.
+static const char kBackoffOptions[] = "backoff";
+// The name of the options item to store backoff data.
+static const char kBackoffDataOption[] = "backoff";
+
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
   Variant(true),
@@ -47,6 +53,53 @@ static const Variant kOpenDefaultArgs[] = {
 };
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
+
+static Backoff::ResultType GetBackoffType(unsigned short status) {
+  // status == 0: network error, don't do exponential backoff.
+  return status == 0 ? Backoff::CONSTANT_BACKOFF :
+         status >= 200 && status < 400 ? Backoff::SUCCESS :
+         Backoff::EXPONENTIAL_BACKOFF;
+}
+
+// field-name     = token
+// token          = 1*<any CHAR except CTLs or separators>
+// separators     = "(" | ")" | "<" | ">" | "@"
+//                | "," | ";" | ":" | "\" | <">
+//                | "/" | "[" | "]" | "?" | "="
+//                | "{" | "}" | SP | HT
+static bool IsValidHTTPToken(const char *s) {
+  if (s == NULL) return false;
+  while (*s) {
+    if (*s > 32 && *s < 127 &&
+        (isalnum(*s) || strchr("!#$%&'*+ -.^_`~", *s) != NULL)) {
+      //valid case
+    } else {
+      return false;
+    }
+    ++s;
+  }
+  return true;
+}
+
+// field-value    = *( field-content | LWS )
+// field-content  = <the OCTETs making up the field-value
+//                  and consisting of either *TEXT or combinations
+//                  of token, separators, and quoted-string>
+// TEXT           = <any OCTET except CTLs, but including LWS>
+static bool IsValidHTTPHeaderValue(const char *s) {
+  if (s == NULL) return true;
+  while (*s) {
+    if ( (*s > 0 && *s<=31
+#if 0 // Disallow \r \n \t in header values.
+         && *s != '\r' && *s != '\n' && *s != '\t'
+#endif
+         ) ||
+         *s == 127)
+      return false;
+    ++s;
+  }
+  return true;
+}
 
 #if 0 // Don't support newlines in header values.
 // Process a user inputed header value, add a space after newline.
@@ -90,18 +143,37 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         main_loop_(main_loop),
         xml_parser_(xml_parser),
         async_(false),
-        method_(HTTP_GET),
         state_(UNSENT),
         send_flag_(false),
         request_headers_(NULL),
         status_(0),
-        succeeded_(false),
         response_dom_(NULL),
         default_user_agent_(default_user_agent) {
-    VERIFY_M(EnsureXHRBackoffOptions(main_loop->GetCurrentTime()),
+    VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
              ("Required options module have not been loaded"));
     pthread_attr_init(&thread_attr_);
     pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_DETACHED);
+  }
+
+  static bool EnsureBackoffOptions(uint64_t now) {
+    if (!backoff_options_) {
+      backoff_options_ = CreateOptions(kBackoffOptions);
+      if (backoff_options_) {
+        std::string data;
+        Variant value = backoff_options_->GetValue(kBackoffDataOption);
+        if (value.ConvertToString(&data))
+          backoff_.SetData(now, data.c_str());
+      }
+    }
+    return backoff_options_ != NULL;
+  }
+
+  static void SaveBackoffData(uint64_t now) {
+    if (EnsureBackoffOptions(now)) {
+      backoff_options_->PutValue(kBackoffDataOption,
+                                 Variant(backoff_.GetData(now)));
+      backoff_options_->Flush();
+    }
   }
 
   virtual void DoClassRegister() {
@@ -223,16 +295,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (strcasecmp(method, "HEAD") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
       curl_easy_setopt(curl_, CURLOPT_NOBODY, 1);
-      method_ = HTTP_HEAD;
     } else if (strcasecmp(method, "GET") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
-      method_ = HTTP_GET;
     } else if (strcasecmp(method, "POST") == 0) {
-      curl_easy_setopt(curl_, CURLOPT_POST, 1);
-      method_ = HTTP_POST;
-    } else if (strcasecmp(method, "PUT") == 0) {
-      curl_easy_setopt(curl_, CURLOPT_UPLOAD, 1);
-      method_ = HTTP_PUT;
+      // Don't set CURLOPT_POST here. If the data parameter of Send()
+      // is not blank, POST method will be set automatically.
+      // curl_easy_setopt(curl_, CURLOPT_POST, 1);
     } else {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
       return SYNTAX_ERR;
@@ -249,9 +317,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd.c_str());
     }
 
-    // Disable the default "Expect: 100-continue" request header.
-    request_headers_ = curl_slist_append(request_headers_, "Expect:");
-
     async_ = async;
     ChangeState(OPENED);
     return NO_ERR;
@@ -259,6 +324,24 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode SetRequestHeader(const char *header,
                                          const char *value) {
+    static const char *kForbiddenHeaders[] = {
+        "Accept-Charset",
+        "Accept-Encoding",
+        "Connection",
+        "Content-Length",
+        "Content-Transfer-Encoding",
+        "Date",
+        "Expect",
+        "Host",
+        "Keep-Alive",
+        "Referer",
+        "TE",
+        "Trailer",
+        "Transfer-Encoding",
+        "Upgrade",
+        "Via"
+    };
+
     if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: SetRequestHeader: Invalid state: %d", state_);
       return INVALID_STATE_ERR;
@@ -274,7 +357,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return SYNTAX_ERR;
     }
 
-    if (IsForbiddenHeader(header)) {
+    if (strncasecmp("Proxy-", header, 6) == 0 ||
+        strncasecmp("Sec-", header, 4) == 0) {
+      DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
+      return NO_ERR;
+    }
+
+    const char **found = std::lower_bound(
+        kForbiddenHeaders, kForbiddenHeaders + arraysize(kForbiddenHeaders),
+        header, CaseInsensitiveCharPtrComparator());
+    if (found != kForbiddenHeaders + arraysize(kForbiddenHeaders) &&
+        strcasecmp(*found, header) == 0) {
       DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
       return NO_ERR;
     }
@@ -292,8 +385,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                   curl_slist *a_request_headers,
                   const char *a_request_data, size_t a_request_size)
         : this_p(a_this_p), curl(a_curl), async(a_async),
-          request_headers(a_request_headers),
-          request_offset(0) {
+          request_headers(a_request_headers) {
       if (a_request_data && a_request_size > 0)
         request_data.assign(a_request_data, a_request_size);
     }
@@ -302,7 +394,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     bool async;
     curl_slist *request_headers;
     std::string request_data;
-    size_t request_offset;
   };
 
   virtual ExceptionCode Send(const char *data, size_t size) {
@@ -322,8 +413,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return INVALID_STATE_ERR;
 
     // Do backoff checking to avoid DDOS attack to the server.
-    if (!IsXHRBackoffRequestOK(main_loop_->GetCurrentTime(),
-                               host_.c_str())) {
+    if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
+                                host_.c_str())) {
       Abort();
       if (async_) {
         // Don't raise exception here because async callers might not expect
@@ -340,20 +431,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     request_headers_ = NULL;
 
     if (data && size > 0) {
-      if (method_ == HTTP_POST) {
-        // CURLOPT_POSTFIELDSIZE_LARGE doesn't work on 32bit curl.
-        curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
-                         static_cast<long>(size));
-        // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
-        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
-                         context->request_data.c_str());
-      } else if (method_ == HTTP_PUT) {
-        curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
-        curl_easy_setopt(curl_, CURLOPT_READDATA, context);
-        // CURLOPT_INFILESIZE_LARGE doesn't work on 32bit curl.
-        curl_easy_setopt(curl_, CURLOPT_INFILESIZE,
-                         static_cast<long>(size));
-      }
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+                       context->request_data.size());
+      // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                       context->request_data.c_str());
     }
 
   #ifdef _DEBUG
@@ -393,10 +475,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     } else {
       send_flag_ = true;
       // Run the worker directly in this thread.
-      // Returns NULL means failed.
       void *result = Worker(context);
+      CURLcode code = *reinterpret_cast<CURLcode *>(&result);
       send_flag_ = false;
-      if (!result)
+      if (code != CURLE_OK)
         return NETWORK_ERR;
     }
     return NO_ERR;
@@ -410,25 +492,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return Send(xml.c_str(), xml.size());
   }
 
-  static void GetStatusAndEffectiveUrl(CURL *curl, unsigned short *status,
-                                       std::string *effective_url) {
-    long curl_status = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curl_status);
-    *status = static_cast<unsigned short>(curl_status);
-    char *url_ptr = NULL;
-    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url_ptr);
-    *effective_url = url_ptr ? url_ptr : "";
-  }
-
   // If async, this method runs in a separate thread.
   static void *Worker(void *arg) {
     WorkerContext *context = static_cast<WorkerContext *>(arg);
 
     CURLcode code = curl_easy_perform(context->curl);
-
-    unsigned short status = 0;
-    std::string effective_url;
-    GetStatusAndEffectiveUrl(context->curl, &status, &effective_url);
+    long curl_status = 0;
+    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
+    unsigned short status = static_cast<unsigned short>(curl_status);
 
     if (context->request_headers) {
       curl_slist_free_all(context->request_headers);
@@ -440,36 +511,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            curl_easy_strerror(code));
     }
 
-    WorkerDone(status, effective_url, context, code == CURLE_OK);
+    WorkerDone(status, context);
     delete context;
-
-    // Returns something that isn't NULL when success.
-    return code == CURLE_OK ? arg : NULL;
-  }
-
-  static size_t ReadCallback(void *ptr, size_t size, size_t mem_block,
-                             void *user_p) {
-    size_t data_size = size * mem_block;
-    WorkerContext *context = static_cast<WorkerContext *>(user_p);
-    ASSERT(context->request_data.size() >= context->request_offset);
-    size_t bytes_left = context->request_data.size() - context->request_offset;
-    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu this=%p left=%zu",
-         size, mem_block, context->this_p, bytes_left);
-    if (bytes_left == 0)
-      return 0;
-
-    if (context->async &&
-        context->this_p->curl_ != context->curl) {
-      // The current XMLHttpRequest has been aborted, so abort the
-      // curl request.
-      return CURL_READFUNC_ABORT;
-    }
-
-    data_size = std::min(data_size, context->request_data.size() -
-                                    context->request_offset);
-    memcpy(ptr, context->request_data.c_str(), data_size);
-    context->request_offset += data_size;
-    return data_size;
+    return reinterpret_cast<void *>(code);
   }
 
   // Passes the WriteHeader() request from worker thread to the main thread.
@@ -496,32 +540,26 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Passes the WriteBody() request from worker thread to the main thread.
   class WriteBodyTask : public WriteHeaderTask {
    public:
-    WriteBodyTask(const void *ptr, size_t size,
-                  unsigned short status, const std::string &effective_url,
+    WriteBodyTask(const void *ptr, size_t size, unsigned short status,
                   const WorkerContext *worker_context)
         : WriteHeaderTask(ptr, size, worker_context),
-          status_(status),
-          effective_url_(effective_url) {
+          status_(status) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->WriteBody(data_, status_, effective_url_);
+        worker_context_.this_p->WriteBody(data_, status_);
       return false;
     }
 
     unsigned short status_;
-    std::string effective_url_;
   };
 
   // Passes the Done() request from worker thread to the main thread.
   class DoneTask : public WriteBodyTask {
    public:
-    DoneTask(unsigned short status, const std::string &effective_url,
-             const WorkerContext *worker_context, bool succeeded)
+    DoneTask(unsigned short status, const WorkerContext *worker_context)
           // Write blank data to ensure the header is parsed.
-        : WriteBodyTask("", 0, status, effective_url, worker_context),
-          succeeded_(succeeded) {
-    }
+        : WriteBodyTask("", 0, status, worker_context) { }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       curl_easy_cleanup(worker_context_.curl);
       // This cleanup of share handle will only succeed if this request is the
@@ -534,34 +572,28 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
       WriteBodyTask::Call(main_loop, watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->Done(false, succeeded_);
+        worker_context_.this_p->Done(false);
       // Remove the internal reference that was added when the request was
       // started.
       worker_context_.this_p->Unref();
       return false;
     }
-
-    bool succeeded_;
   };
 
-  static void WorkerDone(unsigned short status,
-                         const std::string &effective_url,
-                         WorkerContext *context, bool succeeded) {
+  static void WorkerDone(unsigned short status, WorkerContext *context) {
     if (context->async) {
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new DoneTask(status, effective_url, context, succeeded));
+          0, new DoneTask(status, context));
     } else {
-      // Write blank data to ensure the header is parsed.
-      context->this_p->WriteBody("", status, effective_url);
-      context->this_p->Done(false, succeeded);
+      context->this_p->Done(false);
     }
   }
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *user_p) {
     if (!CheckSize(0, size, mem_block))
-      return 0;
+      return CURLE_WRITE_ERROR;
 
     size_t data_size = size * mem_block;
     WorkerContext *context = static_cast<WorkerContext *>(user_p);
@@ -571,7 +603,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (context->this_p->curl_ != context->curl) {
         // The current XMLHttpRequest has been aborted, so abort the
         // curl request.
-        return 0;
+        return CURLE_WRITE_ERROR;
       }
 
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
@@ -587,62 +619,140 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   size_t WriteHeader(const std::string &data) {
     ASSERT(state_ == OPENED && send_flag_);
     size_t size = data.length();
-    if (CheckSize(response_headers_.length(), size, 1)) {
-      if (strncmp(data.c_str(), "HTTP/", 5) == 0) {
-        // This is a new header. We may receive multiple headers if the
-        // request is redirected.
-        response_headers_.clear();
-      }
+    if (CheckSize(response_headers_.length(), size, 1))
       response_headers_ += data;
-    } else {
-      size = 0;
-    }
+    else
+      size = CURLE_WRITE_ERROR;
     return size;
+  }
+
+  bool SplitStatusAndHeaders() {
+    // RFC 2616 doesn't mentioned if HTTP/1.1 is case-sensitive, so implies
+    // it is case-insensitive.
+    // We only support HTTP version 1.0 or above.
+    if (strncasecmp(response_headers_.c_str(), "HTTP/", 5) == 0) {
+      // First split the status line and headers.
+      std::string::size_type end_of_status = response_headers_.find("\r\n", 0);
+      if (end_of_status == std::string::npos) {
+        status_text_ = response_headers_;
+        response_headers_.clear();
+      } else {
+        status_text_ = response_headers_.substr(0, end_of_status);
+        response_headers_.erase(0, end_of_status + 2);
+      }
+
+      // Then extract the status text from the status line.
+      std::string::size_type space_pos = status_text_.find(' ', 0);
+      if (space_pos != std::string::npos) {
+        space_pos = status_text_.find(' ', space_pos + 1);
+        if (space_pos != std::string::npos)
+          status_text_.erase(0, space_pos + 1);
+      }
+
+      // Otherwise, just leave the whole status line in status.
+      return true;
+    }
+    // Otherwise already splitted.
+    return false;
+  }
+
+  void ParseResponseHeaders() {
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+    // http://www.w3.org/TR/XMLHttpRequest
+    std::string::size_type pos = 0;
+    while (pos != std::string::npos) {
+      std::string::size_type new_pos = response_headers_.find("\r\n", pos);
+      std::string line;
+      if (new_pos == std::string::npos) {
+        line = response_headers_.substr(pos);
+        pos = new_pos;
+      } else {
+        line = response_headers_.substr(pos, new_pos - pos);
+        pos = new_pos + 2;
+      }
+
+      std::string name, value;
+      std::string::size_type pos = line.find(':');
+      if (pos != std::string::npos) {
+        name = TrimString(line.substr(0, pos));
+        value = TrimString(line.substr(pos + 1));
+        if (!name.empty()) {
+          CaseInsensitiveStringMap::iterator it =
+              response_headers_map_.find(name);
+          if (it == response_headers_map_.end()) {
+            response_headers_map_.insert(std::make_pair(name, value));
+          } else if (!value.empty()) {
+            // According to XMLHttpRequest specification, the values of multiple
+            // headers with the same name should be concentrated together.
+            if (!it->second.empty())
+              it->second += ", ";
+            it->second += value;
+          }
+        }
+
+        if (strcasecmp(name.c_str(), "Content-Type") == 0) {
+          // Extract content type and encoding from the headers.
+          pos = value.find(';');
+          if (pos != std::string::npos) {
+            response_content_type_ = TrimString(value.substr(0, pos));
+            pos = value.find("charset");
+            if (pos != std::string::npos) {
+              pos += 7;
+              while (pos < value.length() &&
+                     (isspace(value[pos]) || value[pos] == '=')) {
+                pos++;
+              }
+              std::string::size_type pos1 = pos;
+              while (pos1 < value.length() && !isspace(value[pos1]) &&
+                     value[pos1] != ';') {
+                pos1++;
+              }
+              response_encoding_ = value.substr(pos, pos1 - pos);
+            }
+          } else {
+            response_content_type_ = value;
+          }
+        }
+      }
+    }
   }
 
   static size_t WriteBodyCallback(void *ptr, size_t size, size_t mem_block,
                                   void *user_p) {
     if (!CheckSize(0, size, mem_block))
-      return 0;
+      return CURLE_WRITE_ERROR;
 
     size_t data_size = size * mem_block;
     WorkerContext *context = static_cast<WorkerContext *>(user_p);
     // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu this=%p",
     //      size, mem_block, context->this_p);
 
-    unsigned short status = 0;
-    std::string effective_url;
-    GetStatusAndEffectiveUrl(context->curl, &status, &effective_url);
+    long curl_status = 0;
+    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
+    unsigned short status = static_cast<unsigned short>(curl_status);
 
     if (context->async) {
       if (context->this_p->curl_ != context->curl) {
         // The current XMLHttpRequest has been aborted, so abort the
         // curl request.
-        return 0;
+        return CURLE_WRITE_ERROR;
       }
 
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new WriteBodyTask(ptr, data_size, status, effective_url, context));
+          0, new WriteBodyTask(ptr, data_size, status, context));
       return data_size;
     } else {
       return context->this_p->WriteBody(
-          std::string(static_cast<char *>(ptr), data_size),
-          status, effective_url);
+          std::string(static_cast<char *>(ptr), data_size), status);
     }
   }
 
-  size_t WriteBody(const std::string &data, unsigned short status,
-                   const std::string &effective_url) {
+  size_t WriteBody(const std::string &data, unsigned short status) {
     if (state_ == OPENED) {
       status_ = status;
-      effective_url_ = effective_url;
-      SplitStatusFromResponseHeaders(&response_headers_, &status_text_);
-      (LOG("**** response_headers_: %s", response_headers_.c_str()));
-      ParseResponseHeaders(response_headers_,
-                           &response_headers_map_,
-                           &response_content_type_,
-                           &response_encoding_);
+      SplitStatusAndHeaders();
+      ParseResponseHeaders();
       if (!ChangeState(HEADERS_RECEIVED) || !ChangeState(LOADING))
         return 0;
     }
@@ -656,7 +766,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return size;
   }
 
-  void Done(bool aborting, bool succeeded) {
+  void Done(bool aborting) {
     if (curl_) {
       if (!send_flag_) {
         // This cleanup only happens if an XMLHttpRequest is opened but
@@ -677,14 +787,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
-    succeeded_ = succeeded;
     bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
       uint64_t now = main_loop_->GetCurrentTime();
       if (!aborting &&
-          XHRBackoffReportResult(now, host_.c_str(), status_)) {
-        SaveXHRBackoffData(now);
+          backoff_.ReportRequestResult(now, host_.c_str(),
+                                       GetBackoffType(status_))) {
+        SaveBackoffData(now);
       }
       // The caller may call Open() again in the OnReadyStateChange callback,
       // which may cause Done() re-entered.
@@ -709,7 +819,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       response_dom_ = NULL;
     }
 
-    Done(true, false);
+    Done(true);
   }
 
   virtual ExceptionCode GetAllResponseHeaders(const char **result) {
@@ -850,17 +960,34 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return INVALID_STATE_ERR;
   }
 
-  virtual bool IsSuccessful() {
-    return succeeded_;
-  }
+  class XMLHttpRequestException : public ScriptableHelperDefault {
+   public:
+    DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
 
-  virtual std::string GetEffectiveUrl() {
-    return effective_url_;
-  }
+    XMLHttpRequestException(ExceptionCode code) : code_(code) {
+      ASSERT(code != NO_ERR);
+      RegisterSimpleProperty("code", &code_);
+      RegisterMethod("toString",
+                     NewSlot(this, &XMLHttpRequestException::ToString));
+    }
 
-  virtual std::string GetResponseContentType() {
-    return response_content_type_;
-  }
+    std::string ToString() const {
+      const char *name;
+      switch (code_) {
+        case INVALID_STATE_ERR: name = "Invalid State"; break;
+        case SYNTAX_ERR: name = "Syntax Error"; break;
+        case SECURITY_ERR: name = "Security Error"; break;
+        case NETWORK_ERR: name = "Network Error"; break;
+        case ABORT_ERR: name = "Aborted"; break;
+        case NULL_POINTER_ERR: name = "Null Pointer"; break;
+        default: name = "Other Error"; break;
+      }
+      return StringPrintf("XMLHttpRequestException: %d %s", code_, name);
+    }
+
+   private:
+    ExceptionCode code_;
+  };
 
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
@@ -953,8 +1080,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   std::string url_, host_;
   bool async_;
-  enum HTTPMethod { HTTP_HEAD, HTTP_GET, HTTP_POST, HTTP_PUT };
-  HTTPMethod method_;
 
   State state_;
   // Required by the specification.
@@ -966,8 +1091,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_content_type_;
   std::string response_encoding_;
   unsigned short status_;
-  std::string effective_url_;
-  bool succeeded_;
   std::string status_text_;
   std::string response_body_;
   std::string response_text_;
@@ -975,7 +1098,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   CaseInsensitiveStringMap response_headers_map_;
   pthread_attr_t thread_attr_;
   std::string default_user_agent_;
+  static Backoff backoff_;
+  static OptionsInterface *backoff_options_;
 };
+
+Backoff XMLHttpRequest::backoff_;
+OptionsInterface *XMLHttpRequest::backoff_options_ = NULL;
 
 class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
  public:

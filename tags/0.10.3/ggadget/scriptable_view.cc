@@ -130,14 +130,14 @@ class ScriptableView::Impl {
     return event;
   }
 
-  int SetTimeout(Slot *slot, int timeout) {
+  int SetTimeout(Slot *slot, unsigned int duration) {
     Slot0<void> *callback = slot ? new SlotProxy0<void>(slot) : NULL;
-    return view_->SetTimeout(callback, timeout);
+    return view_->SetTimeout(callback, duration);
   }
 
-  int SetInterval(Slot *slot, int interval) {
+  int SetInterval(Slot *slot, unsigned int duration) {
     Slot0<void> *callback = slot ? new SlotProxy0<void>(slot) : NULL;
-    return view_->SetInterval(callback, interval);
+    return view_->SetInterval(callback, duration);
   }
 
   ScriptableImage *LoadScriptableImage(const Variant &image_src) {
