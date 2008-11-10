@@ -13,7 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-function init() {
+
+function view_onopen() {
   if (LoadMetadata()) {
     UpdateLanguageBox();
     main_ui.visible = true;
@@ -31,13 +32,6 @@ function init() {
     };
     gadgetBrowserUtils.updateMetadata(true);
   }
-}
-
-function view_onopen() {
-  // We do the init in timer because gadgetBrowserUtils is not ready when
-  // gadget is created and will be registered by c++ code right after the
-  // gadget is created.
-  setTimeout(init, 0);
 }
 
 function view_onclose() {
@@ -123,10 +117,9 @@ var gUpdatingLanguageBox = false;
 function UpdateLanguageBox() {
   gUpdatingLanguageBox = true;
   var default_language = framework.system.languageCode().toLowerCase();
-  if (!default_language || !gPlugins[default_language] ||
-      !GetDisplayLanguage(default_language))
-    default_language = "en";
   gadget.debug.trace("Default language: " + default_language);
+  if (!default_language || !gPlugins[default_language])
+    default_language = "en";
 
   language_box.removeAllElements();
   var languages = [];
