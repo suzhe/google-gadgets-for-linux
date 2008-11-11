@@ -32,6 +32,8 @@ If you are using Ubuntu 8.04 or 8.10 series, including all of their variants, su
   * zlib1g-dev
   * libxml2-dev
   * libdbus-1-dev
+  * libx11-dev
+  * libxt-dev
   * libltdl3-dev (for Ubuntu 8.04) or libltdl7-dev (for Ubuntu 8.10)
   * libgstreamer-plugins-base0.10-dev
   * network-manager-dev
@@ -72,6 +74,8 @@ If you are using openSUSE 10.3 and later versions, you need install following ma
   * zlib-devel
   * libxml2-devel
   * dbus-1-devel
+  * xorg-x11-devel
+  * xorg-x11-libXt-devel
   * startup-notification-devel
   * NetworkManager-devel
   * gstreamer-0_10-plugins-base-devel (for openSUSE 11.0 or above) or gstreamer010-plugins-base-devel (for openSUSE 10.3)
@@ -106,6 +110,8 @@ If you are using Fedora 8 and later versions, you need install following mandato
   * zlib-devel
   * libxml2-devel
   * dbus-devel
+  * libX11-devel
+  * libXt-devel
   * startup-notification-devel
   * NetworkManager-devel
   * gstreamer-plugins-base-devel
