@@ -32,16 +32,15 @@ If you are using Ubuntu 8.04 or 8.10 series, including all of their variants, su
   * libxml2-dev
   * libdbus-1-dev
   * libltdl3-dev (for Ubuntu 8.04) or libltdl7-dev (for Ubuntu 8.10)
-  * libcurl4-gnutls-dev or libcurl4-openssl-dev
   * libgstreamer-plugins-base0.10-dev
   * network-manager-dev
   * libstartup-notification0-dev
+  * xulrunner-1.9-dev (Mandatory for GTK version, optional for Qt version)
 
 If you want to use GUI and sidebar based on GTK library, you need following packages:
   * libgtk2.0-dev
   * librsvg2-dev
-  * xulrunner-1.9-dev
-
+  * libcurl4-gnutls-dev or libcurl4-openssl-dev
 
 If you want to use GUI based on QT library, you need following packages:
   * libqt4-dev
@@ -70,17 +69,17 @@ If you are using openSUSE 10.3 and later versions, you need install following ma
   * shared-mime-info
   * libtool
   * zlib-devel
-  * libcurl-devel
   * libxml2-devel
   * dbus-1-devel
   * startup-notification-devel
   * NetworkManager-devel
   * gstreamer-0_10-plugins-base-devel (for openSUSE 11.0 or above) or gstreamer010-plugins-base-devel (for openSUSE 10.3)
+  * mozilla-xulrunner190-devel (for openSUSE 11.0 or above) or mozilla-xulrunner181-devel (for openSUSE 10.3) (Mandatory for GTK version, optional for Qt version)
 
 If you want to use GUI and sidebar based on GTK library, you need following packages:
   * gtk2-devel
   * librsvg-devel
-  * mozilla-xulrunner190-devel (for openSUSE 11.0 or above) or mozilla-xulrunner181-devel (for openSUSE 10.3)
+  * libcurl-devel
 
 If you want to use GUI based on QT library, you need following packages:
   * libqt4-devel
@@ -108,14 +107,14 @@ If you are using Fedora 8 and later versions, you need install following mandato
   * dbus-devel
   * startup-notification-devel
   * NetworkManager-devel
-  * libcurl-devel (for Fedora 9 or above) or curl-devel (for Fedora 8)
   * gstreamer-plugins-base-devel
   * gstreamer-devel
+  * xulrunner-devel (for Fedora 9 or above) or firefox-devel (for Fedora 8) (Mandatory for GTK version, optional for Qt version)
 
 If you want to use GUI and sidebar based on GTK library, you need following packages:
   * gtk2-devel
   * librsvg2-devel
-  * xulrunner-devel (for Fedora 9 or above) or firefox-devel (for Fedora 8)
+  * libcurl-devel (for Fedora 9 or above) or curl-devel (for Fedora 8)
 
 If you want to use GUI based on QT library, you need following packages:
   * qt-devel (for Fedora 9 or above) or qt4-devel (for Fedora 8)
@@ -126,6 +125,39 @@ If you want to build source code checked out from svn trunk, you also need follo
   * libtool
 
 You can use yum command to install these packages.
+
+=== Mandriva 2009 ===
+
+If you are using Mandriva 2009, you need install following mandatory packages:
+  * gcc-c++
+  * zip
+  * flex
+  * desktop-file-utils
+  * shared-mime-info
+  * libltdl3-devel
+  * zlib1-devel
+  * libxml2-devel
+  * libdbus-1-devel
+  * libnm_util-devel
+  * libstartup-notification-1-devel
+  * libgstreamer0.10-devel
+  * libgstreamer-plugins-base0.10-devel
+  * libxulrunner-devel (Mandatory for GTK version, optional for Qt version)
+
+If you want to use GUI and sidebar based on GTK library, you need following packages:
+  * librsvg2-devel
+  * libcurl-devel
+  * libcairo-devel
+  * libgtk+2.0_0-devel
+
+If you want to use GUI based on QT library, you need following packages:
+  * libqt4-devel
+
+If you want to build source code checked out from svn trunk, you also need following packages:
+  * autoconf
+  * automake
+  * libtool
+
 
 == Prepare build system ==
 
