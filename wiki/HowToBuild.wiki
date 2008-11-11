@@ -1,6 +1,6 @@
 #summary How to build this project
 #labels Featured,Phase-Deploy
-<wiki:toc max_depth="2" />
+<wiki:toc max_depth="3" />
 
 = Introduction =
 
