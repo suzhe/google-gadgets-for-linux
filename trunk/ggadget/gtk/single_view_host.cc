@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cmath>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <string>
@@ -94,12 +95,16 @@ class SingleViewHost::Impl {
       resize_mouse_y_(0),
       resize_width_mode_(0),
       resize_height_mode_(0),
+      resizable_mode_(ViewInterface::RESIZABLE_TRUE),
       is_keep_above_(false),
       move_dragging_(false),
       enable_signals_(true),
       draw_queued_(false),
       queue_draw_timer_(0),
       last_queue_draw_time_(0),
+      queue_resize_timer_(0),
+      last_allocated_width_(0),
+      last_allocated_height_(0),
       feedback_handler_(NULL),
       can_close_dialog_(false) {
     ASSERT(owner);
@@ -119,6 +124,10 @@ class SingleViewHost::Impl {
     if (queue_draw_timer_)
       g_source_remove(queue_draw_timer_);
     queue_draw_timer_ = 0;
+
+    if (queue_resize_timer_)
+      g_source_remove(queue_resize_timer_);
+    queue_resize_timer_ = 0;
 
     if (stop_move_drag_source_)
       g_source_remove(stop_move_drag_source_);
@@ -194,7 +203,7 @@ class SingleViewHost::Impl {
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
     gtk_window_set_gravity(GTK_WINDOW(window_), GDK_GRAVITY_STATIC);
-    gtk_window_set_resizable(GTK_WINDOW(window_), TRUE);
+    SetResizable(view_->GetResizable());
 
     g_signal_connect(G_OBJECT(window_), "delete-event",
                      G_CALLBACK(gtk_widget_hide_on_delete), NULL);
@@ -284,8 +293,10 @@ class SingleViewHost::Impl {
   void QueueResize() {
     // When doing resize drag, MotionNotifyHandler() is in charge of resizing
     // the window, so don't do it here.
-    if (resize_width_mode_ == 0 && resize_height_mode_ == 0)
-      AdjustWindowSize();
+    if (resize_width_mode_ == 0 && resize_height_mode_ == 0 &&
+        queue_resize_timer_ == 0) {
+      queue_resize_timer_ = g_idle_add(QueueResizeTimeoutHandler, this);
+    }
   }
 
   void EnableInputShapeMask(bool enable) {
@@ -323,11 +334,14 @@ class SingleViewHost::Impl {
 
   void SetResizable(ViewInterface::ResizableMode mode) {
     ASSERT(GTK_IS_WINDOW(window_));
-    bool resizable = (mode == ViewInterface::RESIZABLE_TRUE ||
-                      mode == ViewInterface::RESIZABLE_KEEP_RATIO ||
-                      (mode == ViewInterface::RESIZABLE_ZOOM &&
-                       type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
-    gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
+    if (resizable_mode_ != mode) {
+      resizable_mode_ = mode;
+      bool resizable = (mode == ViewInterface::RESIZABLE_TRUE ||
+                        mode == ViewInterface::RESIZABLE_KEEP_RATIO ||
+                        (mode == ViewInterface::RESIZABLE_ZOOM &&
+                         type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
+      gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
+    }
   }
 
   void SetCaption(const std::string &caption) {
@@ -574,6 +588,9 @@ class SingleViewHost::Impl {
     if (!GTK_WIDGET_MAPPED(window_))
       return;
 
+    if (resizable_mode_ == ViewInterface::RESIZABLE_FALSE)
+      return;
+
     // Determine the resize drag edge.
     resize_width_mode_ = 0;
     resize_height_mode_ = 0;
@@ -807,8 +824,8 @@ class SingleViewHost::Impl {
         double height = original_height;
         double new_width = width + impl->resize_width_mode_ * delta_x;
         double new_height = height + impl->resize_height_mode_ * delta_y;
-
-        if (impl->view_->GetResizable() == ViewInterface::RESIZABLE_TRUE) {
+        if (impl->resizable_mode_ == ViewInterface::RESIZABLE_TRUE ||
+            impl->resizable_mode_ == ViewInterface::RESIZABLE_KEEP_RATIO) {
           double view_width = new_width / impl->resize_view_zoom_;
           double view_height = new_height / impl->resize_view_zoom_;
           if (impl->view_->OnSizing(&view_width, &view_height)) {
@@ -824,6 +841,7 @@ class SingleViewHost::Impl {
           zoom = Clamp(zoom, kMinimumZoom, kMaximumZoom);
           DLOG("Zoom view to: %lf", zoom);
           impl->view_->GetGraphics()->SetZoom(zoom);
+          impl->view_->MarkRedraw();
           width = impl->resize_view_width_ * zoom;
           height = impl->resize_view_height_ * zoom;
         }
@@ -881,32 +899,57 @@ class SingleViewHost::Impl {
       impl->view_->GetDefaultSize(&default_width, &default_height);
       requisition->width = static_cast<int>(ceil(default_width * zoom));
       requisition->height = static_cast<int>(ceil(default_height * zoom));
+    } else if (impl->resizable_mode_ == ViewInterface::RESIZABLE_FALSE) {
+      double zoom = impl->view_->GetGraphics()->GetZoom();
+      double width = impl->view_->GetWidth() * zoom;
+      double height = impl->view_->GetHeight() * zoom;
+      requisition->width = static_cast<int>(ceil(width));
+      requisition->height = static_cast<int>(ceil(height));
     } else {
       // To make sure that user can resize the toplevel window freely.
       requisition->width = 1;
       requisition->height = 1;
     }
+    DLOG("Size request(%d, %d)", requisition->width, requisition->height);
   }
 
-  // Only for options view.
   static void FixedSizeAllocateHandler(GtkWidget *widget,
                                        GtkAllocation *allocation,
                                        gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     DLOG("Size allocate(%d, %d)", allocation->width, allocation->height);
-    if (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS &&
-        impl->view_->GetResizable() == ViewInterface::RESIZABLE_TRUE &&
-        allocation->width > 1 && allocation->height > 1) {
-      double zoom = impl->view_->GetGraphics()->GetZoom();
-      double new_width = allocation->width / zoom;
-      double new_height = allocation->height / zoom;
-      if (new_width != impl->view_->GetWidth() ||
-          new_height != impl->view_->GetHeight()) {
-        if (impl->view_->OnSizing(&new_width, &new_height)) {
-          DLOG("Resize options view to: %lf %lf", new_width, new_height);
+    if (!impl->resize_width_mode_ && !impl->resize_height_mode_ &&
+        allocation->width >= 1 && allocation->height >= 1 &&
+        (impl->last_allocated_width_ != allocation->width ||
+         impl->last_allocated_height_ != allocation->height)) {
+      impl->last_allocated_width_ = allocation->width;
+      impl->last_allocated_height_ = allocation->height;
+
+      double old_width = impl->view_->GetWidth();
+      double old_height = impl->view_->GetHeight();
+      double old_zoom = impl->view_->GetGraphics()->GetZoom();
+      if (impl->resizable_mode_ == ViewInterface::RESIZABLE_TRUE ||
+          impl->resizable_mode_ == ViewInterface::RESIZABLE_KEEP_RATIO) {
+        double new_width = allocation->width / old_zoom;
+        double new_height = allocation->height / old_zoom;
+        if (impl->view_->OnSizing(&new_width, &new_height) &&
+            (new_width != old_width || new_height != old_height)) {
+          DLOG("Resize view to: %lf %lf", new_width, new_height);
           impl->view_->SetSize(new_width, new_height);
         }
+      } else if (impl->resizable_mode_ == ViewInterface::RESIZABLE_ZOOM &&
+                 impl->type_ != ViewHostInterface::VIEW_HOST_OPTIONS) {
+        double xzoom = allocation->width / old_width;
+        double yzoom = allocation->height / old_height;
+        double new_zoom = Clamp(std::min(xzoom, yzoom),
+                                kMinimumZoom, kMaximumZoom);
+        if (old_zoom != new_zoom) {
+          DLOG("Zoom view to: %lf", new_zoom);
+          impl->view_->GetGraphics()->SetZoom(new_zoom);
+          impl->view_->MarkRedraw();
+        }
       }
+      impl->QueueResize();
     }
   }
 
@@ -945,6 +988,13 @@ class SingleViewHost::Impl {
       return FALSE;
     }
     return TRUE;
+  }
+
+  static gboolean QueueResizeTimeoutHandler(gpointer data) {
+    Impl *impl = reinterpret_cast<Impl *>(data);
+    impl->AdjustWindowSize();
+    impl->queue_resize_timer_ = 0;
+    return false;
   }
 
   ViewHostInterface::Type type_;
@@ -996,6 +1046,8 @@ class SingleViewHost::Impl {
   int resize_height_mode_;
   // End of resize drag variants.
 
+  ViewInterface::ResizableMode resizable_mode_;
+
   bool is_keep_above_;
   bool move_dragging_;
   bool enable_signals_;
@@ -1003,6 +1055,10 @@ class SingleViewHost::Impl {
   bool draw_queued_;
   guint queue_draw_timer_;
   uint64_t last_queue_draw_time_;
+
+  guint queue_resize_timer_;
+  gint last_allocated_width_;
+  gint last_allocated_height_;
 
   Slot1<bool, int> *feedback_handler_;
   bool can_close_dialog_; // Only useful when a model dialog is running.

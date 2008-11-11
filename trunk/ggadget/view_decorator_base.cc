@@ -57,7 +57,7 @@ class ViewDecoratorBase::Impl {
       allow_y_margin_(allow_y_margin),
       child_frozen_(false),
       child_visible_(true),
-      resizable_mode_(ViewInterface::RESIZABLE_TRUE),
+      child_resizable_(ViewInterface::RESIZABLE_TRUE),
       owner_(owner),
       view_element_(new ViewElement(owner, NULL, false)),
       snapshot_(new CopyElement(owner, NULL)) {
@@ -204,7 +204,7 @@ class ViewDecoratorBase::Impl {
   bool allow_y_margin_;
   bool child_frozen_;
   bool child_visible_;
-  ViewInterface::ResizableMode resizable_mode_;
+  ViewInterface::ResizableMode child_resizable_;
   std::string option_prefix_;
   ViewDecoratorBase *owner_;
   ViewElement *view_element_;
@@ -233,12 +233,14 @@ void ViewDecoratorBase::SetChildView(View *child_view) {
   if (old != child_view) {
     impl_->view_element_->SetChildView(child_view);
 
-    if (child_view)
-      SetResizable(child_view->GetResizable());
-
-    // TODO: when child view switchs out, RESIZABLE_FALSE should be used
-    // else
-    //   SetResizable(RESIZABLE_FALSE);
+    if (child_view) {
+      impl_->child_resizable_ = child_view->GetResizable();
+      SetResizable(impl_->child_resizable_);
+    } else {
+      // Don't allow to resize the view when child view is switched out.
+      // Don't call this->SetResizable() here, it might be overloaded.
+      View::SetResizable(RESIZABLE_FALSE);
+    }
 
     OnChildViewChanged();
     UpdateViewSize();
@@ -520,15 +522,16 @@ bool ViewDecoratorBase::OnSizing(double *width, double *height) {
 }
 
 void ViewDecoratorBase::SetResizable(ResizableMode resizable) {
-  if (impl_->resizable_mode_ != resizable) {
+  if (resizable != GetResizable()) {
+    View::SetResizable(resizable);
+    View *child = GetChildView();
+    if (child)
+      impl_->child_resizable_ = child->GetResizable();
     // Reset the zoom factor to 1 if the child view is changed to
     // resizable.
-    if (resizable == ViewInterface::RESIZABLE_TRUE) {
+    if (impl_->child_resizable_ == ViewInterface::RESIZABLE_TRUE)
       impl_->view_element_->SetScale(1.0);
-    }
-    impl_->resizable_mode_ = resizable;
     UpdateViewSize();
-    GetViewHost()->SetResizable(resizable);
   }
 }
 
@@ -584,8 +587,7 @@ bool ViewDecoratorBase::InsertDecoratorElement(BasicElement *element,
 }
 
 ViewInterface::ResizableMode ViewDecoratorBase::GetChildViewResizable() const {
-  View *child = GetChildView();
-  return child ? child->GetResizable() : impl_->resizable_mode_;
+  return impl_->child_resizable_;
 }
 
 void ViewDecoratorBase::AddZoomMenuItem(MenuInterface *menu) const {

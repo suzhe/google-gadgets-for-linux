@@ -1763,9 +1763,11 @@ void View::GetDefaultSize(double *width, double *height) const {
 }
 
 void View::SetResizable(ViewInterface::ResizableMode resizable) {
-  impl_->resizable_ = resizable;
-  if (impl_->view_host_)
-    impl_->view_host_->SetResizable(resizable);
+  if (impl_->resizable_ != resizable) {
+    impl_->resizable_ = resizable;
+    if (impl_->view_host_)
+      impl_->view_host_->SetResizable(resizable);
+  }
 }
 
 ViewInterface::ResizableMode View::GetResizable() const {
