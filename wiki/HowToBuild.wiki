@@ -161,8 +161,7 @@ If you want to build source code checked out from svn trunk, you also need follo
 
 You can use urpmi to install these packages, for example:
 {{{
-#urpmi gcc-c++ zip flex desktop-file-utils shared-mime-info libltdl3-devel zlib1-devel libxml2-devel libdbus-1-devel libnm_util-devel libstartup-notification-1-devel libgstreamer0.10-devel libgstreamer-plugins-base0.10-devel libxulrunner-devel librsvg2-devel libcurl-devel libcairo-devel libgtk+2.0_0-devel libqt4-devel autoconf
- automake libtool
+#urpmi gcc-c++ zip flex desktop-file-utils shared-mime-info libltdl3-devel zlib1-devel libxml2-devel libdbus-1-devel libnm_util-devel libstartup-notification-1-devel libgstreamer0.10-devel libgstreamer-plugins-base0.10-devel libxulrunner-devel librsvg2-devel libcurl-devel libcairo-devel libgtk+2.0_0-devel libqt4-devel autoconf automake libtool
 }}}
 
 == Prepare build system ==
