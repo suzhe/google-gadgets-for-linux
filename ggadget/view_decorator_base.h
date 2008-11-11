@@ -206,7 +206,12 @@ class ViewDecoratorBase : public View {
    */
   bool InsertDecoratorElement(BasicElement *element, bool background);
 
-  /** Gets resizable mode of current child view. */
+  /**
+   * Gets resizable mode of child view.
+   *
+   * The result is cached, so even the child view is switched out, the
+   * resizable mode of previous child view will still be returned.
+   */
   ResizableMode GetChildViewResizable() const;
 
   /* Add zoom menu item to context menu */

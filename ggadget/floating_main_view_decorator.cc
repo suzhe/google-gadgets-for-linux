@@ -136,12 +136,8 @@ class FloatingMainViewDecorator::Impl {
   bool UpdateResizeBorder() {
     ResizableMode resizable = owner_->GetChildViewResizable();
     bool minimized = owner_->IsMinimized();
-    bool vertical = ((resizable == RESIZABLE_TRUE ||
-                      resizable == RESIZABLE_KEEP_RATIO) &&
-                     !minimized);
-    bool horizontal = (resizable == RESIZABLE_TRUE ||
-                       resizable == RESIZABLE_KEEP_RATIO ||
-                       minimized);
+    bool vertical = (resizable == RESIZABLE_TRUE && !minimized);
+    bool horizontal = (resizable == RESIZABLE_TRUE || minimized);
     bool both = vertical && horizontal;
     resize_borders_[RESIZE_TOP]->SetVisible(vertical && show_decorator_);
     resize_borders_[RESIZE_BOTTOM]->SetVisible(vertical && show_decorator_);
@@ -186,13 +182,13 @@ class FloatingMainViewDecorator::Impl {
   }
 
   void UpdateDecoratorVisibility() {
-    bool show_background = UpdateResizeBorder();
+    bool show_border = UpdateResizeBorder();
     if (show_decorator_) {
       ResizableMode resizable = owner_->GetChildViewResizable();
       if (resizable == RESIZABLE_TRUE || owner_->IsMinimized()) {
         // background will always be shown if it's not transparent.
         if (transparent_)
-          background_->SetVisible(show_background);
+          background_->SetVisible(show_border);
         zoom_corner_->SetVisible(false);
       } else {
         // background for transparent mode is only visible when view is
