@@ -123,8 +123,18 @@ void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
 
 void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
   int buttons = GetMouseButtons(event->buttons());
-  if (buttons != MouseEvent::BUTTON_NONE)
+  if (buttons != MouseEvent::BUTTON_NONE) {
     grabMouse();
+
+    if (!mouse_drag_moved_) {
+      // Ignore tiny movement of mouse.
+      QPoint offset = QCursor::pos() - mouse_pos_;
+      if (std::abs(static_cast<double>(offset.x())) < kDragThreshold &&
+          std::abs(static_cast<double>(offset.y())) < kDragThreshold)
+        return;
+    }
+  }
+
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x() / zoom_, event->y() / zoom_, 0, 0,
                buttons, 0);
@@ -136,12 +146,13 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
     // the window. Note: no mouse click event is sent in this case, to prevent
     // unwanted action after window move.
     if (!mouse_drag_moved_) {
+      mouse_drag_moved_ = true;
       MouseEvent e(Event::EVENT_MOUSE_UP,
                    event->x() / zoom_, event->y() / zoom_,
                    0, 0, buttons, 0);
       // Ignore the result of this fake event.
       view_->OnMouseEvent(e);
-      mouse_drag_moved_ = true;
+
       resize_drag_ = true;
       origi_geometry_ = window()->geometry();
       top_ = bottom_ = left_ = right_ = 0;
@@ -168,10 +179,10 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
     if (resize_drag_) {
       QPoint p = QCursor::pos() - mouse_pos_;
       QRect rect = origi_geometry_;
-      rect.setTop(rect.top() + top_*p.y());
-      rect.setBottom(rect.bottom() + bottom_*p.y());
-      rect.setLeft(rect.left() + left_*p.x());
-      rect.setRight(rect.right() + right_*p.x());
+      rect.setTop(rect.top() + top_ * p.y());
+      rect.setBottom(rect.bottom() + bottom_ * p.y());
+      rect.setLeft(rect.left() + left_ * p.x());
+      rect.setRight(rect.right() + right_ * p.x());
       double w = rect.width();
       double h = rect.height();
       if (w != view_->GetWidth() || h != view_->GetHeight()) {
@@ -197,7 +208,8 @@ void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
   mouse_down_hittest_ = view_->GetHitTest();
   mouse_drag_moved_ = false;
   resize_drag_ = false;
-  // Remember the position of mouse, it may be used to move the gadget
+  // Remember the position of mouse, it may be used to move the view or
+  // resize the view
   mouse_pos_ = QCursor::pos();
   EventResult handler_result = EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
@@ -216,18 +228,14 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
-  if (mouse_drag_moved_) {
-    QPoint offset = QCursor::pos() - mouse_pos_;
-    if (std::abs(static_cast<double>(offset.x())) > kDragThreshold ||
-        std::abs(static_cast<double>(offset.y())) > kDragThreshold)
+  if (mouse_drag_moved_)
     return;
-  } else {
-    MouseEvent e(Event::EVENT_MOUSE_UP,
-                 event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
-    handler_result = view_->OnMouseEvent(e);
-    if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
-      event->accept();
-  }
+
+  MouseEvent e(Event::EVENT_MOUSE_UP,
+               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
+  handler_result = view_->OnMouseEvent(e);
+  if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
+    event->accept();
 
   MouseEvent e1(event->button() == Qt::LeftButton ? Event::EVENT_MOUSE_CLICK :
                                                     Event::EVENT_MOUSE_RCLICK,
