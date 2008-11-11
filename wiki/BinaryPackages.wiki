@@ -7,21 +7,11 @@ This page collects the information of binary packages of this project built by c
 
 == openSUSE ==
 
-=== Choice one ===
 YaST repositories:
  * openSUSE 11.0: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.0/
  * openSUSE 10.3: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_10.3/
 
 Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
-
-=== Choice two ===
-YaST repositories:
- * openSUSE 11.0: http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_11.0/
- * openSUSE 10.3: http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_10.3/
-
-Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
-
-Either of above two choices is ok, you can choose one of them.
 
 == Ubuntu ==
 You can find binary package for xUbuntu 8.04 at:
@@ -41,8 +31,12 @@ Yum repositories:
  * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
  * Fedora 8: http://download.opensuse.org/repositories/home:/suzhe/Fedora_8/
 
+Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
+
 == Slackware ==
 You can get binary package for Slackware 12.1 from:
  * http://repository.slacky.eu/slackware-12.1/desktop/google-gadgets/
 
-Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
+== FreeBSD ==
+FreeBSD Port:
+ * http://www.freshports.org/deskutils/google-gadgets
