@@ -52,7 +52,7 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget${GGL_EPOCH} ${GTK_LIBRARIES
 OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS
-  "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor -fno-strict-aliasing")
+  "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor -Wno-conversion -fno-strict-aliasing")
 
 IF(NOT GTKMOZEMBED_FOUND)
   MESSAGE(FATAL "gtkmozembed library not found!")
