@@ -15,66 +15,72 @@
   limitations under the License.
 -->
 
-<view height="555" width="714" resizable="false"
-  onopen="view_onopen()" onclose="view_onclose()" oncontextmenu="view_oncontextmenu()">
-  <div height="100%" width="100%">
-   <img width="100%" height="100%" src="images/background.png" stretchMiddle="true"/>
-   <div x="100" y="200" width="514" height="155" name="updating" visible="false">
-     <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
-     <label width="100%" height="100%" align="center" vAlign="middle" bold="true"
-       color="#FFFFFF" size="12" wordwrap="true">&UPDATING_METADATA;</label>
-   </div>
-   <div x="100" y="200" width="514" height="155" name="update_fail" visible="false">
-     <img width="100%" height="100%" src="images/status_adding_default.png" stretchMiddle="true"/>
-     <label width="100%" height="100%" align="center" vAlign="middle" bold="true"
-       color="#D04040" size="12" wordwrap="true">&UPDATE_METADATA_FAILED;</label>
-   </div>
-   <div width="100%" height="100%" name="main_ui" visible="false">
-    <label enabled="true" name="language_label" x="10" y="19" size="10"
-      onsize="language_label_onsize()" color="#FFFFFF"
-      vAlign="middle">&SHOW_ONLY_LABEL;
-    </label>
-    <div height="23" name="language_box_div" width="166" x="82" y="17">
-      <img width="100%" height="100%" src="images/control_border.png" stretchMiddle="true"/>
-      <combobox height="440" name="language_box" width="160" x="3" y="2" background="#FFFFFF"
-        itemWidth="100%" itemHeight="19" onchange="language_box_onchange()"
-        maxDroplistItems="30" type="droplist"/>
-    </div>
-    <div height="23" width="158" x="507" y="17">
-      <img width="100%" height="100%" src="images/control_border.png" stretchMiddle="true"/>
-      <edit height="19" name="search_box" width="152" x="3" y="2" onfocusin="search_box_onfocusin()"
-        onfocusout="search_box_onfocusout()" onchange="search_box_onchange()" color="#808080"
-        value="&SEARCH_GADGETS;"/>
-    </div>
-    <button name="search_button" x="663" y="8" downImage="images/search_lens_down.png"
-      image="images/search_lens_default.png" overImage="images/search_lens_hover.png"
-      onclick="DoSearch()"
-     />
-    <div height="400" width="145" x="6" y="83">
-      <img height="23" name="category_hover_img" opacity="55" width="100%"
-        visible="false" src="images/category_hover.png" stretchMiddle="true"/>
-      <img height="23" name="category_active_img" width="100%" visible="false"
-        src="images/category_active.png" stretchMiddle="true"/>
-    </div>
-    <div height="400" name="categories_div" width="139" x="9" y="83"/>
-    <div height="372" name="plugins_div" width="536" x="162" y="62"/>
-    <label name="plugin_title" width="530" x="163" y="442" color="#FFFFFF"
-      size="9" trimming="character-ellipsis"/>
-    <label name="plugin_description" width="530" x="163" y="458"
-      color="#FFFFFF" size="9" trimming="character-ellipsis"
-      wordwrap="true" onsize="plugin_description_onsize()"/>
-    <label name="plugin_other_data" width="530" x="163" y="490" color="#FFFFFF"
-      size="8" trimming="character-ellipsis"/>
-    <button name="previous_button" x="600" y="511" onclick="previous_button_onclick()"
-      downImage="images/previous_down.png" image="images/previous_default.png"
-      overImage="images/previous_hover.png"/>
-    <label enabled="true" height="39" name="page_label" x="620" y="511"
-      onsize="page_label_onsize()" align="center" color="#FFFFFF" size="10"
-      vAlign="middle"/>
-    <button name="next_button" x="665" y="511" onclick="next_button_onclick()"
-      downImage="images/next_down.png" image="images/next_default.png"
-      overImage="images/next_hover.png"/>
-   </div>
+<view width="714" height="555" resizable="true" onopen="view_onopen()"
+  onclose="view_onclose()" oncontextmenu="view_oncontextmenu()"
+  onsizing="view_onsizing()" onsize="view_onsize()">
+  <img width="100%" height="100%" src="images/background.png"
+    stretchMiddle="true"/>
+	<label name="language_label" x="10" y="19" size="10" color="#FFFFFF"
+	  vAlign="middle" onsize="language_label_onsize()">
+	  &SHOW_ONLY_LABEL;
+	</label>
+	<div name="language_box_div" width="166" height="23" x="82" y="17">
+	  <img width="100%" height="100%" src="images/control_border.png"
+	    stretchMiddle="true"/>
+	  <combobox name="language_box" width="160" height="440" x="3" y="2"
+	    type="droplist" background="#FFFFFF" itemWidth="100%" itemHeight="19"
+	    maxDroplistItems="30" onchange="language_box_onchange()"/>
+	</div>
+  <div name="search_div" width="207" height="40" x="100%" pinX="100%">
+		<div width="158" height="23" y="17">
+		  <img width="100%" height="100%" src="images/control_border.png"
+		    stretchMiddle="true"/>
+		  <edit name="search_box" width="152" height="19" x="3" y="2"
+		    value="&SEARCH_GADGETS;" color="#808080" size="9"
+	      onchange="search_box_onchange()" onfocusin="search_box_onfocusin()"
+		    onfocusout="search_box_onfocusout()"/>
+		</div>
+		<button name="search_button" x="156" y="8"
+       image="images/search_lens_default.png"
+		  downImage="images/search_lens_down.png"
+		  overImage="images/search_lens_hover.png"
+		  onclick="DoSearch()"/>
+  </div>
+	<div name="categories_div" width="147" height="400" x="6" y="83"
+	  autoscroll="true" scrollbar.lineStep="23"
+	  scrollbar.leftImage="x" scrollbar.rightImage="x"
+	  scrollbar.background="images/scrollbar_track.png"
+	  scrollbar.thumbImage="images/scrollbar_thumb.png"
+	  scrollbar.thumbOverImage="images/scrollbar_thumb.png"
+	  scrollbar.thumbDownImage="images/scrollbar_thumb.png">
+     <img name="category_hover_img" opacity="55" width="135" height="23"
+       visible="false" src="images/category_hover.png" stretchMiddle="true"/>
+     <img name="category_active_img" height="23" width="135" visible="false"
+       src="images/category_active.png" stretchMiddle="true"/>
+	</div>
+	<div name="plugins_div" width="536" height="372" x="162" y="62"/>
+	<div name="plugin_info_div" width="530" height="113" x="162"
+	  y="100%" pinY="100%">
+		<label name="plugin_title" width="100%" color="#FFFFFF" size="9"
+		  trimming="character-ellipsis"/>
+		<label name="plugin_description" width="100%" y="16" color="#FFFFFF"
+		  size="9" trimming="character-ellipsis" wordwrap="true"
+		  onsize="plugin_description_onsize()"/>
+		<label name="plugin_other_data" width="100%" y="48" color="#FFFFFF"
+		  size="8" trimming="character-ellipsis"/>
+  </div>
+  <div name="navigation_div" width="350" height="44" x="100%" pinX="100%"
+    y="100%" pinY="100%">
+		<button name="previous_button" image="images/previous_default.png"
+		  downImage="images/previous_down.png"
+		  overImage="images/previous_hover.png"
+       onclick="previous_button_onclick()"/>
+		<label name="page_label" enabled="true" height="39" x="220"
+		  align="center" color="#FFFFFF" size="10" vAlign="middle"
+		  onsize="page_label_onsize()"/>
+		<button name="next_button" x="265" image="images/next_default.png"
+		  downImage="images/next_down.png" overImage="images/next_hover.png"
+		  onclick="next_button_onclick()"/>
   </div>
   <script src="main.js"/>
   <script src="thumbnail.js"/>

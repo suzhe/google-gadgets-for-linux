@@ -638,7 +638,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       status_ = status;
       effective_url_ = effective_url;
       SplitStatusFromResponseHeaders(&response_headers_, &status_text_);
-      (LOG("**** response_headers_: %s", response_headers_.c_str()));
       ParseResponseHeaders(response_headers_,
                            &response_headers_map_,
                            &response_content_type_,

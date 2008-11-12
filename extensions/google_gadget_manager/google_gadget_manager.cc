@@ -253,7 +253,6 @@ void GoogleGadgetManager::OnUpdateDone(bool request_success,
       global_options_->PutValue(kLastUpdateTimeOption,
                                 Variant(last_update_time_));
       ScheduleNextUpdate();
-      metadata_updated_signal_(true);
       return;
     }
 
@@ -276,7 +275,6 @@ void GoogleGadgetManager::OnUpdateDone(bool request_success,
   global_options_->PutValue(kRetryTimeoutOption, Variant(retry_timeout_));
   LOG("Failed to update gadget metadata. Will retry after %dms",
       retry_timeout_);
-  metadata_updated_signal_(false);
   ScheduleNextUpdate();
 }
 
@@ -953,10 +951,6 @@ class GoogleGadgetManager::GadgetBrowserScriptUtils
         NewSlot(this, &GadgetBrowserScriptUtils::SaveGadget));
     RegisterMethod("addGadget",
         NewSlot(gadget_manager_, &GoogleGadgetManager::NewGadgetInstance));
-    RegisterMethod("updateMetadata",
-        NewSlot(gadget_manager_, &GoogleGadgetManager::UpdateGadgetsMetadata));
-    RegisterSignal("onMetadataUpdated",
-                   &gadget_manager_->metadata_updated_signal_);
   }
 
   ~GadgetBrowserScriptUtils() {

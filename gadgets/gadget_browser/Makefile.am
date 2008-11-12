@@ -31,6 +31,8 @@ GADGET_BROWSER_FILES= \
 		images/previous_default.png \
 		images/previous_down.png \
 		images/previous_hover.png \
+		images/scrollbar_thumb.png \
+		images/scrollbar_track.png \
 		images/search_lens_default.png \
 		images/search_lens_down.png \
 		images/search_lens_hover.png \
