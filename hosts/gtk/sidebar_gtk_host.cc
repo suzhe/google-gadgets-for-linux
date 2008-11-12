@@ -123,6 +123,7 @@ class SideBarGtkHost::Impl {
       dragging_offset_x_(-1),
       dragging_offset_y_(-1),
       sidebar_moving_(false),
+      sidebar_resizing_(false),
       has_strut_(false),
       sidebar_(NULL),
       options_(options),
@@ -165,6 +166,8 @@ class SideBarGtkHost::Impl {
         NewSlot(this, &Impl::OnSideBarBeginMove));
     sidebar_host_->ConnectOnShowHide(
         NewSlot(this, &Impl::OnSideBarShowHide));
+    sidebar_host_->ConnectOnResized(
+        NewSlot(this, &Impl::OnSideBarResized));
 
     sidebar_ = new SideBar(sidebar_host_);
     sidebar_->ConnectOnAddGadget(
@@ -173,8 +176,6 @@ class SideBarGtkHost::Impl {
         NewSlot(this, &Impl::OnSideBarMenu));
     sidebar_->ConnectOnClose(
         NewSlot(this, &Impl::OnSideBarClose));
-    sidebar_->ConnectOnSizeEvent(
-        NewSlot(this, &Impl::OnSideBarSizeEvent));
     sidebar_->ConnectOnUndock(
         NewSlot(this, &Impl::OnSideBarUndock));
     sidebar_->ConnectOnClick(
@@ -255,14 +256,17 @@ class SideBarGtkHost::Impl {
         ((hittest == ViewInterface::HT_LEFT &&
           sidebar_position_ == SIDEBAR_POSITION_RIGHT) ||
          (hittest == ViewInterface::HT_RIGHT &&
-          sidebar_position_ == SIDEBAR_POSITION_LEFT)))
+          sidebar_position_ == SIDEBAR_POSITION_LEFT))) {
+      sidebar_resizing_ = true;
       return false;
+    }
 
     // Don't allow resize drag in any other situation.
     return true;
   }
 
   void OnSideBarEndResize() {
+    sidebar_resizing_ = false;
     if (has_strut_)
       AdjustSideBar();
   }
@@ -397,12 +401,17 @@ class SideBarGtkHost::Impl {
 #endif
   }
 
-  void OnSideBarSizeEvent() {
+  void OnSideBarResized(int width, int height) {
     // ignore width changes when the sidebar is minimized.
     if (!sidebar_->IsMinimized()) {
-      int  width = static_cast<int>(sidebar_->GetWidth());
       sidebar_width_ = width;
       DLOG("set sidebar_width_ to %d", sidebar_width_);
+    }
+
+    // Call AdjustSideBar() if it's not in resize mode, otherwise it'll be
+    // called by OnSideBarEndResize().
+    if (!sidebar_resizing_) {
+      AdjustSideBar();
     }
   }
 
@@ -1276,16 +1285,14 @@ class SideBarGtkHost::Impl {
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     if (show && !closed_) {
       sidebar_->Restore();
-      AdjustSideBar();
+      // AdjustSideBar() will be called by OnSideBarResized().
       sidebar_->Show();
     } else {
       CloseAllPopOutWindowsOfSideBar(-1);
       if (auto_hide_ && !closed_) {
+        // Minimize sidebar vertically.
         sidebar_->Minimize(true);
-        // To make sure AdjustSideBar() will be called after the sidebar has
-        // been resized.
-        g_idle_add_full(G_PRIORITY_HIGH_IDLE + 50,
-                        AdjustSideBarTimeoutHandler, this, NULL);
+        // AdjustSideBar() will be called by OnSideBarResized().
       } else {
         sidebar_->Hide();
       }
@@ -1293,19 +1300,14 @@ class SideBarGtkHost::Impl {
 #else
     if (show) {
       sidebar_->Restore();
-      AdjustSideBar();
+      // AdjustSideBar() will be called by OnSideBarResized().
       sidebar_->Show();
     } else {
       CloseAllPopOutWindowsOfSideBar(-1);
+      // Minimize sidebar horizontally.
       sidebar_->Minimize(false);
-      AdjustSideBar();
     }
 #endif
-  }
-
-  static gboolean AdjustSideBarTimeoutHandler(gpointer user_data) {
-    reinterpret_cast<Impl *>(user_data)->AdjustSideBar();
-    return FALSE;
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
@@ -1577,6 +1579,7 @@ class SideBarGtkHost::Impl {
     }
 
     ShowOrHideSideBar(true);
+    AdjustSideBar();
   }
 
   void AlwaysOnTopMenuHandler(const char *str) {
@@ -1592,6 +1595,7 @@ class SideBarGtkHost::Impl {
     }
 
     ShowOrHideSideBar(true);
+    AdjustSideBar();
   }
 
   void ChangeHotKeyMenuHandler(const char *) {
@@ -1832,6 +1836,7 @@ class SideBarGtkHost::Impl {
   double dragging_offset_x_;
   double dragging_offset_y_;
   bool   sidebar_moving_;
+  bool   sidebar_resizing_;
 
   bool has_strut_;
 
