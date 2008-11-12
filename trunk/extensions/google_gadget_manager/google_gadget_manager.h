@@ -335,7 +335,6 @@ class GoogleGadgetManager : public GadgetManagerInterface {
   Signal1<bool, int> new_instance_signal_;
   Signal1<void, int> remove_instance_signal_;
   Signal1<void, int> update_instance_signal_;
-  Signal1<void, bool> metadata_updated_signal_;
 
   GadgetsMetadata metadata_;
   Gadget *browser_gadget_;

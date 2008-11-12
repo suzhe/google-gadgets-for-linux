@@ -13,27 +13,64 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
+// UI constants.
+var kCategoryButtonHeight = category_active_img.height;
+var kPluginBoxWidth = 134;
+var kPluginBoxHeight = 124;
+var kDefaultPluginRows = 3;
+var kDefaultPluginColumns = 4;
+var kCategoryGap = 15;
+var kFixedExtraWidth = 178;
+var kFixedExtraHeight = 183;
+var kMinWidth = kFixedExtraWidth + 3 * kPluginBoxWidth;
+var kMinHeight = kFixedExtraHeight + kPluginBoxHeight;
+var kMaxWidth = kFixedExtraWidth + 5 * kPluginBoxWidth;
+var kMaxHeight = kFixedExtraHeight + 4 * kPluginBoxHeight;
+
+// Default layout: 714x555.
+var gPluginRows = kDefaultPluginRows;
+var gPluginColumns = kDefaultPluginColumns;
+var gPluginsPerPage = gPluginRows * gPluginColumns;
+var gPluginBoxGapX = 0;
+var gPluginBoxGapY = 0;
+
+var gCurrentCategory = "";
+var gCurrentLanguage = "";
+var gCurrentPageStartIndex = 0;
+var gCurrentPlugins = [];
+
+// Plugin download status.
+var kDownloadStatusNone = 0;
+var kDownloadStatusAdding = 1;
+var kDownloadStatusAdded = 2;
+var kDownloadStatusError = 3;
+
 function init() {
-  if (LoadMetadata()) {
-    UpdateLanguageBox();
-    main_ui.visible = true;
-  } else {
-    updating.visible = true;
-    gadgetBrowserUtils.onMetadataUpdated = function(success) {
-      updating.visible = false;
-      gadgetBrowserUtils.onMetadataUpdated = null;
-      if (success && LoadMetadata()) {
-        UpdateLanguageBox();
-        main_ui.visible = true;
-      } else {
-        update_fail.visible = true;
-      }
-    };
-    gadgetBrowserUtils.updateMetadata(true);
-  }
+  LoadMetadata();
+  UpdateLanguageBox();
 }
 
 function view_onopen() {
+  var screen_width = system.screen.size.width;
+  var screen_height = system.screen.size.height;
+  var width, height;
+  if (screen_width >= 1024) {
+    width = kFixedExtraWidth + 4 * kPluginBoxWidth;
+  } else if (screen_width >= 800) {
+    width = kFixedExtraWidth + 3 * kPluginBoxWidth;
+  } else {
+    width = kMinWidth;
+  }
+  if (screen_height >= 768) {
+    height = kFixedExtraHeight + 3 * kPluginBoxHeight;
+  } else if (screen_height >= 600) {
+    height = kFixedExtraHeight + 2 * kPluginBoxHeight;
+  } else {
+    height = kMinHeight;
+  }
+  view.resizeTo(width, height);
+
   // We do the init in timer because gadgetBrowserUtils is not ready when
   // gadget is created and will be registered by c++ code right after the
   // gadget is created.
@@ -48,6 +85,56 @@ function view_onclose() {
 // Disable context menus.
 function view_oncontextmenu() {
   event.returnValue = false;
+}
+
+function view_onsizing() {
+  if (event.width < kMinWidth) {
+    event.width = kMinWidth;
+  } else if (event.width > kMaxWidth) {
+    event.width = kMaxWidth;
+  }
+  if (event.height < kMinHeight) {
+    event.height = kMinHeight;
+  } else if (event.height > kMaxHeight) {
+    event.height = kMaxHeight;
+  }
+}
+
+function view_onsize() {
+  var plugins_width = view.width - kFixedExtraWidth;
+  var plugins_height = view.height - kFixedExtraHeight;
+  var columns = Math.floor(plugins_width / kPluginBoxWidth);
+  var rows = Math.floor(plugins_height / kPluginBoxHeight);
+  plugins_div.width = plugins_width;
+  plugins_div.height = plugins_height;
+  plugin_info_div.width = plugins_width - 6;
+  categories_div.height = plugins_height + 28;
+  language_box.height = Math.min(440, view.height - 30);
+  gPluginBoxGapX = Math.floor((plugins_width - kPluginBoxWidth * columns) /
+                              (columns + 1));
+  gPluginBoxGapY = Math.floor((plugins_height - kPluginBoxHeight * rows) /
+                              (rows + 1));
+  if (rows != gPluginRows || columns != gPluginColumns) {
+    gPluginRows = rows;
+    gPluginColumns = columns;
+    gPluginsPerPage = rows * columns;
+    if (plugins_div.children.count > 0)
+      SelectPage(gCurrentPageStartIndex);
+  } else {
+    var index = 0;
+    for (var i = 0; i < rows; i++) {
+      for (var j = 0; j < columns; j++) {
+        if (index >= plugins_div.children.count)
+          break;
+        var box = plugins_div.children.item(index);
+        box.x = Math.round(j * (kPluginBoxWidth + gPluginBoxGapX) +
+                           gPluginBoxGapX / 2); 
+        box.y = Math.round(i * (kPluginBoxHeight + gPluginBoxGapY) +
+                           gPluginBoxGapY / 2);
+        index++;
+      }
+    }
+  }
 }
 
 function language_label_onsize() {
@@ -77,39 +164,22 @@ function page_label_onsize() {
 }
 
 function previous_button_onclick() {
-  if (gCurrentPage > 0)
-    SelectPage(gCurrentPage - 1);
+  if (gCurrentPageStartIndex > gPluginsPerPage) {
+    SelectPage(gCurrentPageStartIndex - gPluginsPerPage);
+  } else if (gCurrentPageStartIndex > 0) {
+    SelectPage(0);
+  }
 }
 
 function next_button_onclick() {
-  if (gCurrentPage < GetTotalPages() - 1)
-    SelectPage(gCurrentPage + 1);
+  if (gCurrentPageStartIndex <  gCurrentPlugins.length - gPluginsPerPage)
+    SelectPage(gCurrentPageStartIndex + gPluginsPerPage);
 }
 
 function language_box_onchange() {
   if (!gUpdatingLanguageBox)
     SelectLanguage(language_box.children.item(language_box.selectedIndex).name);
 }
-
-var gCurrentCategory = "";
-var gCurrentLanguage = "";
-var gCurrentPage = 0;
-var gCurrentPlugins = [];
-
-// UI constants.
-var kCategoryButtonHeight = category_active_img.height;
-var kCategoryGap = 15;
-var kPluginWidth = 134;
-var kPluginHeight = 124;
-var kPluginRows = 3;
-var kPluginColumns = 4;
-var kPluginsPerPage = kPluginRows * kPluginColumns;
-
-// Plugin download status.
-var kDownloadStatusNone = 0;
-var kDownloadStatusAdding = 1;
-var kDownloadStatusAdded = 2;
-var kDownloadStatusError = 3;
 
 function GetDisplayLanguage(language) {
   return strings["LANGUAGE_" + language.replace("-", "_").toUpperCase()];
@@ -157,10 +227,10 @@ function SelectLanguage(language) {
 
 function AddCategoryButton(category, y) {
   categories_div.appendElement(
-    "<label align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
-    category +
-    "' size='10' width='100%' height='" + kCategoryButtonHeight + "' y='" + y +
-    "' onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +
+    "<label x='5%' width='90%' height='" + kCategoryButtonHeight + "' y='" + y +
+    "' align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
+    category + "' size='10' trimming='character-ellipsis'" + 
+    " onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +
     " onclick='SelectCategory(\"" + category + "\")'>&#160;" +
     GetDisplayCategory(category) + "</label>");
 }
@@ -189,23 +259,30 @@ function SelectCategory(category) {
 }
 
 function AddPluginBox(plugin, index, row, column) {
+  var x = Math.round(column * (kPluginBoxWidth + gPluginBoxGapX) +
+                     gPluginBoxGapX / 2); 
+  var y = Math.round(row * (kPluginBoxHeight + gPluginBoxGapY) +
+                     gPluginBoxGapY / 2);
   var box = plugins_div.appendElement(
-    "<div x='" + (column * kPluginWidth) + "' y='" + (row * kPluginHeight) +
-    "' width='" + kPluginWidth + "' height='" + kPluginHeight + "' enabled='true'" +
-    " onmouseover='pluginbox_onmouseover(" + index + ")'" +
+    "<div x='" + x + "' y='" + y +
+    "' width='" + kPluginBoxWidth + "' height='" + kPluginBoxHeight +
+    "' enabled='true' onmouseover='pluginbox_onmouseover(" + index + ")'" +
     " onmouseout='pluginbox_onmouseout(" + index + ")'>" +
     " <img width='100%' height='100%' stretchMiddle='true'/>" +
-    " <label x='7' y='6' size='10' width='120' align='center' color='#FFFFFF' " +
+    " <label x='7' y='6' size='10' width='120' align='center' color='#FFFFFF'" +
     "  trimming='character-ellipsis'/>" +
     " <img x='16' y='75' opacity='70' src='images/thumbnails_shadow.png'/>" +
     " <div x='27' y='33' width='80' height='83' background='#FFFFFF'>" +
-    "  <img width='80' height='60' src='images/default_thumbnail.jpg' cropMaintainAspect='true'/>" +
-    "  <img y='60' width='80' height='60' src='images/default_thumbnail.jpg' flip='vertical' cropMaintainAspect='true'/>" +
+    "  <img width='80' height='60' src='images/default_thumbnail.jpg'" +
+    "   cropMaintainAspect='true'/>" +
+    "  <img y='60' width='80' height='60' src='images/default_thumbnail.jpg'" +
+    "   flip='vertical' cropMaintainAspect='true'/>" +
     "  <img src='images/thumbnails_default_mask.png'/>" +
     " </div>" +
-    " <button x='22' y='94' width='90' height='30' visible='false' color='#FFFFFF'" +
-    "  size='10' stretchMiddle='true' trimming='character-ellipsis'" +
-    "  downImage='images/add_button_down.png' overImage='images/add_button_hover.png'" +
+    " <button x='22' y='94' width='90' height='30' visible='false' size='10'" +
+    "  color='#FFFFFF' stretchMiddle='true' trimming='character-ellipsis'" +
+    "  downImage='images/add_button_down.png' " +
+    "  overImage='images/add_button_hover.png'" +
     "  onmousedown='add_button_onmousedown(" + index + ")'" +
     "  onmouseover='add_button_onmouseover(" + index + ")'" +
     "  onmouseout='add_button_onmouseout(" + index + ")'" +
@@ -357,31 +434,32 @@ function GetTotalPages() {
     // Return 1 instead of 0 to avoid '1 of 0'.
     return 1;
   }
-  return Math.ceil(gCurrentPlugins.length / kPluginsPerPage);
+  return Math.ceil(gCurrentPageStartIndex / gPluginsPerPage) +
+         Math.ceil((gCurrentPlugins.length - gCurrentPageStartIndex) /
+                   gPluginsPerPage);
 }
 
-function SelectPage(page) {
+// Note for start: We need to keep the first plugin in the page unchanged
+// when user resizes the window, so the first plugin will not always be at
+// the whole page boundary.
+function SelectPage(start) {
   plugins_div.removeAllElements();
   plugin_title.innerText = "";
   plugin_description.innerText = "";
   plugin_other_data.innerText = "";
 
   ClearThumbnailTasks();
-  if (!gCurrentPlugins || !gCurrentPlugins.length) {
-    gCurrentPage = 0;
-  } else {
-    gCurrentPage = page;
-    var start = page * kPluginsPerPage;
+  gCurrentPageStartIndex = start;
+  var page = Math.ceil(start / gPluginsPerPage);
 outer:
-    for (var r = 0; r < kPluginRows; r++) {
-      for (var c = 0; c < kPluginColumns; c++) {
-        var i = start + c;
-        if (i >= gCurrentPlugins.length)
-          break outer;
-        AddPluginBox(gCurrentPlugins[i], i, r, c);
-      }
-      start += kPluginColumns;
+  for (var r = 0; r < gPluginRows; r++) {
+    for (var c = 0; c < gPluginColumns; c++) {
+      var i = start + c;
+      if (i >= gCurrentPlugins.length)
+        break outer;
+      AddPluginBox(gCurrentPlugins[i], i, r, c);
     }
+    start += gPluginColumns;
   }
   page_label.innerText = strings.PAGE_LABEL.replace("{{PAGE}}", page + 1)
                          .replace("{{TOTAL}}", GetTotalPages());
@@ -391,7 +469,8 @@ outer:
 function UpdateCategories() {
   category_hover_img.visible = category_active_img.visible = false;
   var y = 0;
-  categories_div.removeAllElements();
+  for (var i = categories_div.children.count - 1; i >= 2; i--)
+    categories_div.removeElement(categories_div.children.item(i));
   var language_categories = gPlugins[gCurrentLanguage];
   if (!language_categories)
     return;

@@ -37,9 +37,6 @@
   <PLUGIN_VERSION>Version&#160;</PLUGIN_VERSION>
   <PLUGIN_KILOBYTES>&#160;KB</PLUGIN_KILOBYTES>
 
-  <UPDATING_METADATA>Updating gadget data... Please wait.</UPDATING_METADATA>
-  <UPDATE_METADATA_FAILED>Failed to update gadget data. Please try again later.</UPDATE_METADATA_FAILED>
-
   <LANGUAGE_BG>Bulgarian</LANGUAGE_BG>
   <LANGUAGE_CA>Catalan</LANGUAGE_CA>
   <LANGUAGE_CS>Czech</LANGUAGE_CS>
