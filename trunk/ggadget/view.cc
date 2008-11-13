@@ -1132,6 +1132,10 @@ class View::Impl {
     // draw_queued_ is true.
     draw_queued_ = true;
     children_.Layout();
+
+    // Let posted events be processed after Layout() and before actual Draw().
+    // This can prevent some flickers, for example, onsize of labels.
+    FirePostedSizeEvents();
     draw_queued_ = false;
 
     // no draw queued, so the draw request is initiated from host.
@@ -1158,9 +1162,6 @@ class View::Impl {
       need_redraw_ = true;
     }
 
-    // Let posted events be processed after Layout() and before actual Draw().
-    // This can prevent some flickers, for example, onsize of labels.
-    FirePostedSizeEvents();
     if (theme_changed_) {
       SimpleEvent event(Event::EVENT_THEME_CHANGED);
       ScriptableEvent scriptable_event(&event, NULL, NULL);

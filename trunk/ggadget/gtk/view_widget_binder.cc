@@ -65,7 +65,7 @@ class ViewWidgetBinder::Impl {
       dbl_click_(false),
       composited_(false),
       no_background_(no_background),
-      enable_input_shape_mask_(true),
+      enable_input_shape_mask_(false),
       focused_(false),
       button_pressed_(false),
 #ifdef GRAB_POINTER_EXPLICITLY

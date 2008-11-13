@@ -320,6 +320,7 @@ FloatingMainViewDecorator::FloatingMainViewDecorator(
   : MainViewDecoratorBase(host, "main_view_floating", false, false,
                           transparent_background),
     impl_(new Impl(this, transparent_background)) {
+  GetViewHost()->EnableInputShapeMask(true);
 }
 
 FloatingMainViewDecorator::~FloatingMainViewDecorator() {

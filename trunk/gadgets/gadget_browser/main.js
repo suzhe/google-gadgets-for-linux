@@ -160,13 +160,12 @@ function plugin_description_onsize() {
   }
 }
 
-var gPageButtonAdjusted = false;
 function page_label_onsize() {
-  if (!gPageButtonAdjusted && page_label.innerText) {
-    page_label.width = page_label.offsetWidth + 20;
+  if (page_label.innerText) {
+    page_label.width = page_label.offsetWidth + 40;
     page_label.x = next_button.x - page_label.width;
-    previous_button.x = page_label.x - previous_button.offsetWidth;
-    gPageButtonAdjusted = true;
+    previous_button.x = page_label.x;
+    page_label.onsize = null;
   }
 }
 

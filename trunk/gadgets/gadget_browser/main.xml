@@ -73,14 +73,15 @@
     </div>
     <div name="navigation_div" width="350" height="44" x="100%" pinX="100%"
       y="100%" pinY="100%">
-      <button name="previous_button" image="images/previous_default.png"
+      <button name="previous_button" pinX="100%" x="240"
+        image="images/previous_default.png"
         downImage="images/previous_down.png"
         overImage="images/previous_hover.png"
          onclick="previous_button_onclick()"/>
-      <label name="page_label" enabled="true" height="39" x="220"
+      <label name="page_label" enabled="true" height="39" x="260"
         align="center" color="#FFFFFF" size="10" vAlign="middle"
         onsize="page_label_onsize()"/>
-      <button name="next_button" x="265" image="images/next_default.png"
+      <button name="next_button" x="280" image="images/next_default.png"
         downImage="images/next_down.png" overImage="images/next_hover.png"
         onclick="next_button_onclick()"/>
     </div>
