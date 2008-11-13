@@ -1064,7 +1064,7 @@ class View::Impl {
     StringVector values;
     SplitStringList(value, " ", &values);
     double double_values[4];
-    for (size_t i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < values.size(); ++i) {
       if (!Variant(values[i]).ConvertToDouble(double_values + i)) {
         LOG("Invalid resize border value: %s", value.c_str());
         return;

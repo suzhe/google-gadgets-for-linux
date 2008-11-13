@@ -23,6 +23,9 @@ GADGET_BROWSER_FILES= \
 		images/background.png \
 		images/category_active.png \
 		images/category_hover.png \
+		images/close_button_down.png \
+		images/close_button_over.png \
+		images/close_button_up.png \
 		images/control_border.png \
 		images/default_thumbnail.jpg \
 		images/next_default.png \
@@ -31,6 +34,7 @@ GADGET_BROWSER_FILES= \
 		images/previous_default.png \
 		images/previous_down.png \
 		images/previous_hover.png \
+		images/resize_corner.png \
 		images/scrollbar_thumb.png \
 		images/scrollbar_track.png \
 		images/search_lens_default.png \
