@@ -538,7 +538,7 @@ AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
 AC_PATH_XTRA
 if test "x$no_x" != "xyes"; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_X11=1"
-  X_LIBS="$X_LIBS $X_PRE_LIBS -lX11 -lXt"
+  X_LIBS="$X_LIBS $X_PRE_LIBS -lX11"
   AC_SUBST(X_CFLAGS)
   AC_SUBST(X_LIBS)
   AC_SUBST(X_PRE_LIBS)

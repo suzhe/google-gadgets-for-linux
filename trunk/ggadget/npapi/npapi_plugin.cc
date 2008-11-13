@@ -39,7 +39,6 @@
 
 #ifdef MOZ_X11
 #include <X11/Xlib.h>
-#include <X11/Intrinsic.h>
 #endif
 
 namespace ggadget {
@@ -594,6 +593,7 @@ class Plugin::Impl {
   }
 
   static NPError NPN_GetValue(NPP instance, NPNVariable variable, void *value) {
+    DLOG("NPN_GetValue: %d (0x%x)", variable, variable);
     // This function may be called before any instance is constructed.
     ENSURE_MAIN_THREAD(NPERR_INVALID_PARAM);
     switch (variable) {
@@ -619,12 +619,6 @@ class Plugin::Impl {
         *static_cast<Display **>(value) = display_;
         DLOG("NPN_GetValue NPNVxDisplay: %p", display_);
         break;
-      case NPNVxtAppContext:
-        if (!display_)
-          return NPERR_GENERIC_ERROR;
-        *static_cast<XtAppContext *>(value) =
-            XtDisplayToApplicationContext(display_);
-        break;
 #endif
       case NPNVWindowNPObject:
         if (instance && instance->ndata) {
@@ -641,6 +635,7 @@ class Plugin::Impl {
         // windowless mode is used. We must provide a parent window for
         // the plugin to show popups if we want to support.
       case NPNVnetscapeWindow:
+      case NPNVxtAppContext:
       default:
         LOG("NPNVariable %d is not supported.", variable);
         return NPERR_GENERIC_ERROR;

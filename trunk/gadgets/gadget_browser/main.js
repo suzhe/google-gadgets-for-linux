@@ -23,10 +23,12 @@ var kDefaultPluginColumns = 4;
 var kCategoryGap = 15;
 var kFixedExtraWidth = 178;
 var kFixedExtraHeight = 183;
-var kMinWidth = kFixedExtraWidth + 3 * kPluginBoxWidth;
-var kMinHeight = kFixedExtraHeight + kPluginBoxHeight;
-var kMaxWidth = kFixedExtraWidth + 5 * kPluginBoxWidth;
-var kMaxHeight = kFixedExtraHeight + 4 * kPluginBoxHeight;
+var kBorderMarginH = 12;
+var kBorderMarginV = 30;
+var kMinWidth = kFixedExtraWidth + 3 * kPluginBoxWidth + kBorderMarginH;
+var kMinHeight = kFixedExtraHeight + kPluginBoxHeight + kBorderMarginV;
+var kMaxWidth = kFixedExtraWidth + 5 * kPluginBoxWidth + kBorderMarginH;
+var kMaxHeight = kFixedExtraHeight + 4 * kPluginBoxHeight + kBorderMarginV;
 
 // Default layout: 714x555.
 var gPluginRows = kDefaultPluginRows;
@@ -56,16 +58,16 @@ function view_onopen() {
   var screen_height = system.screen.size.height;
   var width, height;
   if (screen_width >= 1024) {
-    width = kFixedExtraWidth + 4 * kPluginBoxWidth;
+    width = kFixedExtraWidth + 4 * kPluginBoxWidth + kBorderMarginH;
   } else if (screen_width >= 800) {
-    width = kFixedExtraWidth + 3 * kPluginBoxWidth;
+    width = kFixedExtraWidth + 3 * kPluginBoxWidth + kBorderMarginH;
   } else {
     width = kMinWidth;
   }
   if (screen_height >= 768) {
-    height = kFixedExtraHeight + 3 * kPluginBoxHeight;
+    height = kFixedExtraHeight + 3 * kPluginBoxHeight + kBorderMarginV;
   } else if (screen_height >= 600) {
-    height = kFixedExtraHeight + 2 * kPluginBoxHeight;
+    height = kFixedExtraHeight + 2 * kPluginBoxHeight + kBorderMarginV;
   } else {
     height = kMinHeight;
   }
@@ -101,15 +103,20 @@ function view_onsizing() {
 }
 
 function view_onsize() {
-  var plugins_width = view.width - kFixedExtraWidth;
-  var plugins_height = view.height - kFixedExtraHeight;
+  window_body.width = view.width - kBorderMarginH;
+  window_body.height = view.height - kBorderMarginV;
+}
+
+function window_onsize() {
+  var plugins_width = window_body.width - kFixedExtraWidth;
+  var plugins_height = window_body.height - kFixedExtraHeight;
   var columns = Math.floor(plugins_width / kPluginBoxWidth);
   var rows = Math.floor(plugins_height / kPluginBoxHeight);
   plugins_div.width = plugins_width;
   plugins_div.height = plugins_height;
   plugin_info_div.width = plugins_width - 6;
   categories_div.height = plugins_height + 28;
-  language_box.height = Math.min(440, view.height - 30);
+  language_box.height = Math.min(440, window_body.height - 30);
   gPluginBoxGapX = Math.floor((plugins_width - kPluginBoxWidth * columns) /
                               (columns + 1));
   gPluginBoxGapY = Math.floor((plugins_height - kPluginBoxHeight * rows) /
@@ -128,7 +135,7 @@ function view_onsize() {
           break;
         var box = plugins_div.children.item(index);
         box.x = Math.round(j * (kPluginBoxWidth + gPluginBoxGapX) +
-                           gPluginBoxGapX / 2); 
+                           gPluginBoxGapX / 2);
         box.y = Math.round(i * (kPluginBoxHeight + gPluginBoxGapY) +
                            gPluginBoxGapY / 2);
         index++;
@@ -229,7 +236,7 @@ function AddCategoryButton(category, y) {
   categories_div.appendElement(
     "<label x='5%' width='90%' height='" + kCategoryButtonHeight + "' y='" + y +
     "' align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
-    category + "' size='10' trimming='character-ellipsis'" + 
+    category + "' size='10' trimming='character-ellipsis'" +
     " onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +
     " onclick='SelectCategory(\"" + category + "\")'>&#160;" +
     GetDisplayCategory(category) + "</label>");
@@ -260,7 +267,7 @@ function SelectCategory(category) {
 
 function AddPluginBox(plugin, index, row, column) {
   var x = Math.round(column * (kPluginBoxWidth + gPluginBoxGapX) +
-                     gPluginBoxGapX / 2); 
+                     gPluginBoxGapX / 2);
   var y = Math.round(row * (kPluginBoxHeight + gPluginBoxGapY) +
                      gPluginBoxGapY / 2);
   var box = plugins_div.appendElement(
