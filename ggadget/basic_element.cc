@@ -720,16 +720,19 @@ class BasicElement::Impl {
 
   void PositionChanged() {
     position_changed_ = true;
+    draw_queued_ = false;
     QueueDraw();
   }
 
   void WidthChanged() {
     size_changed_ = true;
+    draw_queued_ = false;
     QueueDraw();
   }
 
   void HeightChanged() {
     size_changed_ = true;
+    draw_queued_ = false;
     QueueDraw();
   }
 

@@ -44,7 +44,7 @@ class QtViewHost::Impl : public QObject {
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
       composite_(composite),
-      input_shape_mask_(true),
+      input_shape_mask_(false),
       keep_above_(false),
       parent_widget_(parent) {
     if (type != ViewHostInterface::VIEW_HOST_MAIN) {
