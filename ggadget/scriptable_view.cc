@@ -197,6 +197,7 @@ class ScriptableView::Impl {
       return false;
     }
 
+    ASSERT(xmldoc->GetRefCount() == 1);
     xmldoc->Unref();
 
     // Fire "onopen" event here, to make sure that it's only fired once.

@@ -30,10 +30,6 @@
 #endif
 //#define USE_NEW_TO_ALLOCATE
 
-#ifdef DO_EXTRA_LOKI_TESTS
-    #include <iostream>
-#endif
-
 namespace ggadget
 {
 
@@ -1088,9 +1084,6 @@ SmallObjAllocator::SmallObjAllocator( std::size_t pageSize,
     maxSmallObjectSize_( maxObjectSize ),
     objectAlignSize_( objectAlignSize )
 {
-#ifdef DO_EXTRA_LOKI_TESTS
-    std::cout << "SmallObjAllocator " << this << std::endl;
-#endif
     assert( 0 != objectAlignSize );
     const std::size_t allocCount = GetOffset( maxObjectSize, objectAlignSize );
     pool_ = new FixedAllocator[ allocCount ];
@@ -1102,9 +1095,6 @@ SmallObjAllocator::SmallObjAllocator( std::size_t pageSize,
 
 SmallObjAllocator::~SmallObjAllocator( void )
 {
-#ifdef DO_EXTRA_LOKI_TESTS
-    std::cout << "~SmallObjAllocator " << this << std::endl;
-#endif
     delete [] pool_;
 }
 

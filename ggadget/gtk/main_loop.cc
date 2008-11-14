@@ -95,11 +95,12 @@ class MainLoop::Impl {
     node->data = fd;
     node->callback = callback;
     node->impl = this;
-    node->watch_id = g_io_add_watch(channel, cond, IOWatchCallback, node);
+    int watch_id = g_io_add_watch(channel, cond, IOWatchCallback, node);
+    node->watch_id = watch_id;
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
     g_io_channel_unref(channel);
     g_static_mutex_unlock(&mutex_);
-    return node->watch_id;
+    return watch_id;
   }
 
   int AddTimeoutWatch(int interval, WatchCallbackInterface *callback) {
@@ -114,15 +115,16 @@ class MainLoop::Impl {
     node->data = interval;
     node->callback = callback;
     node->impl = this;
-    node->watch_id = (interval < 1 ?
+    int watch_id = (interval < 1 ?
          g_idle_add(TimeoutCallback, node) :
          // Lower priority of other timers to prevent them from congesting the
          // event loop.
          g_timeout_add_full(G_PRIORITY_DEFAULT_IDLE, interval, TimeoutCallback,
                             node, NULL));
+    node->watch_id = watch_id;
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
     g_static_mutex_unlock(&mutex_);
-    return node->watch_id;
+    return watch_id;
   }
 
   MainLoopInterface::WatchType GetWatchType(int watch_id) {

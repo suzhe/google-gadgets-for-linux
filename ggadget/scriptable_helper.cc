@@ -135,7 +135,20 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
 
   typedef std::map<const char *, PropertyInfo,
                    GadgetCharPtrComparator> PropertyInfoMap;
-  typedef std::map<uint64_t, PropertyInfoMap> ClassInfoMap;
+
+  class ClassInfoMap : public std::map<uint64_t, PropertyInfoMap> {
+   public:
+    ~ClassInfoMap() {
+      ClassInfoMap::iterator it = this->begin();
+      ClassInfoMap::iterator end = this->end();
+      for (; it != end; ++it) {
+        PropertyInfoMap::iterator prop_it = it->second.begin();
+        PropertyInfoMap::iterator prop_end = it->second.end();
+        for (; prop_it != prop_end; ++prop_it)
+          ScriptableHelperImpl::DestroyPropertyInfo(&prop_it->second);
+      }
+    }
+  };
 
   // Stores information of all properties of this object.
   PropertyInfoMap property_info_;

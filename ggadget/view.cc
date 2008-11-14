@@ -212,6 +212,7 @@ class View::Impl {
       mouse_over_(false),
       last_cursor_type_(-1),
       hittest_(ViewInterface::HT_CLIENT),
+      last_hittest_(ViewInterface::HT_CLIENT),
       scriptable_view_(NULL) {
     ASSERT(main_loop_);
 

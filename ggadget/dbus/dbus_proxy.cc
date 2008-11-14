@@ -1253,6 +1253,7 @@ class DBusProxy::Impl {
                                          NULL, NULL)) {
       DLOG("Failed to parse introspect xml content of %s|%s:\n%s",
            name_.c_str(), path_.c_str(), xml.c_str());
+      ASSERT(domdoc->GetRefCount() == 1);
       domdoc->Unref();
       return false;
     }
@@ -1261,6 +1262,7 @@ class DBusProxy::Impl {
     if (!root_node) {
       DLOG("Failed to get root node, %s|%s:\n%s",
            name_.c_str(), path_.c_str(), xml.c_str());
+      ASSERT(domdoc->GetRefCount() == 1);
       domdoc->Unref();
       return false;
     }
@@ -1269,6 +1271,7 @@ class DBusProxy::Impl {
     if (tag_name != "node" || !(name_attr.empty() || name_attr == path_)) {
       DLOG("Invalid root node, %s|%s:\n%s",
            name_.c_str(), path_.c_str(), xml.c_str());
+      ASSERT(domdoc->GetRefCount() == 1);
       domdoc->Unref();
       return false;
     }
@@ -1288,6 +1291,8 @@ class DBusProxy::Impl {
         result = ParseChildNode(elm);
       }
     }
+
+    ASSERT(domdoc->GetRefCount() == 1);
     domdoc->Unref();
     if (!result)
       DLOG("Failed to introspect %s|%s", name_.c_str(), path_.c_str());

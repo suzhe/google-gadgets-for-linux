@@ -347,8 +347,8 @@ void NativeJSWrapper::OnContextDestroy() {
   DetachJS(false);
   while (!js_function_slots_.empty()) {
     JSFunctionSlots::iterator it = js_function_slots_.begin();
-    js_function_slots_.erase(it);
     (*it)->Finalize();
+    js_function_slots_.erase(it);
   }
 }
 

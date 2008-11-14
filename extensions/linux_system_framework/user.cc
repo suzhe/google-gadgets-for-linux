@@ -35,6 +35,11 @@ User::User()
   DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
                                                kHalObjectManager,
                                                kHalInterfaceManager);
+  if (!proxy) {
+    DLOG("Failed to connect to DBus Hal service.");
+    return;
+  }
+
   FindDevices(proxy, kHalCapabilityInputKeyboard);
   FindDevices(proxy, kHalCapabilityInputMouse);
   delete proxy;

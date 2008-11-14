@@ -46,6 +46,11 @@ Machine::Machine() {
   DBusProxy *proxy = DBusProxy::NewSystemProxy(kHalDBusName,
                                                kHalObjectComputer,
                                                kHalInterfaceDevice);
+  if (!proxy) {
+    DLOG("Failed to connect to DBus Hal service.");
+    return;
+  }
+
   DBusStringReceiver string_receiver;
 
   if (!proxy->CallMethod(kHalMethodGetProperty, true, kDefaultDBusTimeout,
