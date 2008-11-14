@@ -137,6 +137,10 @@ class BrowserElement::Impl {
   }
 
   void Layout() {
+    int x, y, w, h;
+    GetWidgetExtents(&x, &y, &w, &h);
+    child_->setFixedSize(w, h);
+
     if (!parent_) {
       parent_ = static_cast<QtViewWidget*>(
           owner_->GetView()->GetNativeWidget()
@@ -145,12 +149,10 @@ class BrowserElement::Impl {
       parent_->SetChild(child_);
       QObject::connect(parent_, SIGNAL(destroyed(QObject*)),
                        child_, SLOT(OnParentDestroyed(QObject*)));
-      child_->show();
     }
-    int x, y, w, h;
-    GetWidgetExtents(&x, &y, &w, &h);
-    child_->setFixedSize(w, h);
+
     child_->move(x, y);
+    child_->show();
   }
 
   void SetContent(const std::string &content) {
@@ -163,7 +165,7 @@ class BrowserElement::Impl {
   }
 
   void OnViewRestored() {
-    if (child_) child_->show();
+    if (child_ && parent_) child_->show();
   }
 
   void OnViewChanged() {
