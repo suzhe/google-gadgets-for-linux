@@ -150,6 +150,10 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
   }
 
   const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
+
+  ASSERT(attributes);
+  attributes->Ref();
+
   size_t length = attributes->GetLength();
   for (size_t i = 0; i < length; i++) {
     const DOMAttrInterface *attr =
@@ -198,6 +202,8 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
           attr->GetRow(), attr->GetColumn(), name.c_str(), tag_name.c_str());
     }
   }
+
+  attributes->Unref();
 }
 
 BasicElement *InsertElementFromDOM(Elements *elements,
@@ -289,16 +295,21 @@ std::string GetAttributeGadgetCase(const DOMElementInterface *element,
   return element->GetAttribute(name);
 #else
   const DOMNamedNodeMapInterface *attrs = element->GetAttributes();
+  std::string result;
   if (attrs) {
+    attrs->Ref();
     size_t size = attrs->GetLength();
     for (size_t i = 0; i < size; i++) {
       const DOMAttrInterface *attr =
           down_cast<const DOMAttrInterface *>(attrs->GetItem(i));
-      if (GadgetStrCmp(attr->GetName().c_str(), name) == 0)
-        return attr->GetValue();
+      if (GadgetStrCmp(attr->GetName().c_str(), name) == 0) {
+        result = attr->GetValue();
+        break;
+      }
     }
+    attrs->Unref();
   }
-  return std::string();
+  return result;
 #endif
 }
 

@@ -573,6 +573,8 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
       impl_->view_->EnableEvents(true);
     }
   }
+
+  ASSERT(xmldoc->GetRefCount() == 1);
   xmldoc->Unref();
   return result;
 }
