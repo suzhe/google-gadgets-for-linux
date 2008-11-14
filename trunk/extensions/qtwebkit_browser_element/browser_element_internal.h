@@ -75,14 +75,16 @@ class BrowserElement::Impl {
       parent_(NULL),
       child_(new WebView(this)),
       content_type_("text/html"),
+      minimized_(false),
+      popped_out_(false),
       minimized_connection_(owner->GetView()->ConnectOnMinimizeEvent(
           NewSlot(this, &Impl::OnViewMinimized))),
       restored_connection_(owner->GetView()->ConnectOnRestoreEvent(
           NewSlot(this, &Impl::OnViewRestored))),
       popout_connection_(owner->GetView()->ConnectOnPopOutEvent(
-          NewSlot(this, &Impl::OnViewChanged))),
+          NewSlot(this, &Impl::OnViewPopOut))),
       popin_connection_(owner->GetView()->ConnectOnPopInEvent(
-          NewSlot(this, &Impl::OnViewChanged))),
+          NewSlot(this, &Impl::OnViewPopIn))),
       dock_connection_(owner->GetView()->ConnectOnDockEvent(
           NewSlot(this, &Impl::OnViewChanged))),
       undock_connection_(owner->GetView()->ConnectOnUndockEvent(
@@ -137,6 +139,9 @@ class BrowserElement::Impl {
   }
 
   void Layout() {
+    if (minimized_ && !popped_out_)
+      return;
+
     int x, y, w, h;
     GetWidgetExtents(&x, &y, &w, &h);
     child_->setFixedSize(w, h);
@@ -150,7 +155,6 @@ class BrowserElement::Impl {
       QObject::connect(parent_, SIGNAL(destroyed(QObject*)),
                        child_, SLOT(OnParentDestroyed(QObject*)));
     }
-
     child_->move(x, y);
     child_->show();
   }
@@ -161,15 +165,30 @@ class BrowserElement::Impl {
   }
 
   void OnViewMinimized() {
-    if (child_) child_->hide();
+    if (child_)
+      child_->hide();
+    minimized_ = true;
   }
 
   void OnViewRestored() {
-    if (child_ && parent_) child_->show();
+    if (child_ && parent_)
+      child_->show();
+    minimized_ = false;
+  }
+
+  void OnViewPopIn() {
+    popped_out_ = false;
+    OnViewChanged();
+  }
+
+  void OnViewPopOut() {
+    popped_out_ = true;
+    OnViewChanged();
   }
 
   void OnViewChanged() {
     if (parent_) {
+      child_->hide();
       parent_->SetChild(NULL);
       parent_ = NULL;
     }
@@ -180,6 +199,8 @@ class BrowserElement::Impl {
   QtViewWidget *parent_;
   QWebView *child_;
   std::string content_type_;
+  bool minimized_;
+  bool popped_out_;
   std::string content_;
   Signal1<JSONString, JSONString> get_property_signal_;
   Signal2<void, JSONString, JSONString> set_property_signal_;
