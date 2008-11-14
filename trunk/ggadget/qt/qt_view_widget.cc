@@ -69,6 +69,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
 QtViewWidget::~QtViewWidget() {
   DLOG("Widget freed");
   if (child_) {
+    // Because I don't own child_, just let it go
     child_->setParent(NULL);
   }
   if (offscreen_pixmap_) delete offscreen_pixmap_;
@@ -76,6 +77,7 @@ QtViewWidget::~QtViewWidget() {
 }
 
 void QtViewWidget::paintEvent(QPaintEvent *event) {
+  if (!view_) return;
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
   p.setClipRect(event->rect());
@@ -111,6 +113,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
+  if (!view_) return;
   Event::Type type;
   if (Qt::LeftButton == event->button())
     type = Event::EVENT_MOUSE_DBLCLICK;
@@ -122,6 +125,7 @@ void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
 }
 
 void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
+  if (!view_) return;
   int buttons = GetMouseButtons(event->buttons());
   if (buttons != MouseEvent::BUTTON_NONE) {
     grabMouse();
@@ -199,6 +203,7 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
+  if (!view_) return;
   if (!hasFocus()) {
     setFocus(Qt::MouseFocusReason);
     SimpleEvent e(Event::EVENT_FOCUS_IN);
@@ -225,11 +230,11 @@ void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
 
 void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   releaseMouse();
+  if (!view_ || mouse_drag_moved_)
+    return;
+
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
-
-  if (mouse_drag_moved_)
-    return;
 
   MouseEvent e(Event::EVENT_MOUSE_UP,
                event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
@@ -247,6 +252,7 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
 }
 
 void QtViewWidget::enterEvent(QEvent *event) {
+  if (!view_) return;
   MouseEvent e(Event::EVENT_MOUSE_OVER,
       0, 0, 0, 0,
       MouseEvent::BUTTON_NONE, 0);
@@ -255,6 +261,7 @@ void QtViewWidget::enterEvent(QEvent *event) {
 }
 
 void QtViewWidget::leaveEvent(QEvent *event) {
+  if (!view_) return;
   MouseEvent e(Event::EVENT_MOUSE_OUT,
                0, 0, 0, 0,
                MouseEvent::BUTTON_NONE, 0);
@@ -263,6 +270,8 @@ void QtViewWidget::leaveEvent(QEvent *event) {
 }
 
 void QtViewWidget::wheelEvent(QWheelEvent * event) {
+  if (!view_) return;
+
   int delta_x = 0, delta_y = 0;
   if (event->orientation() == Qt::Horizontal) {
     delta_x = event->delta();
@@ -280,6 +289,8 @@ void QtViewWidget::wheelEvent(QWheelEvent * event) {
 }
 
 void QtViewWidget::keyPressEvent(QKeyEvent *event) {
+  if (!view_) return;
+
   // For key down event
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   // For key press event
@@ -308,6 +319,8 @@ void QtViewWidget::keyPressEvent(QKeyEvent *event) {
 }
 
 void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
+  if (!view_) return;
+
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
 
   int mod = GetModifiers(event->modifiers());
@@ -324,6 +337,7 @@ void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
+  if (!view_) return;
   DLOG("drag enter");
   if (event->mimeData()->hasUrls()) {
     drag_urls_.clear();
@@ -347,6 +361,7 @@ void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
+  if (!view_) return;
   DLOG("drag leave");
   DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0);
   drag_event.SetDragFiles(drag_files_);
@@ -354,6 +369,7 @@ void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
 }
 
 void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
+  if (!view_) return;
   DragEvent drag_event(Event::EVENT_DRAG_MOTION,
                        event->pos().x(), event->pos().y());
   drag_event.SetDragFiles(drag_files_);
@@ -364,6 +380,7 @@ void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
 }
 
 void QtViewWidget::dropEvent(QDropEvent *event) {
+  if (!view_) return;
   LOG("drag drop");
   DragEvent drag_event(Event::EVENT_DRAG_DROP,
                        event->pos().x(), event->pos().y());
@@ -382,6 +399,9 @@ QSize QtViewWidget::sizeHint() const {
 }
 
 QSize QtViewWidget::minimumSizeHint() const {
+  if (!view_)
+    return QWidget::minimumSizeHint();
+
   int w = D2I(view_->GetWidth() * zoom_);
   int h = D2I(view_->GetHeight() * zoom_);
   if (w == 0 || h == 0) {
@@ -423,6 +443,7 @@ void QtViewWidget::SetInputMask(QPixmap *pixmap) {
 }
 
 void QtViewWidget::AdjustToViewSize() {
+  if (!view_) return;
   int w = D2I(view_->GetWidth() * zoom_);
   int h = D2I(view_->GetHeight() * zoom_);
   if (resize_drag_) {
@@ -460,6 +481,12 @@ void QtViewWidget::SetKeepAbove(bool above) {
     f &= ~Qt::WindowStaysOnTopHint;
   setWindowFlags(f);
   show();
+}
+
+void QtViewWidget::SetView(ViewInterface *view) {
+  view_ = view;
+  if (view)
+    zoom_ = view->GetGraphics()->GetZoom();
 }
 
 void QtViewWidget::SkipTaskBar() {

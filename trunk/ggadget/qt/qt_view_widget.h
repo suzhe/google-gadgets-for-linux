@@ -40,6 +40,7 @@ class QtViewWidget : public QWidget {
   void SkipTaskBar();
   void AdjustToViewSize();
   void SetKeepAbove(bool above);
+  void SetView(ViewInterface *view);
   virtual QSize sizeHint () const;
   virtual QSize minimumSizeHint () const;
 
@@ -77,6 +78,7 @@ class QtViewWidget : public QWidget {
   QRect origi_geometry_;
   // used as coefficient of mouse move in window resize
   int top_, bottom_, left_, right_;
+
  signals:
   void moved(int x, int y);
   void geometryChanged(int dleft, int dtop, int dw, int dh);
