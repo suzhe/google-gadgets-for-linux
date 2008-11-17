@@ -18,7 +18,6 @@
 #define GGADGET_GTK_CAIRO_FONT_H__
 
 #include <pango/pango.h>
-
 #include <ggadget/font_interface.h>
 
 namespace ggadget {

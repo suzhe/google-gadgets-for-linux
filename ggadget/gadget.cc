@@ -154,16 +154,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         details_view_(NULL),
         permissions_(global_permissions),
         base_path_(base_path),
+        last_user_interaction_time_(0),
         instance_id_(instance_id),
+        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
+        remove_me_timer_(0),
+        destroy_details_view_timer_(0),
+        display_target_(TARGET_FLOATING_VIEW),
+        plugin_flags_(0),
+        debug_console_config_(debug_console_config),
         initialized_(false),
         has_options_xml_(false),
-        plugin_flags_(0),
-        display_target_(TARGET_FLOATING_VIEW),
-        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
-        in_user_interaction_(false),
-        remove_me_timer_(0), destroy_details_view_timer_(0),
-        debug_console_config_(debug_console_config),
-        last_user_interaction_time_(0) {
+        in_user_interaction_(false) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -1016,16 +1017,19 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Permissions permissions_;
 
   std::string base_path_;
-  int instance_id_;
-  bool initialized_;
-  bool has_options_xml_;
-  int plugin_flags_;
-  DisplayTarget display_target_;
-  int xml_http_request_session_;
-  bool in_user_interaction_;
-  int remove_me_timer_, destroy_details_view_timer_;
-  int debug_console_config_;
+
   uint64_t last_user_interaction_time_;
+  int instance_id_;
+  int xml_http_request_session_;
+  int remove_me_timer_;
+  int destroy_details_view_timer_;
+
+  DisplayTarget display_target_      : 2;
+  unsigned int plugin_flags_         : 2;
+  unsigned int debug_console_config_ : 2;
+  bool initialized_                  : 1;
+  bool has_options_xml_              : 1;
+  bool in_user_interaction_          : 1;
 };
 
 Gadget::Gadget(HostInterface *host,

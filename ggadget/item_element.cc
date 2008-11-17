@@ -25,15 +25,18 @@
 #include "texture.h"
 #include "text_frame.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ItemElement::Impl {
+class ItemElement::Impl : public SmallObject<> {
  public:
   Impl(ItemElement *owner)
-      : owner_(owner),
-        selected_(false), mouseover_(false),
-        drawoverlay_(true), background_(NULL) {
+    : owner_(owner),
+      background_(NULL),
+      selected_(false),
+      mouseover_(false),
+      drawoverlay_(true) {
   }
 
   ~Impl() {
@@ -69,8 +72,11 @@ class ItemElement::Impl {
   }
 
   ItemElement *owner_;
-  bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
+
+  bool selected_    : 1;
+  bool mouseover_   : 1;
+  bool drawoverlay_ : 1;
 };
 
 ItemElement::ItemElement(View *view, const char *tagname, const char *name)

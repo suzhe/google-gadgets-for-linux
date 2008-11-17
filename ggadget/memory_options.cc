@@ -20,6 +20,7 @@
 #include "logger.h"
 #include "scriptable_holder.h"
 #include "string_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -50,7 +51,7 @@ class OptionsItem {
   ScriptableHolder<ScriptableInterface> holder_;
 };
 
-class MemoryOptions::Impl {
+class MemoryOptions::Impl : public SmallObject<> {
  public:
   Impl(size_t size_limit)
       : size_limit_(size_limit), total_size_(0) {

@@ -22,10 +22,11 @@
 #include "elements.h"
 #include "element_factory.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ObjectElement::Impl {
+class ObjectElement::Impl : public SmallObject<> {
  public:
   Impl() : object_(NULL) { }
   ~Impl() { delete object_; }

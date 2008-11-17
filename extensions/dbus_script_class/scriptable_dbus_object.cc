@@ -28,6 +28,7 @@
 #include <ggadget/slot.h>
 #include <ggadget/signals.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 namespace dbus {
@@ -152,7 +153,7 @@ class DBusSignal: public Signal {
   SignalSlot *prototype_slot_;
 };
 
-class ScriptableDBusObject::Impl {
+class ScriptableDBusObject::Impl : public SmallObject<> {
   // Helper class to receive enumerate result.
   class EnumerateReceiver {
    public:

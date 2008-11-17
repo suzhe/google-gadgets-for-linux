@@ -20,19 +20,20 @@
 #include "memory_options.h"
 #include "scriptable_options.h"
 #include "string_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class DetailsViewData::Impl {
+class DetailsViewData::Impl : public SmallObject<> {
  public:
   Impl()
       : time_created_(0),
-        time_absolute_(false),
-        layout_(ContentItem::CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
-        is_html_(false),
-        is_view_(false),
         scriptable_data_(&data_, true),
-        external_object_(NULL) {
+        external_object_(NULL),
+        layout_(ContentItem::CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
+        time_absolute_(false),
+        is_html_(false),
+        is_view_(false) {
   }
 
   ~Impl() {
@@ -40,16 +41,17 @@ class DetailsViewData::Impl {
       external_object_->Unref();
   }
 
-  std::string source_;
   Date time_created_;
-  std::string text_;
-  bool time_absolute_;
-  ContentItem::Layout layout_;
-  bool is_html_;
-  bool is_view_;
   MemoryOptions data_;
   ScriptableOptions scriptable_data_;
   ScriptableInterface *external_object_;
+  std::string source_;
+  std::string text_;
+
+  ContentItem::Layout layout_ : 2;
+  bool time_absolute_         : 1;
+  bool is_html_               : 1;
+  bool is_view_               : 1;
 };
 
 DetailsViewData::DetailsViewData()

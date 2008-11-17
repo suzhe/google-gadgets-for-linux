@@ -20,6 +20,7 @@
 #include <string>
 #include <ggadget/common.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/small_object.h>
 
 struct _NPWindow;
 
@@ -35,7 +36,7 @@ namespace npapi {
 /**
  * Represents a plugin instance.
  */
-class Plugin {
+class Plugin : public SmallObject<> {
  public:
   /**
    * Destroys the plugin instance.

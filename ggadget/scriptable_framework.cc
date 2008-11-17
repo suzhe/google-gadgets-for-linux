@@ -33,6 +33,7 @@
 #include "gadget_consts.h"
 #include "permissions.h"
 #include "system_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 namespace framework {
@@ -119,7 +120,7 @@ class ScriptableAudioclip : public ScriptableHelperDefault {
       onstatechange_signal_;
 };
 
-class ScriptableAudio::Impl {
+class ScriptableAudio::Impl : public SmallObject<> {
  public:
   Impl(AudioInterface *audio, Gadget *gadget)
     : audio_(audio), gadget_(gadget) {
@@ -324,7 +325,7 @@ class ScriptableWireless : public ScriptableHelperNativeOwnedDefault {
   WirelessInterface *wireless_;
 };
 
-class ScriptableNetwork::Impl {
+class ScriptableNetwork::Impl : public SmallObject<> {
  public:
   Impl(NetworkInterface *network)
     : network_(network), scriptable_wireless_(network_->GetWireless()) {
@@ -353,7 +354,7 @@ ScriptableNetwork::~ScriptableNetwork() {
 }
 
 // Implementation of ScriptablePerfmon
-class ScriptablePerfmon::Impl {
+class ScriptablePerfmon::Impl : public SmallObject<> {
  public:
   struct Counter {
     int id;
@@ -446,7 +447,7 @@ ScriptablePerfmon::~ScriptablePerfmon() {
 }
 
 // Implementation of ScriptableProcess
-class ScriptableProcess::Impl {
+class ScriptableProcess::Impl : public SmallObject<> {
  public:
   Impl(ProcessInterface *process)
     : process_(process) {
@@ -589,7 +590,7 @@ ScriptableProcessor::ScriptableProcessor(MachineInterface *machine) {
 }
 
 // Implementation of ScriptableCursor
-class ScriptableCursor::Impl {
+class ScriptableCursor::Impl : public SmallObject<> {
  public:
   Impl(CursorInterface *cursor) : cursor_(cursor) {
     ASSERT(cursor_);
@@ -615,7 +616,7 @@ ScriptableCursor::~ScriptableCursor() {
 }
 
 // Implementation of ScriptableScreen
-class ScriptableScreen::Impl {
+class ScriptableScreen::Impl : public SmallObject<> {
  public:
   Impl(ScreenInterface *screen) : screen_(screen) {
     ASSERT(screen_);
@@ -654,7 +655,7 @@ ScriptableUser::~ScriptableUser() {
 }
 
 // Implementation of ScriptableGraphics
-class ScriptableGraphics::Impl {
+class ScriptableGraphics::Impl : public SmallObject<> {
  public:
   Impl(Gadget *gadget) : gadget_(gadget) {
     ASSERT(gadget_);

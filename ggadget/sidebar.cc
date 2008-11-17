@@ -34,6 +34,7 @@
 #include "view_element.h"
 #include "view.h"
 #include "messages.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -46,7 +47,7 @@ static const double kBorderWidth = 3;
 
 class SideBar::Impl : public View {
  public:
-  class SideBarViewHost : public ViewHostInterface {
+  class SideBarViewHost : public ViewHostInterface, public SmallObject<> {
    public:
     SideBarViewHost(SideBar::Impl *owner, size_t index)
       : owner_(owner),

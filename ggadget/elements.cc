@@ -30,14 +30,15 @@
 #include "xml_dom_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class Elements::Impl {
+class Elements::Impl : public SmallObject<> {
  public:
   Impl(ElementFactory *factory, BasicElement *owner, View *view)
-      : factory_(factory), owner_(owner), view_(view),
-        width_(.0), height_(.0),
+      : width_(.0), height_(.0),
+        factory_(factory), owner_(owner), view_(view),
         scrollable_(false), element_removed_(false) {
     ASSERT(view);
   }
@@ -451,15 +452,16 @@ class Elements::Impl {
       (*it)->MarkRedraw();
   }
 
+  double width_;
+  double height_;
   ElementFactory *factory_;
   BasicElement *owner_;
   View *view_;
   typedef std::vector<BasicElement *> Children;
   Children children_;
-  double width_;
-  double height_;
-  bool scrollable_;
-  bool element_removed_;
+
+  bool scrollable_      : 1;
+  bool element_removed_ : 1;
 };
 
 Elements::Elements(ElementFactory *factory,

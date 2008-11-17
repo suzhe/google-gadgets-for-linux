@@ -89,15 +89,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         share_(share),
         main_loop_(main_loop),
         xml_parser_(xml_parser),
-        async_(false),
-        method_(HTTP_GET),
-        state_(UNSENT),
-        send_flag_(false),
-        request_headers_(NULL),
-        status_(0),
-        succeeded_(false),
         response_dom_(NULL),
-        default_user_agent_(default_user_agent) {
+        request_headers_(NULL),
+        default_user_agent_(default_user_agent),
+        status_(0),
+        state_(UNSENT),
+        method_(HTTP_GET),
+        async_(false),
+        send_flag_(false),
+        succeeded_(false) {
     VERIFY_M(EnsureXHRBackoffOptions(main_loop->GetCurrentTime()),
              ("Required options module have not been loaded"));
     pthread_attr_init(&thread_attr_);
@@ -291,18 +291,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     WorkerContext(XMLHttpRequest *a_this_p, CURL *a_curl, bool a_async,
                   curl_slist *a_request_headers,
                   const char *a_request_data, size_t a_request_size)
-        : this_p(a_this_p), curl(a_curl), async(a_async),
+        : this_p(a_this_p), curl(a_curl),
           request_headers(a_request_headers),
-          request_offset(0) {
+          request_offset(0), async(a_async) {
       if (a_request_data && a_request_size > 0)
         request_data.assign(a_request_data, a_request_size);
     }
     XMLHttpRequest *this_p;
     CURL *curl;
-    bool async;
     curl_slist *request_headers;
     std::string request_data;
     size_t request_offset;
+    bool async;
   };
 
   virtual ExceptionCode Send(const char *data, size_t size) {
@@ -500,8 +500,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                   unsigned short status, const std::string &effective_url,
                   const WorkerContext *worker_context)
         : WriteHeaderTask(ptr, size, worker_context),
-          status_(status),
-          effective_url_(effective_url) {
+          effective_url_(effective_url),
+          status_(status) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       if (worker_context_.this_p->curl_ == worker_context_.curl)
@@ -509,8 +509,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return false;
     }
 
-    unsigned short status_;
     std::string effective_url_;
+    unsigned short status_;
   };
 
   // Passes the Done() request from worker thread to the main thread.
@@ -948,32 +948,34 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   CURLSH *share_;
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
+  DOMDocumentInterface *response_dom_;
+  curl_slist *request_headers_;
+  CaseInsensitiveStringMap response_headers_map_;
   Signal0<void> onreadystatechange_signal_;
 
-  std::string url_, host_;
-  bool async_;
-  enum HTTPMethod { HTTP_HEAD, HTTP_GET, HTTP_POST, HTTP_PUT };
-  HTTPMethod method_;
-
-  State state_;
-  // Required by the specification.
-  // It will be true after send() is called in async mode.
-  bool send_flag_;
-
-  curl_slist *request_headers_;
+  std::string url_;
+  std::string host_;
   std::string response_headers_;
   std::string response_content_type_;
   std::string response_encoding_;
-  unsigned short status_;
   std::string effective_url_;
-  bool succeeded_;
   std::string status_text_;
   std::string response_body_;
   std::string response_text_;
-  DOMDocumentInterface *response_dom_;
-  CaseInsensitiveStringMap response_headers_map_;
-  pthread_attr_t thread_attr_;
   std::string default_user_agent_;
+  pthread_attr_t thread_attr_;
+
+  unsigned short status_;
+  State state_ : 3;
+
+  enum HTTPMethod { HTTP_HEAD, HTTP_GET, HTTP_POST, HTTP_PUT };
+  HTTPMethod method_ : 2;
+
+  bool async_     : 1;
+  // Required by the specification.
+  // It will be true after send() is called in async mode.
+  bool send_flag_ : 1;
+  bool succeeded_ : 1;
 };
 
 class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {

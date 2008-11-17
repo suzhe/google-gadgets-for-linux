@@ -31,10 +31,11 @@
 #include "gadget_consts.h"
 #include "slot.h"
 #include "system_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class DirFileManager::Impl {
+class DirFileManager::Impl : public SmallObject<> {
  public:
   Impl() {
   }

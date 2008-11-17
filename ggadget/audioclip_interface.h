@@ -18,6 +18,7 @@
 #define GGADGET_AUDIOCLIP_INTERFACE_H__
 
 #include <string>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -27,7 +28,7 @@ template <typename R, typename P1> class Slot1;
 namespace framework {
 
 /** Used for playing back audio files. */
-class AudioclipInterface {
+class AudioclipInterface : public SmallObject<> {
  protected:
   virtual ~AudioclipInterface() {}
 

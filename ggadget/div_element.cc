@@ -22,10 +22,11 @@
 #include "logger.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class DivElement::Impl {
+class DivElement::Impl : public SmallObject<> {
  public:
   Impl(DivElement *owner)
       : owner_(owner),

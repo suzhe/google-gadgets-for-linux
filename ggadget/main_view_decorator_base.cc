@@ -38,6 +38,7 @@
 #include "text_frame.h"
 #include "messages.h"
 #include "menu_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -52,7 +53,7 @@ static const int kVDShowTimeout = 200;
 static const int kVDHideTimeout = 500;
 static const double kVDMainFrozenOpacity = 0.5;
 
-class  MainViewDecoratorBase::Impl {
+class  MainViewDecoratorBase::Impl : public SmallObject<> {
  public:
   struct ButtonInfo {
     const char *tooltip;
@@ -65,24 +66,24 @@ class  MainViewDecoratorBase::Impl {
 
   Impl(MainViewDecoratorBase *owner, bool show_minimized_background)
     : owner_(owner),
-      minimized_(false),
-      popped_out_(false),
-      menu_button_clicked_(false),
-      button_box_position_(MainViewDecoratorBase::TOP_RIGHT),
-      button_box_orientation_(MainViewDecoratorBase::HORIZONTAL),
-      popout_direction_(MainViewDecoratorBase::POPOUT_TO_LEFT),
-      decorator_show_hide_timer_(0),
-      decorator_show_timeout_(kVDShowTimeout),
-      decorator_hide_timeout_(kVDHideTimeout),
       buttons_div_(new DivElement(owner, NULL)),
       minimized_bkgnd_(show_minimized_background ?
                        (new ImgElement(owner, NULL)) : NULL),
       minimized_icon_(new ImgElement(owner, NULL)),
       minimized_caption_(new LabelElement(owner, NULL)),
-      minimized_icon_visible_(true),
-      minimized_caption_visible_(true),
       original_child_view_(NULL),
-      plugin_flags_connection_(NULL) {
+      plugin_flags_connection_(NULL),
+      decorator_show_hide_timer_(0),
+      decorator_show_timeout_(kVDShowTimeout),
+      decorator_hide_timeout_(kVDHideTimeout),
+      button_box_position_(MainViewDecoratorBase::TOP_RIGHT),
+      button_box_orientation_(MainViewDecoratorBase::HORIZONTAL),
+      popout_direction_(MainViewDecoratorBase::POPOUT_TO_LEFT),
+      minimized_(false),
+      popped_out_(false),
+      menu_button_clicked_(false),
+      minimized_icon_visible_(true),
+      minimized_caption_visible_(true) {
   }
 
   void InitDecorator() {
@@ -332,30 +333,29 @@ class  MainViewDecoratorBase::Impl {
 
  public:
   MainViewDecoratorBase *owner_;
-
-  bool minimized_;
-  bool popped_out_;
-  bool menu_button_clicked_;
-
-  MainViewDecoratorBase::ButtonBoxPosition button_box_position_;
-  MainViewDecoratorBase::ButtonBoxOrientation button_box_orientation_;
-  MainViewDecoratorBase::PopOutDirection popout_direction_;
-  int decorator_show_hide_timer_;
-  int decorator_show_timeout_;
-  int decorator_hide_timeout_;
-
   DivElement *buttons_div_;
   ImgElement *minimized_bkgnd_;
   ImgElement *minimized_icon_;
   LabelElement *minimized_caption_;
-  bool minimized_icon_visible_;
-  bool minimized_caption_visible_;
-
   View *original_child_view_;
   Connection *plugin_flags_connection_;
 
   Signal0<void> on_popin_signal_;;
   Signal0<void> on_popout_signal_;;
+
+  int decorator_show_hide_timer_;
+  int decorator_show_timeout_;
+  int decorator_hide_timeout_;
+
+  MainViewDecoratorBase::ButtonBoxPosition button_box_position_       : 2;
+  MainViewDecoratorBase::ButtonBoxOrientation button_box_orientation_ : 1;
+  MainViewDecoratorBase::PopOutDirection popout_direction_            : 1;
+
+  bool minimized_                 : 1;
+  bool popped_out_                : 1;
+  bool menu_button_clicked_       : 1;
+  bool minimized_icon_visible_    : 1;
+  bool minimized_caption_visible_ : 1;
 
   static const ButtonInfo kButtonsInfo[];
 };

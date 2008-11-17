@@ -15,10 +15,11 @@
 */
 
 #include "scriptable_function.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableFunction::Impl {
+class ScriptableFunction::Impl : public SmallObject<> {
  public:
   Impl(Slot *slot) : slot_(slot) {
   }

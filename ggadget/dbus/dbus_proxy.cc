@@ -32,11 +32,12 @@ limitations under the License.
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_parser_interface.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 namespace dbus {
 
-class DBusProxy::Impl {
+class DBusProxy::Impl : public SmallObject<> {
   // Structure to hold information of an argument.
   struct ArgPrototype {
     std::string name;

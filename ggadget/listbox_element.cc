@@ -26,6 +26,7 @@
 #include "string_utils.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -39,19 +40,23 @@ static const Color kDefaultItemSelectedColor(0xC6/255.0,
                                              0xF7/255.0);
 static const Color kDefaultItemSepColor(0xF7/255.0, 0xF3/255.0, 0xF7/255.0);
 
-class ListBoxElement::Impl {
+class ListBoxElement::Impl : public SmallObject<> {
  public:
   Impl(ListBoxElement *owner, View *view) :
     owner_(owner),
-    item_width_(1.0), item_height_(0),
-    item_width_specified_(false), item_height_specified_(false),
-    item_width_relative_(true), item_height_relative_(false),
-    multiselect_(false), item_separator_(false),
-    selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
     item_selected_color_(new Texture(kDefaultItemSelectedColor, 1.0)),
     item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)),
-    pending_scroll_(0) {
+    item_width_(1.0),
+    item_height_(0),
+    selected_index_(-2),
+    pending_scroll_(0),
+    item_width_specified_(false),
+    item_height_specified_(false),
+    item_width_relative_(true),
+    item_height_relative_(false),
+    multiselect_(false),
+    item_separator_(false) {
   }
 
   ~Impl() {
@@ -295,15 +300,16 @@ class ListBoxElement::Impl {
   }
 
   ListBoxElement *owner_;
-  double item_width_, item_height_;
-  bool item_width_specified_, item_height_specified_;
-  bool item_width_relative_, item_height_relative_;
-  bool multiselect_, item_separator_;
+  Texture *item_over_color_;
+  Texture *item_selected_color_;
+  Texture *item_separator_color_;
+  double item_width_;
+  double item_height_;
+  EventSignal onchange_event_;
+
   // Only used for when the index is specified in XML. This is an index
   // of an element "pending" to become selected. Initialized to -2.
   int selected_index_;
-  Texture *item_over_color_, *item_selected_color_, *item_separator_color_;
-  EventSignal onchange_event_;
 
   // 0: no pending scroll;
   // 1: scroll the selected item to top;
@@ -312,7 +318,13 @@ class ListBoxElement::Impl {
   // for correct scrolling if some items are added and then SetSelectedItem(),
   // SetSelectedIndex() or ScrollToSelectedItem() is called.
   // called.
-  int pending_scroll_;
+  unsigned int pending_scroll_ : 2;
+  bool item_width_specified_   : 1;
+  bool item_height_specified_  : 1;
+  bool item_width_relative_    : 1;
+  bool item_height_relative_   : 1;
+  bool multiselect_            : 1;
+  bool item_separator_         : 1;
 };
 
 ListBoxElement::ListBoxElement(View *view,

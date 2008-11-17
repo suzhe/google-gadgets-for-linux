@@ -31,12 +31,13 @@
 #include "img_element.h"
 #include "messages.h"
 #include "menu_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 static const double kVDMainDockedResizeBorderWidth = 3;
 
-class DockedMainViewDecorator::Impl {
+class DockedMainViewDecorator::Impl : public SmallObject<> {
  public:
   struct ResizeBorderInfo {
     double x;           // relative x

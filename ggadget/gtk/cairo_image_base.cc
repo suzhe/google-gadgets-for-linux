@@ -19,6 +19,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/color.h>
 #include <ggadget/signals.h>
+#include <ggadget/small_object.h>
 #include "cairo_image_base.h"
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
@@ -26,7 +27,7 @@
 namespace ggadget {
 namespace gtk {
 
-class CairoImageBase::Impl {
+class CairoImageBase::Impl : public SmallObject<> {
  public:
   Impl(const std::string &tag, bool is_mask)
     : tag_(tag), is_mask_(is_mask) {

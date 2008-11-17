@@ -31,13 +31,14 @@
 #include "img_element.h"
 #include "messages.h"
 #include "menu_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 static const double kVDMainBorderWidth = 6;
 static const double kVDMainBackgroundOpacity = 0.618;
 
-class FloatingMainViewDecorator::Impl {
+class FloatingMainViewDecorator::Impl : public SmallObject<> {
   struct ResizeBorderInfo {
     double x;           // relative x
     double y;           // relative y
@@ -66,10 +67,10 @@ class FloatingMainViewDecorator::Impl {
  public:
   Impl(FloatingMainViewDecorator *owner, bool transparent_background)
     : owner_(owner),
-      show_decorator_(false),
-      transparent_(transparent_background),
       background_(new ImgElement(owner, NULL)),
-      zoom_corner_(new DivElement(owner, NULL)) {
+      zoom_corner_(new DivElement(owner, NULL)),
+      show_decorator_(false),
+      transparent_(transparent_background) {
     background_->SetSrc(Variant(transparent_ ? kVDMainBackgroundTransparent :
                                 kVDMainBackground));
     background_->SetOpacity(transparent_ ? 1 : kVDMainBackgroundOpacity);
@@ -284,15 +285,14 @@ class FloatingMainViewDecorator::Impl {
 
  public:
   FloatingMainViewDecorator *owner_;
-
-  bool show_decorator_;
-  bool transparent_;
-
   ImgElement *background_;
   DivElement *zoom_corner_;
   BasicElement *resize_borders_[NUMBER_OF_RESIZE_BORDERS];
 
   Signal0<void> on_dock_signal_;
+
+  bool show_decorator_ : 1;
+  bool transparent_    : 1;
 };
 
 const FloatingMainViewDecorator::Impl::ResizeBorderInfo

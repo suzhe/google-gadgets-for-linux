@@ -18,12 +18,13 @@
 #include "clip_region.h"
 #include "math_utils.h"
 #include "slot.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 typedef std::vector<Rectangle> RectangleVector;
 
-class ClipRegion::Impl {
+class ClipRegion::Impl : public SmallObject<> {
  public:
   Impl(double fuzzy_ratio)
     : fuzzy_ratio_(Clamp(fuzzy_ratio, 0.5, 1.0)) {

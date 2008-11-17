@@ -23,10 +23,11 @@
 #include "slot.h"
 #include "string_utils.h"
 #include "system_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class FileManagerWrapper::Impl {
+class FileManagerWrapper::Impl : public SmallObject<> {
  public:
   Impl() : default_(NULL) {
   }

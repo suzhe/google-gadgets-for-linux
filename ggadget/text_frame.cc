@@ -22,6 +22,7 @@
 #include "string_utils.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget{
 
@@ -42,18 +43,24 @@ static const char *kTrimmingNames[] = {
   "path-ellipsis"
 };
 
-class TextFrame::Impl {
+class TextFrame::Impl : public SmallObject<> {
  public:
   Impl(BasicElement *owner, View *view)
-      : owner_(owner), view_(view), font_(NULL),
-        color_texture_(new Texture(kDefaultColor, 1.0)),
-        align_(CanvasInterface::ALIGN_LEFT),
-        valign_(CanvasInterface::VALIGN_TOP),
-        trimming_(CanvasInterface::TRIMMING_NONE),
-        bold_(false), italic_(false), flags_(0),
-        size_(kDefaultFontSize), size_is_default_(true),
-        // font_name_ is left blank to indicate default font.
-        width_(0.0), height_(0.0) {
+    : owner_(owner),
+      view_(view),
+      font_(NULL),
+      color_texture_(new Texture(kDefaultColor, 1.0)),
+      width_(0.0),
+      height_(0.0),
+      size_(kDefaultFontSize),
+      // font_name_ is left blank to indicate default font.
+      flags_(0),
+      trimming_(CanvasInterface::TRIMMING_NONE),
+      align_(CanvasInterface::ALIGN_LEFT),
+      valign_(CanvasInterface::VALIGN_TOP),
+      bold_(false),
+      italic_(false),
+      size_is_default_(true) {
   }
 
   ~Impl() {
@@ -118,18 +125,23 @@ class TextFrame::Impl {
 
   BasicElement *owner_;
   View *view_;
-
   FontInterface *font_;
   Texture *color_texture_;
-  CanvasInterface::Alignment align_;
-  CanvasInterface::VAlignment valign_;
-  CanvasInterface::Trimming trimming_;
-  bool bold_, italic_;
-  int flags_;
+  double width_;
+  double height_;
   double size_;
-  bool size_is_default_;
-  std::string font_name_, color_, text_;
-  double width_, height_;
+
+  std::string font_name_;
+  std::string color_;
+  std::string text_;
+
+  unsigned int flags_                 : 3;
+  CanvasInterface::Trimming trimming_ : 3;
+  CanvasInterface::Alignment align_   : 2;
+  CanvasInterface::VAlignment valign_ : 2;
+  bool bold_                          : 1;
+  bool italic_                        : 1;
+  bool size_is_default_               : 1;
 };
 
 TextFrame::TextFrame(BasicElement *owner, View *view)

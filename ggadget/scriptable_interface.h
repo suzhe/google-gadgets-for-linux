@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -39,7 +40,7 @@ class RegisterableInterface;
  * Any concrete implementation class should include @c DEFINE_CLASS_ID to
  * define its @c CLASS_ID and @c IsInstanceOf() method.
  */
-class ScriptableInterface {
+class ScriptableInterface : public SmallObject<> {
  protected:
   /**
    * Disallow direct deletion.

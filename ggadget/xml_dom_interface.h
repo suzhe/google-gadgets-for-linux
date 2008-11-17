@@ -142,7 +142,7 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual DOMNodeInterface *GetParentNode() = 0;
   virtual const DOMNodeInterface *GetParentNode() const = 0;
 
-  /** Caller must delete or unref the returned object. */
+  /** Caller must delete or Ref/Unref the returned object. */
   virtual DOMNodeListInterface *GetChildNodes() = 0;
   virtual const DOMNodeListInterface *GetChildNodes() const = 0;
 
@@ -155,7 +155,7 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual DOMNodeInterface *GetNextSibling() = 0;
   virtual const DOMNodeInterface *GetNextSibling() const = 0;
 
-  /** Caller must delete or unref the returned object. */
+  /** Caller must delete or Ref/Unref the returned object. */
   virtual DOMNamedNodeMapInterface *GetAttributes() = 0;
   virtual const DOMNamedNodeMapInterface *GetAttributes() const = 0;
 
@@ -185,7 +185,7 @@ class DOMNodeInterface : public ScriptableInterface {
    * We can prevent script program from accesssing it by only registering the
    * script method into Element and Document classes only.
    *
-   * Caller must delete or unref the returned object.
+   * Caller must delete or Ref/Unref the returned object.
    */
   virtual DOMNodeListInterface *GetElementsByTagName(const char *name) = 0;
   virtual const DOMNodeListInterface *GetElementsByTagName(
@@ -222,7 +222,7 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual DOMNodeInterface *SelectSingleNode(const char *xpath) = 0;
   virtual const DOMNodeInterface *SelectSingleNode(const char *xpath) const = 0;
 
-  /** Caller must delete or unref the returned object. */
+  /** Caller must delete or Ref/Unref the returned object. */
   virtual DOMNodeListInterface *SelectNodes(const char *xpath) = 0;
   virtual const DOMNodeListInterface *SelectNodes(const char *xpath) const = 0;
 

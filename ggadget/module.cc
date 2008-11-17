@@ -25,6 +25,7 @@
 #include "logger.h"
 #include "system_utils.h"
 #include "string_utils.h"
+#include "small_object.h"
 
 #ifdef _DEBUG
 // Uncomment the following line to get verbose debug logs.
@@ -37,7 +38,7 @@ static const char *kModulePathEnv = "GGL_MODULE_PATH";
 static const char *kModuleInitializeSymbol = "Initialize";
 static const char *kModuleFinalizeSymbol = "Finalize";
 
-class Module::Impl {
+class Module::Impl : public SmallObject<> {
  public:
   Impl()
     : handle_(NULL),

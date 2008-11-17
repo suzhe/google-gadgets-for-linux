@@ -25,6 +25,7 @@
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -99,24 +100,27 @@ static const char *kOrientationNames[] = {
 static const double kThumbMinSize = 16;
 static const double kGrippyOffset = 12;
 
-class ScrollBarElement::Impl {
+class ScrollBarElement::Impl : public SmallObject<> {
  public:
   Impl(ScrollBarElement *owner)
-      : owner_(owner),
-        left_state_(STATE_NORMAL), right_state_(STATE_NORMAL),
-        thumb_state_(STATE_NORMAL),
-        // ScrollBarElement's default rendering is true, which is an exception
-        // of default rendering.
-        default_rendering_(true),
+      : drag_delta_(0.),
+        owner_(owner),
         // The values below are the default ones in Windows.
         min_(0), max_(100), value_(0), pagestep_(10), linestep_(1),
-        accum_wheel_delta_(0), drag_delta_(0.),
+        accum_wheel_delta_(0),
+        image_is_default_(0),
+        left_state_(STATE_NORMAL),
+        right_state_(STATE_NORMAL),
+        thumb_state_(STATE_NORMAL),
         // Windows default to horizontal for orientation,
         // but puzzlingly use vertical images as default.
-        orientation_(ORIENTATION_VERTICAL) {
+        orientation_(ORIENTATION_VERTICAL),
+        // ScrollBarElement's default rendering is true, which is an exception
+        // of default rendering.
+        default_rendering_(true) {
     for (int i = 0; i < kImageCount; i++) {
       images_[i] = NULL;
-      image_is_default_[i] = true;
+      image_is_default_ |= (1 << i);
     }
   }
 
@@ -128,7 +132,7 @@ class ScrollBarElement::Impl {
   // Called when the orientation changes or default rendering is switched off.
   void DestroyDefaultImages() {
     for (int i = 0; i < kImageCount; i++) {
-      if (image_is_default_[i]) {
+      if (image_is_default_ & (1 << i)) {
         DestroyImage(images_[i]);
         images_[i] = NULL;
       }
@@ -141,7 +145,7 @@ class ScrollBarElement::Impl {
       const char **images_src = orientation_ == ORIENTATION_HORIZONTAL ?
                                 kHorizontalImages : kVerticalImages;
       for (int i = 0; i < kImageCount; i++) {
-        if (!images_[i] && image_is_default_[i])
+        if (!images_[i] && (image_is_default_ & (1 << i)))
           images_[i] = view->LoadImageFromGlobal(images_src[i], false);
       }
     }
@@ -324,29 +328,38 @@ class ScrollBarElement::Impl {
     if (src != Variant(GetImageTag(images_[image]))) {
       DestroyImage(images_[image]);
       images_[image] = owner_->GetView()->LoadImage(src, false);
-      image_is_default_[image] = false;
+      image_is_default_ &= ~(1 << image);
       if (queue_draw)
         owner_->QueueDraw();
     }
   }
 
   Variant GetImageSrc(ScrollBarImage image) {
-    return Variant(image_is_default_[image] ? "" : GetImageTag(images_[image]));
+    return Variant((image_is_default_ & (1 << image)) ? "" :
+                   GetImageTag(images_[image]));
   }
 
+  double drag_delta_;
   ScrollBarElement *owner_;
-  DisplayState left_state_, right_state_, thumb_state_;
+  ImageInterface *images_[kImageCount];
+  EventSignal onchange_event_;
+
   // All the following rects are in horizontal coordinates, that is,
   // x and y, w and h are swapped when the orientation is vertical.
-  Rectangle left_rect_, right_rect_, thumb_rect_;
-  ImageInterface *images_[kImageCount];
-  bool image_is_default_[kImageCount];
-  bool default_rendering_;
+  Rectangle left_rect_;
+  Rectangle right_rect_;
+  Rectangle thumb_rect_;
   int min_, max_, value_, pagestep_, linestep_;
   int accum_wheel_delta_;
-  double drag_delta_;
-  Orientation orientation_;
-  EventSignal onchange_event_;
+
+  // bitmask
+  unsigned int image_is_default_;
+
+  DisplayState left_state_  : 2;
+  DisplayState right_state_ : 2;
+  DisplayState thumb_state_ : 2;
+  Orientation orientation_  : 1;
+  bool default_rendering_   : 1;
 };
 
 ScrollBarElement::ScrollBarElement(View *view, const char *name)

@@ -25,6 +25,7 @@
 #include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -38,16 +39,17 @@ enum CheckedState {
 #define IMPL_IMAGE(postfix) \
     (impl_->is_checkbox_ ? kCheckBox##postfix : kRadio##postfix)
 
-class CheckBoxElement::Impl {
+class CheckBoxElement::Impl : public SmallObject<> {
  public:
   Impl(CheckBoxElement *owner, View *view, bool is_checkbox)
     : owner_(owner),
-      is_checkbox_(is_checkbox),
       text_(owner, view),
-      mousedown_(false), mouseover_(false),
+      value_(STATE_CHECKED),
+      is_checkbox_(is_checkbox),
+      mousedown_(false),
+      mouseover_(false),
       checkbox_on_right_(false),
-      default_rendering_(false),
-      value_(STATE_CHECKED) {
+      default_rendering_(false) {
     for (int i = 0; i < STATE_COUNT; i++) {
       image_[i] = NULL;
       downimage_[i] = NULL;
@@ -173,16 +175,17 @@ class CheckBoxElement::Impl {
                          BasicElement, TextFrame);
 
   CheckBoxElement *owner_;
-  bool is_checkbox_;
   TextFrame text_;
-  bool mousedown_;
-  bool mouseover_;
-  bool checkbox_on_right_;
-  bool default_rendering_;
-  CheckedState value_;
   ImageInterface *image_[STATE_COUNT], *downimage_[STATE_COUNT],
                  *overimage_[STATE_COUNT], *disabledimage_[STATE_COUNT];
   EventSignal onchange_event_;
+
+  CheckedState value_           : 2;
+  bool is_checkbox_             : 1;
+  bool mousedown_               : 1;
+  bool mouseover_               : 1;
+  bool checkbox_on_right_       : 1;
+  bool default_rendering_       : 1;
 };
 
 CheckBoxElement::CheckBoxElement(View *view, const char *name, bool is_checkbox)

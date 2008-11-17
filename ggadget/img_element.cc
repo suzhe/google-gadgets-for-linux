@@ -24,6 +24,7 @@
 #include "string_utils.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -31,11 +32,13 @@ static const char *kCropMaintainAspectNames[] = {
   "false", "true", "photo"
 };
 
-class ImgElement::Impl {
+class ImgElement::Impl : public SmallObject<> {
  public:
   Impl()
-    : image_(NULL), color_multiplied_image_(NULL),
-      src_width_(0), src_height_(0),
+    : image_(NULL),
+      color_multiplied_image_(NULL),
+      src_width_(0),
+      src_height_(0),
       crop_(CROP_FALSE),
       stretch_middle_(false) {
   }
@@ -66,12 +69,14 @@ class ImgElement::Impl {
     return color_multiplied_image_ ? color_multiplied_image_ : image_;
   }
 
-  ImageInterface *image_, *color_multiplied_image_;
+  ImageInterface *image_;
+  ImageInterface *color_multiplied_image_;
   double src_width_;
   double src_height_;
-  CropMaintainAspect crop_;
   std::string color_multiply_;
-  bool stretch_middle_;
+
+  CropMaintainAspect crop_ : 2;
+  bool stretch_middle_     : 1;
 };
 
 ImgElement::ImgElement(View *view, const char *name)

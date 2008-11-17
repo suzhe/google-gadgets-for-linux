@@ -19,6 +19,7 @@
 
 #include <ggadget/color.h>
 #include <ggadget/font_interface.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -35,7 +36,7 @@ class ClipRegion;
  * transformation matrix, although these may change depending on the object
  * creator's needs.
  */
-class CanvasInterface {
+class CanvasInterface : public SmallObject<> {
  protected:
   /**
    * Disallow direct deletion.

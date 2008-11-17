@@ -19,10 +19,11 @@
 #include <utility>
 #include "logger.h"
 #include "script_runtime_manager.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptRuntimeManager::Impl {
+class ScriptRuntimeManager::Impl : public SmallObject<> {
  public:
   bool RegisterScriptRuntime(const char *tag_name,
                              ScriptRuntimeInterface *runtime) {

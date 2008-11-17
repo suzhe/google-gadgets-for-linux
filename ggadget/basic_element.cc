@@ -36,10 +36,11 @@
 #include "clip_region.h"
 #include "permissions.h"
 #include "gadget.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class BasicElement::Impl {
+class BasicElement::Impl : public SmallObject<> {
  public:
   Impl(View *view, const char *tag_name, const char *name,
        bool allow_children, BasicElement *owner)
@@ -49,34 +50,34 @@ class BasicElement::Impl {
                   new Elements(view->GetElementFactory(), owner, view) :
                   NULL),
         view_(view),
-        index_(kInvalidIndex), // Invalid until set by Elements.
-        hittest_(ViewInterface::HT_CLIENT),
-        cursor_(ViewInterface::CURSOR_DEFAULT),
-        drop_target_(false),
-        enabled_(false),
+        mask_image_(NULL),
+        cache_(NULL),
         tag_name_(tag_name),
-        name_(name ? name : ""),
+        index_(kInvalidIndex), // Invalid until set by Elements.
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
-        width_relative_(false), height_relative_(false),
-        width_specified_(false), height_specified_(false),
         x_(0.0), y_(0.0), px_(0.0), py_(0.0),
-        x_relative_(false), y_relative_(false),
-        x_specified_(false), y_specified_(false),
         pin_x_(0.0), pin_y_(0.0), ppin_x_(0.0), ppin_y_(0.0),
-        pin_x_relative_(false), pin_y_relative_(false),
         rotation_(0.0),
         opacity_(1.0),
-        visible_(true),
-        flip_(FLIP_NONE),
+        name_(name ? name : ""),
 #ifdef _DEBUG
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()),
 #endif
-        mask_image_(NULL),
+        hittest_(ViewInterface::HT_CLIENT),
+        cursor_(ViewInterface::CURSOR_DEFAULT),
+        flip_(FLIP_NONE),
+        drop_target_(false),
+        enabled_(false),
+        width_relative_(false), height_relative_(false),
+        width_specified_(false), height_specified_(false),
+        x_relative_(false), y_relative_(false),
+        x_specified_(false), y_specified_(false),
+        pin_x_relative_(false), pin_y_relative_(false),
+        visible_(true),
         visibility_changed_(true),
         position_changed_(true),
         size_changed_(true),
-        cache_(NULL),
         cache_enabled_(false),
         content_changed_(false),
         draw_queued_(false),
@@ -1003,48 +1004,19 @@ class BasicElement::Impl {
   BasicElement *owner_;
   Elements *children_;
   View *view_;
-  size_t index_;
-  ViewInterface::HitTest hittest_;
-  ViewInterface::CursorType cursor_;
-  bool drop_target_;
-  bool enabled_;
+  ImageInterface *mask_image_;
+  CanvasInterface *cache_;
   const char *tag_name_;
-  std::string name_;
+  size_t index_;
+
   double width_, height_, pwidth_, pheight_;
-  bool width_relative_, height_relative_;
-  bool width_specified_, height_specified_;
   double x_, y_, px_, py_;
-  bool x_relative_, y_relative_;
-  bool x_specified_, y_specified_;
   double pin_x_, pin_y_, ppin_x_, ppin_y_;
-  bool pin_x_relative_, pin_y_relative_;
   double rotation_;
   double opacity_;
-  bool visible_;
+
+  std::string name_;
   std::string tooltip_;
-  FlipMode flip_;
-
-#ifdef _DEBUG
-  int debug_color_index_;
-  static int total_debug_color_index_;
-  int debug_mode_;
-
-  static int total_draw_count_;
-  static int total_queue_draw_count_;
-
-  static std::map<uint64_t, bool> class_has_children_;
-#endif
-
-  ImageInterface *mask_image_;
-  bool visibility_changed_;
-  bool position_changed_;
-  bool size_changed_;
-
-  CanvasInterface *cache_;
-  bool cache_enabled_;
-  bool content_changed_;
-  bool draw_queued_;
-  bool designer_mode_;
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
@@ -1067,6 +1039,42 @@ class BasicElement::Impl {
   EventSignal onsize_event_;
   EventSignal oncontextmenu_event_;
   EventSignal on_content_changed_signal_;
+
+#ifdef _DEBUG
+  int debug_color_index_;
+  static int total_debug_color_index_;
+  int debug_mode_;
+
+  static int total_draw_count_;
+  static int total_queue_draw_count_;
+
+  static std::map<uint64_t, bool> class_has_children_;
+#endif
+
+  ViewInterface::HitTest hittest_   : 6;
+  ViewInterface::CursorType cursor_ : 4;
+  FlipMode flip_                    : 2;
+
+  bool drop_target_             : 1;
+  bool enabled_                 : 1;
+  bool width_relative_          : 1;
+  bool height_relative_         : 1;
+  bool width_specified_         : 1;
+  bool height_specified_        : 1;
+  bool x_relative_              : 1;
+  bool y_relative_              : 1;
+  bool x_specified_             : 1;
+  bool y_specified_             : 1;
+  bool pin_x_relative_          : 1;
+  bool pin_y_relative_          : 1;
+  bool visible_                 : 1;
+  bool visibility_changed_      : 1;
+  bool position_changed_        : 1;
+  bool size_changed_            : 1;
+  bool cache_enabled_           : 1;
+  bool content_changed_         : 1;
+  bool draw_queued_             : 1;
+  bool designer_mode_           : 1;
 };
 
 #ifdef _DEBUG
@@ -1079,7 +1087,7 @@ std::map<uint64_t, bool> BasicElement::Impl::class_has_children_;
 // Must sync with ViewInterface::CursorType enumerates
 // defined in view_interface.h
 static const char *kCursorTypeNames[] = {
-  "arrow", "ibeam", "wait", "cross", "uparrow",
+  "default", "arrow", "ibeam", "wait", "cross", "uparrow",
   "size", "sizenwse", "sizenesw", "sizewe", "sizens", "sizeall",
   "no", "hand", "busy", "help",
 };

@@ -31,10 +31,11 @@
 #include "slot.h"
 #include "system_utils.h"
 #include "string_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class LocalizedFileManager::Impl {
+class LocalizedFileManager::Impl : public SmallObject<> {
  public:
   Impl(FileManagerInterface *file_manager, const char *locale)
     : file_manager_(file_manager) {

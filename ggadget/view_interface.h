@@ -71,8 +71,8 @@ class ViewInterface {
 
   /** Cursor types that can be used by elements. */
   enum CursorType {
-    CURSOR_DEFAULT = -1, // Used as the default value.
-    CURSOR_ARROW = 0,
+    CURSOR_DEFAULT = 0, // Used as the default value.
+    CURSOR_ARROW,
     CURSOR_IBEAM,
     CURSOR_WAIT,
     CURSOR_CROSS,

@@ -1989,13 +1989,13 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
               bool allow_load_http, bool allow_load_file)
       : Super(NULL, kDOMDocumentName),
         xml_parser_(xml_parser),
+        http_request_(NULL),
+        onreadystatechange_connection_(NULL),
+        ready_state_(XMLHttpRequestInterface::UNSENT),
         allow_load_http_(allow_load_http),
         allow_load_file_(allow_load_file),
         preserve_whitespace_(false),
-        async_(true),
-        http_request_(NULL),
-        ready_state_(XMLHttpRequestInterface::UNSENT),
-        onreadystatechange_connection_(NULL) {
+        async_(true) {
   }
 
   virtual ~DOMDocument() {
@@ -2387,15 +2387,19 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
  private:
   XMLParserInterface *xml_parser_;
-  bool allow_load_http_, allow_load_file_;
-  bool preserve_whitespace_;
-  bool async_;
   XMLHttpRequestInterface *http_request_;
-  XMLHttpRequestInterface::State ready_state_; // Only used when load from file.
   Connection *onreadystatechange_connection_;
   Signal0<void> onreadystatechange_signal_;
-  static DOMImplementation dom_implementation_;
   ParseError parse_error_;
+
+  // Only used when load from file.
+  XMLHttpRequestInterface::State ready_state_ : 4;
+  bool allow_load_http_         : 1;
+  bool allow_load_file_         : 1;
+  bool preserve_whitespace_     : 1;
+  bool async_                   : 1;
+
+  static DOMImplementation dom_implementation_;
 };
 
 DOMImplementation DOMDocument::dom_implementation_;

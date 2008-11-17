@@ -337,8 +337,6 @@ class Variant {
   static const std::string kNullString;
   static const UTF16String kNullUTF16String;
 
-  Type type_;
-
   // Value of the Variant.
   union {
     bool bool_value_;
@@ -356,6 +354,8 @@ class Variant {
     void *any_value_;
     const void *const_any_value_;
   } v_;
+
+  Type type_;
 
   template <typename T> friend struct VariantValue;
 };

@@ -31,6 +31,7 @@
 #include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -41,7 +42,7 @@ static const char *kBackgroundColor = "#FFFFFF";
 static const int kMinComboBoxHeight = 80;
 static const int kMaxComboBoxHeight = 150;
 
-class DisplayWindow::Impl {
+class DisplayWindow::Impl : public SmallObject<> {
  public:
   enum ButtonId {
     ID_OK = 1,

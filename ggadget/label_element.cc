@@ -18,10 +18,11 @@
 #include "graphics_interface.h"
 #include "text_frame.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class LabelElement::Impl {
+class LabelElement::Impl : public SmallObject<> {
  public:
   Impl(BasicElement *owner, View *view) : text_(owner, view) { }
   ~Impl() {

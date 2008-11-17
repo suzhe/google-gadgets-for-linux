@@ -23,6 +23,7 @@
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -30,18 +31,23 @@ static const char *kOrientationNames[] = {
   "vertical", "horizontal"
 };
 
-class ProgressBarElement::Impl {
+class ProgressBarElement::Impl : public SmallObject<> {
  public:
   Impl(ProgressBarElement *owner)
-      : owner_(owner),
-        thumbover_(false), thumbdown_(false),
-        emptyimage_(NULL), fullimage_(NULL), thumbdisabledimage_(NULL),
-        thumbdownimage_(NULL), thumboverimage_(NULL), thumbimage_(NULL),
-        // The values below are the default ones in Windows.
-        min_(0), max_(100), value_(0),
-        drag_delta_(0.),
-        orientation_(ORIENTATION_HORIZONTAL),
-        default_rendering_(false) {
+    : drag_delta_(0.),
+      owner_(owner),
+      emptyimage_(NULL),
+      fullimage_(NULL),
+      thumbdisabledimage_(NULL),
+      thumbdownimage_(NULL),
+      thumboverimage_(NULL),
+      thumbimage_(NULL),
+      // The values below are the default ones in Windows.
+      min_(0), max_(100), value_(0),
+      orientation_(ORIENTATION_HORIZONTAL),
+      thumbover_(false),
+      thumbdown_(false),
+      default_rendering_(false) {
   }
 
   ~Impl() {
@@ -189,15 +195,21 @@ class ProgressBarElement::Impl {
     return img;
   }
 
-  ProgressBarElement *owner_;
-  bool thumbover_, thumbdown_;
-  ImageInterface *emptyimage_, *fullimage_, *thumbdisabledimage_,
-                 *thumbdownimage_, *thumboverimage_, *thumbimage_;
-  int min_, max_, value_;
   double drag_delta_;
-  Orientation orientation_;
+  ProgressBarElement *owner_;
+  ImageInterface *emptyimage_;
+  ImageInterface *fullimage_;
+  ImageInterface *thumbdisabledimage_;
+  ImageInterface *thumbdownimage_;
+  ImageInterface *thumboverimage_;
+  ImageInterface *thumbimage_;
   EventSignal onchange_event_;
-  bool default_rendering_;
+
+  int min_, max_, value_;
+  Orientation orientation_ : 1;
+  bool thumbover_          : 1;
+  bool thumbdown_          : 1;
+  bool default_rendering_  : 1;
 };
 
 ProgressBarElement::ProgressBarElement(View *view, const char *name)

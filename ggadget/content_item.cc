@@ -26,6 +26,7 @@
 #include "text_frame.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -47,24 +48,24 @@ const Color ScriptableCanvas::kColorNormalText(0, 0, 0);
 const Color ScriptableCanvas::kColorExtraInfo(0.133, 0.267, 0.6); // #224499
 const Color ScriptableCanvas::kColorSnippet(0.4, 0.4, 0.4); // #666666
 
-class ContentItem::Impl {
+class ContentItem::Impl : public SmallObject<> {
  public:
   Impl(View *view)
       : view_(view),
         content_area_(NULL),
         image_(NULL), notifier_image_(NULL),
         time_created_(0),
+        x_(0), y_(0), width_(0), height_(0),
+        layout_x_(0), layout_y_(0), layout_width_(0), layout_height_(0),
         heading_text_(NULL, view),
         source_text_(NULL, view),
         time_text_(NULL, view),
         snippet_text_(NULL, view),
-        display_text_changed_(false),
-        layout_(CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
         flags_(CONTENT_ITEM_FLAG_NONE),
-        x_(0), y_(0), width_(0), height_(0),
+        layout_(CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
+        display_text_changed_(false),
         x_relative_(false), y_relative_(false),
-        width_relative_(false), height_relative_(false),
-        layout_x_(0), layout_y_(0), layout_width_(0), layout_height_(0) {
+        width_relative_(false), height_relative_(false) {
     ASSERT(view);
     heading_text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS);
     heading_text_.SetColor(ScriptableCanvas::kColorNormalText, 1.0);
@@ -161,16 +162,16 @@ class ContentItem::Impl {
 
   View *view_;
   ContentAreaElement *content_area_;
-  ScriptableHolder<ScriptableImage> image_, notifier_image_;
+  ScriptableHolder<ScriptableImage> image_;
+  ScriptableHolder<ScriptableImage> notifier_image_;
+
   uint64_t time_created_;
+  double x_, y_, width_, height_;
+  double layout_x_, layout_y_, layout_width_, layout_height_;
+
   std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
-  bool display_text_changed_;
-  Layout layout_;
-  int flags_;
-  double x_, y_, width_, height_;
-  bool x_relative_, y_relative_, width_relative_, height_relative_;
-  double layout_x_, layout_y_, layout_width_, layout_height_;
+
   Signal7<void, ContentItem *, Gadget::DisplayTarget, ScriptableCanvas *,
           double, double, double, double> on_draw_item_signal_;
   Signal4<double, ContentItem *, Gadget::DisplayTarget,
@@ -182,6 +183,14 @@ class ContentItem::Impl {
   Signal1<ScriptableInterface *, ContentItem *> on_details_view_signal_;
   Signal2<Variant, ContentItem *, int> on_process_details_view_feedback_signal_;
   Signal1<Variant, ContentItem *> on_remove_item_signal_;
+
+  int flags_                 : 16;
+  Layout layout_             : 2;
+  bool display_text_changed_ : 1;
+  bool x_relative_           : 1;
+  bool y_relative_           : 1;
+  bool width_relative_       : 1;
+  bool height_relative_      : 1;
 };
 
 ContentItem::ContentItem(View *view)

@@ -20,6 +20,7 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <ggadget/logger.h>
 #include <ggadget/color.h>
+#include <ggadget/small_object.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "pixbuf_image.h"
@@ -28,7 +29,7 @@
 namespace ggadget {
 namespace gtk {
 
-class PixbufImage::Impl {
+class PixbufImage::Impl : public SmallObject<> {
  public:
   Impl(const std::string &data, bool is_mask)
       : fully_opaque_(false), width_(0), height_(0), canvas_(NULL) {

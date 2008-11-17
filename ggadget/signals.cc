@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <vector>
 #include "logger.h"
+#include "small_object.h"
 
 #ifdef _DEBUG
 // Uncomment the following line to enable logs.
@@ -56,7 +57,7 @@ bool Connection::Reconnect(Slot *slot) {
   return true;
 }
 
-class Signal::Impl {
+class Signal::Impl : public SmallObject<> {
  public:
   Impl()
       : default_connection_(NULL),

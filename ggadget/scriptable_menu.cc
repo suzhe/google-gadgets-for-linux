@@ -19,10 +19,11 @@
 #include "menu_interface.h"
 #include "scriptable_menu.h"
 #include "slot.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableMenu::Impl {
+class ScriptableMenu::Impl : public SmallObject<> {
  public:
   class MenuItemSlot : public Slot1<void, const char *> {
    public:

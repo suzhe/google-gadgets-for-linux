@@ -18,8 +18,9 @@
 #include "backoff.h"
 
 #include <map>
-#include <ggadget/logger.h>
-#include <ggadget/string_utils.h>
+#include "logger.h"
+#include "string_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -33,7 +34,7 @@ static const uint64_t kExpirationInterval = 24U * 3600U * 1000U; // 24 hours.
 // NOTE: The backoff and randomization features in this implementation is
 // very important for proper server-side operation. Please do *NOT* disable
 // or remove them.
-class Backoff::Impl {
+class Backoff::Impl : public SmallObject<> {
  public:
   bool IsOkToRequest(uint64_t now, const char *request) {
     ASSERT(request);
