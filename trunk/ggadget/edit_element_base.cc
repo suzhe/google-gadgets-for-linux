@@ -23,6 +23,7 @@
 #include "slot.h"
 #include "string_utils.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -30,11 +31,11 @@ static const char *kAlignNames[] = {
   "left", "center", "right", "justify"
 };
 
-class EditElementBase::Impl {
+class EditElementBase::Impl : public SmallObject<> {
  public:
   Impl(EditElementBase *owner)
-      : owner_(owner),
-        size_(kDefaultFontSize),
+      : size_(kDefaultFontSize),
+        owner_(owner),
         size_is_default_(true) {
   }
 
@@ -50,10 +51,10 @@ class EditElementBase::Impl {
     return JSONString(StringPrintf("{\"width\":%d,\"height\":%d}", w, h));
   }
 
-  EditElementBase *owner_;
   double size_;
-  bool size_is_default_;
+  EditElementBase *owner_;
   EventSignal onchange_event_;
+  bool size_is_default_;
 };
 
 EditElementBase::EditElementBase(View *view, const char *name)

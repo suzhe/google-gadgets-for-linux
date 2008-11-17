@@ -28,6 +28,7 @@
 #include "signals.h"
 #include "video_element_base.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -50,7 +51,7 @@ enum WMPState {
   WMP_STATE_READY = 10,
 };
 
-class ObjectVideoPlayer::Impl {
+class ObjectVideoPlayer::Impl : public SmallObject<> {
  public:
   class Media : public ScriptableHelperDefault {
    public:
@@ -529,19 +530,12 @@ class ObjectVideoPlayer::Impl {
   // The real play backend we wrap.
   VideoElementBase *video_element_;
 
-  NativeOwnedScriptable<UINT64_C(0x42a88e66ff444ba1)> controls_;
-  NativeOwnedScriptable<UINT64_C(0xde2169669ebf4b61)> settings_;
-  NativeOwnedScriptable<UINT64_C(0x1af44fe45e404eae)> application_;
-
   Media *current_media_;
   Playlist *current_playlist_;
 
-  // Indicates whether to automatically call Play() after current media or
-  // playlist is changed.
-  bool auto_start_;
-  // Indicates whether to automatically loop to the first media when the last
-  // media finishes. It doesn't affect previous() and next() calls.
-  bool loop_;
+  NativeOwnedScriptable<UINT64_C(0x42a88e66ff444ba1)> controls_;
+  NativeOwnedScriptable<UINT64_C(0xde2169669ebf4b61)> settings_;
+  NativeOwnedScriptable<UINT64_C(0x1af44fe45e404eae)> application_;
 
   EventSignal on_state_change_event_;
   EventSignal on_position_change_event_;
@@ -549,6 +543,13 @@ class ObjectVideoPlayer::Impl {
   EventSignal on_playlist_change_event_;
   // Never fired.
   EventSignal on_player_docked_state_change_event_;
+
+  // Indicates whether to automatically call Play() after current media or
+  // playlist is changed.
+  bool auto_start_ : 1;
+  // Indicates whether to automatically loop to the first media when the last
+  // media finishes. It doesn't affect previous() and next() calls.
+  bool loop_       : 1;
 };
 
 ObjectVideoPlayer::ObjectVideoPlayer(View *view, const char *name)

@@ -21,6 +21,7 @@
 #include <ggadget/color.h>
 #include <ggadget/logger.h>
 #include <ggadget/signals.h>
+#include <ggadget/small_object.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "rsvg_image.h"
@@ -28,7 +29,7 @@
 namespace ggadget {
 namespace gtk {
 
-class RsvgImage::Impl {
+class RsvgImage::Impl : public SmallObject<> {
  public:
   Impl(const CairoGraphics *graphics, const std::string &data)
       : width_(0), height_(0), rsvg_(NULL), canvas_(NULL),

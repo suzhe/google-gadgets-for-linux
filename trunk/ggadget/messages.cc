@@ -26,6 +26,7 @@
 #include "locales.h"
 #include "gadget_consts.h"
 #include "slot.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -64,7 +65,7 @@ static const char kMessagesTag[] = "messages";
  * directory of corresponding locale.
  */
 
-class Messages::Impl {
+class Messages::Impl : public SmallObject<> {
  public:
   Impl()
       : system_locale_(GetSystemLocaleName()),

@@ -22,10 +22,11 @@
 #include "image_cache.h"
 #include "graphics_interface.h"
 #include "file_manager_factory.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ImageCache::Impl {
+class ImageCache::Impl : public SmallObject<> {
   class SharedImage;
   typedef std::map<std::string, SharedImage *> ImageMap;
 

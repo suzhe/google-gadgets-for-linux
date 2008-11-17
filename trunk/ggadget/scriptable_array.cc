@@ -16,10 +16,11 @@
 
 #include <vector>
 #include "scriptable_array.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableArray::Impl {
+class ScriptableArray::Impl : public SmallObject<> {
  public:
   Impl(ScriptableArray *owner) : owner_(owner) {
   }

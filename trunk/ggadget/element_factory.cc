@@ -35,10 +35,11 @@
 #include "object_videoplayer.h"
 #include "progressbar_element.h"
 #include "scrollbar_element.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ElementFactory::Impl {
+class ElementFactory::Impl : public SmallObject<> {
  public:
   BasicElement *CreateElement(const char *tag_name,
                               View *view,

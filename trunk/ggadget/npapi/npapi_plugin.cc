@@ -47,7 +47,7 @@ namespace npapi {
 const char *kFirefox3UserAgent = "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
                                  "Gecko/20080724 Firefox/3.0.1";
 
-class Plugin::Impl {
+class Plugin::Impl : public SmallObject<> {
  public:
   static const int kStreamCallbackInterval = 50;
 

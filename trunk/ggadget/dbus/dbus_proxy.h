@@ -21,6 +21,7 @@
 #include <ggadget/variant.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -52,7 +53,7 @@ enum MessageType {
 };
 
 /** A class to wrap a remote DBus object. */
-class DBusProxy {
+class DBusProxy : public SmallObject<> {
  public:
   // Access typs of a property.
   // They can be used as bitmask.

@@ -16,10 +16,11 @@
 
 #include "scriptable_options.h"
 #include "options_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableOptions::Impl {
+class ScriptableOptions::Impl : public SmallObject<> {
  public:
   Impl(OptionsInterface *options, bool raw_objects)
       : options_(options), raw_objects_(raw_objects) {

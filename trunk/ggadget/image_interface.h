@@ -19,6 +19,7 @@
 
 #include <string>
 #include <ggadget/color.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -28,7 +29,7 @@ class CanvasInterface;
  * This class is the interface abstracting an image object, which might be
  * implemented by system dependent technic.
  */
-class ImageInterface {
+class ImageInterface : public SmallObject<> {
  protected:
   /**
    * Disallow direct deletion.

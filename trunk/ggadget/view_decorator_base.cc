@@ -32,10 +32,11 @@
 #include "view_element.h"
 #include "copy_element.h"
 #include "view_decorator_base.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ViewDecoratorBase::Impl {
+class ViewDecoratorBase::Impl : public SmallObject<> {
  public:
   class SignalPostCallback : public WatchCallbackInterface {
    public:
@@ -53,14 +54,14 @@ class ViewDecoratorBase::Impl {
  public:
   Impl(ViewDecoratorBase *owner, const char *option_prefix,
        bool allow_x_margin, bool allow_y_margin)
-    : allow_x_margin_(allow_x_margin),
+    : owner_(owner),
+      view_element_(new ViewElement(owner, NULL, false)),
+      snapshot_(new CopyElement(owner, NULL)),
+      child_resizable_(ViewInterface::RESIZABLE_TRUE),
+      allow_x_margin_(allow_x_margin),
       allow_y_margin_(allow_y_margin),
       child_frozen_(false),
-      child_visible_(true),
-      child_resizable_(ViewInterface::RESIZABLE_TRUE),
-      owner_(owner),
-      view_element_(new ViewElement(owner, NULL, false)),
-      snapshot_(new CopyElement(owner, NULL)) {
+      child_visible_(true) {
     view_element_->SetVisible(true);
     snapshot_->SetVisible(false);
     owner->GetChildren()->InsertElement(view_element_, NULL);
@@ -200,16 +201,17 @@ class ViewDecoratorBase::Impl {
     owner_->SetChildViewScale(zoom == 0 ? 1.0 : zoom);
   }
 
-  bool allow_x_margin_;
-  bool allow_y_margin_;
-  bool child_frozen_;
-  bool child_visible_;
-  ViewInterface::ResizableMode child_resizable_;
-  std::string option_prefix_;
   ViewDecoratorBase *owner_;
   ViewElement *view_element_;
   CopyElement *snapshot_;
+  std::string option_prefix_;
   Signal0<void> on_close_signal_;;
+
+  ViewInterface::ResizableMode child_resizable_ : 2;
+  bool allow_x_margin_ : 1;
+  bool allow_y_margin_ : 1;
+  bool child_frozen_   : 1;
+  bool child_visible_  : 1;
 };
 
 ViewDecoratorBase::ViewDecoratorBase(ViewHostInterface *host,

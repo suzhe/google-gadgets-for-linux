@@ -19,6 +19,7 @@
 #include "event.h"
 #include "scriptable_array.h"
 #include "scriptable_menu.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -31,14 +32,14 @@ static const uint64_t kTimerEventClassId = UINT64_C(0xc7de1daa11a0489b);
 static const uint64_t kPerfmonEventClassId = UINT64_C(0x4109a5fb49c84ae6);
 static const uint64_t kContextMenuEventClassId = UINT64_C(0x5899c2c72f0e4f22);
 
-class ScriptableEvent::Impl {
+class ScriptableEvent::Impl : public SmallObject<> {
  public:
   Impl(const Event *event, ScriptableInterface *src_element,
        Event *output_event)
        : event_(event),
-         return_value_(EVENT_RESULT_UNHANDLED),
+         output_event_(output_event),
          src_element_(src_element),
-         output_event_(output_event) {
+         return_value_(EVENT_RESULT_UNHANDLED) {
     if (event->IsMouseEvent()) {
       class_id_ = kMouseEventClassId;
     } else if (event->IsKeyboardEvent()) {
@@ -131,11 +132,11 @@ class ScriptableEvent::Impl {
       GetPerfmonEvent, static_cast<const PerfmonEvent *>(src->impl_->event_),
       ScriptableEvent, PerfmonEvent);
 
-  const Event *event_;
   uint64_t class_id_;
-  EventResult return_value_;
-  ScriptableHolder<ScriptableInterface> src_element_;
+  const Event *event_;
   Event *output_event_;
+  ScriptableHolder<ScriptableInterface> src_element_;
+  EventResult return_value_;
 };
 
 ScriptableEvent::ScriptableEvent(const Event *event,

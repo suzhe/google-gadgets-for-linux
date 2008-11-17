@@ -21,12 +21,13 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/image_interface.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
 class FontInterface;
 
-class Texture {
+class Texture : public SmallObject<> {
  public:
   /**
    * Creates a texture with an image. Ownership of the specified image will be

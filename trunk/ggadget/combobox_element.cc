@@ -32,6 +32,7 @@
 #include "view.h"
 #include "graphics_interface.h"
 #include "element_factory.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -114,23 +115,23 @@ class Droplist : public ListBoxElement {
   ResultVariant item_over_color_;
 };
 
-class ComboBoxElement::Impl {
+class ComboBoxElement::Impl : public SmallObject<> {
  public:
   Impl(ComboBoxElement *owner, View *view)
       : owner_(owner),
-        max_items_(10),
         droplist_(new Droplist(owner)),
         edit_(NULL),
-        button_over_(false),
-        button_down_(false),
-        update_edit_value_(true),
-        item_pixel_height_(0),
         button_up_img_(view->LoadImageFromGlobal(kComboArrow, false)),
         button_down_img_(view->LoadImageFromGlobal(kComboArrowDown, false)),
         button_over_img_(view->LoadImageFromGlobal(kComboArrowOver, false)),
         background_(NULL),
         selection_refchange_connection_(NULL),
         selection_update_connection_(NULL),
+        max_items_(10),
+        item_pixel_height_(0),
+        button_over_(false),
+        button_down_(false),
+        update_edit_value_(true),
         edit_has_focus_(false) {
     droplist_->SetPixelX(0);
     droplist_->SetVisible(false);
@@ -315,17 +316,24 @@ class ComboBoxElement::Impl {
                          ComboBoxElement, ListBoxElement);
 
   ComboBoxElement *owner_;
-  size_t max_items_;
   Droplist *droplist_;
   EditElementBase *edit_; // is NULL if and only if COMBO_DROPLIST mode
-  bool button_over_, button_down_;
-  bool update_edit_value_;
-  double item_pixel_height_;
-  ImageInterface *button_up_img_, *button_down_img_, *button_over_img_;
+  ImageInterface *button_up_img_;
+  ImageInterface *button_down_img_;
+  ImageInterface *button_over_img_;
   Texture *background_;
-  EventSignal onchange_event_, ontextchange_event_;
-  Connection *selection_refchange_connection_, *selection_update_connection_;
-  bool edit_has_focus_;
+  Connection *selection_refchange_connection_;
+  Connection *selection_update_connection_;
+  size_t max_items_;
+  double item_pixel_height_;
+
+  EventSignal onchange_event_;
+  EventSignal ontextchange_event_;
+
+  bool button_over_        : 1;
+  bool button_down_        : 1;
+  bool update_edit_value_  : 1;
+  bool edit_has_focus_     : 1;
 };
 
 ComboBoxElement::ComboBoxElement(View *view, const char *name)

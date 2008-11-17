@@ -34,13 +34,14 @@
 #include "label_element.h"
 #include "text_frame.h"
 #include "menu_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 static const double kVDFramedBorderWidth = 6;
 static const double kVDFramedCaptionMargin = 1;
 static const double kVDFramedActionMargin = 1;
 
-class FramedViewDecoratorBase::Impl {
+class FramedViewDecoratorBase::Impl : public SmallObject<> {
   struct ResizeBorderInfo {
     double x;           // relative x
     double y;           // relative y

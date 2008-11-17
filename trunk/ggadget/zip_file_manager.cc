@@ -34,6 +34,7 @@
 #include "slot.h"
 #include "string_utils.h"
 #include "system_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -47,7 +48,7 @@ static const char kZipGlobalComment[] = "Created by Google Gadgets for Linux.";
 static const char kZipReadMeFile[] = ".readme";
 static const char kTempZipFile[] = "%%Temp%%.zip";
 
-class ZipFileManager::Impl {
+class ZipFileManager::Impl : public SmallObject<> {
  public:
   Impl() : unzip_handle_(NULL), zip_handle_(NULL) {
   }

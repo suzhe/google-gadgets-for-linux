@@ -16,6 +16,7 @@
 
 #ifndef GGADGET_FONT_INTERFACE_H__
 #define GGADGET_FONT_INTERFACE_H__
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -24,7 +25,7 @@ namespace ggadget {
  * It is created by an associated GraphicsInterface object.
  * Call @c Destroy() to free this object once it is no longer needed.
  */
-class FontInterface {
+class FontInterface : public SmallObject<> {
  protected:
   /**
    * Disallow direct deletion.

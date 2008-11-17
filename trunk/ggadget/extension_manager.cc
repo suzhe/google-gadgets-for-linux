@@ -21,6 +21,7 @@
 #include "module.h"
 #include "common.h"
 #include "extension_manager.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -91,7 +92,7 @@ bool FileManagerExtensionRegister::RegisterExtension(const Module *extension) {
   return func ? func(fm_wrapper_) : false;
 }
 
-class MultipleExtensionRegisterWrapper::Impl {
+class MultipleExtensionRegisterWrapper::Impl : public SmallObject<> {
  public:
   typedef std::vector<ExtensionRegisterInterface *> ExtRegisterVector;
   ExtRegisterVector ext_registers_;
@@ -126,7 +127,7 @@ void MultipleExtensionRegisterWrapper::AddExtensionRegister(
   impl_->ext_registers_.push_back(ext_register);
 }
 
-class ExtensionManager::Impl {
+class ExtensionManager::Impl : public SmallObject<> {
   typedef std::vector<std::pair<std::string, Module*> > ExtensionVector;
 
  public:

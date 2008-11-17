@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <ggadget/variant.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -87,7 +88,7 @@ enum DriveType {
  * another call to a method also returns <code>const char *</code> in some
  * implementations.
  */
-class FileSystemInterface {
+class FileSystemInterface : public SmallObject<> {
  public:
   virtual ~FileSystemInterface() { }
 
@@ -157,7 +158,7 @@ class FileSystemInterface {
 };
 
 /** IDriveCollection. */
-class DrivesInterface {
+class DrivesInterface : public SmallObject<> {
  protected:
   virtual ~DrivesInterface() {}
 
@@ -175,7 +176,7 @@ class DrivesInterface {
 };
 
 /** IDrive. */
-class DriveInterface {
+class DriveInterface : public SmallObject<> {
  protected:
   virtual ~DriveInterface() { }
 
@@ -199,7 +200,7 @@ class DriveInterface {
 };
 
 /** IFolderCollection. */
-class FoldersInterface {
+class FoldersInterface : public SmallObject<> {
  protected:
   virtual ~FoldersInterface() {}
 
@@ -217,7 +218,7 @@ class FoldersInterface {
 };
 
 /** IFolder. */
-class FolderInterface {
+class FolderInterface : public SmallObject<> {
  protected:
   virtual ~FolderInterface() { }
 
@@ -251,7 +252,7 @@ class FolderInterface {
 };
 
 /** IFileCollection. */
-class FilesInterface {
+class FilesInterface : public SmallObject<> {
  protected:
   virtual ~FilesInterface() {}
 
@@ -269,7 +270,7 @@ class FilesInterface {
 };
 
 /** IFile. */
-class FileInterface {
+class FileInterface : public SmallObject<> {
  protected:
   virtual ~FileInterface() { }
 
@@ -298,7 +299,7 @@ class FileInterface {
                                                 Tristate Format) = 0;
 };
 
-class TextStreamInterface {
+class TextStreamInterface : public SmallObject<> {
  protected:
   virtual ~TextStreamInterface() { }
 

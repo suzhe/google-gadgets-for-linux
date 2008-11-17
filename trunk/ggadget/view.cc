@@ -62,6 +62,7 @@
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -69,7 +70,7 @@ DECLARE_VARIANT_PTR_TYPE(CanvasInterface);
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-class View::Impl {
+class View::Impl : public SmallObject<> {
  public:
   /**
    * Callback object for timer watches.
@@ -82,10 +83,18 @@ class View::Impl {
     TimerWatchCallback(Impl *impl, Slot *slot, int start, int end,
                        int duration, uint64_t start_time,
                        bool is_event)
-      : event_(0, 0), scriptable_event_(&event_, NULL, NULL),
-        impl_(impl), slot_(slot), start_(start), end_(end),
-        duration_(duration), start_time_(start_time), last_finished_time_(0),
-        last_value_(start), is_event_(is_event), destroy_connection_(NULL) {
+      : start_time_(start_time),
+        last_finished_time_(0),
+        impl_(impl),
+        slot_(slot),
+        destroy_connection_(NULL),
+        event_(0, 0),
+        scriptable_event_(&event_, NULL, NULL),
+        start_(start),
+        end_(end),
+        duration_(duration),
+        last_value_(start),
+        is_event_(is_event) {
       destroy_connection_ = impl_->on_destroy_signal_.Connect(
           NewSlot(this, &TimerWatchCallback::OnDestroy));
     }
@@ -155,18 +164,18 @@ class View::Impl {
     }
 
    private:
-    TimerEvent event_;
-    ScriptableEvent scriptable_event_;
+    uint64_t start_time_;
+    uint64_t last_finished_time_;
     Impl *impl_;
     Slot *slot_;
+    Connection *destroy_connection_;
+    TimerEvent event_;
+    ScriptableEvent scriptable_event_;
     int start_;
     int end_;
     int duration_;
-    uint64_t start_time_;
-    uint64_t last_finished_time_;
     int last_value_;
     bool is_event_;
-    Connection *destroy_connection_;
   };
 
   Impl(View *owner,
@@ -174,8 +183,15 @@ class View::Impl {
        Gadget *gadget,
        ElementFactory *element_factory,
        ScriptContextInterface *script_context)
-    : clip_region_(0.9),
-      clip_region_enabled_(true),
+    :
+      width_(0),
+      height_(0),
+      default_width_(320),
+      default_height_(240),
+      resize_border_left_(0),
+      resize_border_top_(0),
+      resize_border_right_(0),
+      resize_border_bottom_(0),
       owner_(owner),
       gadget_(gadget),
       element_factory_(element_factory),
@@ -185,35 +201,28 @@ class View::Impl {
       onoptionchanged_connection_(NULL),
       canvas_cache_(NULL),
       graphics_(NULL),
-      enable_cache_(true),
+      scriptable_view_(NULL),
+      clip_region_(0.9),
       children_(element_factory, NULL, owner),
-      dragover_result_(EVENT_RESULT_UNHANDLED),
-      width_(0),
-      height_(0),
-      default_width_(320),
-      default_height_(240),
-      // TODO: Make sure the default value.
+#ifdef _DEBUG
+      draw_count_(0),
+      view_draw_count_(0),
+      accum_draw_time_(0),
+#endif
+      hittest_(ViewInterface::HT_CLIENT),
+      last_hittest_(ViewInterface::HT_CLIENT),
+      last_cursor_type_(-1),
       resizable_(ViewInterface::RESIZABLE_ZOOM),
+      dragover_result_(EVENT_RESULT_UNHANDLED),
+      clip_region_enabled_(true),
+      enable_cache_(true),
       show_caption_always_(false),
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
       theme_changed_(false),
       resize_border_specified_(false),
-      resize_border_left_(0),
-      resize_border_top_(0),
-      resize_border_right_(0),
-      resize_border_bottom_(0),
-#ifdef _DEBUG
-      draw_count_(0),
-      view_draw_count_(0),
-      accum_draw_time_(0),
-#endif
-      mouse_over_(false),
-      last_cursor_type_(-1),
-      hittest_(ViewInterface::HT_CLIENT),
-      last_hittest_(ViewInterface::HT_CLIENT),
-      scriptable_view_(NULL) {
+      mouse_over_(false) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -1575,6 +1584,27 @@ class View::Impl {
   }
 
  public: // member variables
+  double width_;
+  double height_;
+  double default_width_;
+  double default_height_;
+
+  double resize_border_left_;
+  double resize_border_top_;
+  double resize_border_right_;
+  double resize_border_bottom_;
+
+  View *owner_;
+  Gadget *gadget_;
+  ElementFactory *element_factory_;
+  MainLoopInterface *main_loop_;
+  ViewHostInterface *view_host_;
+  ScriptContextInterface *script_context_;
+  Connection *onoptionchanged_connection_;
+  CanvasInterface *canvas_cache_;
+  GraphicsInterface *graphics_;
+  ScriptableInterface *scriptable_view_;
+
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
@@ -1604,6 +1634,8 @@ class View::Impl {
   EventSignal oncontextmenu_event_;
   EventSignal onthemechanged_event_;
 
+  Signal0<void> on_destroy_signal_;
+
   ImageCache image_cache_;
 
   // Note: though other things are case-insenstive, this map is case-sensitive,
@@ -1614,18 +1646,6 @@ class View::Impl {
   ElementsMap all_elements_;
 
   ClipRegion clip_region_;
-  bool clip_region_enabled_;
-
-  View *owner_;
-  Gadget *gadget_;
-  ElementFactory *element_factory_;
-  MainLoopInterface *main_loop_;
-  ViewHostInterface *view_host_;
-  ScriptContextInterface *script_context_;
-  Connection *onoptionchanged_connection_;
-  CanvasInterface *canvas_cache_;
-  GraphicsInterface *graphics_;
-  bool enable_cache_;
 
   Elements children_;
 
@@ -1640,28 +1660,9 @@ class View::Impl {
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedSizeEvents;
   PostedSizeEvents posted_size_events_;
-
   std::vector<ScriptableEvent *> event_stack_;
 
-  EventResult dragover_result_;
-  double width_;
-  double height_;
-  double default_width_;
-  double default_height_;
-  ResizableMode resizable_;
   std::string caption_;
-  bool show_caption_always_;
-
-  bool draw_queued_;
-  bool events_enabled_;
-  bool need_redraw_;
-  bool theme_changed_;
-
-  bool resize_border_specified_;
-  double resize_border_left_;
-  double resize_border_top_;
-  double resize_border_right_;
-  double resize_border_bottom_;
 
 #ifdef _DEBUG
   int draw_count_;
@@ -1669,14 +1670,21 @@ class View::Impl {
   uint64_t accum_draw_time_;
 #endif
 
-  bool mouse_over_;
-  int last_cursor_type_;
-  ViewInterface::HitTest hittest_;
-  ViewInterface::HitTest last_hittest_;
+  ViewInterface::HitTest hittest_       : 6;
+  ViewInterface::HitTest last_hittest_  : 6;
+  unsigned int last_cursor_type_        : 4;
+  ResizableMode resizable_              : 2;
+  EventResult dragover_result_          : 2;
 
-  Signal0<void> on_destroy_signal_;
-
-  ScriptableInterface *scriptable_view_;
+  bool clip_region_enabled_             : 1;
+  bool enable_cache_                    : 1;
+  bool show_caption_always_             : 1;
+  bool draw_queued_                     : 1;
+  bool events_enabled_                  : 1;
+  bool need_redraw_                     : 1;
+  bool theme_changed_                   : 1;
+  bool resize_border_specified_         : 1;
+  bool mouse_over_                      : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;

@@ -70,7 +70,7 @@ class Connection : public SmallObject<> {
 /**
  * Signal caller that can connect and emit to 0 to many <code>Slot</code>s.
  */
-class Signal {
+class Signal : public SmallObject<> {
  public:
   virtual ~Signal();
 
@@ -110,7 +110,7 @@ class Signal {
    *     If there is no active connections, a @c ResultVariant containing
    *     a @c Variant with the default value of @c GetReturnType() will be
    *     returned. If there are multiple active connections, the return value
-   *     of the last slot will be returned. 
+   *     of the last slot will be returned.
    */
   ResultVariant Emit(int argc, const Variant argv[]) const;
 
@@ -134,7 +134,7 @@ class Signal {
 
   /**
    * Get the single default connection to this signal. It's useful to manage
-   * event handlers that doesn't have multiple instances. 
+   * event handlers that doesn't have multiple instances.
    */
   Connection *GetDefaultConnection();
 
@@ -165,7 +165,7 @@ class Signal {
  * A @c ClassSignal implementation should contain a memmber pointer to
  * a @c Signal member of a class.
  */
-class ClassSignal {
+class ClassSignal : public SmallObject<> {
  public:
   virtual ~ClassSignal() { }
   /** Binds the stored @c Signal member to a particular object. */

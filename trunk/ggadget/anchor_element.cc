@@ -22,12 +22,13 @@
 #include "text_frame.h"
 #include "texture.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 static const Color kDefaultColor(0.0, 0.0, 1.0);
 
-class AnchorElement::Impl {
+class AnchorElement::Impl : public SmallObject<> {
  public:
   Impl(BasicElement *owner, View *view)
     : text_(owner, view),
@@ -48,8 +49,8 @@ class AnchorElement::Impl {
 
   TextFrame text_;
   Texture *overcolor_texture_;
-  bool mouseover_;
   std::string href_;
+  bool mouseover_;
 };
 
 AnchorElement::AnchorElement(View *view, const char *name)

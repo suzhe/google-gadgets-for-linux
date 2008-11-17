@@ -22,10 +22,11 @@
 #include "math_utils.h"
 #include "scrollbar_element.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScrollingElement::Impl {
+class ScrollingElement::Impl : public SmallObject<> {
  public:
   Impl(ScrollingElement *owner)
       : owner_(owner),

@@ -23,28 +23,33 @@
 #include "file_manager_interface.h"
 #include "string_utils.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class Texture::Impl {
+class Texture::Impl : public SmallObject<> {
  public:
   Impl(ImageInterface *image)
-      : image_(image), color_(.0, .0, .0), opacity_(1.0) {
+    : color_(.0, .0, .0),
+      opacity_(1.0),
+      image_(image) {
     name_ = image_ ? image_->GetTag() : "";
   }
 
   Impl(const Color &color, double opacity)
-      : image_(NULL), color_(color), opacity_(opacity),
-        name_(opacity == 1.0 ?
-              StringPrintf("#%02X%02X%02X",
-                           static_cast<int>(round(color.red * 255)),
-                           static_cast<int>(round(color.green * 255)),
-                           static_cast<int>(round(color.blue * 255))) :
-              StringPrintf("#%02X%02X%02X%02X",
-                           static_cast<int>(round(opacity * 255)),
-                           static_cast<int>(round(color.red * 255)),
-                           static_cast<int>(round(color.green * 255)),
-                           static_cast<int>(round(color.blue * 255)))) {
+    : color_(color),
+      opacity_(opacity),
+      image_(NULL),
+      name_(opacity == 1.0 ?
+            StringPrintf("#%02X%02X%02X",
+                         static_cast<int>(round(color.red * 255)),
+                         static_cast<int>(round(color.green * 255)),
+                         static_cast<int>(round(color.blue * 255))) :
+            StringPrintf("#%02X%02X%02X%02X",
+                         static_cast<int>(round(opacity * 255)),
+                         static_cast<int>(round(color.red * 255)),
+                         static_cast<int>(round(color.green * 255)),
+                         static_cast<int>(round(color.blue * 255)))) {
   }
 
   ~Impl() {
@@ -103,9 +108,9 @@ class Texture::Impl {
     return opacity_ == 1.0;
   }
 
-  ImageInterface *image_;
   Color color_;
   double opacity_;
+  ImageInterface *image_;
   std::string name_;
 };
 

@@ -38,10 +38,11 @@
 #include "string_utils.h"
 #include "permissions.h"
 #include "system_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableView::Impl {
+class ScriptableView::Impl : public SmallObject<> {
  public:
   class GlobalObject : public ScriptableHelperNativeOwnedDefault {
    public:
@@ -69,6 +70,26 @@ class ScriptableView::Impl {
           NewSlot(DetailsViewData::CreateInstance));
       script_context_->RegisterClass("ContentItem",
           NewSlot(ContentItem::CreateInstance, view_));
+
+      // Old "utils" global object, for backward compatibility.
+      utils_.RegisterMethod("loadImage",
+                            NewSlot(this, &Impl::LoadScriptableImage));
+      utils_.RegisterMethod("setTimeout",
+                            NewSlot(this, &Impl::SetTimeout));
+      utils_.RegisterMethod("clearTimeout",
+                            NewSlot(view_, &View::ClearTimeout));
+      utils_.RegisterMethod("setInterval",
+                            NewSlot(this, &Impl::SetInterval));
+      utils_.RegisterMethod("clearInterval",
+                            NewSlot(view_, &View::ClearInterval));
+      utils_.RegisterMethod("alert",
+                            NewSlot(view_, &View::Alert));
+      utils_.RegisterMethod("confirm",
+                            NewSlot(view_, &View::Confirm));
+      utils_.RegisterMethod("prompt",
+                            NewSlot(view_, &View::Prompt));
+
+      script_context_->AssignFromNative(NULL, "", "utils", Variant(&utils_));
 
       // Execute common.js to initialize global constants and compatibility
       // adapters.
@@ -99,26 +120,7 @@ class ScriptableView::Impl {
     global_object_.RegisterProperty("event", NewSlot(this, &Impl::GetEvent),
                                     NULL);
 
-    // Old "utils" global object, for backward compatibility.
-    utils_.RegisterMethod("loadImage",
-                          NewSlot(this, &Impl::LoadScriptableImage));
-    utils_.RegisterMethod("setTimeout",
-                          NewSlot(this, &Impl::SetTimeout));
-    utils_.RegisterMethod("clearTimeout",
-                          NewSlot(view_, &View::ClearTimeout));
-    utils_.RegisterMethod("setInterval",
-                          NewSlot(this, &Impl::SetInterval));
-    utils_.RegisterMethod("clearInterval",
-                          NewSlot(view_, &View::ClearInterval));
-    utils_.RegisterMethod("alert",
-                          NewSlot(view_, &View::Alert));
-    utils_.RegisterMethod("confirm",
-                          NewSlot(view_, &View::Confirm));
-    utils_.RegisterMethod("prompt",
-                          NewSlot(view_, &View::Prompt));
-
     global_object_.RegisterConstant("view", owner_);
-    global_object_.RegisterConstant("utils", &utils_);
     global_object_.SetDynamicPropertyHandler(
         NewSlot(this, &Impl::GetElementByNameVariant), NULL);
   }

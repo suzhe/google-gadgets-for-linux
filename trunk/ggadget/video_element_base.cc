@@ -22,10 +22,11 @@
 #include "scriptable_event.h"
 #include "signals.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class VideoElementBase::Impl {
+class VideoElementBase::Impl : public SmallObject<> {
  public:
   Impl()
       : image_data_(NULL),

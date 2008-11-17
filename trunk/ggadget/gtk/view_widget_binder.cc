@@ -27,6 +27,7 @@
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
 #include <ggadget/string_utils.h>
+#include <ggadget/small_object.h>
 #include "cairo_canvas.h"
 #include "cairo_graphics.h"
 #include "key_convert.h"
@@ -51,7 +52,7 @@ static const double kDragThreshold = 3;
 static const uint64_t kFPSCountDuration = 5000;
 #endif
 
-class ViewWidgetBinder::Impl {
+class ViewWidgetBinder::Impl : public SmallObject<> {
  public:
   Impl(ViewInterface *view,
        ViewHostInterface *host, GtkWidget *widget,

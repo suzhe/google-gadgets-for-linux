@@ -28,11 +28,12 @@
 #include <ggadget/npapi/npapi_plugin.h>
 #include <ggadget/npapi/npapi_wrapper.h>
 #include <ggadget/math_utils.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 namespace gtk {
 
-class NPAPIPluginElement::Impl {
+class NPAPIPluginElement::Impl : public SmallObject<> {
  public:
   Impl(NPAPIPluginElement *owner, const char *mime_type,
        const StringMap &default_parameters, bool in_object_element)

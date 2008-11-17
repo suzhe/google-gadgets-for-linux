@@ -25,13 +25,14 @@
 #include "view.h"
 #include "view_host_interface.h"
 #include "math_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 static const double kMinimumScale = 0.5;
 static const double kMaximumScale = 2.0;
 
-class ViewElement::Impl {
+class ViewElement::Impl : public SmallObject<> {
  public:
   Impl(ViewElement *owner, bool no_transparent)
     : owner_(owner),

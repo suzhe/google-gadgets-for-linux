@@ -22,23 +22,25 @@
 #include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
 static const double kButtonMargin = 2;
 
-class ButtonElement::Impl {
+class ButtonElement::Impl : public SmallObject<> {
  public:
   Impl(ButtonElement *owner, View *view)
     : owner_(owner),
       text_(owner, view),
-      mousedown_(false), mouseover_(false),
       image_(NULL), down_image_(NULL),
       over_image_(NULL), disabled_image_(NULL),
       icon_image_(NULL), icon_disabled_image_(NULL),
+      icon_position_(ICON_LEFT),
+      mousedown_(false),
+      mouseover_(false),
       stretch_middle_(false),
-      default_rendering_(false),
-      icon_position_(ICON_LEFT) {
+      default_rendering_(false) {
     text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER);
     text_.SetAlign(CanvasInterface::ALIGN_CENTER);
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
@@ -97,17 +99,18 @@ class ButtonElement::Impl {
 
   ButtonElement *owner_;
   TextFrame text_;
-  bool mousedown_;
-  bool mouseover_;
   ImageInterface *image_;
   ImageInterface *down_image_;
   ImageInterface *over_image_;
   ImageInterface *disabled_image_;
   ImageInterface *icon_image_;
   ImageInterface *icon_disabled_image_;
-  bool stretch_middle_;
-  bool default_rendering_;
-  IconPosition icon_position_;
+
+  IconPosition icon_position_   : 2;
+  bool mousedown_               : 1;
+  bool mouseover_               : 1;
+  bool stretch_middle_          : 1;
+  bool default_rendering_       : 1;
 };
 
 ButtonElement::ButtonElement(View *view, const char *name)

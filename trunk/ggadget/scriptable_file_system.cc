@@ -21,6 +21,7 @@
 #include "string_utils.h"
 #include "gadget.h"
 #include "permissions.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -65,7 +66,7 @@ static const Variant kGetStandardStreamDefaultArgs[] = {
   Variant(false)
 };
 
-class ScriptableFileSystem::Impl {
+class ScriptableFileSystem::Impl : public SmallObject<> {
  public:
   Impl(FileSystemInterface *filesystem, ScriptableFileSystem *owner,
        Gadget *gadget)

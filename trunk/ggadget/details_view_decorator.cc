@@ -31,16 +31,17 @@
 #include "label_element.h"
 #include "text_frame.h"
 #include "messages.h"
+#include "small_object.h"
 
 namespace ggadget {
 static const double kVDDetailsButtonHeight = 22;
 
-class DetailsViewDecorator::Impl {
+class DetailsViewDecorator::Impl : public SmallObject<> {
  public:
   Impl(DetailsViewDecorator *owner)
     : owner_(owner),
-      flags_(0),
-      feedback_handler_(NULL) {
+      feedback_handler_(NULL),
+      flags_(0) {
   }
   ~Impl() {
     delete feedback_handler_;
@@ -66,8 +67,8 @@ class DetailsViewDecorator::Impl {
 
  public:
   DetailsViewDecorator *owner_;
-  int flags_;
   Slot1<bool, int> *feedback_handler_;
+  int flags_;
 };
 
 DetailsViewDecorator::DetailsViewDecorator(ViewHostInterface *host)

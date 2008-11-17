@@ -23,15 +23,16 @@
 #include "signals.h"
 #include "slot.h"
 #include "menu_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class DecoratedViewHost::Impl {
+class DecoratedViewHost::Impl : public SmallObject<> {
  public:
   Impl(ViewDecoratorBase *view_decorator)
-    : auto_load_child_view_size_(true),
-      child_view_size_loaded_(false),
-      view_decorator_(view_decorator) {
+    : view_decorator_(view_decorator),
+      auto_load_child_view_size_(true),
+      child_view_size_loaded_(false) {
     ASSERT(view_decorator);
   }
 
@@ -47,9 +48,9 @@ class DecoratedViewHost::Impl {
     }
   }
 
-  bool auto_load_child_view_size_;
-  bool child_view_size_loaded_;
   ViewDecoratorBase *view_decorator_;
+  bool auto_load_child_view_size_ : 1;
+  bool child_view_size_loaded_    : 1;
 };
 
 DecoratedViewHost::DecoratedViewHost(ViewDecoratorBase *view_decorator)

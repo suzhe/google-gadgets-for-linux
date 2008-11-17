@@ -32,6 +32,7 @@
 #include "view.h"
 #include "view_host_interface.h"
 #include "signals.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -43,7 +44,7 @@ static const Color kMouseDownBackground(0.73, 0.83, 0.88);
 static const Color kSelectedBackground(0.83, 0.93, 0.98);
 static const unsigned int kRefreshInterval = 30000; // 30 seconds.
 
-class ContentAreaElement::Impl {
+class ContentAreaElement::Impl : public SmallObject<> {
  public:
   typedef std::vector<ContentItem *> ContentItems;
   enum PinImageIndex {
@@ -54,32 +55,35 @@ class ContentAreaElement::Impl {
   };
 
   Impl(ContentAreaElement *owner)
-      : owner_(owner),
-        layout_canvas_(owner->GetView()->GetGraphics()->NewCanvas(5, 5)),
-        content_flags_(CONTENT_FLAG_NONE),
-        target_(Gadget::TARGET_SIDEBAR),
-        target_connection_(NULL),
-        max_content_items_(kDefaultMaxContentItems),
-        pin_image_max_width_(0), pin_image_max_height_(0),
-        mouse_down_(false), mouse_over_pin_(false),
-        mouse_x_(-1.), mouse_y_(-1.),
-        mouse_over_item_(NULL),
-        details_open_item_(NULL),
+      : context_menu_time_(0),
+        pin_image_max_width_(0),
+        pin_image_max_height_(0),
+        mouse_x_(-1.),
+        mouse_y_(-1.),
         content_height_(0),
-        scrolling_line_step_(0),
-        refresh_timer_(0),
-        modified_(false),
-        death_detector_(NULL),
-        context_menu_time_(0),
-        background_color_src_(kDefaultBackground.ToString()),
-        mouseover_color_src_(kMouseOverBackground.ToString()),
-        mousedown_color_src_(kMouseDownBackground.ToString()),
         background_opacity_(1.),
         mouseover_opacity_(1.),
         mousedown_opacity_(1.),
         background_color_(kDefaultBackground),
         mouseover_color_(kMouseOverBackground),
-        mousedown_color_(kMouseDownBackground) {
+        mousedown_color_(kMouseDownBackground),
+        owner_(owner),
+        layout_canvas_(owner->GetView()->GetGraphics()->NewCanvas(5, 5)),
+        target_connection_(NULL),
+        mouse_over_item_(NULL),
+        details_open_item_(NULL),
+        death_detector_(NULL),
+        background_color_src_(kDefaultBackground.ToString()),
+        mouseover_color_src_(kMouseOverBackground.ToString()),
+        mousedown_color_src_(kMouseDownBackground.ToString()),
+        max_content_items_(kDefaultMaxContentItems),
+        scrolling_line_step_(0),
+        refresh_timer_(0),
+        content_flags_(CONTENT_FLAG_NONE),
+        target_(Gadget::TARGET_SIDEBAR),
+        mouse_down_(false),
+        mouse_over_pin_(false),
+        modified_(false) {
     pin_images_[PIN_IMAGE_UNPINNED].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false)));
     pin_images_[PIN_IMAGE_UNPINNED_OVER].Reset(new ScriptableImage(
@@ -735,28 +739,39 @@ class ContentAreaElement::Impl {
     return false;
   }
 
+  uint64_t context_menu_time_;
+  double pin_image_max_width_;
+  double pin_image_max_height_;
+  double mouse_x_, mouse_y_;
+  double content_height_;
+  double background_opacity_;
+  double mouseover_opacity_;
+  double mousedown_opacity_;
+  Color background_color_;
+  Color mouseover_color_;
+  Color mousedown_color_;
+
   ContentAreaElement *owner_;
   CanvasInterface *layout_canvas_; // Only used during Layout().
-  int content_flags_;
-  Gadget::DisplayTarget target_;
   Connection *target_connection_;
-  size_t max_content_items_;
-  ContentItems content_items_;
-  ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
-  double pin_image_max_width_, pin_image_max_height_;
-  bool mouse_down_, mouse_over_pin_;
-  double mouse_x_, mouse_y_;
   ContentItem *mouse_over_item_;
   ContentItem *details_open_item_;
-  double content_height_;
+  bool *death_detector_;
+  ContentItems content_items_;
+  ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
+  std::string background_color_src_;
+  std::string mouseover_color_src_;
+  std::string mousedown_color_src_;
+  size_t max_content_items_;
   int scrolling_line_step_;
   int refresh_timer_;
-  bool modified_; // Flags whether items were added, removed or reordered.
-  bool *death_detector_;
-  uint64_t context_menu_time_;
-  std::string background_color_src_, mouseover_color_src_, mousedown_color_src_;
-  double background_opacity_, mouseover_opacity_, mousedown_opacity_;
-  Color background_color_, mouseover_color_, mousedown_color_;
+
+  unsigned int content_flags_   : 4;
+  Gadget::DisplayTarget target_ : 2;
+  bool mouse_down_              : 1;
+  bool mouse_over_pin_          : 1;
+  // Flags whether items were added, removed or reordered.
+  bool modified_                : 1;
 };
 
 ContentAreaElement::ContentAreaElement(View *view, const char *name)

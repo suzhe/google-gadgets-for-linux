@@ -16,10 +16,11 @@
 
 #include "scriptable_image.h"
 #include "image_interface.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class ScriptableImage::Impl {
+class ScriptableImage::Impl : public SmallObject<> {
  public:
   Impl(ImageInterface *image) : image_(image) {
   }

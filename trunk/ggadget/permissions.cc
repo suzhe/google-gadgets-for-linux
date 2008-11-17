@@ -20,6 +20,7 @@
 #include "messages.h"
 #include "slot.h"
 #include "string_utils.h"
+#include "small_object.h"
 
 namespace ggadget {
 
@@ -51,7 +52,7 @@ static const PermissionInfo kPermissionsInfo[] = {
   { "allaccess",    0x20, 0x0, 0x0,  false }
 };
 
-class Permissions::Impl {
+class Permissions::Impl : public SmallValueObject<> {
  public:
   Impl() : required_(0), granted_(0), denied_(0) {
   }

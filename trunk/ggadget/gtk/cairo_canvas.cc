@@ -25,6 +25,7 @@
 #include <ggadget/math_utils.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
+#include <ggadget/small_object.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
@@ -68,7 +69,7 @@ static void SetPangoLayoutAttrFromTextFlags(PangoLayout *layout,
   pango_attr_list_unref(attr_list);
 }
 
-class CairoCanvas::Impl {
+class CairoCanvas::Impl : public SmallObject<> {
  public:
   Impl(const CairoGraphics *graphics, double w, double h, cairo_format_t fmt)
     : cr_(NULL), width_(w), height_(h), opacity_(1),

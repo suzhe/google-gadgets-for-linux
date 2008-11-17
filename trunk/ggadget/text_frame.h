@@ -19,6 +19,7 @@
 
 #include <ggadget/canvas_interface.h>
 #include <ggadget/variant.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -27,7 +28,7 @@ class Texture;
 class BasicElement;
 class View;
 
-class TextFrame {
+class TextFrame : public SmallObject<> {
  public:
   TextFrame(BasicElement *owner, View *view);
   ~TextFrame();

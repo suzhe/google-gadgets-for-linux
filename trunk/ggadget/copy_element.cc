@@ -20,10 +20,11 @@
 #include "copy_element.h"
 #include "canvas_interface.h"
 #include "view.h"
+#include "small_object.h"
 
 namespace ggadget {
 
-class CopyElement::Impl {
+class CopyElement::Impl : public SmallObject<> {
  public:
   Impl(CopyElement *owner)
     : owner_(owner),

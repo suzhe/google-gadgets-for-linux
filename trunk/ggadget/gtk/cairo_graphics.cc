@@ -19,6 +19,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/signals.h>
+#include <ggadget/small_object.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
@@ -31,7 +32,7 @@
 namespace ggadget {
 namespace gtk {
 
-class CairoGraphics::Impl {
+class CairoGraphics::Impl : public SmallObject<> {
  public:
   Impl(double zoom) : zoom_(zoom) {
     if (zoom_ <= 0) zoom_ = 1;
