@@ -157,7 +157,7 @@ class Gadget {
   int GetInstanceID() const;
 
   /** Returns current plugin flags of the gadget. */
-  unsigned int GetPluginFlags() const;
+  int GetPluginFlags() const;
 
   DisplayTarget GetDisplayTarget() const;
 

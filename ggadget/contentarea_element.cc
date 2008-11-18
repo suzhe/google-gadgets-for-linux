@@ -865,11 +865,11 @@ void ContentAreaElement::SetOverColor(const char *color) {
   }
 }
 
-unsigned int ContentAreaElement::GetContentFlags() const {
+int ContentAreaElement::GetContentFlags() const {
   return impl_->content_flags_;
 }
 
-void ContentAreaElement::SetContentFlags(unsigned int flags) {
+void ContentAreaElement::SetContentFlags(int flags) {
   if (impl_->content_flags_ != flags) {
     // Casting to ContentFlags to avoid conversion warning when
     // compiling by the latest gcc.

@@ -1098,6 +1098,32 @@ SmallObjAllocator::~SmallObjAllocator( void )
     delete [] pool_;
 }
 
+SmallObjAllocator & SmallObjAllocator::Instance( std::size_t pageSize,
+    std::size_t maxObjectSize, std::size_t objectAlignSize ) {
+    static SmallObjAllocator *instance = NULL;
+    static std::size_t curPageSize = 0;
+    static std::size_t curMaxObjectSize = 0;
+    static std::size_t curObjectAlignSize = 0;
+
+    if (!instance)
+    {
+        curPageSize = pageSize;
+        curMaxObjectSize = maxObjectSize;
+        curObjectAlignSize = objectAlignSize;
+        instance =
+            new SmallObjAllocator(pageSize, maxObjectSize, objectAlignSize);
+    } else if ( curPageSize != pageSize || curMaxObjectSize != maxObjectSize ||
+                curObjectAlignSize != objectAlignSize ) {
+        LOG("Can't use multiple SmallObjAllocators with different parameters: "
+            "old: (%zd, %zd, %zd) new: (%zd, %zd, %zd)",
+            curPageSize, curMaxObjectSize, curObjectAlignSize,
+            pageSize, maxObjectSize, objectAlignSize);
+        abort();
+    }
+
+    return *instance;
+}
+
 // SmallObjAllocator::TrimExcessMemory ----------------------------------------
 
 bool SmallObjAllocator::TrimExcessMemory( void )

@@ -64,8 +64,8 @@ class ContentAreaElement : public ScrollingElement {
   };
 
   /** Combination of one or more @c ContentFlag. */
-  unsigned int GetContentFlags() const;
-  void SetContentFlags(unsigned int flags);
+  int GetContentFlags() const;
+  void SetContentFlags(int flags);
 
   /** Maximum number of allowed content items, defaults to 25. */
   size_t GetMaxContentItems() const;

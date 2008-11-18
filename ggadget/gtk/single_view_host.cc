@@ -591,9 +591,9 @@ class SingleViewHost::Impl {
         default: gtk_button = 3; break;
       }
 
-      gtk_menu_popup(GTK_MENU(context_menu_),
-                     NULL, NULL, NULL, NULL,
-                     gtk_button, gtk_get_current_event_time());
+      // don't set button parameter, which will cause problem.
+      gtk_menu_popup(GTK_MENU(context_menu_), NULL, NULL, NULL, NULL, 0,
+                     gtk_get_current_event_time());
       return true;
     }
     return false;

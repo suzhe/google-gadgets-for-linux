@@ -75,6 +75,9 @@ namespace ggadget
          */
         ~SmallObjAllocator( void );
 
+        /** Returns reference to the singleton. */
+        static SmallObjAllocator & Instance( std::size_t pageSize,
+            std::size_t maxObjectSize, std::size_t objectAlignSize );
     public:
         /** Allocates a block of memory of requested size.  Complexity is often
          constant-time, but might be O(C) where C is the number of Chunks in a
@@ -194,21 +197,11 @@ namespace ggadget
     public:
 
         /// Returns reference to the singleton.
-        inline static AllocatorSingleton & Instance( void )
+        inline static SmallObjAllocator & Instance( void )
         {
-            static AllocatorSingleton *instance = NULL;
-            if (!instance)
-              instance = new AllocatorSingleton();
-            return *instance;
+          return SmallObjAllocator::Instance(chunkSize, maxSmallObjectSize,
+                                             objectAlignSize);
         }
-
-        /// The default constructor is not meant to be called directly.
-        inline AllocatorSingleton() :
-            SmallObjAllocator( chunkSize, maxSmallObjectSize, objectAlignSize )
-            {}
-
-        /// The destructor is not meant to be called directly.
-        inline ~AllocatorSingleton( void ) {}
 
     private:
         /// Copy-constructor is not implemented.

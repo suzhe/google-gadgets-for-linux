@@ -561,7 +561,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ondisplaytargetchange_signal_(target);
   }
 
-  void SetPluginFlags(unsigned int flags) {
+  void SetPluginFlags(int flags) {
     bool changed = (flags != plugin_flags_);
     // Casting to PluginFlags to avoid conversion warning when
     // compiling by the latest gcc.
@@ -570,7 +570,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       onpluginflagschanged_signal_(flags);
   }
 
-  void SetFlags(unsigned int plugin_flags, unsigned int content_flags) {
+  void SetFlags(int plugin_flags, int content_flags) {
     SetPluginFlags(plugin_flags);
     SetContentFlags(content_flags);
   }
@@ -580,7 +580,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         "Please specify icons in the manifest file.");
   }
 
-  void SetContentFlags(unsigned int flags) {
+  void SetContentFlags(int flags) {
     ContentAreaElement *content_area =
         main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->SetContentFlags(flags);
@@ -1075,7 +1075,7 @@ int Gadget::GetInstanceID() const {
   return impl_->instance_id_;
 }
 
-unsigned int Gadget::GetPluginFlags() const {
+int Gadget::GetPluginFlags() const {
   return impl_->plugin_flags_;
 }
 
