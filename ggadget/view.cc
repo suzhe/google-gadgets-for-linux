@@ -209,10 +209,10 @@ class View::Impl : public SmallObject<> {
       view_draw_count_(0),
       accum_draw_time_(0),
 #endif
-      hittest_(ViewInterface::HT_CLIENT),
-      last_hittest_(ViewInterface::HT_CLIENT),
-      last_cursor_type_(-1),
-      resizable_(ViewInterface::RESIZABLE_ZOOM),
+      hittest_(HT_CLIENT),
+      last_hittest_(HT_CLIENT),
+      last_cursor_type_(CURSOR_DEFAULT),
+      resizable_(RESIZABLE_ZOOM),
       dragover_result_(EVENT_RESULT_UNHANDLED),
       clip_region_enabled_(true),
       enable_cache_(true),
@@ -385,7 +385,7 @@ class View::Impl : public SmallObject<> {
 
     BasicElement *temp, *temp1; // Used to receive unused output parameters.
     EventResult result = EVENT_RESULT_UNHANDLED;
-    ViewInterface::HitTest temp_hittest;
+    HitTest temp_hittest;
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE,
     // EVENT_MOUSE_UP and EVENT_MOUSE_CLICK events to it directly, until
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
@@ -430,7 +430,7 @@ class View::Impl : public SmallObject<> {
 
     BasicElement *fired_element = NULL;
     BasicElement *in_element = NULL;
-    ViewInterface::HitTest child_hittest = HT_CLIENT;
+    HitTest child_hittest = HT_CLIENT;
 
     // Dispatch the event to children normally,
     // unless popup is active and event is inside popup element.
@@ -517,7 +517,7 @@ class View::Impl : public SmallObject<> {
       }
     } else {
       // FIXME: If HT_NOWHERE is more suitable?
-      hittest_ = ViewInterface::HT_TRANSPARENT;
+      hittest_ = HT_TRANSPARENT;
       tooltip_element_.Reset(NULL);
     }
 
@@ -566,7 +566,7 @@ class View::Impl : public SmallObject<> {
                              MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
         OnMouseEvent(new_event);
       }
-      hittest_ = ViewInterface::HT_TRANSPARENT;
+      hittest_ = HT_TRANSPARENT;
       return EVENT_RESULT_UNHANDLED;
     }
 
@@ -1670,21 +1670,21 @@ class View::Impl : public SmallObject<> {
   uint64_t accum_draw_time_;
 #endif
 
-  ViewInterface::HitTest hittest_       : 6;
-  ViewInterface::HitTest last_hittest_  : 6;
-  unsigned int last_cursor_type_        : 4;
-  ResizableMode resizable_              : 2;
-  EventResult dragover_result_          : 2;
+  HitTest hittest_              : 6;
+  HitTest last_hittest_         : 6;
+  CursorType last_cursor_type_  : 4;
+  ResizableMode resizable_      : 2;
+  EventResult dragover_result_  : 2;
 
-  bool clip_region_enabled_             : 1;
-  bool enable_cache_                    : 1;
-  bool show_caption_always_             : 1;
-  bool draw_queued_                     : 1;
-  bool events_enabled_                  : 1;
-  bool need_redraw_                     : 1;
-  bool theme_changed_                   : 1;
-  bool resize_border_specified_         : 1;
-  bool mouse_over_                      : 1;
+  bool clip_region_enabled_     : 1;
+  bool enable_cache_            : 1;
+  bool show_caption_always_     : 1;
+  bool draw_queued_             : 1;
+  bool events_enabled_          : 1;
+  bool need_redraw_             : 1;
+  bool theme_changed_           : 1;
+  bool resize_border_specified_ : 1;
+  bool mouse_over_              : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;
@@ -2054,8 +2054,7 @@ void View::QueueDraw() {
 }
 
 int View::GetDebugMode() const {
-  return impl_->view_host_ ? impl_->view_host_->GetDebugMode() :
-         ViewInterface::DEBUG_DISABLED;
+  return impl_->view_host_ ? impl_->view_host_->GetDebugMode() : DEBUG_DISABLED;
 }
 
 bool View::OpenURL(const char *url) const {
@@ -2120,7 +2119,7 @@ void View::ShowElementTooltipAtPosition(BasicElement *element,
   }
 }
 
-void View::SetCursor(int type) {
+void View::SetCursor(ViewInterface::CursorType type) {
   if (impl_->view_host_ && (impl_->last_cursor_type_ != type ||
                             impl_->last_hittest_ != impl_->hittest_)) {
     impl_->last_cursor_type_ = type;

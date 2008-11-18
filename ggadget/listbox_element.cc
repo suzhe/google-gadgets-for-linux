@@ -612,11 +612,7 @@ void ListBoxElement::SetSelectedIndex(int index) {
   impl_->SetSelectedIndex(index);
 }
 
-ItemElement *ListBoxElement::GetSelectedItem() {
-  return impl_->GetSelectedItem();
-}
-
-const ItemElement *ListBoxElement::GetSelectedItem() const {
+ItemElement *ListBoxElement::GetSelectedItem() const {
   return impl_->GetSelectedItem();
 }
 

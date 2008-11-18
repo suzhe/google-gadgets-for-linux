@@ -93,11 +93,11 @@ class Gadget {
 
   enum DebugConsoleConfig {
     /** Disable debug console. */
-    DEBUG_CONSOLE_DISABLED,
+    DEBUG_CONSOLE_DISABLED = 0,
     /** Display a "Debug Console" menu item. */
-    DEBUG_CONSOLE_ON_DEMMAND,
+    DEBUG_CONSOLE_ON_DEMMAND = 1,
     /** Show the debug console during gadget initialization. */
-    DEBUG_CONSOLE_INITIAL
+    DEBUG_CONSOLE_INITIAL = 2
   };
 
  public:
@@ -157,7 +157,7 @@ class Gadget {
   int GetInstanceID() const;
 
   /** Returns current plugin flags of the gadget. */
-  int GetPluginFlags() const;
+  unsigned int GetPluginFlags() const;
 
   DisplayTarget GetDisplayTarget() const;
 

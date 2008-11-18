@@ -15,8 +15,8 @@
 #
 # GGL_CHECK_LIBMOZJS([minversion], [ACTION-IF-OK], [ACTION-IF-NOT-OK])
 # Check if libmozjs (spidermonkey) library is ok.
-# LIBMOZJS_CFLAGS, LIBMOZJS_LIBS, must be set properly before calling this
-# method.
+# LIBMOZJS_CFLAGS, LIBMOZJS_LIBS, LIBMOZJS_LIBDIR must be set properly before
+# calling this method.
 
 AC_DEFUN([GGL_CHECK_LIBMOZJS], [
 ggl_check_libmozjs_save_CPPFLAGS="$CPPFLAGS"
@@ -56,12 +56,17 @@ else
 
   if (echo $CPPFLAGS | grep -v 'MOZILLA_1_8_BRANCH') > /dev/null 2>&1; then
     CPPFLAGS="$CPPFLAGS -DMOZILLA_1_8_BRANCH"
+    if test "x$LIBMOZJS_LIBDIR" != "x" -a "x$LIBMOZJS_LIBDIR" != "$LIBDIR"; then
+      ggl_check_libmozjs_save_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+      export LD_LIBRARY_PATH="$LIBMOZJS_LIBDIR"
+    fi
+
     AC_RUN_IFELSE([[
       // This file is used to test if MOZILLA_1_8_BRANCH should be defined to
       // use the SpiderMonkey library.
       // It will fail to execute (crash or return error code) if
       // MOZILLA_1_8_BRANCH macro is not defined but the library was compiled
-      // with the flag.
+      // with the flag, or vise versa.
       #include <jsapi.h>
       #include<jsconfig.h>
 
@@ -106,6 +111,9 @@ else
                    macro in cross compile mode.])
       ggl_check_libmozjs_18_branch=no
     ])
+    if test "x$LIBMOZJS_LIBDIR" != x -a "x$LIBMOZJS_LIBDIR" != "$libdir"; then
+      export LD_LIBRARY_PATH="$ggl_check_libmozjs_save_LD_LIBRARY_PATH"
+    fi
   fi
 
   if test "x$ggl_check_libmozjs_ok" = "xyes"; then

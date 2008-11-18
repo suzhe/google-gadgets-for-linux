@@ -110,7 +110,9 @@ MOZJS_API(JSErrorReporter, JS_SetErrorReporter, (JSContext *cx, JSErrorReporter 
 MOZJS_API(void, JS_SetGCParameter, (JSRuntime *rt, JSGCParamKey key, uint32 value));
 MOZJS_API(void, JS_SetGlobalObject, (JSContext *cx, JSObject *obj));
 MOZJS_API(void, JS_SetLocaleCallbacks, (JSContext *cx, JSLocaleCallbacks *callbacks));
+#ifdef JS_OPERATION_WEIGHT_BASE
 MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback, uint32 operationLimit));
+#endif
 MOZJS_API(uint32, JS_SetOptions, (JSContext *cx, uint32 options));
 MOZJS_API(void, JS_SetPendingException, (JSContext *cx, jsval v));
 MOZJS_API(JSBool, JS_SetPrivate, (JSContext *cx, JSObject *obj, void *data));
@@ -132,6 +134,13 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
 #endif
 
 #undef MOZJS_API
+
+#ifdef JS_OPERATION_WEIGHT_BASE
+#define MOZJS_FUNC_JS_SetOoperationCallback \
+  MOZJS_FUNC(JS_SetOperationCallback)
+#else
+#define MOZJS_FUNC_JS_SetOoperationCallback
+#endif
 
 #define MOZJS_FUNCTIONS \
   MOZJS_FUNC(JS_AddNamedRootRT) \
@@ -208,7 +217,6 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
   MOZJS_FUNC(JS_SetGCParameter) \
   MOZJS_FUNC(JS_SetGlobalObject) \
   MOZJS_FUNC(JS_SetLocaleCallbacks) \
-  MOZJS_FUNC(JS_SetOperationCallback) \
   MOZJS_FUNC(JS_SetOptions) \
   MOZJS_FUNC(JS_SetPendingException) \
   MOZJS_FUNC(JS_SetPrivate) \
@@ -224,6 +232,7 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
   MOZJS_FUNC(JS_ValueToNumber) \
   MOZJS_FUNC(JS_ValueToString) \
   MOZJS_FUNC(JS_GetClass) \
+  MOZJS_FUNC_JS_SetOoperationCallback
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
 

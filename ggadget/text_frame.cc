@@ -54,7 +54,7 @@ class TextFrame::Impl : public SmallObject<> {
       height_(0.0),
       size_(kDefaultFontSize),
       // font_name_ is left blank to indicate default font.
-      flags_(0),
+      flags_(CanvasInterface::TEXT_FLAGS_NONE),
       trimming_(CanvasInterface::TRIMMING_NONE),
       align_(CanvasInterface::ALIGN_LEFT),
       valign_(CanvasInterface::VALIGN_TOP),
@@ -135,7 +135,7 @@ class TextFrame::Impl : public SmallObject<> {
   std::string color_;
   std::string text_;
 
-  unsigned int flags_                 : 3;
+  CanvasInterface::TextFlag flags_    : 3;
   CanvasInterface::Trimming trimming_ : 3;
   CanvasInterface::Alignment align_   : 2;
   CanvasInterface::VAlignment valign_ : 2;
@@ -289,7 +289,10 @@ bool TextFrame::IsStrikeout() const {
 
 void TextFrame::SetStrikeout(bool strikeout) {
   if (strikeout == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_STRIKEOUT)) {
-    impl_->flags_ ^= CanvasInterface::TEXT_FLAGS_STRIKEOUT;
+    // Casting to TextFlag to avoid conversion warning when compiling by the
+    // latest gcc.
+    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
+        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_STRIKEOUT);
     impl_->ResetFont();
   }
 }
@@ -311,7 +314,10 @@ bool TextFrame::IsUnderline() const {
 
 void TextFrame::SetUnderline(bool underline) {
   if (underline == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_UNDERLINE)) {
-    impl_->flags_ ^= CanvasInterface::TEXT_FLAGS_UNDERLINE;
+    // Casting to TextFlag to avoid conversion warning when compiling by the
+    // latest gcc.
+    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
+        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_UNDERLINE);
     impl_->ResetFont();
   }
 }
@@ -333,7 +339,10 @@ bool TextFrame::IsWordWrap() const {
 
 void TextFrame::SetWordWrap(bool wrap) {
   if (wrap == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_WORDWRAP)) {
-    impl_->flags_ ^= CanvasInterface::TEXT_FLAGS_WORDWRAP;
+    // Casting to TextFlag to avoid conversion warning when compiling by the
+    // latest gcc.
+    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
+        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_WORDWRAP);
     impl_->ResetFont();
   }
 }

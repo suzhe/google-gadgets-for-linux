@@ -79,9 +79,10 @@ class CanvasInterface : public SmallObject<> {
    * Enum used to specify text flags.
    */
   enum TextFlag {
-    TEXT_FLAGS_UNDERLINE = 1 << 0,
-    TEXT_FLAGS_STRIKEOUT = 1 << 1,
-    TEXT_FLAGS_WORDWRAP = 1 << 2
+    TEXT_FLAGS_NONE = 0,
+    TEXT_FLAGS_UNDERLINE = 1,
+    TEXT_FLAGS_STRIKEOUT = 2,
+    TEXT_FLAGS_WORDWRAP = 4
   };
 
   /**

@@ -100,6 +100,7 @@ class SingleViewHost::Impl {
       move_dragging_(false),
       enable_signals_(true),
       draw_queued_(false),
+      draw_finished_(false),
       queue_draw_timer_(0),
       last_queue_draw_time_(0),
       queue_resize_timer_(0),
@@ -190,6 +191,8 @@ class SingleViewHost::Impl {
       // details and main view only need a toplevel window.
       // buttons of details view shall be provided by view decorator.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+      gtk_window_set_type_hint(GTK_WINDOW(window_),
+                               GDK_WINDOW_TYPE_HINT_DIALOG);
       gtk_container_add(GTK_CONTAINER(window_), fixed_);
       no_background = true;
       DisableWidgetBackground(window_);
@@ -233,6 +236,9 @@ class SingleViewHost::Impl {
 
     g_signal_connect(G_OBJECT(fixed_), "size-allocate",
                      G_CALLBACK(FixedSizeAllocateHandler), this);
+
+    g_signal_connect(G_OBJECT(widget_), "expose-event",
+                     G_CALLBACK(ExposeHandler), this);
 
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
@@ -310,6 +316,7 @@ class SingleViewHost::Impl {
 
   void QueueDraw() {
     ASSERT(GTK_IS_WIDGET(widget_));
+    draw_finished_ = false;
     if (queue_draw_timer_) {
       draw_queued_ = true;
       return;
@@ -341,6 +348,15 @@ class SingleViewHost::Impl {
                         (mode == ViewInterface::RESIZABLE_ZOOM &&
                          type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
       gtk_window_set_resizable(GTK_WINDOW(window_), resizable);
+
+      // Reset the zoom factor to 1 if the child view is changed to
+      // resizable.
+      if ((mode == ViewInterface::RESIZABLE_TRUE ||
+           mode == ViewInterface::RESIZABLE_KEEP_RATIO) &&
+          view_->GetGraphics()->GetZoom() != 1.0) {
+        view_->GetGraphics()->SetZoom(1.0);
+        view_->MarkRedraw();
+      }
     }
   }
 
@@ -353,7 +369,7 @@ class SingleViewHost::Impl {
     // SingleViewHost will always show caption when window decorator is shown.
   }
 
-  void SetCursor(int type) {
+  void SetCursor(ViewInterface::CursorType type) {
     // Don't change cursor if it's in resize dragging mode.
     if (resize_width_mode_ || resize_height_mode_)
       return;
@@ -672,6 +688,7 @@ class SingleViewHost::Impl {
 #endif
       QueueResize();
       on_end_resize_drag_signal_();
+      SetCursor(ViewInterface::CURSOR_DEFAULT);
     }
   }
 
@@ -710,6 +727,7 @@ class SingleViewHost::Impl {
       g_source_remove(stop_move_drag_source_);
       stop_move_drag_source_ = 0;
     }
+    SetCursor(ViewInterface::CURSOR_DEFAULT);
   }
 
   // gtk signal handlers.
@@ -812,6 +830,20 @@ class SingleViewHost::Impl {
                                       gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->resize_width_mode_ || impl->resize_height_mode_) {
+      if (event->is_hint) {
+        // Since motion hint is enabled, we must notify GTK that we're ready to
+        // receive the next motion event.
+#if GTK_CHECK_VERSION(2,12,0)
+        gdk_event_request_motions(event); // requires version 2.12
+#else
+        int x, y;
+        gdk_window_get_pointer(widget->window, &x, &y, NULL);
+#endif
+      }
+
+      if (impl->draw_queued_ || !impl->draw_finished_)
+        return TRUE;
+
       int button = ConvertGdkModifierToButton(event->state);
       if (button == impl->resize_button_) {
         double original_width =
@@ -862,14 +894,7 @@ class SingleViewHost::Impl {
           DLOG("Move resize window: x:%d, y:%d, w:%d, h:%d", x, y,
                win_width, win_height);
         }
-        // Since motion hint is enabled, we must notify GTK that we're ready to
-        // receive the next motion event.
-#if GTK_CHECK_VERSION(2,12,0)
-        gdk_event_request_motions(event); // requires version 2.12
-#else
-        int x, y;
-        gdk_window_get_pointer(widget->window, &x, &y, NULL);
-#endif
+
         return TRUE;
       } else {
         impl->StopResizeDrag();
@@ -918,7 +943,8 @@ class SingleViewHost::Impl {
                                        gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     DLOG("Size allocate(%d, %d)", allocation->width, allocation->height);
-    if (!impl->resize_width_mode_ && !impl->resize_height_mode_ &&
+    if (GTK_WIDGET_VISIBLE(impl->window_) &&
+        !impl->resize_width_mode_ && !impl->resize_height_mode_ &&
         allocation->width >= 1 && allocation->height >= 1 &&
         (impl->last_allocated_width_ != allocation->width ||
          impl->last_allocated_height_ != allocation->height)) {
@@ -997,6 +1023,14 @@ class SingleViewHost::Impl {
     return false;
   }
 
+  static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
+                                gpointer data) {
+    Impl *impl = reinterpret_cast<Impl *>(data);
+    impl->draw_finished_ = true;
+    // Make sure view widget binder can receive this event.
+    return FALSE;
+  }
+
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
@@ -1053,6 +1087,7 @@ class SingleViewHost::Impl {
   bool enable_signals_;
 
   bool draw_queued_;
+  bool draw_finished_;
   guint queue_draw_timer_;
   uint64_t last_queue_draw_time_;
 
@@ -1148,7 +1183,7 @@ void SingleViewHost::SetShowCaptionAlways(bool always) {
   impl_->SetShowCaptionAlways(always);
 }
 
-void SingleViewHost::SetCursor(int type) {
+void SingleViewHost::SetCursor(ViewInterface::CursorType type) {
   impl_->SetCursor(type);
 }
 

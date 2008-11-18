@@ -861,7 +861,7 @@ void GadgetVideoSink::GetProperty(GObject * object,
         g_value_transform(videosink->par_, value);
       break;
     case PROP_RECEIVE_IMAGE_HANDLER:
-      g_value_set_pointer(value, reinterpret_cast<void*>(&ReceiveImageHandler));
+      g_value_set_pointer(value, (void*)ReceiveImageHandler);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);

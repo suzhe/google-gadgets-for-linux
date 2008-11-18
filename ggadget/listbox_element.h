@@ -51,8 +51,7 @@ class ListBoxElement : public DivElement {
   void SetSelectedIndex(int index);
 
   /** Gets and sets the current selected item. */
-  ItemElement *GetSelectedItem();
-  const ItemElement *GetSelectedItem() const;
+  ItemElement *GetSelectedItem() const;
   void SetSelectedItem(ItemElement *item);
 
   /**

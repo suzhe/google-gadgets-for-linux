@@ -431,9 +431,8 @@ class View : public ViewInterface {
    * Sets the current mouse cursor.
    *
    * @param type the cursor type, see @c ViewInterface::CursorType.
-   *        -1 means the default type.
    */
-  void SetCursor(int type);
+  void SetCursor(CursorType type);
 
   /**
    * Shows the associated View by proper method according to type of the View.

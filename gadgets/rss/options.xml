@@ -15,28 +15,30 @@
   limitations under the License.
 -->
 
-<view width="350" height="405" resizable="false"
-      onok="OKClicked()" onopen="OnOpen()" caption="&GADGET_OPTIONS;">
+<view width="350" height="300" resizable="true" onok="OKClicked()"
+  onopen="OnOpen()" onsize="OnSize()" caption="&GADGET_OPTIONS;">
   <label y="5">&GADGET_ADDLABEL;</label>
-  <div width="295" height="20" y="25" background="#7f9db9">
-    <edit width="293" height="18" x="1" y="1" name="feedname"
+  <div width="285" height="20" y="25" name = "feedname_div"
+    background="#7f9db9">
+    <edit width="283" height="18" x="1" y="1" name="feedname"
       onchange="FeedBoxChanged()"/>
   </div>
-  <button x="300" y="25" width="50" height="20" name="addbutton"
+  <button pinX="100%" x="100%" y="25" width="60" height="20" name="addbutton"
     onclick="AddFeed()" caption="&GADGET_ADD;" downImage="button_down.png"
     image="button_up.png" overImage="button_over.png" stretchMiddle="true"/>
-  <div width="350" height="300" y="50" background="#7f9db9">
-    <listbox name="feeds" width="348" height="298" x="1" y="1"
+  <div width="100%" height="195" y="50" name="feeds_div" background="#7f9db9">
+    <listbox name="feeds" width="348" height="193" x="1" y="1"
       background="#ffffff" autoscroll="true" itemHeight="35"
       itemWidth="100%" onchange="SelectedFeedChanged()"/>
   </div>
-  <button x="250" y="355" width="100" height="20" name="removebutton"
-    onclick="RemoveFeed()" caption="&GADGET_REMOVE;"
+  <button pinX="100%" x="100%" y="250" width="100" height="20"
+    name="removebutton" onclick="RemoveFeed()" caption="&GADGET_REMOVE;"
     downImage="button_down.png" image="button_up.png"
     overImage="button_over.png" stretchMiddle="true"/>
-  <label y="380">&GADGET_MAXSHOW;</label>
-  <div width="30" height="20" x="320" y="380" background="#7f9db9">
-    <edit x="1" y="1" width="28" height="18"
+  <label name="maxitems_label" y="275">&GADGET_MAXSHOW;</label>
+  <div pinX="100%" width="40" height="20" x="100%" y="275" name="maxitems_div"
+    background="#7f9db9">
+    <edit x="1" y="1" width="38" height="18"
       align="right" name="maxitems"/>
   </div>
   <script src="shared.js"/>

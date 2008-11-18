@@ -766,7 +766,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
   int scrolling_line_step_;
   int refresh_timer_;
 
-  unsigned int content_flags_   : 4;
+  ContentFlag content_flags_    : 4;
   Gadget::DisplayTarget target_ : 2;
   bool mouse_down_              : 1;
   bool mouse_over_pin_          : 1;
@@ -865,13 +865,15 @@ void ContentAreaElement::SetOverColor(const char *color) {
   }
 }
 
-int ContentAreaElement::GetContentFlags() const {
+unsigned int ContentAreaElement::GetContentFlags() const {
   return impl_->content_flags_;
 }
 
-void ContentAreaElement::SetContentFlags(int flags) {
+void ContentAreaElement::SetContentFlags(unsigned int flags) {
   if (impl_->content_flags_ != flags) {
-    impl_->content_flags_ = flags;
+    // Casting to ContentFlags to avoid conversion warning when
+    // compiling by the latest gcc.
+    impl_->content_flags_ = static_cast<ContentFlag>(flags);
     QueueDraw();
   }
 }

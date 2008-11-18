@@ -20,9 +20,20 @@ var g_max_items;
 SetButtonEnabled(addbutton, false);
 SetButtonEnabled(removebutton, false);
 
+function OnSize() {
+  feedname_div.width = view.width - addbutton.offsetWidth - 5;
+  feedname.width = feedname_div.offsetWidth - 2;
+  feeds_div.height = view.height - 105;
+  feeds.height = feeds_div.offsetHeight - 2;
+  feeds.width = feeds_div.offsetWidth - 2;
+  removebutton.y = feeds_div.offsetY + feeds_div.offsetHeight + 5;
+  maxitems_label.y = removebutton.offsetY + removebutton.offsetHeight + 5;
+  maxitems_div.y = maxitems_label.offsetY;
+}
+
 function OnOpen() {
   g_max_items = options.getValue(kMaxItemsOption);
-  g_feeds = options.getValue(kFeedListOption); 
+  g_feeds = options.getValue(kFeedListOption);
   if (!g_feeds) {
     g_feeds = new Array();
   }

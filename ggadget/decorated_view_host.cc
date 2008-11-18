@@ -153,9 +153,8 @@ void DecoratedViewHost::SetShowCaptionAlways(bool always) {
   impl_->view_decorator_->SetShowCaptionAlways(always);
 }
 
-void DecoratedViewHost::SetCursor(int type) {
-  impl_->view_decorator_->SetChildViewCursor(
-      static_cast<ViewInterface::CursorType>(type));
+void DecoratedViewHost::SetCursor(ViewInterface::CursorType type) {
+  impl_->view_decorator_->SetChildViewCursor(type);
 }
 
 void DecoratedViewHost::ShowTooltip(const std::string &tooltip) {
