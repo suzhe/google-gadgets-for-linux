@@ -374,11 +374,11 @@ void ContentItem::SetLayout(Layout layout) {
   }
 }
 
-unsigned int ContentItem::GetFlags() const {
+int ContentItem::GetFlags() const {
   return impl_->flags_;
 }
 
-void ContentItem::SetFlags(unsigned int flags) {
+void ContentItem::SetFlags(int flags) {
   if (flags != impl_->flags_) {
     // We don't think this is necessary to auto set AS_IS flag for HTML.
     // Sometimes the user may want HTML but not AS_IS.
@@ -627,7 +627,8 @@ void ContentItem::ToggleItemPinnedState() {
     result = VariantToBool(impl_->on_toggle_item_pinned_state_signal_(this));
 
   if (!result) {
-    impl_->flags_ ^= CONTENT_ITEM_FLAG_PINNED;
+    impl_->flags_ =
+        static_cast<Flags>(impl_->flags_ ^ CONTENT_ITEM_FLAG_PINNED);
     impl_->QueueDraw();
   }
 }
