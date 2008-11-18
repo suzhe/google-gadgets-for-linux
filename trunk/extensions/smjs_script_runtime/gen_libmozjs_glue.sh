@@ -174,7 +174,10 @@ LIBMOZJS_GLUE_H
 
 # Append api type declarations.
 # Remove JS_GetClass(), it'll be handled specially
-cat used_mozjs_api_declare | grep -v ' JS_GetClass,' >> libmozjs_glue.h
+cat used_mozjs_api_declare | \
+  grep -v ' JS_GetClass,' | \
+  sed -e '/^.*JS_SetOperationCallback,.*$/s/^\(.*\)$/#ifdef JS_OPERATION_WEIGHT_BASE\n\1\n#endif/' \
+  >> libmozjs_glue.h
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
 #ifdef JS_THREADSAFE
@@ -185,13 +188,27 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
 
 #undef MOZJS_API
 
+#ifdef JS_OPERATION_WEIGHT_BASE
+#define MOZJS_FUNC_JS_SetOoperationCallback \\
+LIBMOZJS_GLUE_H
+
+sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1)/' used_mozjs_api_list | \
+  grep JS_SetOperationCallback >> libmozjs_glue.h
+
+cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
+#else
+#define MOZJS_FUNC_JS_SetOoperationCallback
+#endif
+
 #define MOZJS_FUNCTIONS \\
 LIBMOZJS_GLUE_H
 
 # Append api list
-sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1) \\/' used_mozjs_api_list >> libmozjs_glue.h
+sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1) \\/' used_mozjs_api_list | \
+  grep -v JS_SetOperationCallback >> libmozjs_glue.h
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
+  MOZJS_FUNC_JS_SetOoperationCallback
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
 

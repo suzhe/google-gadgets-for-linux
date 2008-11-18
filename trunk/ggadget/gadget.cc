@@ -160,7 +160,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         remove_me_timer_(0),
         destroy_details_view_timer_(0),
         display_target_(TARGET_FLOATING_VIEW),
-        plugin_flags_(0),
+        plugin_flags_(PLUGIN_FLAG_NONE),
         debug_console_config_(debug_console_config),
         initialized_(false),
         has_options_xml_(false),
@@ -561,14 +561,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ondisplaytargetchange_signal_(target);
   }
 
-  void SetPluginFlags(int flags) {
+  void SetPluginFlags(unsigned int flags) {
     bool changed = (flags != plugin_flags_);
-    plugin_flags_ = flags;
+    // Casting to PluginFlags to avoid conversion warning when
+    // compiling by the latest gcc.
+    plugin_flags_ = static_cast<PluginFlags>(flags);
     if (changed)
       onpluginflagschanged_signal_(flags);
   }
 
-  void SetFlags(int plugin_flags, int content_flags) {
+  void SetFlags(unsigned int plugin_flags, unsigned int content_flags) {
     SetPluginFlags(plugin_flags);
     SetContentFlags(content_flags);
   }
@@ -578,7 +580,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         "Please specify icons in the manifest file.");
   }
 
-  void SetContentFlags(int flags) {
+  void SetContentFlags(unsigned int flags) {
     ContentAreaElement *content_area =
         main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->SetContentFlags(flags);
@@ -1024,12 +1026,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   int remove_me_timer_;
   int destroy_details_view_timer_;
 
-  DisplayTarget display_target_      : 2;
-  unsigned int plugin_flags_         : 2;
-  unsigned int debug_console_config_ : 2;
-  bool initialized_                  : 1;
-  bool has_options_xml_              : 1;
-  bool in_user_interaction_          : 1;
+  DisplayTarget display_target_            : 2;
+  PluginFlags plugin_flags_                : 2;
+  DebugConsoleConfig debug_console_config_ : 2;
+  bool initialized_                        : 1;
+  bool has_options_xml_                    : 1;
+  bool in_user_interaction_                : 1;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -1073,7 +1075,7 @@ int Gadget::GetInstanceID() const {
   return impl_->instance_id_;
 }
 
-int Gadget::GetPluginFlags() const {
+unsigned int Gadget::GetPluginFlags() const {
   return impl_->plugin_flags_;
 }
 

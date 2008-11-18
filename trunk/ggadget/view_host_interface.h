@@ -138,9 +138,8 @@ class ViewHostInterface {
    * Sets the current mouse cursor.
    *
    * @param type the cursor type, see @c ViewInterface::CursorType.
-   *        -1 means the default type.
    */
-  virtual void SetCursor(int type) = 0;
+  virtual void SetCursor(ViewInterface::CursorType type) = 0;
 
   /**
    * Shows a tooltip popup after certain initial delay at the current mouse

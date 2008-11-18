@@ -474,9 +474,6 @@ class SideBarGtkHost::Impl {
                                          &dragging_offset_y_);
       info->undock_by_drag = true;
 
-      // make sure that the floating window can move on to the sidebar.
-      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
-
       // move window to the cursor position.
       int x, y;
       gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
@@ -487,6 +484,8 @@ class SideBarGtkHost::Impl {
       info->old_keep_above = info->floating->IsKeepAbove();
       info->floating->SetKeepAbove(true);
       gdk_window_raise(info->floating->GetWindow()->window);
+      // make sure that the floating window can move on to the sidebar.
+      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
     } else {
       info->floating->ShowView(false, 0, NULL);
       info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
@@ -810,7 +809,9 @@ class SideBarGtkHost::Impl {
       has_strut_ = false;
       gdk_property_delete(sidebar_window_->window, net_wm_strut_);
       gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
-      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
+      // Use GDK_WINDOW_TYPE_HINT_DIALOG to prevent from being maximized in
+      // matchbox window manager.
+      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_DIALOG);
     }
 
     DLOG("Set SideBar size: %dx%d", sidebar_width_, workarea_.height);
@@ -944,8 +945,6 @@ class SideBarGtkHost::Impl {
       gtk_widget_get_pointer(window, &x, &y);
       dragging_offset_x_ = x;
       dragging_offset_y_ = y;
-      // make sure that the floating window can move on to the sidebar.
-      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       info->old_keep_above = info->floating->IsKeepAbove();
       info->floating->SetKeepAbove(true);
 
@@ -956,6 +955,9 @@ class SideBarGtkHost::Impl {
       // Raise gadget window after raising sidebar window, to make sure it's on
       // top of sidebar window.
       gdk_window_raise(window->window);
+
+      // make sure that the floating window can move on to the sidebar.
+      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       return true;
     }
     return false;
@@ -1000,7 +1002,9 @@ class SideBarGtkHost::Impl {
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
     // The floating window must be normal window when not dragging,
     // otherwise it'll always on top.
-    info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
+    // Use GDK_WINDOW_TYPE_HINT_DIALOG to prevent from being maximized in
+    // matchbox window manager.
+    info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DIALOG);
     info->floating->SetKeepAbove(info->old_keep_above);
     if (IsOverlapWithSideBar(gadget_id, &h)) {
       info->index_in_sidebar = sidebar_->GetIndexOfPosition(h);

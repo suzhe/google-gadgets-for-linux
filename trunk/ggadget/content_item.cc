@@ -184,7 +184,7 @@ class ContentItem::Impl : public SmallObject<> {
   Signal2<Variant, ContentItem *, int> on_process_details_view_feedback_signal_;
   Signal1<Variant, ContentItem *> on_remove_item_signal_;
 
-  int flags_                 : 16;
+  ContentItem::Flags flags_  : 16;
   Layout layout_             : 2;
   bool display_text_changed_ : 1;
   bool x_relative_           : 1;
@@ -374,17 +374,19 @@ void ContentItem::SetLayout(Layout layout) {
   }
 }
 
-int ContentItem::GetFlags() const {
+unsigned int ContentItem::GetFlags() const {
   return impl_->flags_;
 }
 
-void ContentItem::SetFlags(int flags) {
+void ContentItem::SetFlags(unsigned int flags) {
   if (flags != impl_->flags_) {
     // We don't think this is necessary to auto set AS_IS flag for HTML.
     // Sometimes the user may want HTML but not AS_IS.
     // if (flags & CONTENT_ITEM_FLAG_HTML)
     //   flags |= CONTENT_ITEM_FLAG_DISPLAY_AS_IS;
-    impl_->flags_ = flags;
+    // Casting to Flags to avoid conversion warning when compiling by the
+    // latest gcc.
+    impl_->flags_ = static_cast<Flags>(flags);
     impl_->heading_text_.SetBold(flags & CONTENT_ITEM_FLAG_HIGHLIGHTED);
     impl_->DisplayTextChanged();
   }

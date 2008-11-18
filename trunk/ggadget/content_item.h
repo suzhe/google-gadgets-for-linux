@@ -158,8 +158,8 @@ class ContentItem : public ScriptableHelperDefault {
    * Gets and sets the flags.
    * @param flags combination of Flags.
    */
-  int GetFlags() const;
-  void SetFlags(int flags);
+  unsigned int GetFlags() const;
+  void SetFlags(unsigned int flags);
 
   /** Gets and sets the tooltip text, such as full headlines, etc. */
   std::string GetTooltip() const;

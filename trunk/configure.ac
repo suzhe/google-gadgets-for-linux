@@ -710,6 +710,7 @@ fi
 #  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
 #  firefox 2.0: firefox2-gtkmozembed and firefox2-js
 #  firefox 1.5: firefox-gtkmozembed and firefox-js
+#  microb(Maemo): microb-engine and microb-engine-js
 #
 # Add more rules here if your distribution doesn't support above rules.
 has_gtkmozembed=no
@@ -725,7 +726,9 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
 			  [has_gtkmozembed=firefox2-gtkmozembed],
 	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
 			    [has_gtkmozembed=firefox-gtkmozembed],
-	    [has_gtkmozembed=no])])])])])
+	    [PKG_CHECK_MODULES(GTKMOZEMBED, [microb-engine],
+			      [has_gtkmozembed=microb-engine],
+	      [has_gtkmozembed=no])])])])])])
 else
   case $with_gtkmozembed in
     libxul)
@@ -750,6 +753,11 @@ else
                         [has_gtkmozembed=firefox-gtkmozembed],
         [has_gtkmozembed=no])
       ;;
+    microb)
+      PKG_CHECK_MODULES(GTKMOZEMBED, [microb-engine],
+                        [has_gtkmozembed=microb-engine],
+        [has_gtkmozembed=no])
+      ;;
     *)
       AC_MSG_ERROR([--with-gtkmozembed, invalid value])
   esac
@@ -757,6 +765,8 @@ fi
 
 # Check spidermonkey
 # If gtkmozembed is available, then use bundled libmozjs.so.
+# If libmozjs is not available, then set has_gtkmozembed to false as well,
+# because gtkmoz-browser-child needs libmozjs.
 has_libmozjs=no
 case $has_gtkmozembed in
   libxul-embedding-unstable | libxul-embedding)
@@ -775,6 +785,10 @@ case $has_gtkmozembed in
     PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
 		      [has_libmozjs=firefox-js],
 		      [has_gtkmozembed=no]) ;;
+  microb-engine)
+    PKG_CHECK_MODULES(LIBMOZJS, [microb-engine-js],
+		      [has_libmozjs=microb-engine-js],
+		      [has_gtkmozembed=no]) ;;
   *)
     PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
 		      [has_libmozjs=mozilla-js],
@@ -784,7 +798,9 @@ case $has_gtkmozembed in
 			  [has_libmozjs=firefox2-js],
 	  [PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
 			    [has_libmozjs=firefox-js],
-	    [has_libmozjs=no])])])]) ;;
+	    [PKG_CHECK_MODULES(LIBMOZJS, [microb-engine-js],
+			      [has_libmozjs=microb-engine-js],
+	      [has_gtkmozembed=no])])])])]) ;;
 esac
 
 # Check necessary functions
@@ -938,6 +954,22 @@ if test x$has_libmozjs != xno; then
     fi
   fi
 
+  # Find out the real path of libmozjs.so
+  LIBMOZJS_LIBDIR=`$PKG_CONFIG --variable=libdir $has_libmozjs`
+  if test "x$LIBMOZJS_LIBDIR" = "x"; then
+  # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+  # It usually occurs on some pre xulrunner 1.9 versions.
+  # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+  # FIXME: Following method might not work on systems other than Linux.
+    LIBMOZJS_LIBDIR=`echo $LIBMOZJS_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+    # Try to find out the correct xulrunner path.
+    if test -e "$LIBMOZJS_LIBDIR/libmozjs.so"; then
+      LIBMOZJS_PATH=`readlink -f $LIBMOZJS_LIBDIR/libmozjs.so`
+      LIBMOZJS_LIBDIR=`dirname $LIBMOZJS_PATH`
+    fi
+  fi
+
+  # GGL_CHECK_LIBMOZJS requires LIBMOZJS_LIBDIR
   GGL_CHECK_LIBMOZJS([170], [], [has_libmozjs=no])
   if test x$has_libmozjs != xno; then
     # If gtkmozembed is available and uses xpcomglue, then use xpcomglue for
@@ -957,6 +989,10 @@ if test x$has_libmozjs != xno; then
     fi
     if test x$with_mozjs_libname != x; then
       LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DGGL_MOZJS_LIBNAME=\\\"$with_mozjs_libname\\\""
+    fi
+    if test "x$LIBMOZJS_LIBDIR" != "x" -a "x$LIBMOZJS_LIBDIR" != "$libdir"; then
+      LIBMOZJS_LDFLAGS="-R$LIBMOZJS_LIBDIR"
+      AC_SUBST(LIBMOZJS_LDFLAGS)
     fi
   fi
 fi

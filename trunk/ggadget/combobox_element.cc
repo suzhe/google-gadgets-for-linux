@@ -370,7 +370,7 @@ void ComboBoxElement::DoClassRegister() {
                            Impl::GetListBox));
   RegisterProperty("selectedItem",
                    NewSlot(&ListBoxElement::GetSelectedItem,
-                           Impl::GetListBox),
+                           Impl::GetListBoxConst),
                    NewSlot(&ListBoxElement::SetSelectedItem, Impl::GetListBox));
   RegisterProperty("droplistVisible",
                    NewSlot(&ComboBoxElement::IsDroplistVisible),

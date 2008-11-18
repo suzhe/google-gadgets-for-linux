@@ -127,7 +127,7 @@ void QtViewHost::SetCaption(const std::string &caption) {
 void QtViewHost::SetShowCaptionAlways(bool always) {
 }
 
-void QtViewHost::SetCursor(int type) {
+void QtViewHost::SetCursor(ViewInterface::CursorType type) {
   QCursor cursor(GetQtCursorShape(type));
   impl_->widget_->setCursor(cursor);
 }
