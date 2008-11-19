@@ -274,14 +274,19 @@ std::string QtEditElement::GetValue() const {
 }
 
 void QtEditElement::SetValue(const char *value) {
+  QString qval;
   if (!multiline_) {
     std::string v = CleanupLineBreaks(value);
-    doc_.setPlainText(QString::fromUtf8(v.c_str()));
+    qval = QString::fromUtf8(v.c_str());
   } else {
-    doc_.setPlainText(QString::fromUtf8(value));
+    qval = QString::fromUtf8(value);
   }
-  QueueDraw();
-  FireOnChangeEvent();
+
+  if (qval != doc_.toPlainText()) {
+    doc_.setPlainText(qval);
+    QueueDraw();
+    FireOnChangeEvent();
+  }
 }
 
 bool QtEditElement::IsWordWrap() const {
