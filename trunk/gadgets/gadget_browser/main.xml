@@ -86,16 +86,16 @@
         onclick="next_button_onclick()"/>
     </div>
   </div>
-  <label color="#ffffff" size="10" wordWrap="false" align="center"
-    pinX="50%" x="50%" y="6">&GADGET_NAME;</label>
+  <label color="#ffffff" size="10" wordWrap="false" vAlign="middle" bold="true"
+    pinX="50%" x="50%" height="24">&GADGET_NAME;</label>
   <button name="close_button" pinX="24" pinY="0" x="100%" y="0"
     image="images/close_button_up.png"
     overImage="images/close_button_over.png"
     downImage="images/close_button_down.png"
     onclick="plugin.RemoveMe(true)" enabled="true"/>
   <img name="resize_corner" src="images/resize_corner.png"
-    hitTest="htbottomright" cursor="sizenwse"
-    pinX="23" pinY="23" x="100%" y="100%"/>
+    hitTest="htbottomright" cursor="sizenwse" opacity="160"
+    pinX="20" pinY="20" x="100%" y="100%"/>
   <script src="main.js"/>
   <script src="thumbnail.js"/>
   <script src="plugins.js"/>

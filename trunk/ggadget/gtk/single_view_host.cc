@@ -381,7 +381,7 @@ class SingleViewHost::Impl {
   }
 
   void ShowTooltip(const std::string &tooltip) {
-    DLOG("SingleViewHost::ShowTooltip(%s)", tooltip.c_str());
+    // DLOG("SingleViewHost::ShowTooltip(%s)", tooltip.c_str());
     tooltip_->Show(tooltip.c_str());
   }
 
@@ -1222,8 +1222,9 @@ void SingleViewHost::Alert(const ViewInterface *view, const char *message) {
   ShowAlertDialog(view->GetCaption().c_str(), message);
 }
 
-bool SingleViewHost::Confirm(const ViewInterface *view, const char *message) {
-  return ShowConfirmDialog(view->GetCaption().c_str(), message);
+ViewHostInterface::ConfirmResponse SingleViewHost::Confirm(
+    const ViewInterface *view, const char *message, bool cancel_button) {
+  return ShowConfirmDialog(view->GetCaption().c_str(), message, cancel_button);
 }
 
 std::string SingleViewHost::Prompt(const ViewInterface *view,

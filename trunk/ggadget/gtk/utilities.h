@@ -22,6 +22,7 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <ggadget/view_interface.h>
+#include <ggadget/view_host_interface.h>
 #include <ggadget/slot.h>
 
 namespace ggadget {
@@ -42,9 +43,14 @@ void ShowAlertDialog(const char *title, const char *message);
  * Displays a dialog containing the message string and Yes and No buttons.
  * @param title tile of the dialog.
  * @param message the message string.
- * @return @c true if Yes button is pressed, @c false if not.
+ * @param cancel_button indicates whether to show the Cancel button.
+ * @return which button is pressed. Note: if @a cancel_button is false,
+ *     this function returns 0 if the user closes the dialog without pressing
+ *     Yes or No button, to keep backward compatibility.
  */
-bool ShowConfirmDialog(const char *title, const char *message);
+ViewHostInterface::ConfirmResponse ShowConfirmDialog(const char *title,
+                                                     const char *message,
+                                                     bool cancel_button);
 
 /**
  * Displays a dialog asking the user to enter text.

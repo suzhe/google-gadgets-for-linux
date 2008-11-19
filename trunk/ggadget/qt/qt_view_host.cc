@@ -174,14 +174,18 @@ void QtViewHost::Alert(const ViewInterface *view, const char *message) {
       QString::fromUtf8(message));
 }
 
-bool QtViewHost::Confirm(const ViewInterface *view, const char *message) {
+ViewHostInterface::ConfirmResponse QtViewHost::Confirm(
+    const ViewInterface *view, const char *message, bool cancel_button) {
   int ret = QMessageBox::question(
       NULL,
       QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message),
-      QMessageBox::Yes| QMessageBox::No,
+      QMessageBox::Yes | QMessageBox::No |
+          (cancel_button ? QMessageBox::Cancel : 0),
       QMessageBox::Yes);
-  return ret == QMessageBox::Yes;
+  return ret == QMessageBox::Yes ? CONFIRM_YES :
+         ret == QMessageBox::No ? CONFIRM_NO :
+         cancel_button ? CONFIRM_CANCEL : CONFIRM_NO;
 }
 
 std::string QtViewHost::Prompt(const ViewInterface *view,

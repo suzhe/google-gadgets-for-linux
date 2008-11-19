@@ -107,6 +107,7 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
         function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }
 
+  JS_ReportPendingException(context_);
   return ResultVariant(return_value);
 }
 

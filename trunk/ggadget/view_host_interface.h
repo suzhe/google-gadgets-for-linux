@@ -253,13 +253,23 @@ class ViewHostInterface {
    */
   virtual void Alert(const ViewInterface *view, const char *message) = 0;
 
+  enum ConfirmResponse {
+    CONFIRM_CANCEL = -1,
+    CONFIRM_NO = 0,
+    CONFIRM_YES = 1
+  };
+
   /**
    * Displays a dialog containing the message string and Yes and No buttons.
    * @param view the real calling view, useful when this call is delegated.
    * @param message the message string.
-   * @return @c true if Yes button is pressed, @c false if not.
+   * @param cancel_button indicates whether to display the Cancel button.
+   * @return which button is pressed. Note: if @a cancel_button is false,
+   *     this method returns 0 if the user closes the dialog without pressing
+   *     Yes or No button, to keep backward compatibility.
    */
-  virtual bool Confirm(const ViewInterface *view, const char *message) = 0;
+  virtual ConfirmResponse Confirm(const ViewInterface *view,
+                                  const char *message, bool cancel_button) = 0;
 
   /**
    * Displays a dialog asking the user to enter text.

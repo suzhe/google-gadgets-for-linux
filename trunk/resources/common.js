@@ -258,6 +258,16 @@ contentRankingAlgorithm.InverselyProportional = 2;
 contentRankingAlgorithm.LeastSteep = 4;
 contentRankingAlgorithm.MostSteep = 8;
 
+// BrowseForFile() and BrowseForFiles() modes
+var gddBrowseFileModeOpen = 0;
+var gddBrowseFileModeFolder = 1;
+var gddBrowseFileModeSaveAs = 2;
+
+// Return value of view.confirm
+var gddConfirmResponseYes = 1;
+var gddConfirmResponseNo = 0;
+var gddConfirmResponseCancel = -1;
+
 // Windows Enumerator adapter
 function Enumerator(coll) {
   var pos_ = 0;

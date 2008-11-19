@@ -14,10 +14,12 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>
 #include <ggadget/basic_element.h>
+#include <ggadget/color.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
@@ -28,12 +30,14 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/permissions.h>
 #include <ggadget/scriptable_array.h>
+#include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_menu.h>
 #include <ggadget/scriptable_view.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/uuid.h>
 #include <ggadget/view_interface.h>
 
 namespace ggadget {
@@ -57,8 +61,12 @@ class ScriptableFileManager : public ScriptableHelperDefault {
   virtual void DoRegister() {
     RegisterMethod("read",
                    NewSlot(this, &ScriptableFileManager::ReadFile));
+    RegisterMethod("readBinary",
+                   NewSlot(this, &ScriptableFileManager::ReadBinaryFile));
     RegisterMethod("write",
                    NewSlot(fm_, &FileManagerInterface::WriteFile));
+    RegisterMethod("writeBinary",
+                   NewSlot(this, &ScriptableFileManager::WriteBinaryFile));
     RegisterMethod("remove",
                    NewSlot(fm_, &FileManagerInterface::RemoveFile));
     RegisterMethod("extract",
@@ -73,12 +81,26 @@ class ScriptableFileManager : public ScriptableHelperDefault {
                    NewSlot(this, &ScriptableFileManager::GetLastModifiedTime));
     RegisterMethod("getAllFiles",
                    NewSlot(this, &ScriptableFileManager::GetAllFiles));
+    RegisterMethod("copy", NewSlot(this, &ScriptableFileManager::CopyFile));
   }
 
   std::string ReadFile(const char *file) {
     std::string result;
     fm_->ReadFile(file, &result);
     return result;
+  }
+
+  ScriptableBinaryData *ReadBinaryFile(const char *file) {
+    std::string result;
+    return fm_->ReadFile(file, &result) ?
+           new ScriptableBinaryData(result) : NULL;
+  }
+
+  bool WriteBinaryFile(const char *file, ScriptableBinaryData *data,
+                       bool overwrite) {
+    if (!data)
+      return false;
+    return fm_->WriteFile(file, data->data(), overwrite);
   }
 
   std::string ExtractFile(const char *file) {
@@ -108,6 +130,12 @@ class ScriptableFileManager : public ScriptableHelperDefault {
     std::vector<std::string> files;
     fm_->EnumerateFiles("", NewSlot(GetFile, &files));
     return ScriptableArray::Create(files.begin(), files.end());
+  }
+
+  bool CopyFile(const char *src_file, const char *dest_file, bool overwrite) {
+    std::string contents;
+    return fm_->ReadFile(src_file, &contents) &&
+           fm_->WriteFile(dest_file, contents, overwrite);
   }
 
   FileManagerInterface *fm_;
@@ -147,6 +175,10 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
                    NewSlot(this, &DesignerUtils::SystemOpenFileWith));
     RegisterMethod("runGadget", NewSlot(this, &DesignerUtils::RunGadget));
     RegisterMethod("removeGadget", NewSlot(this, &DesignerUtils::RemoveGadget));
+    RegisterMethod("generateUUID", NewSlot(GenerateUUID));
+    RegisterMethod("getUserName", NewSlot(GetUserLoginName));
+    RegisterMethod("parseColor", NewSlot(ParseColor));
+    RegisterMethod("toColorString", NewSlot(ToColorString));
   }
 
   JSONString ElementCoordToAncestor(const BasicElement *element,
@@ -301,6 +333,32 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
       g_designee_gadget->RemoveMe(false);
       g_designee_gadget = NULL;
     }
+  }
+
+  static std::string GenerateUUID() {
+    UUID uuid;
+    uuid.Generate();
+    return uuid.GetString();
+  }
+
+  static JSONString ParseColor(const char *color_str) {
+    Color color;
+    double opacity = 0;
+    if (!Color::FromString(color_str, &color, &opacity))
+      return JSONString("");
+    return JSONString(StringPrintf(
+        "{\"red\":%d,\"green\":%d,\"blue\":%d,\"opacity\":%d}",
+        color.RedInt(), color.GreenInt(), color.BlueInt(),
+        static_cast<int>(round(opacity * 255))));
+  }
+
+  static std::string ToColorString(int r, int g, int b, int opacity) {
+    r = std::min(255, std::max(0, r));
+    g = std::min(255, std::max(0, g));
+    b = std::min(255, std::max(0, b));
+    opacity = std::min(255, std::max(0, opacity));
+    return opacity == 255 ? StringPrintf("#%02X%02X%02X", r, g, b) :
+                            StringPrintf("#%02X%02X%02X%02X", opacity, r, g, b);
   }
 
  private:

@@ -124,9 +124,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       if (!view_host)
         return true; // Maybe in test environment, let the script continue.
 
-      return !view_host->Confirm(
-          view_, StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
-                              filename, lineno).c_str());
+      return view_host->Confirm(view_,
+                                StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
+                                             filename, lineno).c_str(),
+                                false) == ViewHostInterface::CONFIRM_NO;
     }
 
    private:
@@ -756,18 +757,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       View *view = options_view.view();
       RegisterScriptExtensions(options_view.context());
       std::string full_path = file_manager_->GetFullPath(xml_file);
+      if (param) {
+        // Set up the param variable in the opened options view.
+        options_view.context()->AssignFromNative(NULL, "", "optionsViewData",
+                                                 Variant(param));
+      }
       if (options_view.scriptable()->InitFromXML(xml, full_path.c_str())) {
         // Allow XML options dialog to resize, but not zoom.
         if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
           view->SetResizable(ViewInterface::RESIZABLE_FALSE);
         if (view->GetCaption().empty())
           view->SetCaption(main_view_->view()->GetCaption());
-
-        if (param) {
-          // Set up the param variable in the opened options view.
-          options_view.context()->AssignFromNative(NULL, "", "optionsViewData",
-                                                   Variant(param));
-        }
 
         ret = view->ShowView(true, flags,
                              NewSlot(OptionsDialogCallback, &options_view));

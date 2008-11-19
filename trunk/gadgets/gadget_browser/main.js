@@ -502,6 +502,7 @@ function UpdateCategories() {
 function ResetSearchBox() {
   search_box.value = strings.SEARCH_GADGETS;
   search_box.color = "#808080";
+  search_box.killFocus();
 }
 
 var kSearchDelay = 500;

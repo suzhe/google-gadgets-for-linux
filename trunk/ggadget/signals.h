@@ -133,10 +133,11 @@ class Signal : public SmallObject<> {
   bool Disconnect(Connection *connection);
 
   /**
-   * Get the single default connection to this signal. It's useful to manage
+   * Gets/sets the single default slot to this signal. It's useful to manage
    * event handlers that doesn't have multiple instances.
    */
-  Connection *GetDefaultConnection();
+  Slot *GetDefaultSlot();
+  Connection *SetDefaultSlot(Slot *slot);
 
   /**
    * Gets the count of connected connections, including blocked or unblocked.

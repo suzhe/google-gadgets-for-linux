@@ -26,7 +26,9 @@ limitations under the License.
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>
 
-#define DBUS_VERBOSE_LOG
+#ifdef _DEBUG
+// #define DBUS_VERBOSE_LOG
+#endif
 
 namespace ggadget {
 namespace dbus {

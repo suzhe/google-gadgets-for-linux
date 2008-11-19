@@ -66,6 +66,12 @@ class Signal::Impl : public SmallObject<> {
     max_connection_length_ = 0;
 #endif
   }
+
+  static void EnsureImpl(Signal *signal) {
+    if (!signal->impl_)
+      signal->impl_ = new Impl;
+  }
+
   typedef std::vector<Connection *> Connections;
   Connections connections_;
   Connection *default_connection_;
@@ -80,15 +86,29 @@ class Signal::Impl : public SmallObject<> {
 };
 
 #ifdef DEBUG_SIGNALS
-static size_t g_max_connection_length;
-static size_t g_signals_count;
-static size_t g_sum_connection_length;
+static size_t g_max_connection_length = 0;
+static size_t g_signals_count = 0;
+static size_t g_signals_with_impl_count = 0;
+static size_t g_sum_connection_length = 0;
 #endif
 
-Signal::Signal() : impl_(new Impl) {
+Signal::Signal() : impl_(NULL) {
 }
 
 Signal::~Signal() {
+#ifdef DEBUG_SIGNALS
+  ++g_signals_count;
+  if (impl_)
+    ++g_signals_with_impl_count;
+  if (g_signals_count % 100 == 0) {
+    DLOG("#Signals: %zu #Signals with impl: %zu %f",
+         g_signals_count, g_signals_with_impl_count,
+         static_cast<double>(g_signals_with_impl_count) / g_signals_count);
+  }
+#endif
+  if (!impl_)
+    return;
+
   for (Impl::Connections::iterator it = impl_->connections_.begin();
        it != impl_->connections_.end(); ++it) {
     delete *it;
@@ -102,7 +122,7 @@ Signal::~Signal() {
   g_sum_connection_length += impl_->max_connection_length_;
   if (impl_->max_connection_length_ > g_max_connection_length)
     g_max_connection_length = impl_->max_connection_length_;
-  if (++g_signals_count % 100 == 0) {
+  if (g_signals_count % 100 == 0) {
     DLOG("#Signals: %zu  MAX#CONNS: %zu  AVG#CONNS: %f",
          g_signals_count, g_max_connection_length,
          static_cast<double>(g_sum_connection_length) / g_signals_count);
@@ -151,6 +171,8 @@ bool Signal::CheckCompatibility(const Slot *slot) const {
 }
 
 bool Signal::HasActiveConnections() const {
+  if (!impl_)
+    return false;
   if (impl_->connections_.empty())
     return false;
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
@@ -162,6 +184,10 @@ bool Signal::HasActiveConnections() const {
 }
 
 ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
+  ResultVariant result = ResultVariant(Variant(GetReturnType()));
+  if (!impl_)
+    return result;
+
   bool death_flag = false;
   bool *death_flag_ptr = &death_flag;
   if (!impl_->death_flag_ptr_) {
@@ -175,8 +201,6 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
     DLOG("Signal::Emit() Re-entrance");
 #endif
   }
-
-  ResultVariant result = ResultVariant(Variant(GetReturnType()));
 
   // Can't use iterator here, because new connection might be added during the
   // loop, which may invalidate the iterator.
@@ -205,6 +229,7 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
 }
 
 Connection *Signal::Connect(Slot *slot) {
+  Impl::EnsureImpl(this);
   Connection *connection = new Connection(this, slot);
   impl_->connections_.push_back(connection);
 #ifdef DEBUG_SIGNALS
@@ -215,6 +240,7 @@ Connection *Signal::Connect(Slot *slot) {
 }
 
 bool Signal::Disconnect(Connection *connection) {
+  ASSERT(impl_);
   Impl::Connections::iterator it = std::find(impl_->connections_.begin(),
                                              impl_->connections_.end(),
                                              connection);
@@ -234,13 +260,23 @@ bool Signal::Disconnect(Connection *connection) {
   return true;
 }
 
-Connection *Signal::GetDefaultConnection() {
-  if (!impl_->default_connection_)
-    impl_->default_connection_ = Connect(NULL);
-  return impl_->default_connection_; 
+Slot *Signal::GetDefaultSlot() {
+  return impl_ && impl_->default_connection_ ?
+         impl_->default_connection_->slot_ : NULL;
+}
+
+Connection *Signal::SetDefaultSlot(Slot *slot) {
+  Impl::EnsureImpl(this);
+  if (impl_->default_connection_)
+    impl_->default_connection_->Reconnect(slot);
+  else
+    impl_->default_connection_ = Connect(slot);
+  return impl_->default_connection_;
 }
 
 size_t Signal::GetConnectionCount() const {
+  if (!impl_)
+    return 0;
   return impl_->connections_.size();
 }
 

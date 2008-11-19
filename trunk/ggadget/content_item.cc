@@ -216,7 +216,7 @@ void ContentItem::DoClassRegister() {
   RegisterProperty("snippet",
                    NewSlot(&ContentItem::GetSnippet),
                    NewSlot(&ContentItem::SetSnippet));
-  // Don't use the xxxColor properties until they are in the public API. 
+  // Don't use the xxxColor properties until they are in the public API.
   RegisterProperty("headingColor",
                    NewSlot(&TextFrame::GetColor, Impl::GetHeadingTextConst),
                    NewSlot<void, const Variant &>(&TextFrame::SetColor,
@@ -435,7 +435,7 @@ void ContentItem::SetLayoutRect(double x, double y, double width, double height)
   impl_->layout_height_ = height;
 }
 
-void ContentItem::GetLayoutRect(double *x, double *y, 
+void ContentItem::GetLayoutRect(double *x, double *y,
                                 double *width, double *height) {
   ASSERT(x && y && width && height);
   *x = impl_->layout_x_;
@@ -864,7 +864,7 @@ void ScriptableCanvas::DrawRect(double x1, double y1, double width, double heigh
     double y2 = y1 + height;
 
     // Make the border actually inside the rect.
-    x1++; x2--; y1++; y2--; 
+    x1++; x2--; y1++; y2--;
 
     canvas_->DrawLine(x1, y1, x1, y2, 1, *line_color);
     canvas_->DrawLine(x1, y1, x2, y1, 1, *line_color);
@@ -965,7 +965,7 @@ void ScriptableCanvas::DrawRectWithColorName(double x1, double y1,
   Color lc, fc;
   bool lc_parsed = Color::FromString(line_color, &lc, NULL);
   bool fc_parsed = Color::FromString(fill_color, &fc, NULL);
-  DrawRect(x1, y1, width, height, lc_parsed ? &lc : NULL, 
+  DrawRect(x1, y1, width, height, lc_parsed ? &lc : NULL,
                                   fc_parsed ? &fc : NULL);
 }
 

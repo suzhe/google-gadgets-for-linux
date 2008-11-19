@@ -17,7 +17,10 @@
 ADD_MODULE(designer-script-utils designer_script_utils.cc)
 TARGET_LINK_LIBRARIES(designer-script-utils ggadget${GGL_EPOCH})
 
+ADD_DIR_TO_ZIP(blank_gadget blank_gadget.gg)
 ADD_DIR_TO_ZIP(gadget ../../output/bin/designer.gg)
+ADD_FILE_TO_ZIP_ABS(${CMAKE_CURRENT_BINARY_DIR}/blank_gadget.gg
+  ${CMAKE_BINARY_DIR}/output/bin/designer.gg)
 ADD_TARGET_TO_ZIP(designer-script-utils ../../output/bin/designer.gg)
 
 INSTALL_GADGET(designer.gg)

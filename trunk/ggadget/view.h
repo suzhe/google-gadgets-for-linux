@@ -20,6 +20,7 @@
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
 #include <ggadget/variant.h>
+#include <ggadget/view_host_interface.h>
 #include <ggadget/view_interface.h>
 
 namespace ggadget {
@@ -388,23 +389,14 @@ class View : public ViewInterface {
    */
   bool OpenURL(const char *url) const;
 
-  /** Displays a message box containing the message string. */
+  /** @see ViewHostInterface::Alert() */
   void Alert(const char *message) const;
 
-  /**
-   * Displays a dialog containing the message string and Yes and No buttons.
-   * @param message the message string.
-   * @return @c true if Yes button is pressed, @c false if not.
-   */
-  bool Confirm(const char *message) const;
+  /** @see ViewHostInterface::Confirm() */
+  ViewHostInterface::ConfirmResponse Confirm(const char *message,
+                                             bool cancel_button) const;
 
-  /**
-   * Displays a dialog asking the user to enter text.
-   * @param message the message string displayed before the edit box.
-   * @param default_value the initial default value dispalyed in the edit box.
-   * @return the user inputted text, or an empty string if user canceled the
-   *     dialog.
-   */
+  /** @see ViewHostInterface::Prompt() */
   std::string Prompt(const char *message, const char *default_value) const;
 
   /**

@@ -30,7 +30,7 @@ struct SVGColorInfo {
   unsigned char r, g, b;
 };
 
-SVGColorInfo kSVGColors[] = {
+static const SVGColorInfo kSVGColors[] = {
   { "aliceblue",            240, 248, 255 },
   { "antiquewhite",         250, 235, 215 },
   { "aqua",                   0, 255, 255 },

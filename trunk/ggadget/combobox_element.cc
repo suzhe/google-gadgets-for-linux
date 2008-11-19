@@ -725,18 +725,20 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
         impl_->button_over_ = false;
         QueueDrawRect(impl_->GetButtonRect());
       }
-     break;
+      break;
     case Event::EVENT_MOUSE_WHEEL:
       if (impl_->droplist_->IsVisible()) {
         BasicElement *dummy1, *dummy2;
         ViewInterface::HitTest dummy3;
         r = impl_->droplist_->OnMouseEvent(event, true, &dummy1,
                                            &dummy2, &dummy3);
+      } else {
+        r = EVENT_RESULT_UNHANDLED;
       }
-     break;
-   default:
-    r = EVENT_RESULT_UNHANDLED;
-    break;
+      break;
+    default:
+      r = EVENT_RESULT_UNHANDLED;
+      break;
   }
 
   return r;

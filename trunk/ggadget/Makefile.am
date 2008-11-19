@@ -134,6 +134,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  texture.h \
 			  unicode_utils.h \
 			  usage_collector_interface.h \
+			  uuid.h \
 			  variant.h \
 			  video_element_base.h \
 			  view.h \
@@ -231,6 +232,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  texture.cc \
 			  unicode_utils.cc \
 			  usage_collector_factory.cc \
+			  uuid.cc \
 			  variant.cc \
 			  video_element_base.cc \
 			  view.cc \

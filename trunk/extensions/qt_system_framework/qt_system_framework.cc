@@ -63,6 +63,19 @@ class QtSystemScreen : public ScreenInterface {
   }
 };
 
+static const Variant kBrowseForFilesDefaultArgs[] = {
+  Variant(),  // filter
+  Variant(static_cast<const char *>(NULL)),  // title
+  Variant(BROWSE_FILE_MODE_OPEN)  // mode
+};
+
+static const Variant kBrowseForFileDefaultArgs[] = {
+  Variant(),  // filter
+  Variant(static_cast<const char *>(NULL)),  // title
+  Variant(BROWSE_FILE_MODE_OPEN),  // mode
+  Variant(static_cast<const char *>(NULL))  // default_name
+};
+
 class QtSystemBrowseForFileHelper {
  public:
   QtSystemBrowseForFileHelper(ScriptableInterface *framework, Gadget *gadget)
@@ -79,28 +92,32 @@ class QtSystemBrowseForFileHelper {
     }
   }
 
-  std::string BrowseForFile(const char *filter) {
+  std::string BrowseForFile(const char *filter, const char *title,
+                            BrowseForFileMode mode, const char *default_name) {
     std::string result;
     std::vector<std::string> files;
-    if (BrowseForFilesImpl(filter, false, &files) && files.size() > 0)
+    if (BrowseForFilesImpl(filter, false, title, mode, default_name, &files) &&
+        files.size() > 0)
       result = files[0];
     return result;
   }
 
-  ScriptableArray *BrowseForFiles(const char *filter) {
+  ScriptableArray *BrowseForFiles(const char *filter, const char *title,
+                                  BrowseForFileMode mode) {
     std::vector<std::string> files;
-    BrowseForFilesImpl(filter, true, &files);
+    BrowseForFilesImpl(filter, true, title, mode, NULL, &files);
     return ScriptableArray::Create(files.begin(), files.end());
   }
 
-  bool BrowseForFilesImpl(const char *filter,
-      bool multiple,
-      std::vector<std::string> *result) {
+  bool BrowseForFilesImpl(const char *filter, bool multiple, const char *title,
+                          BrowseForFileMode mode, const char *default_name,
+                          std::vector<std::string> *result) {
     ASSERT(result);
     result->clear();
 
     QStringList filters;
     QFileDialog dialog;
+    // TODO: support title(including gadget name), gadget icon, mode, default_name.
     if (multiple) dialog.setFileMode(QFileDialog::ExistingFiles);
     if (filter && *filter) {
       size_t len = strlen(filter);
@@ -284,9 +301,13 @@ extern "C" {
           new QtSystemBrowseForFileHelper(framework, gadget);
 
       reg_framework->RegisterMethod("BrowseForFile",
-          NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFile));
+          NewSlotWithDefaultArgs(
+              NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFile),
+              kBrowseForFileDefaultArgs));
       reg_framework->RegisterMethod("BrowseForFiles",
-          NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFiles));
+          NewSlotWithDefaultArgs(
+              NewSlot(helper, &QtSystemBrowseForFileHelper::BrowseForFiles),
+              kBrowseForFilesDefaultArgs));
 
       reg_system->RegisterMethod("getFileIcon",
           NewSlot(ggadget::framework::qt_system_framework::GetFileIcon));

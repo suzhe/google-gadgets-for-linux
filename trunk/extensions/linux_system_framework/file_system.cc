@@ -39,9 +39,6 @@ namespace ggadget {
 namespace framework {
 namespace linux_system {
 
-static const size_t kBlockSize = 8192;
-static const size_t kMaxFileSize = 10 * 1024 * 1024;
-
 void FixCRLF(std::string *data) {
   ASSERT(data);
   size_t position = 0;
@@ -354,18 +351,22 @@ class TextStream : public TextStreamInterface {
 
   bool Init() {
     if (mode_ == IO_MODE_READING) {
-      scoped_ptr<char> buffer(new char[kMaxFileSize]);
-      ssize_t size = read(fd_, buffer.get(), kMaxFileSize - 1);
-      if (size == -1)
-        return false;
-      if (size == 0)
-        return true;
-      buffer.get()[size] = '\0';
-      if (!ConvertLocaleStringToUTF8(buffer.get(), &content_)) {
-        if (!DetectAndConvertStreamToUTF8(std::string(buffer.get(), size),
-                                          &content_,
-                                          &encoding_))
+      std::string raw_content;
+      const size_t kChunkSize = 8192;
+      char buffer[kChunkSize];
+      while (true) {
+        ssize_t read_size = read(fd_, buffer, kChunkSize);
+        if (read_size == -1)
           return false;
+        raw_content.append(buffer, static_cast<size_t>(read_size));
+        if (raw_content.length() > kMaxFileSize)
+          return false;
+        if (static_cast<size_t>(read_size) < kChunkSize)
+          break;
+      }
+      if (!ConvertLocaleStringToUTF8(raw_content.c_str(), &content_) &&
+          !DetectAndConvertStreamToUTF8(raw_content, &content_, &encoding_)) {
+        return false;
       }
       FixCRLF(&content_);
     }

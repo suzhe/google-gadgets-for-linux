@@ -190,10 +190,11 @@ void DecoratedViewHost::Alert(const ViewInterface *view, const char *message) {
   if (view_host) view_host->Alert(view, message);
 }
 
-bool DecoratedViewHost::Confirm(const ViewInterface *view,
-                                const char *message) {
+ViewHostInterface::ConfirmResponse DecoratedViewHost::Confirm(
+    const ViewInterface *view, const char *message, bool cancel_button) {
   ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
-  return view_host ? view_host->Confirm(view, message) : false;
+  return view_host ? view_host->Confirm(view, message, cancel_button) :
+         cancel_button ? CONFIRM_CANCEL : CONFIRM_NO;
 }
 
 std::string DecoratedViewHost::Prompt(const ViewInterface *view,

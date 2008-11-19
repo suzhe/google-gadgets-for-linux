@@ -140,8 +140,9 @@ class SideBar::Impl : public View {
     virtual void Alert(const ViewInterface *view, const char *message) {
       owner_->view_host_->Alert(view, message);
     }
-    virtual bool Confirm(const ViewInterface *view, const char *message) {
-      return owner_->view_host_->Confirm(view, message);
+    virtual ConfirmResponse Confirm(const ViewInterface *view,
+                                    const char *message, bool cancel_button) {
+      return owner_->view_host_->Confirm(view, message, cancel_button);
     }
     virtual std::string Prompt(const ViewInterface *view,
                                const char *message,
