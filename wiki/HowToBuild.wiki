@@ -77,7 +77,7 @@ If you are using openSUSE 10.3 and later versions, you need install following ma
   * xorg-x11-devel
   * xorg-x11-libXt-devel
   * startup-notification-devel
-  * NetworkManager-devel
+  * !NetworkManager-devel
   * gstreamer-0_10-plugins-base-devel (for openSUSE 11.0 or above) or gstreamer010-plugins-base-devel (for openSUSE 10.3)
   * mozilla-xulrunner190-devel (for openSUSE 11.0 or above) or mozilla-xulrunner181-devel (for openSUSE 10.3) (Mandatory for GTK version, optional for Qt version)
 
@@ -113,7 +113,7 @@ If you are using Fedora 8 and later versions, you need install following mandato
   * libX11-devel
   * libXt-devel
   * startup-notification-devel
-  * NetworkManager-devel
+  * !NetworkManager-devel
   * gstreamer-plugins-base-devel
   * gstreamer-devel
   * xulrunner-devel (for Fedora 9 or above) or firefox-devel (for Fedora 8) (Mandatory for GTK version, optional for Qt version)
