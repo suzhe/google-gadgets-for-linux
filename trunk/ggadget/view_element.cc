@@ -159,10 +159,6 @@ bool ViewElement::OnSizing(double *width, double *height) {
   if (!impl_->child_view_)
     return true;
 
-  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_FALSE)
-    return false;
-
   if (impl_->onsizing_called_ &&
       impl_->onsizing_width_request_ == *width &&
       impl_->onsizing_height_request_ == *height) {
@@ -178,6 +174,7 @@ bool ViewElement::OnSizing(double *width, double *height) {
   double child_width;
   double child_height;
   bool ret = false;
+  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
 
   // If child view is resizable then just delegate OnSizing request to child
   // view.

@@ -18,7 +18,6 @@
 #define GGADGET_MAIN_LOOP_INTERFACE_H__
 #include <stdint.h>
 #include <ggadget/slot.h>
-#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -27,8 +26,11 @@ class MainLoopInterface;
 /**
  * This object is used by main loop to callback application
  * when there is any incoming event.
+ *
+ * This object can't inherit SmallObject<>, because it might be created in
+ * multiple threads (curl_xml_http_request).
  */
-class WatchCallbackInterface : public SmallObject<> {
+class WatchCallbackInterface {
  public:
   virtual ~WatchCallbackInterface() { }
 

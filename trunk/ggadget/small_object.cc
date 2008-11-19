@@ -26,9 +26,11 @@
 #include "logger.h"
 
 #ifdef _DEBUG
-#define DO_EXTRA_LOKI_TESTS
+// For special debug purpose only. Will affect performance dramatically.
+// #define DO_EXTRA_LOKI_TESTS
+// #define LOKI_CHECK_FOR_CORRUPTION
 #endif
-//#define USE_NEW_TO_ALLOCATE
+// #define USE_NEW_TO_ALLOCATE
 
 namespace ggadget
 {
