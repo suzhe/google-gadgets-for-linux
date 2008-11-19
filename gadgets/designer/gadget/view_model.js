@@ -334,15 +334,26 @@ function GetNewElementName(type) {
 // Don't repeat API level default values here to keep consistence.
 kElementInitXML = {
   div: "<div name='&NAME;' width='32' height='32' background='#00CCEE'/>",
-  img: "<img name='&NAME;'/>",
-  button: "<button name='&NAME;' width='64' height='22'/>",
+  img: "<img name='&NAME;' src='icon_large.png'/>",
+  button: "<button name='&NAME;' width='64' height='22'" +
+  		    " image='stock_images/button_up.png'" +
+  		    " downImage='stock_images/button_down.png'" +
+  		    " overImage='stock_images/button_over.png'/>",
   edit: "<edit name='&NAME;' width='64' height='16' value='Text'/>",
-  checkbox: "<checkbox name='&NAME;' caption='&NAME;'/>",
-  radio: "<radio name='&NAME;' caption='&NAME;'/>",
+  checkbox: "<checkbox name='&NAME;' caption='&NAME;'" +
+            " image='stock_images/checkbox_up.png'" +
+            " downImage='stock_images/checkbox_down.png'" +
+            " overImage='stock_images/checkbox_over.png'" +
+            " checkedImage='stock_images/checkbox_checked_up.png'" +
+            " checkedDownImage='stock_images/checkbox_checked_down.png'" +
+            " checkedOverImage='stock_images/checkbox_checked_over.png'/>",
+  radio: "<radio name='&NAME;' caption='&NAME;'" +
+         " image='stock_images/radiobutton.png'" +
+         " checkedImage='stock_images/radiobutton_checked.png'/>",
   a: "<a name='&NAME;' href='www.google.com'/>",
   label: "<label name='&NAME;'>&NAME;</label>",
   contentarea: "<contentarea name='&NAME;' width='100' height='100'/>",
-  listbox: "<listbox name='&NAME;' width='100' height='80'" +
+  listbox: "<listbox name='&NAME;' width='100' height='80' autoscroll='true'" +
            " itemWidth='100%' itemHeight='20'>" +
            " <item><label>Label #0</label></item>" +
            " <item><label>Label #1</label></item>" +
@@ -352,11 +363,15 @@ kElementInitXML = {
             " <item><label>Label #0</label></item>" +
             " <item><label>Label #1</label></item>" +
             "</combobox>",
-  progressbar: "<progressbar name='&NAME;'/>",
+  progressbar: "<progressbar name='&NAME;' width='192' height='16'" +
+               " emptyImage='stock_images/progressbar_empty.png'" +
+               " fullImage='stock_images/progressbar_full.png'/>",
   scrollbar: "<scrollbar name='&NAME;' width='16' height='100'/>"
 };
 
 function NewElement(type, x, y) {
+  g_elements_view.SetNodeHasChildren(g_view_info.id, true);
+  g_elements_view.ExpandFolder(g_view_info.id);
   var name = GetNewElementName(type);
   var init_xml = kElementInitXML[type].replace(/&NAME;/gm, name);
   var domdoc = new DOMDocument();
@@ -513,6 +528,16 @@ function GetNextElementInTree(element) {
 }
 
 function MoveElement(element, parent, before_element) {
+  // Keep the element position unchanged within the view.
+  var old_pos = designerUtils.elementCoordToAncestor(
+      element.parentElement, e_designer_view, element.offsetX, element.offsetY);
+  var new_pos = designerUtils.ancestorCoordToElement(
+      e_designer_view, parent, old_pos.x, old_pos.y);
+  if (typeof element.x != "string")
+    element.x = new_pos.x;
+  if (typeof element.y != "string")
+    element.y = new_pos.y;
+
   var old_info = GetElementInfo(element);
   var parent_info = GetElementInfo(parent);
   g_elements_view.SetNodeHasChildren(parent_info.id, true);

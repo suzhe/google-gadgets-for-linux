@@ -202,6 +202,16 @@ std::string GetFullPathOfSystemCommand(const char *command);
  */
 std::string GetSystemGadgetPath(const char *basename);
 
+/**
+ * Gets the real name of the current user.
+ */
+std::string GetUserRealName();
+
+/**
+ * Gets the login name of the current user.
+ */
+std::string GetUserLoginName();
+
 } // namespace ggadget
 
 #endif // GGADGET_SYSTEM_UTILS_H__

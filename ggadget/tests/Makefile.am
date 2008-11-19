@@ -59,6 +59,7 @@ check_PROGRAMS		= backoff_test \
 			  basic_element_test \
 			  module_test \
 			  system_utils_test \
+			  uuid_test \
 			  view_test \
 			  xml_dom_test \
 			  xml_parser_test \

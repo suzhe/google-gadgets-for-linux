@@ -34,6 +34,10 @@ limitations under the License.
 #include <ggadget/xml_parser_interface.h>
 #include <ggadget/small_object.h>
 
+#ifdef _DEBUG
+// #define DBUS_VERBOSE_LOG
+#endif
+
 namespace ggadget {
 namespace dbus {
 
@@ -217,7 +221,9 @@ class DBusProxy::Impl : public SmallObject<> {
             proxies_[tri_name] = impl;
             MonitorImplName(name);
             std::string match_rule = impl->GetMatchRule();
+#ifdef DBUS_VERBOSE_LOG
             DLOG("Add Match to %s bus: %s", GetTypeName(), match_rule.c_str());
+#endif
             dbus_bus_add_match(bus_, match_rule.c_str(), NULL);
             return impl;
           } else {
@@ -239,8 +245,10 @@ class DBusProxy::Impl : public SmallObject<> {
           ASSERT(it->second == impl);
           if (bus_) {
             std::string match_rule = impl->GetMatchRule();
+#ifdef DBUS_VERBOSE_LOG
             DLOG("Remove Match from %s bus: %s",
                  GetTypeName(), match_rule.c_str());
+#endif
             dbus_bus_remove_match(bus_, match_rule.c_str(), NULL);
           }
           UnmonitorImplName(impl->GetName());
@@ -262,8 +270,10 @@ class DBusProxy::Impl : public SmallObject<> {
     bool EnsureInitialized() {
       ASSERT(!destroying_);
       if (!bus_ && !destroying_) {
+#ifdef DBUS_VERBOSE_LOG
         DLOG("Initialize DBus %s bus.",
              type_ == DBUS_BUS_SYSTEM ? "system" : "session");
+#endif
         DBusError error;
         dbus_error_init(&error);
         bus_ = dbus_bus_get_private(type_, &error);
@@ -299,8 +309,10 @@ class DBusProxy::Impl : public SmallObject<> {
     void Destroy() {
       ASSERT(!destroying_);
       if (bus_ && !destroying_) {
+#ifdef DBUS_VERBOSE_LOG
         DLOG("Destroy DBus %s bus.",
              type_ == DBUS_BUS_SYSTEM ? "system" : "session");
+#endif
         destroying_ = true;
         // Remove filter first to avoid receiving signals anymore.
         dbus_connection_remove_filter(bus_, BusFilter, this);
@@ -355,7 +367,9 @@ class DBusProxy::Impl : public SmallObject<> {
       if (bus_ && !destroying_ && index == 0) {
         std::string owner;
         if (result.ConvertToString(&owner)) {
+#ifdef DBUS_VERBOSE_LOG
           DLOG("The owner of name %s is %s", name.c_str(), owner.c_str());
+#endif
           owner_names_.SetNameOwner(name, owner);
         }
       }
@@ -406,7 +420,9 @@ class DBusProxy::Impl : public SmallObject<> {
       const char *sender = dbus_message_get_sender(message);
       const char *path = dbus_message_get_path(message);
       const char *interface = dbus_message_get_interface(message);
+#ifdef _DEBUG
       const char *member = dbus_message_get_member(message);
+#endif
       // path, interface and member are mandatory according to dbus spec.
       ASSERT(path);
       ASSERT(interface);
@@ -425,7 +441,9 @@ class DBusProxy::Impl : public SmallObject<> {
         std::string tri_name = GetTriName(*it, path, interface);
         ProxyMap::iterator proxy_it = proxies_.find(tri_name);
         if (proxy_it != proxies_.end()) {
+#ifdef DBUS_VERBOSE_LOG
           DLOG("Emit signal %s on proxy %s", member, tri_name.c_str());
+#endif
           proxy_it->second->EmitSignal(message);
         }
       }
@@ -453,15 +471,19 @@ class DBusProxy::Impl : public SmallObject<> {
       ASSERT(bus == manager->bus_);
       ASSERT(!manager->destroying_);
 
+#ifdef DBUS_VERBOSE_LOG
       DLOG("BusFilter(%s): sender:%s path:%s interface:%s member:%s",
            manager->GetTypeName(), dbus_message_get_sender(message),
            dbus_message_get_path(message),
            dbus_message_get_interface(message),
            dbus_message_get_member(message));
+#endif
 
       if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL,
                                  "Disconnected")) {
+#ifdef DBUS_VERBOSE_LOG
         DLOG("Disconnected signal received for bus: %d", manager->type_);
+#endif
         // bus is disconnected, destroy the manager.
         manager->Destroy();
       } else {
@@ -844,8 +866,10 @@ class DBusProxy::Impl : public SmallObject<> {
       std::string child_path = path_ + "/" + child;
       // It's not necessary to check if the interface is available or not,
       // because many dbus objects have no introspect data.
+#ifdef DBUS_VERBOSE_LOG
       DLOG("New %s dbus proxy: %s|%s|%s", manager_->GetTypeName(),
            name_.c_str(), child_path.c_str(), interface.c_str());
+#endif
       Impl *impl = manager_->NewImpl(name_, child_path, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
@@ -873,8 +897,10 @@ class DBusProxy::Impl : public SmallObject<> {
     if (manager_ && interface.length()) {
       // It's not necessary to check if the interface is available or not,
       // because many dbus objects have no introspect data.
+#ifdef DBUS_VERBOSE_LOG
       DLOG("New %s dbus proxy: %s|%s|%s", manager_->GetTypeName(),
            name_.c_str(), path_.c_str(), interface.c_str());
+#endif
       Impl *impl = manager_->NewImpl(name_, path_, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
@@ -931,8 +957,10 @@ class DBusProxy::Impl : public SmallObject<> {
                                    const std::string &path,
                                    const std::string &interface) {
     if (name.length() && path.length() && interface.length()) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("New system dbus proxy: %s|%s|%s",
            name.c_str(), path.c_str(), interface.c_str());
+#endif
       Impl *impl = system_bus_.NewImpl(name, path, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
@@ -949,8 +977,10 @@ class DBusProxy::Impl : public SmallObject<> {
                                     const std::string &path,
                                     const std::string &interface) {
     if (name.length() && path.length() && interface.length()) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("New session dbus proxy: %s|%s|%s",
            name.c_str(), path.c_str(), interface.c_str());
+#endif
       Impl *impl = session_bus_.NewImpl(name, path, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
@@ -1093,8 +1123,10 @@ class DBusProxy::Impl : public SmallObject<> {
   bool CallMethodSync(DBusConnection *bus, const char *interface,
                       const char *method, const Arguments &in_args,
                       Arguments *out_args, int timeout) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("Call method synchronously: %s|%s|%s|%s",
          name_.c_str(), path_.c_str(), interface, method);
+#endif
 
     DBusPendingCall *pending_return = NULL;
     bool ret = SendMessage(bus, interface, method, in_args,
@@ -1119,8 +1151,10 @@ class DBusProxy::Impl : public SmallObject<> {
     PendingCallClosure *closure = reinterpret_cast<PendingCallClosure *>(data);
     ASSERT(closure);
     if (closure) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("Free PendingCallClosure: %d, %s|%s", closure->call_id,
            closure->impl->name_.c_str(), closure->impl->path_.c_str());
+#endif
       delete closure->callback;
       delete closure;
     }
@@ -1130,8 +1164,10 @@ class DBusProxy::Impl : public SmallObject<> {
     PendingCallClosure *closure = reinterpret_cast<PendingCallClosure *>(data);
     ASSERT(closure);
     if (closure) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("Pending call returned: %d, %s|%s", closure->call_id,
            closure->impl->name_.c_str(), closure->impl->path_.c_str());
+#endif
       Impl *impl = closure->impl;
       if (closure->callback) {
         Arguments out_args;
@@ -1185,8 +1221,10 @@ class DBusProxy::Impl : public SmallObject<> {
   int CallMethodAsync(DBusConnection *bus, const char *interface,
                       const char *method, const Arguments &in_args,
                       ResultCallback *callback, int timeout) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("Call method asynchronously: %s|%s|%s|%s",
          name_.c_str(), path_.c_str(), interface, method);
+#endif
 
     DBusPendingCall *pending = NULL;
     bool ret = SendMessage(bus, interface, method, in_args,
@@ -1200,7 +1238,9 @@ class DBusProxy::Impl : public SmallObject<> {
       dbus_pending_call_set_notify(pending, PendingCallNotify,
                                    closure, PendingCallClosureFree);
       pending_calls_[closure->call_id] = pending;
+#ifdef DBUS_VERBOSE_LOG
       DLOG("Succeeded: pending call id: %d", closure->call_id);
+#endif
       return closure->call_id;
     }
 
@@ -1226,7 +1266,9 @@ class DBusProxy::Impl : public SmallObject<> {
   // http://dbus.freedesktop.org/doc/dbus-specification.html
   // Section: Introspection Data Format
   bool Introspect(DBusConnection *bus) {
+#ifdef DBUS_VERBOSE_LOG
     DLOG("Introspect dbus object: %s|%s", name_.c_str(), path_.c_str());
+#endif
     XMLParserInterface *xml_parser = GetXMLParser();
     ASSERT(xml_parser);
 
@@ -1297,7 +1339,7 @@ class DBusProxy::Impl : public SmallObject<> {
     domdoc->Unref();
     if (!result)
       DLOG("Failed to introspect %s|%s", name_.c_str(), path_.c_str());
-#ifdef _DEBUG
+#ifdef DBUS_VERBOSE_LOG
     else
       DLOG("Introspect result:\n%s", PrintProxyInfo().c_str());
 #endif
@@ -1308,8 +1350,10 @@ class DBusProxy::Impl : public SmallObject<> {
     std::string name_attr = interface_node->GetAttribute("name");
     if (std::find(interfaces_.begin(), interfaces_.end(), name_attr) ==
         interfaces_.end()) {
+#ifdef DBUS_VERBOSE_LOG
       DLOG("Found interface for %s|%s: %s",
            name_.c_str(), path_.c_str(), name_attr.c_str());
+#endif
       interfaces_.push_back(name_attr);
     }
 

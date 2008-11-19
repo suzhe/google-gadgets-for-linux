@@ -29,8 +29,13 @@
 // For special debug purpose only. Will affect performance dramatically.
 // #define DO_EXTRA_LOKI_TESTS
 // #define LOKI_CHECK_FOR_CORRUPTION
+// #define TRACE_ALLOCS
 #endif
 // #define USE_NEW_TO_ALLOCATE
+
+#ifdef TRACE_ALLOCS
+#include <valgrind/valgrind.h>
+#endif
 
 namespace ggadget
 {
@@ -893,6 +898,10 @@ void * FixedAllocator::Allocate( void )
     // prove either emptyChunk_ points nowhere, or points to a truly empty Chunk.
     assert( ( NULL == emptyChunk_ ) || ( emptyChunk_->HasAvailable( numBlocks_ ) ) );
     assert( CountEmptyChunks() < 2 );
+
+#ifdef TRACE_ALLOCS
+    VALGRIND_PRINTF_BACKTRACE("TRACE_ALLOC: %d", static_cast<int>(blockSize_));
+#endif
 
 #ifdef _DEBUG
     if (++allocCount_ % 10000 == 0)

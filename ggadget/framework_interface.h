@@ -28,6 +28,35 @@ class Slot;
 
 namespace framework {
 
+/**
+ * These modes are for framework.BrowseForFile() and framework.BrowseForFiles().
+ * There is no C++ interface for the methods. The script methods are registered
+ * in framework extension modules.
+ * The prototype of the methods are like:
+ *   - string BrowseForFile(string filter, optional string title,
+ *                          optional int mode, optional string default_name);
+ * and
+ *   - collection BrowseForFiles(string filter, optional string title,
+ *                               optional int mode);
+ */
+enum BrowseForFileMode {
+  /**
+   * Default mode.
+   */
+  BROWSE_FILE_MODE_OPEN,
+  /**
+   * Indicates the caller wants folder(s) instead of file(s).
+   * If this flag is specified, the filter parameter may be ignored (depending
+   * on the underlying system).
+   */
+  BROWSE_FILE_MODE_FOLDER,
+  /**
+   * Indicates the caller wants to get a filename to save as.
+   * Behavior is undefined if this mode is used in BrowseForFiles().
+   */
+  BROWSE_FILE_MODE_SAVEAS
+};
+
 class FileSystemInterface;
 class AudioclipInterface;
 class WirelessInterface;

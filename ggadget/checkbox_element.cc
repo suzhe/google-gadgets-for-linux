@@ -29,6 +29,8 @@
 
 namespace ggadget {
 
+static const int kImageTextGap = 2;
+
 enum CheckedState {
   STATE_NORMAL,
   STATE_CHECKED,
@@ -258,9 +260,9 @@ void CheckBoxElement::DoDraw(CanvasInterface *canvas) {
     textwidth -= imgw;
     double imgx;
     if (impl_->checkbox_on_right_) {
-      imgx = textwidth;
+      imgx = textwidth + kImageTextGap;
     } else {
-      textx = imgw;
+      textx = imgw + kImageTextGap;
       imgx = 0.;
     }
     img->Draw(canvas, imgx, (h - img->GetHeight()) / 2.);
@@ -457,7 +459,7 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   double text_width = 0, text_height = 0;
   impl_->text_.GetSimpleExtents(&text_width, &text_height);
 
-  *width = image_width + text_width;
+  *width = image_width + text_width + kImageTextGap;
   *height = std::max(image_height, text_height);
 }
 

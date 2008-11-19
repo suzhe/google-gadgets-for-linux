@@ -431,12 +431,8 @@ void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
   // Create a SignalSlot as the value of the prototype to let others know
   // the calling convention.  It is owned by property_info_.
   Variant prototype = Variant(new SignalSlot(signal));
-  Connection *connection = signal->GetDefaultConnection();
-  // The getter returns the connected slot of the connection.
-  Slot *getter = NewSlot(connection, &Connection::slot);
-  // The setter accepts a Slot * parameter and connect it to the signal.
-  Slot *setter = NewSlot(connection, &Connection::Reconnect);
-
+  Slot *getter = NewSlot(signal, &Signal::GetDefaultSlot);
+  Slot *setter = NewSlot(signal, &Signal::SetDefaultSlot);
   AddPropertyInfo(name, PROPERTY_NORMAL, prototype, getter, setter);
 }
 
@@ -447,9 +443,8 @@ class ClassSignalGetter : public Slot0<Slot *> {
   }
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
-    Connection *connection =
-        class_signal_->GetSignal(obj)->GetDefaultConnection();
-    return ResultVariant(Variant(connection->slot()));
+    Slot *slot = class_signal_->GetSignal(obj)->GetDefaultSlot();
+    return ResultVariant(Variant(slot));
   }
   virtual bool operator==(const Slot &another) const {
     return false; // Not used.
@@ -471,10 +466,9 @@ class ClassSignalSetter : public Slot1<void, Slot *> {
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
     ASSERT(argc == 1);
-    Connection *connection =
-        class_signal_->GetSignal(obj)->GetDefaultConnection();
+    Signal *signal = class_signal_->GetSignal(obj);
     Slot *slot = VariantValue<Slot *>()(argv[0]);
-    connection->Reconnect(slot);
+    signal->SetDefaultSlot(slot);
     return ResultVariant();
   }
   virtual bool operator==(const Slot &another) const {

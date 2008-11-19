@@ -68,7 +68,8 @@ class QtViewHost : public ViewHostInterface {
   virtual void BeginMoveDrag(int button);
 
   virtual void Alert(const ViewInterface *view, const char *message);
-  virtual bool Confirm(const ViewInterface *view, const char *message);
+  virtual ConfirmResponse Confirm(const ViewInterface *view,
+                                  const char *message, bool cancel_button);
   virtual std::string Prompt(const ViewInterface *view,
                              const char *message,
                              const char *default_value);

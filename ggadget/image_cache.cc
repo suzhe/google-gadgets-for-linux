@@ -24,6 +24,10 @@
 #include "file_manager_factory.h"
 #include "small_object.h"
 
+#ifdef _DEBUG
+// #define DEBUG_IMAGE_CACHE
+#endif
+
 namespace ggadget {
 
 class ImageCache::Impl : public SmallObject<> {
@@ -38,7 +42,9 @@ class ImageCache::Impl : public SmallObject<> {
       ASSERT(owner_);
     }
     virtual ~SharedImage() {
+#ifdef DEBUG_IMAGE_CACHE
       DLOG("Destroy image %s", key_.c_str());
+#endif
       if (owner_)
         owner_->erase(key_);
       if (image_)
@@ -110,7 +116,7 @@ class ImageCache::Impl : public SmallObject<> {
 
  public:
   Impl() : ref_(0) {
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
     num_new_local_images_ = 0;
     num_shared_local_images_ = 0;
     num_new_global_images_ = 0;
@@ -119,7 +125,7 @@ class ImageCache::Impl : public SmallObject<> {
   }
 
   ~Impl() {
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
     DLOG("Image statistics(new/shared): "
          "local: %d/%d, global: %d/%d, remained: %zd",
          num_new_local_images_, num_shared_local_images_,
@@ -156,7 +162,7 @@ class ImageCache::Impl : public SmallObject<> {
       local_key = fm->GetFullPath(filename.c_str());
       it = image_map->find(local_key);
       if (it != image_map->end()) {
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
         num_shared_local_images_++;
         DLOG("Local image %s found in cache.", local_key.c_str());
 #endif
@@ -169,7 +175,7 @@ class ImageCache::Impl : public SmallObject<> {
       global_key = global_fm->GetFullPath(filename.c_str());
       it = image_map->find(global_key);
       if (it != image_map->end()) {
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
         num_shared_global_images_++;
         DLOG("Global image %s found in cache.", global_key.c_str());
 #endif
@@ -185,14 +191,14 @@ class ImageCache::Impl : public SmallObject<> {
     if (fm && fm->ReadFile(filename.c_str(), &data)) {
       key = local_key;
       img = gfx->NewImage(filename, data, is_mask);
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
       DLOG("Local image %s loaded.", key.c_str());
       num_new_local_images_++;
 #endif
     } else if (global_fm && global_fm->ReadFile(filename.c_str(), &data)) {
       key = global_key;
       img = gfx->NewImage(filename, data, is_mask);
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
       DLOG("Global image %s loaded.", key.c_str());
       num_new_global_images_++;
 #endif
@@ -236,7 +242,7 @@ class ImageCache::Impl : public SmallObject<> {
   ImageMap mask_images_;
   int ref_;
 
-#ifdef _DEBUG
+#ifdef DEBUG_IMAGE_CACHE
   int num_new_local_images_;
   int num_shared_local_images_;
   int num_new_global_images_;

@@ -15,10 +15,22 @@
 
 DESIGNER_FILES= \
 		en/strings.xml \
+		images/border_bottom.png \
+		images/border_left.png \
+		images/border_right.png \
+		images/border_top.png \
+		images/close_button_down.png \
+		images/close_button_over.png \
+		images/close_button_up.png \
+		images/control_border.png \
 		images/folder.png \
 		images/folder_over.png \
 		images/pin.png \
+		images/resize_corner.png \
 		images/selection_border.png \
+		images/tab_active.png \
+		images/tab_background.png \
+		images/tab_inactive.png \
 		images/tool_a.png \
 		images/tool_button.png \
 		images/tool_button_active.png \
@@ -37,6 +49,8 @@ DESIGNER_FILES= \
 		images/tool_radio.png \
 		images/tool_scrollbar.png \
 		images/view_background.png \
+		choose_color_image.js \
+		choose_color_image.xml \
 		designer.js \
 		gadget.gmanifest \
 		icon.png \

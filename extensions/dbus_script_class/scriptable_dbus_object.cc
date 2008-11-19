@@ -140,12 +140,6 @@ class DBusSignal: public Signal {
       prototype_slot_ = new SignalSlot(this);
     return prototype_slot_;
   }
-  Slot *GetDefaultConnectedSlot() {
-    return GetDefaultConnection()->slot();
-  }
-  bool SetDefaultConnectedSlot(Slot *slot) {
-    return GetDefaultConnection()->Reconnect(slot);
-  }
 
  private:
   int argc_;
@@ -323,7 +317,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       if (get_info) {
         return ResultVariant(Variant(sig_it->second->GetPrototypeSlot()));
       }
-      return ResultVariant(Variant(sig_it->second->GetDefaultConnectedSlot()));
+      return ResultVariant(Variant(sig_it->second->GetDefaultSlot()));
     }
 
     // Method has the highest priority.
@@ -346,7 +340,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       if (get_info) {
         return ResultVariant(Variant(signal->GetPrototypeSlot()));
       }
-      return ResultVariant(Variant(signal->GetDefaultConnectedSlot()));
+      return ResultVariant(Variant(signal->GetDefaultSlot()));
     }
 
     // Then try property.
@@ -380,8 +374,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
     SignalMap::iterator sig_it = signals_.find(name);
     if (sig_it != signals_.end()) {
       if (value.type() == Variant::TYPE_SLOT) {
-        return sig_it->second->SetDefaultConnectedSlot(
-            VariantValue<Slot *>()(value));
+        return sig_it->second->SetDefaultSlot(VariantValue<Slot *>()(value));
       }
       DLOG("Signal property expects a slot.");
       return false;
@@ -393,7 +386,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       DBusSignal *signal = new DBusSignal(argc, arg_types);
       signals_[name] = signal;
       if (value.type() == Variant::TYPE_SLOT) {
-        return signal->SetDefaultConnectedSlot(VariantValue<Slot *>()(value));
+        return signal->SetDefaultSlot(VariantValue<Slot *>()(value));
       }
       DLOG("Signal property expects a slot.");
       return false;

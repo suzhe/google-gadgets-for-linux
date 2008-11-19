@@ -70,12 +70,23 @@ void ShowAlertDialog(const char *title, const char *message) {
   gtk_widget_destroy(dialog);
 }
 
-bool ShowConfirmDialog(const char *title, const char *message) {
-  GtkWidget *dialog = gtk_message_dialog_new(NULL,
-                                             GTK_DIALOG_MODAL,
-                                             GTK_MESSAGE_QUESTION,
-                                             GTK_BUTTONS_YES_NO,
-                                             "%s", message);
+ViewHostInterface::ConfirmResponse ShowConfirmDialog(const char *title,
+                                                     const char *message,
+                                                     bool cancel_button) {
+  GtkWidget *dialog;
+  if (cancel_button) {
+    dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+                                    GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE,
+                                    "%s", message);
+    gtk_dialog_add_buttons(GTK_DIALOG(dialog), GTK_STOCK_NO, GTK_RESPONSE_NO,
+                           GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                           GTK_STOCK_YES, GTK_RESPONSE_YES, NULL);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
+  } else {
+    dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+                                    GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+                                    "%s", message);
+  }
   GdkScreen *screen;
   gdk_display_get_pointer(gdk_display_get_default(), &screen, NULL, NULL, NULL);
   gtk_window_set_screen(GTK_WINDOW(dialog), screen);
@@ -84,7 +95,10 @@ bool ShowConfirmDialog(const char *title, const char *message) {
   SetGadgetWindowIcon(GTK_WINDOW(dialog), NULL);
   gint result = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
-  return result == GTK_RESPONSE_YES;
+  return result == GTK_RESPONSE_YES ? ViewHostInterface::CONFIRM_YES :
+         result == GTK_RESPONSE_NO ? ViewHostInterface::CONFIRM_NO :
+         cancel_button ? ViewHostInterface::CONFIRM_CANCEL :
+                         ViewHostInterface::CONFIRM_NO;
 }
 
 std::string ShowPromptDialog(const char *title, const char *message,
@@ -113,6 +127,7 @@ std::string ShowPromptDialog(const char *title, const char *message,
   GtkWidget *entry = gtk_entry_new();
   if (default_value)
     gtk_entry_set_text(GTK_ENTRY(entry), default_value);
+  gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
 
   GtkWidget *hbox = gtk_hbox_new(FALSE, 12);
   GtkWidget *vbox = gtk_vbox_new(FALSE, 12);

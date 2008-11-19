@@ -273,6 +273,11 @@ const int kDefaultFontSize = 8;
 
 const char kGoogleGadgetsMimeType[] = "application/x-google-gadget";
 
+/**
+ * The upper limit of size of single file if the file is read as a whole.
+ */
+const size_t kMaxFileSize = 20 * 1024 * 1024;
+
 } // namespace ggadget
 
 #endif // GGADGET_GADGET_CONSTS_H__

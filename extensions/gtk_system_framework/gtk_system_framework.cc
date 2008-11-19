@@ -29,6 +29,7 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/gtk/utilities.h>
 #include <ggadget/xdg/desktop_entry.h>
 #include <ggadget/xdg/utilities.h>
 
@@ -66,6 +67,19 @@ class GtkSystemScreen : public ScreenInterface {
   }
 };
 
+static const Variant kBrowseForFilesDefaultArgs[] = {
+  Variant(),  // filter
+  Variant(static_cast<const char *>(NULL)),  // title
+  Variant(BROWSE_FILE_MODE_OPEN)  // mode
+};
+
+static const Variant kBrowseForFileDefaultArgs[] = {
+  Variant(),  // filter
+  Variant(static_cast<const char *>(NULL)),  // title
+  Variant(BROWSE_FILE_MODE_OPEN),  // mode
+  Variant(static_cast<const char *>(NULL))  // default_name
+};
+
 class GtkSystemBrowseForFileHelper {
  public:
   GtkSystemBrowseForFileHelper(ScriptableInterface *framework, Gadget *gadget)
@@ -82,32 +96,56 @@ class GtkSystemBrowseForFileHelper {
     }
   }
 
-  std::string BrowseForFile(const char *filter) {
+  std::string BrowseForFile(const char *filter, const char *title,
+                            BrowseForFileMode mode, const char *default_name) {
     std::string result;
     std::vector<std::string> files;
-    if (BrowseForFilesImpl(filter, false, &files) && files.size() > 0)
+    if (BrowseForFilesImpl(filter, false, title, mode, default_name, &files) &&
+        files.size() > 0)
       result = files[0];
     return result;
   }
 
-  ScriptableArray *BrowseForFiles(const char *filter) {
+  ScriptableArray *BrowseForFiles(const char *filter, const char * title,
+                                  BrowseForFileMode mode) {
     std::vector<std::string> files;
-    BrowseForFilesImpl(filter, true, &files);
+    BrowseForFilesImpl(filter, true, title, mode, NULL, &files);
     return ScriptableArray::Create(files.begin(), files.end());
   }
 
-  bool BrowseForFilesImpl(const char *filter,
-                          bool multiple,
+  bool BrowseForFilesImpl(const char *filter, bool multiple, const char *title,
+                          BrowseForFileMode mode, const char *default_name,
                           std::vector<std::string> *result) {
     ASSERT(result);
     result->clear();
 
+    GtkFileChooserAction action;
+    if (mode == BROWSE_FILE_MODE_FOLDER)
+      action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
+    else if (mode == BROWSE_FILE_MODE_SAVEAS)
+      action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    else
+      action = GTK_FILE_CHOOSER_ACTION_OPEN;
+
+    std::string whole_title(gadget_->GetManifestInfo(kManifestName));
+    if (title && *title) {
+      whole_title += " - ";
+      whole_title += title;
+    }
+
     GtkWidget *dialog = gtk_file_chooser_dialog_new(
-        gadget_->GetManifestInfo(kManifestName).c_str(), NULL,
-        GTK_FILE_CHOOSER_ACTION_OPEN,
+        whole_title.c_str(), NULL, action,
         GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
         GTK_STOCK_OK, GTK_RESPONSE_OK,
         NULL);
+    gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+
+    if (action == GTK_FILE_CHOOSER_ACTION_SAVE) {
+      gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog),
+                                                     TRUE);
+    }
+
+    ggadget::gtk::SetGadgetWindowIcon(GTK_WINDOW(dialog), gadget_);
 
     OptionsInterface *options = GetGlobalOptions();
     if (options) {
@@ -117,6 +155,17 @@ class GtkSystemBrowseForFileHelper {
       if (current_folder.size()) {
         gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
                                             current_folder.c_str());
+      }
+    }
+
+    if (default_name && *default_name) {
+      std::string normalized = NormalizeFilePath(default_name);
+      if (normalized.find('/') == normalized.npos) {
+        gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog),
+                                          normalized.c_str());
+      } else {
+        gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(dialog),
+                                      normalized.c_str());
       }
     }
 
@@ -339,9 +388,13 @@ extern "C" {
       GtkSystemBrowseForFileHelper *helper =
           new GtkSystemBrowseForFileHelper(framework, gadget);
       reg_framework->RegisterMethod("BrowseForFile",
-          NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFile));
+          NewSlotWithDefaultArgs(
+              NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFile),
+              kBrowseForFileDefaultArgs));
       reg_framework->RegisterMethod("BrowseForFiles",
-          NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFiles));
+          NewSlotWithDefaultArgs(
+              NewSlot(helper, &GtkSystemBrowseForFileHelper::BrowseForFiles),
+              kBrowseForFilesDefaultArgs));
 
       reg_system->RegisterMethod("getFileIcon",
           NewSlot(ggadget::framework::gtk_system_framework::GetFileIcon));

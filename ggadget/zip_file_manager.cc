@@ -44,6 +44,7 @@ static const int kZipCaseSensitivity = 1;
 static const int kZipCaseSensitivity = 2;
 #endif
 
+static const uLong kMaxFieldSize = 200000;
 static const char kZipGlobalComment[] = "Created by Google Gadgets for Linux.";
 static const char kZipReadMeFile[] = ".readme";
 static const char kTempZipFile[] = "%%Temp%%.zip";
@@ -162,6 +163,12 @@ class ZipFileManager::Impl : public SmallObject<> {
       int read_size = unzReadCurrentFile(unzip_handle_, buffer, kChunkSize);
       if (read_size > 0) {
         data->append(buffer, read_size);
+        if (data->length() > kMaxFileSize) {
+          LOG("File %s is too big", relative_path.c_str());
+          data->clear();
+          result = false;
+          break;
+        }
       } else if (read_size < 0) {
         LOG("Error reading file: %s in zip archive %s",
             relative_path.c_str(), base_path_.c_str());
@@ -217,7 +224,9 @@ class ZipFileManager::Impl : public SmallObject<> {
 
       unz_file_info unz_info;
       if (unzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info,
-                                NULL, 0, NULL, 0, NULL, 0) != UNZ_OK)
+                                NULL, 0, NULL, 0, NULL, 0) != UNZ_OK ||
+          unz_info.size_file_extra > kMaxFieldSize ||
+          unz_info.size_file_comment > kMaxFieldSize)
         return false;
       char *extra = new char[unz_info.size_file_extra];
       char *comment = new char[unz_info.size_file_comment + 1];
@@ -265,7 +274,8 @@ class ZipFileManager::Impl : public SmallObject<> {
 
     unz_global_info global_info;
     char *global_comment = NULL;
-    if (unzGetGlobalInfo(unzip_handle_, &global_info) == UNZ_OK) {
+    if (unzGetGlobalInfo(unzip_handle_, &global_info) == UNZ_OK &&
+        global_info.size_comment <= kMaxFieldSize) {
       global_comment = new char[global_info.size_comment + 1];
       if (unzGetGlobalComment(unzip_handle_, global_comment,
                               global_info.size_comment + 1) < 0) {
@@ -294,10 +304,9 @@ class ZipFileManager::Impl : public SmallObject<> {
       // Copy the temp zip file over the original zip.
       unzClose(unzip_handle_);
       unzip_handle_ = NULL;
-      res = unlink(base_path_.c_str()) == 0;
-      if (res) {
-        CopyFile(temp_file.c_str(), base_path_.c_str());
-      } else {
+      res = unlink(base_path_.c_str()) == 0 &&
+            CopyFile(temp_file.c_str(), base_path_.c_str());
+      if (!res) {
         LOG("Failed to copy temp zip file %s to original zip file %s: %s",
             temp_file.c_str(), base_path_.c_str(), strerror(errno));
       }
@@ -335,6 +344,7 @@ class ZipFileManager::Impl : public SmallObject<> {
       *into_file = BuildFilePath(dir.c_str(), file_name.c_str(), NULL);
     }
 
+    unlink(into_file->c_str());
     FILE *out_fp = fopen(into_file->c_str(), "w");
     if (!out_fp) {
       LOG("Can't open file %s for writing.", into_file->c_str());

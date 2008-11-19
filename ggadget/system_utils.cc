@@ -202,7 +202,6 @@ bool ReadFileContents(const char *path, std::string *content) {
 
   // The approach below doesn't really work for large files, so we limit the
   // file size. A memory-mapped file scheme might be better here.
-  const size_t kMaxFileSize = 20 * 1000 * 1000;
   const size_t kChunkSize = 8192;
   char buffer[kChunkSize];
   while (true) {
@@ -601,6 +600,22 @@ std::string GetSystemGadgetPath(const char *basename) {
   result = GetSystemGadgetPathInResourceDir(GGL_RESOURCE_DIR, basename);
 #endif
   return result;
+}
+
+std::string GetUserRealName() {
+  struct passwd *pw;
+  setpwent();
+  pw = getpwuid(getuid());
+  endpwent();
+  return pw ? pw->pw_gecos : "";
+}
+
+std::string GetUserLoginName() {
+  struct passwd *pw;
+  setpwent();
+  pw = getpwuid(getuid());
+  endpwent();
+  return pw ? pw->pw_name : "";
 }
 
 }  // namespace ggadget

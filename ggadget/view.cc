@@ -69,6 +69,7 @@ namespace ggadget {
 DECLARE_VARIANT_PTR_TYPE(CanvasInterface);
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
+static const Variant kConfirmDefaultArgs[] = { Variant(), Variant(false) };
 
 class View::Impl : public SmallObject<> {
  public:
@@ -303,7 +304,9 @@ class View::Impl : public SmallObject<> {
     obj->RegisterMethod("clearInterval", NewSlot(this, &Impl::RemoveTimer));
 
     obj->RegisterMethod("alert", NewSlot(owner_, &View::Alert));
-    obj->RegisterMethod("confirm", NewSlot(owner_, &View::Confirm));
+    obj->RegisterMethod("confirm",
+                        NewSlotWithDefaultArgs(NewSlot(owner_, &View::Confirm),
+                                               kConfirmDefaultArgs));
     obj->RegisterMethod("prompt", NewSlot(owner_, &View::Prompt));
 
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
@@ -392,7 +395,10 @@ class View::Impl : public SmallObject<> {
     // left button down.
     // FIXME: Is it necessary to update hittest_ when mouse is grabbing?
     if (grabmouse_element_.Get()) {
-      if (grabmouse_element_.Get()->IsReallyEnabled() &&
+      // We used to check IsReallyEnabled() here, which seems too strict
+      // because the grabmouse_element_ may move out of the visible area, but
+      // it should still grab the mouse.
+      if (grabmouse_element_.Get()->IsEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {
@@ -958,20 +964,12 @@ class View::Impl : public SmallObject<> {
 #endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
-        if (!focused_element_.Get()) {
-          SetFocusToFirstElement();
-        } else if (focused_element_.Get()->IsReallyEnabled()) {
-          // Restore focus to the original focused element if it is still there.
-          if (focused_element_.Get()->OnOtherEvent(SimpleEvent(
-              Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
-            focused_element_.Reset(NULL);
-            SetFocusToFirstElement();
-          }
-        } else {
-          focused_element_.Get()->OnOtherEvent(SimpleEvent(
-              Event::EVENT_FOCUS_OUT));
+        // Restore focus to the original focused element if it is still there.
+        if (focused_element_.Get() &&
+            (!focused_element_.Get()->IsReallyEnabled() ||
+             focused_element_.Get()->OnOtherEvent(SimpleEvent(
+                 Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED)) {
           focused_element_.Reset(NULL);
-          SetFocusToFirstElement();
         }
         break;
       case Event::EVENT_FOCUS_OUT:
@@ -998,6 +996,7 @@ class View::Impl : public SmallObject<> {
         FireEvent(&scriptable_event, onok_event_);
         break;
       case Event::EVENT_OPEN:
+        SetFocusToFirstElement();
         FireEvent(&scriptable_event, onopen_event_);
         break;
       case Event::EVENT_POPIN:
@@ -2071,12 +2070,15 @@ void View::Alert(const char *message) const {
   }
 }
 
-bool View::Confirm(const char *message) const {
-  bool result = false;
+ViewHostInterface::ConfirmResponse View::Confirm(const char *message,
+                                                 bool cancel_button) const {
+  ViewHostInterface::ConfirmResponse result =
+    cancel_button ? ViewHostInterface::CONFIRM_CANCEL :
+                    ViewHostInterface::CONFIRM_NO;
   if (impl_->view_host_) {
     bool old_interaction =
       impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
-    result = impl_->view_host_->Confirm(this, message);
+    result = impl_->view_host_->Confirm(this, message, cancel_button);
     if (impl_->gadget_)
       impl_->gadget_->SetInUserInteraction(old_interaction);
   }

@@ -71,6 +71,7 @@ SET(SRCS
   text_frame.cc
   unicode_utils.cc
   usage_collector_factory.cc
+  uuid.cc
   variant.cc
   view.cc
   xml_dom.cc
@@ -222,6 +223,7 @@ INSTALL(FILES
   texture.h
   unicode_utils.h
   usage_collector_interface.h
+  uuid.h
   video_element_base.h
   variant.h
   view.h

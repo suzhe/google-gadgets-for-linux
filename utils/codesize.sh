@@ -35,3 +35,4 @@ nm --format=bsd --size-sort --print-file-name --demangle $ALLFILES >$NMRESULTS 2
 $CODESIGHS/nm2tsv --input $NMRESULTS | sort -r >$TSVFILE
 $CODESIGHS/codesighs --input $TSVFILE
 
+rm $TSVFILE $NMRESULTS

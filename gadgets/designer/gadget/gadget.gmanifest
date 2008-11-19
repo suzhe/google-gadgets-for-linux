@@ -15,7 +15,7 @@
   limitations under the License.
 -->
 
-<gadget minimumGoogleDesktopVersion="5.7.0.0">
+<gadget minimumGoogleDesktopVersion="5.8.0.0">
   <about>
     <id>d1d627bc-ed53-45f1-b1b7-6c060c9a1de8</id>
     <version>1.0.0.0</version>

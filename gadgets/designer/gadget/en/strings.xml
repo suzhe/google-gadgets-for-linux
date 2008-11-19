@@ -19,13 +19,26 @@
   <GADGET_DESCRIPTION>Gadget Designer</GADGET_DESCRIPTION>
   <GADGET_TITLE>Gadget Designer</GADGET_TITLE>
   <ABOUT_TEXT>Gadget Designer</ABOUT_TEXT>
-  <MENU_NEW_GADGET>New Gadget...</MENU_NEW_GADGET>
+  <TITLE_NEW_GADGET>New Gadget</TITLE_NEW_GADGET>
+  <MENU_UNDO>Undo</MENU_UNDO>
+  <MENU_REDO>Redo</MENU_REDO>
+  <MENU_NEW_GADGET>New Gadget</MENU_NEW_GADGET>
   <MENU_OPEN_GADGET>Open Gadget...</MENU_OPEN_GADGET>
+  <MENU_SAVE_GADGET_AS>Save Gadget As...</MENU_SAVE_GADGET_AS>
   <MENU_CLOSE_GADGET>Close Gadget</MENU_CLOSE_GADGET>
   <MENU_RUN_GADGET>Run Gadget</MENU_RUN_GADGET>
   <MENU_SAVE_CURRENT_FILE>Save Current File</MENU_SAVE_CURRENT_FILE>
+  <MENU_ADD>Add</MENU_ADD>
+  <MENU_ADD_FILES>Files...</MENU_ADD_FILES>
+  <MENU_ADD_OPTIONS_VIEW>Options View</MENU_ADD_OPTIONS_VIEW>
+  <MENU_ADD_NEW_VIEW>New View...</MENU_ADD_NEW_VIEW>
+  <MENU_ADD_NEW_FILE>New File...</MENU_ADD_NEW_FILE>
   <MENU_EDIT_SOURCE>Edit Source</MENU_EDIT_SOURCE>
-  <MENU_RENAME>Rename</MENU_RENAME>
+  <MENU_REFRESH>Refresh</MENU_REFRESH>
+  <MENU_REMOVE_FILE>Remove...</MENU_REMOVE_FILE>
+  <MENU_RENAME_MOVE_FILE>Rename/Move...</MENU_RENAME_MOVE_FILE>
+  <MENU_REMOVE_ELEMENT>Remove</MENU_REMOVE_ELEMENT>
+  <MENU_RENAME_ELEMENT>Rename</MENU_RENAME_ELEMENT>
   <MENU_MOVE_BACK>Move Back</MENU_MOVE_BACK>
   <MENU_MOVE_FRONT>Bring Front</MENU_MOVE_FRONT>
   <MENU_MOVE_BOTTOM>Move to Bottom</MENU_MOVE_BOTTOM>
@@ -52,7 +65,35 @@
   <PROPERTIES>Properties</PROPERTIES>
   <EVENTS>Events</EVENTS>
   <ELEMENTS>Elements</ELEMENTS>
-  <CONFIRM_DISCARD>Your current file has not been saved.&#10;&#10;Discard changes?</CONFIRM_DISCARD>
-  <CONFIRM_CHANGED>The current file has been changed on the file system.&#10;&#10;Do you want to refresh it?</CONFIRM_CHANGED>
-  <PROMPT_APPEND_STRING>Append string</PROMPT_APPEND_STRING>
+  <TITLE_SAVE_GADGET_AS>Save Gadget As</TITLE_SAVE_GADGET_AS>
+  <CONFIRM_SAVE_GADGET>Your new gadget has not been saved.&#10;&#10;Do you want to save it?</CONFIRM_SAVE_GADGET>
+  <CONFIRM_SAVE_FILE>Your file '{{FILENAME}}' has not been saved.&#10;&#10;Do you want to save it?</CONFIRM_SAVE_FILE>
+  <CONFIRM_CHANGED>The file '{{FILENAME}}' has been changed on the file system.&#10;&#10;Do you want to refresh it?</CONFIRM_CHANGED>
+  <CONFIRM_OVERWRITE>The file '{{FILENAME}}' already exists in gadget.&#10;&#10;Do you want to overwrite it?</CONFIRM_OVERWRITE>
+  <CONFIRM_REMOVE_FILE>Do you want to remove file '{{FILENAME}}' from gadget?</CONFIRM_REMOVE_FILE>
+  <PROMPT_ADD_FILE_PREFIX>Location (path ending with '/') and/or prefix to be added to the file(s):&#10;(Leave blank to add the file(s) to the root of the gadget.)</PROMPT_ADD_FILE_PREFIX>
+  <PROMPT_APPEND_STRING>Append string:</PROMPT_APPEND_STRING>
+  <PROMPT_NEW_VIEW_NAME>Name of the new view file:</PROMPT_NEW_VIEW_NAME>
+  <PROMPT_NEW_FILE_NAME>Name of the new file:</PROMPT_NEW_FILE_NAME>
+  <PROMPT_RENAME_MOVE_FILE>Rename or move file to:</PROMPT_RENAME_MOVE_FILE>
+  <ALERT_FAIL_OPEN_GADGET>Failed to open gadget '{{FILENAME}}'.</ALERT_FAIL_OPEN_GADGET>
+  <ALERT_FAIL_OPEN_FILE>Failed to open file '{{FILENAME}}' from gadget.</ALERT_FAIL_OPEN_FILE>
+  <ALERT_FAIL_SAVE_FILE>Failed to save file '{{FILENAME}}' into gadget.</ALERT_FAIL_SAVE_FILE>
+  <ALERT_FAIL_ADD_FILE>Failed to add file '{{FILENAME}}' into gadget.</ALERT_FAIL_ADD_FILE>
+  <ALERT_FAIL_REMOVE_FILE>Failed to remove file '{{FILENAME}}' from gadget.</ALERT_FAIL_REMOVE_FILE>
+  <ALERT_FAIL_SAVE_GADGET_AS>Failed to save current gadget as '{{FILENAME}}'.</ALERT_FAIL_SAVE_GADGET_AS>
+  <ALERT_FAIL_RENAME_MOVE_FILE>Failed to rename/move file '{{FILENAME}}' to '{{NEWFILENAME}}'.</ALERT_FAIL_RENAME_MOVE_FILE>
+  <ALERT_FILE_EXISTS>File '{{FILENAME}}' already exists in gadget.</ALERT_FILE_EXISTS>
+
+  <CAPTION_COLOR_IMAGE>Choose Color/Image</CAPTION_COLOR_IMAGE>
+  <TAB_TITLE_COLOR>Color</TAB_TITLE_COLOR>
+  <TAB_TITLE_IMAGE>Image</TAB_TITLE_IMAGE>
+  <LABEL_COLOR>Color:</LABEL_COLOR>
+  <LABEL_OPACITY>Opacity:</LABEL_OPACITY>
+  <LABEL_RED>Red:</LABEL_RED>
+  <LABEL_GREEN>Green:</LABEL_GREEN>
+  <LABEL_BLUE>Blue:</LABEL_BLUE>
+  <INVALID_COLOR_STRING>Invalid color string!</INVALID_COLOR_STRING>
+  <LABEL_IMAGES>Images:</LABEL_IMAGES>
+  <NO_IMAGE>There is no image in the gadget.</NO_IMAGE>
 </strings>

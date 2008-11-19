@@ -29,17 +29,13 @@
 
 var kGadgetFileManagerPrefix = "gadget://";
 
-function ChooseImage() {
-  // TODO:
-};
+function ChooseImage(value) {
+  return ChooseColorImage(value, false, true);
+}
 
-function ChooseColorOrImage() {
-  // TODO:
-};
-
-function ChooseColor() {
-  // TODO:
-};
+function ChooseColorOrImage(value) {
+  return ChooseColorImage(value, true, true);
+}
 
 // It's not feasible to detect default value of view's properties,
 // so define them here.
@@ -58,14 +54,16 @@ var g_metadata = {
       height: null,
       width: null,
       resizable: [ "false", "true", "zoom" ],
+      resizeBorder: null,
       showCaptionAlways: null
     },
     events: [
       "oncancel", "onclick", "onclose", "ondblclick", "ondock", "onkeydown",
-      "onkeypress", "onkeyup", "onminimize", "onmousedown", "onmouseout",
-      "onmouseover", "onmouseup", "onok", "onopen", "onoptionchanged",
-      "onpopin", "onpopout", "onrclick", "onrdblclick", "onrestore", "onsize",
-      "onsizing", "onundock"
+      "onkeypress", "onkeyup", "onminimize", "onmousedown", "onmousemove",
+      "onmouseout", "onmouseover", "onmouseup", "onmousewheel", "onok",
+      "onopen", "onoptionchanged", "onpopin", "onpopout", "onrclick",
+      "onrdblclick", "onrestore", "onsize", "onsizing", "onthemechanged",
+      "onundock"
     ]
   },
 
@@ -132,6 +130,7 @@ var g_metadata = {
     inherits: "textBase_",
     properties: {
       caption: null,
+      // defaultRendering: null,
       disabledImage: ChooseImage,
       downImage: ChooseImage,
       image: ChooseImage,
@@ -149,6 +148,7 @@ var g_metadata = {
       checkedDownImage: ChooseImage,
       checkedOverImage: ChooseImage,
       checkedImage: ChooseImage,
+      // defaultRendering: null,
       disabledImage: ChooseImage,
       downImage: ChooseImage,
       overImage: ChooseImage,
@@ -178,6 +178,7 @@ var g_metadata = {
     inherits: "textBase_",
     properties: {
       background: ChooseColorOrImage,
+      detectUrls: null,
       multiline: null,
       passwordChar: null,
       readonly: null,
@@ -190,7 +191,7 @@ var g_metadata = {
   img: {
     inherits: "basicElement_",
     properties: {
-      colorMultiply: ChooseColor,
+      colorMultiply: null,
       cropMaintainAspect: [ "false", "true", "photo" ],
       src: ChooseImage
     },
@@ -213,7 +214,7 @@ var g_metadata = {
         "sizenesw", "sizewe", "sizens", "sizeall", "no", "hand", "busy", "help"
       ],
       href: null,
-      overColor: ChooseImage,
+      overColor: ChooseColorOrImage,
     },
     events: [ ]
   },
@@ -221,6 +222,7 @@ var g_metadata = {
   progressbar: {
     inherits: "basicElement_",
     properties: {
+      // defaultRendering: null,
       emptyImage: ChooseImage,
       fullImage: ChooseImage,
       max: null,
@@ -239,6 +241,7 @@ var g_metadata = {
     inherits: "basicElement_",
     properties: {
       background: ChooseImage,
+      // defaultRendering: null,
       leftDownImage: ChooseImage,
       leftImage: ChooseImage,
       leftOverImage: ChooseImage,
@@ -347,10 +350,10 @@ function InitMetadata() {
     return value ? value.substring(kGadgetFileManagerPrefix.length) : "";
   }
   function SetColorOrImage(value) {
-    return value ? (value.charAt(0) == '#' ? value : GetImage(value)) : "";
+    return value ? (value.indexOf('.') == -1 ? value : SetImage(value)) : "";
   }
   function GetColorOrImage(value) {
-    return value ? (value.charAt(0) == '#' ? value : SetImage(value)) : "";
+    return value ? (value.indexOf('.') == -1 ? value : GetImage(value)) : "";
   }
 
   function InitGetterSetter(property, name) {
