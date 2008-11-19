@@ -28,8 +28,6 @@
 namespace ggadget {
 namespace qt {
 
-class QtEditImpl;
-
 class QtEditElement : public EditElementBase {
  public:
   DEFINE_CLASS_ID(0xea8a5426cb544282, EditElementBase);
