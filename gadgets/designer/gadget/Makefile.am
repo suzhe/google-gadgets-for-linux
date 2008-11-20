@@ -15,10 +15,14 @@
 
 DESIGNER_FILES= \
 		en/strings.xml \
-		images/border_bottom.png \
-		images/border_left.png \
-		images/border_right.png \
-		images/border_top.png \
+		images/border_bottom_left.png \
+		images/border_bottom_middle.png \
+		images/border_bottom_right.png \
+		images/border_middle_left.png \
+		images/border_middle_right.png \
+		images/border_top_left.png \
+		images/border_top_middle.png \
+		images/border_top_right.png \
 		images/close_button_down.png \
 		images/close_button_over.png \
 		images/close_button_up.png \
@@ -61,15 +65,22 @@ DESIGNER_FILES= \
 		view_model.js
 
 EXTRA_DIST = $(DESIGNER_FILES)
-
-nobase_designer_DATA = $(DESIGNER_FILES)
-designerdir	= $(GGL_RESOURCE_DIR)/designer
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
+designer_gadget_DATA = designer.gg
+designer_gadgetdir = $(GGL_RESOURCE_DIR)
+
+designer.gg: $(DESIGNER_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(DESIGNER_FILES))
+
 install-data-hook:
 	(cd $(DESTDIR)$(GGL_RESOURCE_DIR)/designer; \
 	 $(ZIP) -r -u ../designer.gg \
-	 	designer-script-utils.so \
-		$(DESIGNER_FILES) )
+		designer-script-utils.so \
+		blank-gadget.gg )
 	rm -fr $(DESTDIR)$(GGL_RESOURCE_DIR)/designer
+else
+nobase_designer_DATA = $(DESIGNER_FILES)
+designerdir = $(GGL_RESOURCE_DIR)/designer
 endif

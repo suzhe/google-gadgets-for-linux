@@ -92,19 +92,34 @@ function view_oncontextmenu() {
 function view_onsizing() {
   if (event.width < kMinWidth) {
     event.width = kMinWidth;
-  } else if (event.width > kMaxWidth) {
-    event.width = kMaxWidth;
+//  } else if (event.width > kMaxWidth) {
+//    event.width = kMaxWidth;
   }
   if (event.height < kMinHeight) {
     event.height = kMinHeight;
-  } else if (event.height > kMaxHeight) {
-    event.height = kMaxHeight;
+//  } else if (event.height > kMaxHeight) {
+//    event.height = kMaxHeight;
   }
 }
 
 function view_onsize() {
-  window_body.width = view.width - kBorderMarginH;
-  window_body.height = view.height - kBorderMarginV;
+  var view_width = view.width;
+  var view_height = view.height;
+  bg_top_middle.width = view_width -
+    bg_top_left.offsetWidth - bg_top_right.offsetWidth;
+  bg_bottom_middle.width = view_width -
+    bg_bottom_left.offsetWidth - bg_bottom_right.offsetWidth;
+  bg_middle_left.height = view_height -
+    bg_top_left.offsetHeight - bg_bottom_left.offsetHeight;
+  bg_middle_middle.width = view_width -
+    bg_middle_left.offsetWidth - bg_middle_right.offsetWidth;
+  bg_middle_middle.height = view_height -
+    bg_top_middle.offsetHeight - bg_bottom_middle.offsetHeight;
+  bg_middle_right.height = view_height -
+    bg_top_right.offsetHeight - bg_bottom_right.offsetHeight;
+
+  window_body.width = view_width - kBorderMarginH;
+  window_body.height = view_height - kBorderMarginV;
 }
 
 function window_onsize() {

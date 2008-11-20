@@ -18,8 +18,26 @@
 <view width="726" height="585" resizable="true" onopen="view_onopen()"
   onclose="view_onclose()" oncontextmenu="view_oncontextmenu()"
   onsizing="view_onsizing()" onsize="view_onsize()">
-  <img width="100%" height="100%" src="images/background.png"
-    stretchMiddle="true"/>
+
+  <img name="bg_top_left" src="images/bg_top_left.png"/>
+  <div name="bg_top_middle" background="images/bg_top_middle.png"
+    x="12" width="702" height="82"/>
+  <img name="bg_top_right" src="images/bg_top_right.png" pinX="100%" x="100%"/>
+
+  <div name="bg_middle_left" background="images/bg_middle_left.png"
+    y="82" width="6" height="383"/>
+  <div name="bg_middle_middle" background="#333333"
+    x="6" y="82" width="714" height="383"/>
+  <div name="bg_middle_right" background="images/bg_middle_right.png"
+    pinX="100%" x="100%" y="82" width="6" height="383"/>
+
+  <img name="bg_bottom_left" src="images/bg_bottom_left.png"
+    pinY="100%" y="100%"/>
+  <div name="bg_bottom_middle" background="images/bg_bottom_middle.png"
+    pinY="100%" y="100%" x="12" width="702" height="120"/>
+  <img name="bg_bottom_right" src="images/bg_bottom_right.png"
+    pinX="100%" x="100%" pinY="100%" y="100%"/>
+
   <div name="window_body" x="6" y="24" width="714" height="555"
     onsize="window_onsize()">
     <label name="language_label" x="10" y="19" size="10" color="#FFFFFF"

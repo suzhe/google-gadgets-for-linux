@@ -24,7 +24,7 @@
   gadget directory under the resource directory.
 -->
 <plugins>
-  <plugin id="analog_clock" category="tools" thumbnail_url="resource://analog_clock_sm.jpg" rank="1"
+  <plugin id="analog-clock" category="tools" thumbnail_url="resource://analog_clock_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale="el">Αναλογικό ρολόι</title>
     <description locale="el">Δείτε την ώρα με μια γρήγορη ματιά – παλιά σχολή</description>
@@ -89,7 +89,7 @@
     <title locale="sl">Analogna ura</title>
     <description locale="sl">Bodite vedno na tekočem s časom – tokrat starodobnim</description>
   </plugin>
-  <plugin id="digital_alarm_clock" category="tools" thumbnail_url="resource://digital_alarm_clock_sm.jpg" rank="1"
+  <plugin id="digital-alarm-clock" category="tools" thumbnail_url="resource://digital_alarm_clock_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <title locale='el'>Παγκόσμιο ξυπνητήρι ηλιοφάνειας</title>
     <description locale='el'>Ένα ξυπνητήρι με χάρτη της γης που εμφανίζει τις περιοχές όπου έχει ξημερώσει.</description>

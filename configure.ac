@@ -1181,6 +1181,7 @@ AC_CONFIG_FILES([Makefile
 		 gadgets/analog_clock/Makefile
 		 gadgets/designer/Makefile
 		 gadgets/designer/gadget/Makefile
+		 gadgets/designer/blank_gadget/Makefile
 		 gadgets/digital_alarm_clock/Makefile
 		 gadgets/igoogle/Makefile
 		 gadgets/photos/Makefile

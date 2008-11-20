@@ -58,12 +58,12 @@ EXTRA_DIST = $(DIGITAL_ALARM_CLOCK_GADGET_FILES)
 CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
-digital_alarm_clock_gadget_DATA = digital_alarm_clock.gg
+digital_alarm_clock_gadget_DATA = digital-alarm-clock.gg
 digital_alarm_clock_gadgetdir=$(GGL_RESOURCE_DIR)
 
-digital_alarm_clock.gg: $(DIGITAL_ALARM_CLOCK_GADGET_FILES)
+digital-alarm-clock.gg: $(DIGITAL_ALARM_CLOCK_GADGET_FILES)
 	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(DIGITAL_ALARM_CLOCK_GADGET_FILES))
 else
 nobase_digital_alarm_clock_gadget_DATA = $(DIGITAL_ALARM_CLOCK_GADGET_FILES)
-digital_alarm_clock_gadgetdir = $(GGL_RESOURCE_DIR)/digital_alarm_clock
+digital_alarm_clock_gadgetdir = $(GGL_RESOURCE_DIR)/digital-alarm-clock
 endif

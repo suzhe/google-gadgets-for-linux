@@ -101,6 +101,7 @@ MOZJS_API(JSBool, JS_RemoveRoot, (JSContext *cx, void *rp));
 MOZJS_API(JSBool, JS_RemoveRootRT, (JSRuntime *rt, void *rp));
 MOZJS_API(void, JS_ReportError, (JSContext *cx, const char *format, ...));
 MOZJS_API(void, JS_ReportErrorNumber, (JSContext *cx, JSErrorCallback errorCallback, void *userRef, const uintN errorNumber, ...));
+MOZJS_API(JSBool, JS_ReportPendingException, (JSContext *cx));
 MOZJS_API(JSBool, JS_ReportWarning, (JSContext *cx, const char *format, ...));
 MOZJS_API(JSBool, JS_ResolveStub, (JSContext *cx, JSObject *obj, jsval id));
 MOZJS_API(JSBranchCallback, JS_SetBranchCallback, (JSContext *cx, JSBranchCallback cb));
@@ -208,6 +209,7 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
   MOZJS_FUNC(JS_RemoveRootRT) \
   MOZJS_FUNC(JS_ReportError) \
   MOZJS_FUNC(JS_ReportErrorNumber) \
+  MOZJS_FUNC(JS_ReportPendingException) \
   MOZJS_FUNC(JS_ReportWarning) \
   MOZJS_FUNC(JS_ResolveStub) \
   MOZJS_FUNC(JS_SetBranchCallback) \
@@ -302,6 +304,7 @@ MOZJS_FUNCTIONS
 #define JS_RemoveRootRT ggadget::libmozjs::JS_RemoveRootRT.func
 #define JS_ReportError ggadget::libmozjs::JS_ReportError.func
 #define JS_ReportErrorNumber ggadget::libmozjs::JS_ReportErrorNumber.func
+#define JS_ReportPendingException ggadget::libmozjs::JS_ReportPendingException.func
 #define JS_ReportWarning ggadget::libmozjs::JS_ReportWarning.func
 #define JS_SetBranchCallback ggadget::libmozjs::JS_SetBranchCallback.func
 #define JS_SetContextPrivate ggadget::libmozjs::JS_SetContextPrivate.func
