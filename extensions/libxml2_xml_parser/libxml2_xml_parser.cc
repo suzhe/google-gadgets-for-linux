@@ -143,6 +143,25 @@ static bool ConvertStringToUTF8(const std::string &content,
   return success;
 }
 
+static std::string GetXMLEncodingDecl(const std::string &xml) {
+  std::string result;
+  if (!STARTS_WITH(xml.c_str(), xml.size(), kXMLTag) &&
+      !STARTS_WITH(xml.c_str(), xml.size(), kXMLTagUTF8))
+    return result;
+  size_t end_decl_pos = xml.find("?>");
+  if (end_decl_pos == std::string::npos)
+    return result;
+  size_t encoding_pos = xml.rfind(" encoding=\"", end_decl_pos);
+  if (encoding_pos == std::string::npos)
+    return result;
+  encoding_pos += 11;
+  size_t end_encoding_pos = xml.find('"', encoding_pos);
+  if (end_encoding_pos == std::string::npos)
+    return result;
+
+  return xml.substr(encoding_pos, end_encoding_pos - encoding_pos + 1);
+}
+
 static void ReplaceXMLEncodingDecl(std::string *xml) {
   if (!STARTS_WITH(xml->c_str(), xml->size(), kXMLTag) &&
       !STARTS_WITH(xml->c_str(), xml->size(), kXMLTagUTF8))
@@ -571,16 +590,7 @@ std::string GetHTMLCharset(const char* html_content) {
       }
     }
   }
-  // UTF-16 and UTF-32 makes no sense here. Because if the content is in
-  // UTF-16 or UTF-32 encoding, then it's impossible to find the charset tag
-  // by parsing it as char string directly.
-  // In this case, assuming UTF-8 will be the best choice, and will fallback to
-  // ISO8859-1 if it's not UTF-8.
-  if (ToLower(charset).find("utf") == 0 &&
-      (charset.find("16") != std::string::npos ||
-       charset.find("32") != std::string::npos))
-    charset = "UTF-8";
-  return charset.empty() ? "UTF-8" : charset;
+  return charset;
 }
 
 // Count the sequence of a child in the elements of the same tag name.
@@ -641,6 +651,16 @@ static void ConvertElementIntoXPathMap(const xmlNode *element,
   }
 }
 
+// Check if the content is XML according to XMLHttpRequest standard rule.
+static bool ContentTypeIsXML(const char *content_type) {
+  size_t content_type_len = content_type ? strlen(content_type) : 0;
+  return content_type_len == 0 ||
+         strcasecmp(content_type, "text/xml") == 0 ||
+         strcasecmp(content_type, "application/xml") == 0 ||
+         (content_type_len > 4 &&
+          strcasecmp(content_type + content_type_len - 4, "+xml") == 0);
+}
+
 class XMLParser : public XMLParserInterface {
  public:
   virtual bool CheckXMLName(const char *name) {
@@ -675,6 +695,64 @@ class XMLParser : public XMLParserInterface {
     return ::ggadget::CreateDOMDocument(this, false, false);
   }
 
+
+  virtual bool ConvertContentToUTF8(const std::string &content,
+                                    const char *filename,
+                                    const char *content_type,
+                                    const char *encoding_hint,
+                                    const char *encoding_fallback,
+                                    std::string *encoding,
+                                    std::string *utf8_content) {
+    // The caller wants nothing?
+    if (!encoding && !utf8_content)
+      return true;
+
+    bool result = true;
+    std::string encoding_to_use;
+    if (!DetectUTFEncoding(content, &encoding_to_use)) {
+      if (encoding_hint && *encoding_hint) {
+        encoding_to_use = encoding_hint;
+      } else if (STARTS_WITH(content.c_str(), content.size(),
+                             kXMLTagBOMLessUTF16LE)) {
+        encoding_to_use = "UTF-16LE";
+      } else if (STARTS_WITH(content.c_str(), content.size(),
+                             kXMLTagBOMLessUTF16BE)) {
+        encoding_to_use = "UTF-16BE";
+      } else {
+        // Try to find encoding declaration from the content.
+        if (ContentTypeIsXML(content_type) ||
+            STARTS_WITH(content.c_str(), content.size(), kXMLTag)) {
+          encoding_to_use = GetXMLEncodingDecl(content);
+        } else if (content_type && strcasecmp(content_type, "text/html") == 0) {
+          encoding_to_use = GetHTMLCharset(content.c_str());
+        }
+
+        if (encoding_to_use.empty()) {
+          encoding_to_use = "UTF-8";
+        } else if (ToLower(encoding_to_use).find("utf") == 0 &&
+                   (encoding_to_use.find("16") != std::string::npos ||
+                    encoding_to_use.find("32") != std::string::npos)) {
+          // UTF-16 and UTF-32 makes no sense here. Because if the content is
+          // in UTF-16 or UTF-32 encoding, then it's impossible to find the
+          // charset tag by parsing it as char string directly.
+          // In this case, assuming UTF-8 will be the best choice, and will
+          // fallback to ISO8859-1 if it's not UTF-8.
+          encoding_to_use = "UTF-8";
+        }
+      }
+    }
+
+    result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
+                                 utf8_content);
+    if (!result && encoding_fallback && *encoding_fallback) {
+      encoding_to_use = encoding_fallback;
+      result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
+    }
+    if (encoding)
+      *encoding = result ? encoding_to_use : "";
+    return result;
+  }
+
   virtual bool ParseContentIntoDOM(const std::string &content,
                                    const StringMap *extra_entities,
                                    const char *filename,
@@ -689,15 +767,9 @@ class XMLParser : public XMLParserInterface {
 #endif
     bool result = true;
     xmlLineNumbersDefault(1);
-    // Check if the content is XML according to XMLHttpRequest standard rule.
-    size_t content_type_len = content_type ? strlen(content_type) : 0;
-    if (content_type_len == 0 ||
-        strcasecmp(content_type, "text/xml") == 0 ||
-        strcasecmp(content_type, "application/xml") == 0 ||
-        (content_type_len > 4 &&
-         strcasecmp(content_type + content_type_len - 4, "+xml") == 0) ||
-         // However, some XML documents is returned when Content-Type is
-         // text/html or others, so detect from the contents.
+    if (ContentTypeIsXML(content_type) ||
+        // However, some XML documents is returned when Content-Type is
+        // text/html or others, so detect from the contents.
         HasXMLDecl(content)) {
       ASSERT(!domdoc || !domdoc->HasChildNodes());
       xmlDoc *xmldoc = ParseXML(content, extra_entities, filename,
@@ -716,25 +788,10 @@ class XMLParser : public XMLParserInterface {
         }
         xmlFreeDoc(xmldoc);
       }
-    } else if (utf8_content) {
-      // This is not an XML content, only do encoding conversion.
-      std::string encoding_to_use;
-      if (!DetectUTFEncoding(content, &encoding_to_use)) {
-        if (encoding_hint && *encoding_hint)
-          encoding_to_use = encoding_hint;
-        else if (strcasecmp(content_type, "text/html") == 0)
-          encoding_to_use = GetHTMLCharset(content.c_str());
-        else
-          encoding_to_use = "UTF-8";
-      }
-      result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
-                                   utf8_content);
-      if (!result && encoding_fallback && *encoding_fallback) {
-        encoding_to_use = encoding_fallback;
-        result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
-      }
-      if (encoding)
-        *encoding = result ? encoding_to_use : "";
+    } else {
+      result = ConvertContentToUTF8(content, filename, content_type,
+                                    encoding_hint, encoding_fallback,
+                                    encoding, utf8_content);
     }
 #ifdef _DEBUG
     ASSERT(!domdoc || domdoc->GetRefCount() == original_ref_count);

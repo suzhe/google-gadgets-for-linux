@@ -72,20 +72,14 @@ public:
     return Send(NULL, 0);
   }
   virtual void Abort() { ChangeState(DONE); }
-  virtual ExceptionCode GetAllResponseHeaders(const char **result) {
+  virtual ExceptionCode GetAllResponseHeaders(const std::string **result) {
     return NO_ERR;
   }
   virtual ExceptionCode GetResponseHeader(const char *header,
-                                          const char **result) {
+                                          const std::string **result) {
     return NO_ERR;
   }
-  virtual ExceptionCode GetResponseText(const char **result) { return NO_ERR; }
-  virtual ExceptionCode GetResponseBody(const char **result,
-                                        size_t *size) {
-    *result = return_data_.c_str();
-    *size = return_data_.size();
-    return NO_ERR;
-  }
+  virtual ExceptionCode GetResponseText(std::string *result) { return NO_ERR; }
   virtual ExceptionCode GetResponseXML(ggadget::DOMDocumentInterface **result) {
     return NO_ERR;
   }
@@ -93,7 +87,9 @@ public:
     *result = return_status_;
     return NO_ERR;
   }
-  virtual ExceptionCode GetStatusText(const char **result) { return NO_ERR; }
+  virtual ExceptionCode GetStatusText(const std::string **result) {
+    return NO_ERR;
+  }
   virtual ExceptionCode GetResponseBody(std::string *result) {
     *result = return_data_;
     return NO_ERR;

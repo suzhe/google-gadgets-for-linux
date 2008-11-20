@@ -44,7 +44,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
       code_(true),
       script_(QString::fromUtf8(script)),
       file_name_(file_name ? file_name: ""),
-      line_no_(lineno) {
+      line_no_(lineno),
+      death_flag_ptr_(NULL) {
 #ifdef _DEBUG
   i++;
   DLOG("New JSFunctionSlot:#%d", i);
@@ -65,6 +66,10 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
+  // Set *death_flag_ to true to let Call() know this slot is to be deleted.
+  if (death_flag_ptr_)
+    *death_flag_ptr_ = true;
+
 #ifdef _DEBUG
   DLOG("JSFunctionSlot deleted");
   i--;
@@ -74,11 +79,23 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
+  bool death_flag = false;
+  bool *death_flag_ptr = &death_flag;
+  if (!death_flag_ptr_) {
+    // Let the destructor inform us when this object is to be deleted.
+    death_flag_ptr_ = death_flag_ptr;
+  } else {
+    // There must be some upper stack frame containing Call() call of the same
+    // object. We just use the outer most death_flag_.
+    death_flag_ptr = death_flag_ptr_;
+  }
+
   Variant return_value(GetReturnType());
   if (!q_obj_->valid_)
     return ResultVariant(return_value);
   ScopedLogContext log_context(GetEngineContext(engine_));
   QScriptValue qval;
+
   if (code_) {
     DLOG("JSFunctionSlot::Call: %s", script_.toUtf8().data());
     qval = engine_->evaluate(script_, file_name_.c_str(), line_no_);
@@ -101,18 +118,24 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
 
     qval = fun.call(QScriptValue(), args);
   }
-  if (engine_->hasUncaughtException()) {
-    QStringList bt = engine_->uncaughtExceptionBacktrace();
-    LOGE("Backtrace:");
-    for (int i = 0; i < bt.size(); i++) {
-      LOGE("\t%s", bt[i].toStdString().c_str());
-    }
-  }
 
-  if (!ConvertJSToNative(engine_, return_value, qval, &return_value)) {
-    LOGE("Failed to convert returned value to native");
-    engine_->currentContext()->throwError(
-        "Failed to convert returned value to native");
+  if (!*death_flag_ptr) {
+    if (death_flag_ptr == &death_flag)
+      death_flag_ptr_ = NULL;
+
+    if (engine_->hasUncaughtException()) {
+      QStringList bt = engine_->uncaughtExceptionBacktrace();
+      LOGE("Backtrace:");
+      for (int i = 0; i < bt.size(); i++) {
+        LOGE("\t%s", bt[i].toStdString().c_str());
+      }
+    }
+
+    if (!ConvertJSToNative(engine_, return_value, qval, &return_value)) {
+      LOGE("Failed to convert returned value to native");
+      engine_->currentContext()->throwError(
+          "Failed to convert returned value to native");
+    }
   }
   return ResultVariant(return_value);
 }

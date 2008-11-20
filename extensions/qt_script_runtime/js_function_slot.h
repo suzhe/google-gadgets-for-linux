@@ -66,6 +66,11 @@ class JSFunctionSlot : public Slot {
   std::string file_name_;
   int line_no_;
   QScriptValue function_;
+
+  // This slot object may be deleted during Call(). In Call(), This pointer
+  // should point to a local bool variable, and once *death_flag_ptr_ becomes
+  // true, Call() should return immediately.
+  mutable bool *death_flag_ptr_;
 };
 
 class JSFunctionSlot::QtObject : public QObject {

@@ -43,11 +43,43 @@ class XMLParserInterface {
   virtual DOMDocumentInterface *CreateDOMDocument() = 0;
 
   /**
+   * Convert input content into UTF8, according to the rules defined in the
+   * XMLHttpRequestspecification
+   * (http://www.w3.org/TR/2007/WD-XMLHttpRequest-20071026/).
+   *
+   * @param content the content of an XML file.
+   * @param filename the name of the XML file (only for logging).
+   * @param content_type the MIME content type of the input. Can be @c NULL or
+   *     blank if the caller can ensure the content is XML.
+   * @param encoding_hint the hint of encoding if the input xml has no
+   *     Unicode BOF.  If @c NULL or blank, the parser will detect the
+   *     encoding.
+   * @param encoding_fallback the last fallback encoding if the hint or
+   *     the declared encoding fails.
+   * @param[out] encoding contains the encoding actually used. Can be @c NULL
+   *     if the caller doesn't need it.
+   * @param[out] utf8_content converted content into utf8, if encoding
+   *     conversion is successful, otherwise blank.
+   *     Can be @c NULL if the caller doesn't need it.
+   * @return @c false if encoding conversion failed, or the content is XML
+   *     and XML parsing failed. Note, even when @c false is returned,
+   *     @c utf8_content is still available if encoding conversion is
+   *     successful.
+   */
+  virtual bool ConvertContentToUTF8(const std::string &content,
+                                    const char *filename,
+                                    const char *content_type,
+                                    const char *encoding_hint,
+                                    const char *encoding_fallback,
+                                    std::string *encoding,
+                                    std::string *utf8_content) = 0;
+
+  /**
    * Parses XML and build the DOM tree if the input is XML, and convert input
    * content into UTF8, according to the rules defined in the XMLHttpRequest
    * specification (http://www.w3.org/TR/2007/WD-XMLHttpRequest-20071026/).
    *
-   * @param xml the content of an XML file.
+   * @param content the content of an XML file.
    * @param extra_entities extra entites defined in other places that this
    *     XML file may reference.
    * @param filename the name of the XML file (only for logging).

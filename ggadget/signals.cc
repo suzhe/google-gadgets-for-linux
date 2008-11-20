@@ -191,7 +191,7 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
   bool death_flag = false;
   bool *death_flag_ptr = &death_flag;
   if (!impl_->death_flag_ptr_) {
-    // Let the desctructor inform us when this object is to be deleted.
+    // Let the destructor inform us when this object is to be deleted.
     impl_->death_flag_ptr_ = death_flag_ptr;
   } else {
     // There must be some upper stack frame containing Emit() call of the same
