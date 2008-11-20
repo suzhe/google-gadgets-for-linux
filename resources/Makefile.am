@@ -125,6 +125,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		zh-CN/strings.xml
 
 EXTRA_DIST=$(RESOURCE_FILES)
+CLEANFILES=*.gg
 
 if GGL_HAVE_ZIP
 resource_DATA = resources.gg

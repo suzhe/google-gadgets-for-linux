@@ -230,11 +230,13 @@ class BrowserElement::Impl {
       } else {
         size_t callback_params_count = params.size() - 3;
         ScriptableArray *callback_params = new ScriptableArray();
+        callback_params->Ref();
         for (size_t i = 0; i < callback_params_count; ++i)
           callback_params->Append(Variant(JSONString(params[i + 3])));
         JSONString result_json =
             callback_signal_(JSONString(params[2]), callback_params);
         result = result_json.value;
+        callback_params->Unref();
       }
     } else if (strcmp(type, kOpenURLFeedback) == 0) {
       if (params.size() != 3) {
