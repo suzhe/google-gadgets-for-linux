@@ -74,6 +74,11 @@ class JSFunctionSlot : public Slot {
   NativeJSWrapper *owner_;
   JSObject *function_;
   std::string function_info_;
+
+  // This slot object may be deleted during Call(). In Call(), This pointer
+  // should point to a local bool variable, and once *death_flag_ptr_ becomes
+  // true, Call() should return immediately.
+  mutable bool *death_flag_ptr_;
 };
 
 } // namespace smjs

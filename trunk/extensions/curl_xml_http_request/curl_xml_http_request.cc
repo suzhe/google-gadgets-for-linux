@@ -677,6 +677,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // re-entered.
     send_flag_ = false;
     succeeded_ = succeeded;
+    if (!succeeded) {
+      response_body_.clear();
+      response_headers_.clear();
+      response_headers_map_.clear();
+      response_text_.clear();
+    }
+
     bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
@@ -711,10 +718,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     Done(true, false);
   }
 
-  virtual ExceptionCode GetAllResponseHeaders(const char **result) {
+  virtual ExceptionCode GetAllResponseHeaders(const std::string **result) {
     ASSERT(result);
     if (state_ == HEADERS_RECEIVED || state_ == LOADING || state_ == DONE) {
-      *result = response_headers_.c_str();
+      *result = &response_headers_;
       return NO_ERR;
     }
 
@@ -724,17 +731,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual ExceptionCode GetResponseHeader(const char *header,
-                                          const char **result) {
+                                          const std::string **result) {
     ASSERT(result);
     if (!header)
       return NULL_POINTER_ERR;
 
     *result = NULL;
     if (state_ == HEADERS_RECEIVED || state_ == LOADING || state_ == DONE) {
-      CaseInsensitiveStringMap::iterator it = response_headers_map_.find(
+      CaseInsensitiveStringMap::const_iterator it = response_headers_map_.find(
           header);
       if (it != response_headers_map_.end())
-        *result = it->second.c_str();
+        *result = &it->second;
       return NO_ERR;
     }
     LOG("XMLHttpRequest: GetRequestHeader: Invalid state: %d", state_);
@@ -742,6 +749,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void DecodeResponseText() {
+    std::string encoding;
+    xml_parser_->ConvertContentToUTF8(response_body_, url_.c_str(),
+                                      response_content_type_.c_str(),
+                                      response_encoding_.c_str(),
+                                      kEncodingFallback,
+                                      &encoding, &response_text_);
+  }
+
+  void ParseResponseToDOM() {
     std::string encoding;
     response_dom_ = xml_parser_->CreateDOMDocument();
     response_dom_->Ref();
@@ -757,7 +773,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  virtual ExceptionCode GetResponseText(const char **result) {
+  virtual ExceptionCode GetResponseText(std::string *result) {
     ASSERT(result);
 
     if (state_ == LOADING) {
@@ -769,28 +785,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (response_text_.empty() && !response_body_.empty())
         DecodeResponseText();
 
-      *result = response_text_.c_str();
+      *result = response_text_;
       return NO_ERR;
     }
 
-    *result = NULL;
+    result->clear();
     LOG("XMLHttpRequest: GetResponseText: Invalid state: %d", state_);
-    return INVALID_STATE_ERR;
-  }
-
-  virtual ExceptionCode GetResponseBody(const char **result, size_t *size) {
-    ASSERT(result);
-    ASSERT(size);
-
-    if (state_ == LOADING || state_ == DONE) {
-      *size = response_body_.length();
-      *result = response_body_.c_str();
-      return NO_ERR;
-    }
-
-    *size = 0;
-    *result = NULL;
-    LOG("XMLHttpRequest: GetResponseBody: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -812,7 +812,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     if (state_ == DONE) {
       if (!response_dom_ && !response_body_.empty())
-        DecodeResponseText();
+        ParseResponseToDOM();
 
       *result = response_dom_;
       return NO_ERR;
@@ -836,11 +836,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return INVALID_STATE_ERR;
   }
 
-  virtual ExceptionCode GetStatusText(const char **result) {
+  virtual ExceptionCode GetStatusText(const std::string **result) {
     ASSERT(result);
 
     if (state_ == LOADING || state_ == DONE) {
-      *result = status_text_.c_str();
+      *result = &status_text_;
       return NO_ERR;
     }
 
@@ -898,30 +898,29 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  const char *ScriptGetAllResponseHeaders() {
-    const char *result = NULL;
+  Variant ScriptGetAllResponseHeaders() {
+    const std::string *result = NULL;
     CheckException(GetAllResponseHeaders(&result));
-    return result;
+    return result ? Variant(*result) : Variant(static_cast<const char *>(NULL));
   }
 
-  const char *ScriptGetResponseHeader(const char *header) {
-    const char *result = NULL;
+  Variant ScriptGetResponseHeader(const char *header) {
+    const std::string *result = NULL;
     CheckException(GetResponseHeader(header, &result));
-    return result;
+    return result ? Variant(*result) : Variant(static_cast<const char *>(NULL));
   }
 
   // We can't return std::string here, because the response body may be binary
   // and can't be converted from UTF-8 to UTF-16 by the script adapter.
   ScriptableBinaryData *ScriptGetResponseBody() {
-    const char *result = NULL;
-    size_t size = 0;
-    if (CheckException(GetResponseBody(&result, &size)))
-      return result ? new ScriptableBinaryData(result, size) : NULL;
+    std::string result;
+    if (CheckException(GetResponseBody(&result)) && !result.empty())
+      return new ScriptableBinaryData(result);
     return NULL;
   }
 
-  const char *ScriptGetResponseText() {
-    const char *result = NULL;
+  std::string ScriptGetResponseText() {
+    std::string result;
     CheckException(GetResponseText(&result));
     return result;
   }
@@ -938,10 +937,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return result;
   }
 
-  const char *ScriptGetStatusText() {
-    const char *result = NULL;
+  Variant ScriptGetStatusText() {
+    const std::string *result = NULL;
     CheckException(GetStatusText(&result));
-    return result;
+    return result ? Variant(*result) : Variant(static_cast<const char *>(NULL));
   }
 
   CURL *curl_;

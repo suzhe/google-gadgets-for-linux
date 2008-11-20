@@ -31,7 +31,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
     : prototype_(prototype),
       context_(context),
       owner_(owner),
-      function_(function) {
+      function_(function),
+      death_flag_ptr_(NULL) {
   ASSERT(function &&
          JS_TypeOfValue(context, OBJECT_TO_JSVAL(function)) == JSTYPE_FUNCTION);
 
@@ -56,6 +57,10 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
+  // Set *death_flag_ to true to let Call() know this slot is to be deleted.
+  if (death_flag_ptr_)
+    *death_flag_ptr_ = true;
+
   if (function_) {
     if (owner_)
       owner_->RemoveJSFunctionSlot(this);
@@ -66,8 +71,16 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
                                    const Variant argv[]) const {
-  if (context_)
-    JSScriptContext::MaybeGC(context_);
+  bool death_flag = false;
+  bool *death_flag_ptr = &death_flag;
+  if (!death_flag_ptr_) {
+    // Let the destructor inform us when this object is to be deleted.
+    death_flag_ptr_ = death_flag_ptr;
+  } else {
+    // There must be some upper stack frame containing Call() call of the same
+    // object. We just use the outer most death_flag_.
+    death_flag_ptr = death_flag_ptr_;
+  }
 
   Variant return_value(GetReturnType());
   if (!function_) {
@@ -81,33 +94,47 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
   if (JS_IsExceptionPending(context_))
     return ResultVariant(return_value);
 
-  AutoLocalRootScope local_root_scope(context_);
-  if (!local_root_scope.good())
-    return ResultVariant(return_value);
-
   scoped_array<jsval> js_args;
-  if (argc > 0) {
-    js_args.reset(new jsval[argc]);
-    for (int i = 0; i < argc; i++) {
-      if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        RaiseException(context_,
-            "Failed to convert argument %d(%s) of function(%s) to jsval",
-            i, argv[i].Print().c_str(), function_info_.c_str());
-        return ResultVariant(return_value);
+  {
+    AutoLocalRootScope local_root_scope(context_);
+    if (!local_root_scope.good())
+      return ResultVariant(return_value);
+
+    if (argc > 0) {
+      js_args.reset(new jsval[argc]);
+      for (int i = 0; i < argc; i++) {
+        if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
+          RaiseException(context_,
+              "Failed to convert argument %d(%s) of function(%s) to jsval",
+              i, argv[i].Print().c_str(), function_info_.c_str());
+          return ResultVariant(return_value);
+        }
       }
     }
   }
 
   jsval rval;
-  if (JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
-                           argc, js_args.get(), &rval) &&
-      !ConvertJSToNative(context_, NULL, return_value, rval, &return_value)) {
-    RaiseException(context_,
-        "Failed to convert JS function(%s) return value(%s) to native",
-        function_info_.c_str(), PrintJSValue(context_, rval).c_str());
+  JSBool ret =  JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
+                                     argc, js_args.get(), &rval);
+  if (!*death_flag_ptr) {
+    if (death_flag_ptr == &death_flag)
+      death_flag_ptr_ = NULL;
+
+    if (context_) {
+      if (ret) {
+        if (!ConvertJSToNative(context_, NULL, return_value, rval,
+                               &return_value)) {
+          RaiseException(context_,
+              "Failed to convert JS function(%s) return value(%s) to native",
+              function_info_.c_str(), PrintJSValue(context_, rval).c_str());
+        }
+      } else {
+        JS_ReportPendingException(context_);
+      }
+      JSScriptContext::MaybeGC(context_);
+    }
   }
 
-  JS_ReportPendingException(context_);
   return ResultVariant(return_value);
 }
 

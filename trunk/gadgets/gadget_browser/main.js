@@ -547,9 +547,9 @@ function search_box_onchange() {
     return;
 
   if (search_box.value == "") {
-    SelectCategory(kCategoryAll); // TODO: kCategoryRecommendations.
+    SelectCategory(kCategoryAll);
     // Undo the actions in ResetSearchBox() called by SelectCategory().
-    search_box_onfocusin();
+    search_box.focus();
   } else {
     if (gSearchPluginsTimer)
       view.clearTimeout(gSearchPluginsTimer);

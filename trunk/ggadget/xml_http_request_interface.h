@@ -72,16 +72,25 @@ class XMLHttpRequestInterface : public ScriptableInterface {
   virtual ExceptionCode Send(const DOMDocumentInterface *data) = 0;
   virtual void Abort() = 0;
 
-  virtual ExceptionCode GetAllResponseHeaders(const char **result) = 0;
+  /**
+   * For all of the following methods that output a
+   * <code>const std::string **</code>, the caller can only use the pointer
+   * during the life of this XMLHttpRequest object.
+   * The caller doesn't need to free the pointer.
+   * We use <code>const std::string **</code> because the specification
+   * requires that the methods sometimes to return null result.
+   */
+  virtual ExceptionCode GetAllResponseHeaders(const std::string **result) = 0;
   virtual ExceptionCode GetResponseHeader(const char *header,
-                                          const char **result) = 0;
-  virtual ExceptionCode GetResponseText(const char **result) = 0;
-  virtual ExceptionCode GetResponseBody(const char **result, size_t *size) = 0;
+                                          const std::string **result) = 0;
   virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) = 0;
   virtual ExceptionCode GetStatus(unsigned short *result) = 0;
-  virtual ExceptionCode GetStatusText(const char **result) = 0;
+  virtual ExceptionCode GetStatusText(const std::string **result) = 0;
 
-  /** Convenient alternative of GetResponseBody(const char **, size_t *). */
+  /** Returns the "text response entity body" as defined in the spec. */
+  virtual ExceptionCode GetResponseText(std::string *result) = 0;
+
+  /** Returns the "response entity body" as defined in the spec. */
   virtual ExceptionCode GetResponseBody(std::string *result) = 0;
 
   /**

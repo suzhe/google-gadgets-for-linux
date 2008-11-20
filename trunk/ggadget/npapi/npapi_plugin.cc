@@ -216,21 +216,22 @@ class Plugin::Impl : public SmallObject<> {
     }
 
     std::string GetHeaders() {
-      const char *headers_ptr = NULL;
+      const std::string *headers_ptr = NULL;
       http_request_->GetAllResponseHeaders(&headers_ptr);
       std::string result;
       if (headers_ptr) {
+        const char *p = headers_ptr->c_str();
         // Remove all '\r's according to NPAPI's requirement.
-        while (*headers_ptr) {
-          if (*headers_ptr != '\r')
-            result += *headers_ptr;
+        while (*p) {
+          if (*p != '\r')
+            result += *p;
+          p++;
         }
       }
       return result;
     }
 
     void OnStateChange() {
-      std::string headers;
       if (http_request_->GetReadyState() == XMLHttpRequestInterface::DONE) {
         unsigned short status = 0;
         if (http_request_->IsSuccessful() &&
@@ -240,14 +241,11 @@ class Plugin::Impl : public SmallObject<> {
           std::string mime_type = http_request_->GetResponseContentType();
           if (mime_type.empty())
             mime_type = owner_->mime_type_;
-          const char *response = NULL;
-          size_t response_size = 0;
-          http_request_->GetResponseBody(&response, &response_size);
-          std::string response_str;
-          if (response)
-            response_str.assign(response, response_size);
+
+          std::string response;
+          http_request_->GetResponseBody(&response);
           owner_->OnStreamReady(url_, http_request_->GetEffectiveUrl(),
-                                mime_type, headers, response_str,
+                                mime_type, GetHeaders(), response,
                                 notify_, notify_data_);
         } else {
           owner_->OnStreamError(url_, notify_, notify_data_, NPRES_NETWORK_ERR);

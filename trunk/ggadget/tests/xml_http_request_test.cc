@@ -117,71 +117,6 @@ class Callback {
   XMLHttpRequestInterface *request_;
 };
 
-#if 0 // Local file is no longer supported.
-TEST(XMLHttpRequest, SyncLocalFile) {
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
-  request->Ref();
-
-  Callback callback(request);
-
-  system("echo ABCDEFG >/tmp/xml_http_request_test_data");
-  // Valid request.
-  request->ConnectOnReadyStateChange(NewSlot(&callback, &Callback::Call));
-  ASSERT_EQ(0, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Open("GET", "file:///tmp/xml_http_request_test_data",
-                          false, NULL, NULL));
-  ASSERT_EQ(1, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
-  ASSERT_EQ(5, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
-  const char *str;
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_STREQ("", str);
-  size_t size;
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseBody(&str, &size));
-  ASSERT_STREQ("ABCDEFG\n", str);
-  ASSERT_EQ(8u, size);
-  ASSERT_EQ(1, request->GetRefCount());
-  request->Unref();
-}
-
-TEST(XMLHttpRequest, AsyncLocalFile) {
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
-  request->Ref();
-
-  Callback callback(request);
-  system("echo GFEDCBA123 >/tmp/xml_http_request_test_data");
-  // Valid request.
-  request->ConnectOnReadyStateChange(NewSlot(&callback, &Callback::Call));
-  ASSERT_EQ(0, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Open("GET", "file:///tmp/xml_http_request_test_data",
-                          true, NULL, NULL));
-  ASSERT_EQ(1, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
-  ASSERT_EQ(5, callback.callback_count_);
-  ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
-  const char *str;
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_STREQ("", str);
-  size_t size;
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseBody(&str, &size));
-  ASSERT_STREQ("GFEDCBA123\n", str);
-  ASSERT_EQ(11u, size);
-  ASSERT_EQ(1, request->GetRefCount());
-  request->Unref();
-}
-#endif
-
 const char *kResponse0 = "HTTP/1.1 200 OK\r\n";
 const char *kResponse1 = "Connection: Close\r\n"
                          "Set-Cookie: COOKIE1=Value1; Path=/\r\n"
@@ -333,42 +268,41 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
             server.request_.find("TestHeader: TestHeaderValue\r\n"));
   ASSERT_EQ(std::string::npos, server.request_.find("Cookie:"));
 
-  const char *str;
-  size_t size;
+  const std::string *str_p;
+  std::string str;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_STREQ((std::string(kResponse1) + kResponse2).c_str(), str);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseBody(&str, &size));
-  ASSERT_STREQ((std::string(kResponse3) + kResponse4).c_str(), str);
-  ASSERT_EQ(strlen(kResponse3) + strlen(kResponse4), size);
+            request->GetAllResponseHeaders(&str_p));
+  ASSERT_EQ(std::string(kResponse1) + kResponse2, *str_p);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseBody(&str));
+  ASSERT_EQ(std::string(kResponse3) + kResponse4, str);
+  ASSERT_EQ(strlen(kResponse3) + strlen(kResponse4), str.size());
   unsigned short status;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatus(&status));
   ASSERT_EQ(200, status);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str));
-  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str_p));
+  ASSERT_STREQ("OK", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("NoSuchHeader", &str));
-  ASSERT_TRUE(NULL == str);
+            request->GetResponseHeader("NoSuchHeader", &str_p));
+  ASSERT_TRUE(NULL == str_p);
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("TestHeader1", &str));
-  ASSERT_STREQ("Value1", str);
+            request->GetResponseHeader("TestHeader1", &str_p));
+  ASSERT_STREQ("Value1", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("testheader1", &str));
-  ASSERT_STREQ("Value1", str);
+            request->GetResponseHeader("testheader1", &str_p));
+  ASSERT_STREQ("Value1", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("testheader2", &str));
-  ASSERT_STREQ("Value2a, Value2b", str);
+            request->GetResponseHeader("testheader2", &str_p));
+  ASSERT_STREQ("Value2a, Value2b", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("TestHeader2", &str));
-  ASSERT_STREQ("Value2a, Value2b", str);
+            request->GetResponseHeader("TestHeader2", &str_p));
+  ASSERT_STREQ("Value2a, Value2b", str_p->c_str());
 
   pthread_join(server.thread_, NULL);
   ASSERT_TRUE(server.succeeded_);
 
-  const char *text;
+  std::string text;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseText(&text));
-  ASSERT_STREQ(kResponseText, text);
+  ASSERT_STREQ(kResponseText, text.c_str());
   DOMDocumentInterface *dom = NULL;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseXML(&dom));
   ASSERT_TRUE(dom);
@@ -405,8 +339,8 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(2, callback.callback_count_);
   ASSERT_FALSE(request->IsSuccessful());
 
-  const char *str;
-  size_t size;
+  const std::string *str_p;
+  std::string str;
   server.instruction_ = 1;
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(0U, server.request_.find("GET /test HTTP/1."));
@@ -418,13 +352,14 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(2, callback.callback_count_);
   // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state.
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_TRUE(NULL == str);
+            request->GetAllResponseHeaders(&str_p));
+  ASSERT_TRUE(NULL == str_p);
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
-            request->GetResponseBody(&str, &size));
+            request->GetResponseBody(&str));
+  ASSERT_EQ(0u, str.size());
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
-            request->GetStatusText(&str));
-  ASSERT_EQ(0u, size);
+            request->GetStatusText(&str_p));
+  ASSERT_TRUE(NULL == str_p);
   ASSERT_FALSE(request->IsSuccessful());
 
   server.instruction_ = 2;
@@ -439,32 +374,31 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_FALSE(request->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_STREQ((std::string(kResponse1) + kResponse2).c_str(), str);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseBody(&str, &size));
-  ASSERT_STREQ(kResponse3, str);
-  ASSERT_EQ(strlen(kResponse3), size);
+            request->GetAllResponseHeaders(&str_p));
+  ASSERT_EQ(std::string(kResponse1) + kResponse2, *str_p);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseBody(&str));
+  ASSERT_STREQ(kResponse3, str.c_str());
+  ASSERT_EQ(strlen(kResponse3), str.size());
   unsigned short status;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatus(&status));
   ASSERT_EQ(200, status);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str));
-  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str_p));
+  ASSERT_STREQ("OK", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("NoSuchHeader", &str));
-  ASSERT_TRUE(NULL == str);
+            request->GetResponseHeader("NoSuchHeader", &str_p));
+  ASSERT_TRUE(NULL == str_p);
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("TestHeader1", &str));
-  ASSERT_STREQ("Value1", str);
+            request->GetResponseHeader("TestHeader1", &str_p));
+  ASSERT_STREQ("Value1", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("testheader1", &str));
-  ASSERT_STREQ("Value1", str);
+            request->GetResponseHeader("testheader1", &str_p));
+  ASSERT_STREQ("Value1", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("testheader2", &str));
-  ASSERT_STREQ("Value2a, Value2b", str);
+            request->GetResponseHeader("testheader2", &str_p));
+  ASSERT_STREQ("Value2a, Value2b", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseHeader("TestHeader2", &str));
-  ASSERT_STREQ("Value2a, Value2b", str);
+            request->GetResponseHeader("TestHeader2", &str_p));
+  ASSERT_STREQ("Value2a, Value2b", str_p->c_str());
   ASSERT_FALSE(request->IsSuccessful());
 
   server.instruction_ = 4;
@@ -474,23 +408,22 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_TRUE(request->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetAllResponseHeaders(&str));
-  ASSERT_STREQ((std::string(kResponse1) + kResponse2).c_str(), str);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->GetResponseBody(&str, &size));
-  ASSERT_STREQ((std::string(kResponse3) + kResponse4).c_str(), str);
-  ASSERT_EQ(strlen(kResponse3) + strlen(kResponse4), size);
+            request->GetAllResponseHeaders(&str_p));
+  ASSERT_EQ(std::string(kResponse1) + kResponse2, *str_p);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseBody(&str));
+  ASSERT_EQ(std::string(kResponse3) + kResponse4, str);
+  ASSERT_EQ(strlen(kResponse3) + strlen(kResponse4), str.size());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatus(&status));
   ASSERT_EQ(200, status);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str));
-  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str_p));
+  ASSERT_STREQ("OK", str_p->c_str());
 
   pthread_join(server.thread_, NULL);
   ASSERT_TRUE(server.succeeded_);
 
-  const char *text;
+  std::string text;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseText(&text));
-  ASSERT_STREQ(kResponseText, text);
+  ASSERT_STREQ(kResponseText, text.c_str());
   DOMDocumentInterface *dom = NULL;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseXML(&dom));
   ASSERT_TRUE(dom);
@@ -538,16 +471,16 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
 
   for (int i = 0; i < 30; i++) { Wait(10); g_main_loop.DoIteration(false); }
   unsigned short status;
-  const char *str;
+  const std::string *str_p;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->GetStatus(&status));
   ASSERT_EQ(200, status);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->GetStatusText(&str));
-  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->GetStatusText(&str_p));
+  ASSERT_STREQ("OK", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request1->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->GetStatus(&status));
   ASSERT_EQ(200, status);
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->GetStatusText(&str));
-  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->GetStatusText(&str_p));
+  ASSERT_STREQ("OK", str_p->c_str());
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request2->GetReadyState());
 
   ASSERT_EQ(0U, server1.request_.find("HEAD /test1 HTTP/"));
