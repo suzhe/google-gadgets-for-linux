@@ -623,7 +623,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   void OnResponseHeaderReceived(const QHttpResponseHeader &header) {
     status_ = static_cast<unsigned short>(header.statusCode());
-    if (status_ == 301) {
+    if (status_ == 301 || status_ == 302) {
       redirected_url_ = header.value("Location").toUtf8().data();
     } else {
       response_header_ = header;
@@ -652,7 +652,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void OnRequestFinished(int id, bool error) {
-    if (status_ == 301) {
+    if (status_ == 301 || status_ == 302) {
       FreeResource();
       send_flag_ = false;
       if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
