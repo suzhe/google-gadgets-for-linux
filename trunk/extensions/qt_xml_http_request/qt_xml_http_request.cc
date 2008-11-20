@@ -49,6 +49,8 @@
 namespace ggadget {
 namespace qt {
 
+static const int kMaxRedirectTimes = 5;
+
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
   Variant(true),
@@ -103,6 +105,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         async_(false),
         state_(UNSENT),
         send_flag_(false),
+        redirected_times_(0),
         status_(0),
         succeeded_(false),
         response_dom_(NULL) {
@@ -623,7 +626,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   void OnResponseHeaderReceived(const QHttpResponseHeader &header) {
     status_ = static_cast<unsigned short>(header.statusCode());
-    if (status_ == 301 || status_ == 302) {
+    if ((status_ >= 300 && status_ <= 303) || status_ == 307) {
       redirected_url_ = header.value("Location").toUtf8().data();
     } else {
       response_header_ = header;
@@ -652,8 +655,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void OnRequestFinished(int id, bool error) {
-    if (status_ == 301 || status_ == 302) {
+    if ((status_ >= 300 && status_ <= 303) || status_ == 307) {
       FreeResource();
+      if (redirected_times_ == kMaxRedirectTimes) {
+        LOG("Too much redirect, abort this request");
+        Done(false, false);
+        return;
+      }
+      if (((status_ == 301 || status_ == 302) && method_ == "POST") ||
+          status_ == 303) {
+        method_ = "GET";
+      }
       send_flag_ = false;
       if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
         // TODO: Why do the state changes?
@@ -661,6 +673,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         // ChangeState(LOADING);
         Done(false, false);
       } else {
+        redirected_times_++;
         Send(NULL, 0);
       }
     } else {
@@ -698,6 +711,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   bool send_flag_;
 
   std::string redirected_url_;
+  int redirected_times_;
   std::string response_headers_;
   std::string response_content_type_;
   std::string response_encoding_;
