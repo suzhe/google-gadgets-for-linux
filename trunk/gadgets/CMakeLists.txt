@@ -16,15 +16,15 @@
 
 ADD_SUBDIRECTORY(designer)
 
-ADD_DIR_TO_ZIP(analog_clock ../output/bin/analog_clock.gg)
-ADD_DIR_TO_ZIP(digital_alarm_clock ../output/bin/digital_alarm_clock.gg)
+ADD_DIR_TO_ZIP(analog_clock ../output/bin/analog-clock.gg)
+ADD_DIR_TO_ZIP(digital_alarm_clock ../output/bin/digital-alarm-clock.gg)
 ADD_DIR_TO_ZIP(igoogle ../output/bin/igoogle.gg)
 ADD_DIR_TO_ZIP(rss ../output/bin/rss.gg)
 ADD_DIR_TO_ZIP(photos ../output/bin/photos.gg)
 ADD_DIR_TO_ZIP(gadget_browser ../output/bin/google-gadget-browser.gg)
 
-INSTALL_GADGET(analog_clock.gg)
-INSTALL_GADGET(digital_alarm_clock.gg)
+INSTALL_GADGET(analog-clock.gg)
+INSTALL_GADGET(digital-alarm-clock.gg)
 INSTALL_GADGET(igoogle.gg)
 INSTALL_GADGET(rss.gg)
 INSTALL_GADGET(photos.gg)

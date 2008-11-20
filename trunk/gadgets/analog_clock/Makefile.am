@@ -30,12 +30,12 @@ EXTRA_DIST = $(ANALOG_CLOCK_GADGET_FILES)
 CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
-analog_clock_gadget_DATA = analog_clock.gg
+analog_clock_gadget_DATA = analog-clock.gg
 analog_clock_gadgetdir=$(GGL_RESOURCE_DIR)
 
-analog_clock.gg: $(ANALOG_CLOCK_GADGET_FILES)
+analog-clock.gg: $(ANALOG_CLOCK_GADGET_FILES)
 	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(ANALOG_CLOCK_GADGET_FILES))
 else
 nobase_analog_clock_gadget_DATA = $(ANALOG_CLOCK_GADGET_FILES)
-analog_clock_gadgetdir = $(GGL_RESOURCE_DIR)/analog_clock
+analog_clock_gadgetdir = $(GGL_RESOURCE_DIR)/analog-clock
 endif

@@ -98,6 +98,7 @@ namespace libmozjs {
 #undef JS_RemoveRootRT
 #undef JS_ReportError
 #undef JS_ReportErrorNumber
+#undef JS_ReportPendingException
 #undef JS_ReportWarning
 #undef JS_ResolveStub
 #undef JS_SetBranchCallback

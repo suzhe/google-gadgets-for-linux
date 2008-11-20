@@ -20,7 +20,14 @@ GADGET_BROWSER_FILES= \
 		images/add_button_default.png \
 		images/add_button_down.png \
 		images/add_button_hover.png \
-		images/background.png \
+		images/bg_bottom_left.png \
+		images/bg_bottom_middle.png \
+		images/bg_bottom_right.png \
+		images/bg_middle_left.png \
+		images/bg_middle_right.png \
+		images/bg_top_left.png \
+		images/bg_top_middle.png \
+		images/bg_top_right.png \
 		images/category_active.png \
 		images/category_hover.png \
 		images/close_button_down.png \
@@ -63,5 +70,5 @@ google-gadget-browser.gg: $(GADGET_BROWSER_FILES)
 	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(GADGET_BROWSER_FILES))
 else
 nobase_gadget_browser_DATA = $(GADGET_BROWSER_FILES)
-gadget_browserdir = $(GGL_RESOURCE_DIR)/gadget_browser
+gadget_browserdir = $(GGL_RESOURCE_DIR)/google-gadget-browser
 endif

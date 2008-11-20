@@ -15,7 +15,7 @@
 
 EXTRA_DIST = CMakeLists.txt
 
-SUBDIRS = . gadget
+SUBDIRS = . blank_gadget gadget
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

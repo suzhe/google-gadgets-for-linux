@@ -35,15 +35,15 @@ BLANK_GADGET_FILES = \
 		main.xml
 
 EXTRA_DIST = $(BLANK_GADGET_FILES)
-
-nobase_blank_gadget_DATA = $(BLANK_GADGET_FILES)
+CLEANFILES = *.gg
 
 if GGL_HAVE_ZIP
-install-data-hook:
-	(cd $(DESTDIR)$(GGL_RESOURCE_DIR)/blank_gadget; \
-	 $(ZIP) -r -u ../blank_gadget.gg \
-		$(BLANK_GADGET_FILES); \
-	 cd ..; $(ZIP) -u designer.gg blank_gadget.gg; \
-	 rm blank_gadget.gg)
-	rm -fr $(DESTDIR)$(GGL_RESOURCE_DIR)/blank_gadget
+blank_gadget_DATA = blank-gadget.gg
+blank_gadgetdir = $(GGL_RESOURCE_DIR)/designer
+
+blank-gadget.gg: $(BLANK_GADGET_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(BLANK_GADGET_FILES))
+else
+nobase_blank_gadget_DATA = $(BLANK_GADGET_FILES)
+blank_gadgetdir = $(GGL_RESOURCE_DIR)/designer/blank-gadget
 endif

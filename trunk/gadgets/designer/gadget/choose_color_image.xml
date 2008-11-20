@@ -90,5 +90,5 @@
       <img name="e_image_display1"/>
     </div>
   </div>
-	<script src="choose_color_image.js"/>
+  <script src="choose_color_image.js"/>
 </view>

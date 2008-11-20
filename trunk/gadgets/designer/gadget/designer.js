@@ -28,8 +28,6 @@ var kOptionsXML = "options.xml";
 var kOptionsJS = "options.js";
 var kGadgetGManifest = "gadget.gmanifest";
 
-var kMaxViewWidth = 1600;
-var kMaxViewHeight = 700;
 var kMinViewWidth = 720;
 var kMinViewHeight = 400;
 
@@ -129,14 +127,10 @@ function view_onclose() {
 }
 
 function view_onsizing() {
-  if (event.width > kMaxViewWidth) {
-    event.width = kMaxViewWidth;
-  } else if (event.width < kMinViewWidth) {
+  if (event.width < kMinViewWidth) {
     event.width = kMinViewWidth;
   }
-  if (event.height > kMaxViewHeight) {
-    event.height = kMaxViewHeight;
-  } else if (event.height < kMinViewHeight) {
+  if (event.height < kMinViewHeight) {
     event.height = kMinViewHeight;
   }
 }
@@ -144,15 +138,29 @@ function view_onsizing() {
 var g_view_onsize_timer = 0;
 function view_onsize() {
   // The borders are updated not delayed.
-  e_top_border.width = e_bottom_border.width =
-      view.width - 2 * e_left_border.offsetWidth;
+  var v_width = view.width;
+  var v_height = view.height;
+
+  e_border_top_middle.width = v_width -
+    e_border_top_left.offsetWidth - e_border_top_right.offsetWidth;
+
+  e_border_bottom_middle.width = v_width -
+    e_border_bottom_left.offsetWidth - e_border_bottom_right.offsetWidth;
+
+  e_border_middle_left.height = v_height -
+    e_border_top_left.offsetHeight - e_border_bottom_left.offsetHeight;
+
+  e_border_middle_right.height = v_height -
+    e_border_top_right.offsetHeight - e_border_bottom_right.offsetHeight;
+
   if (!g_view_onsize_timer) {
     // Use a timer to lower the priority of reaction of onsize.
     g_view_onsize_timer = view.setTimeout(function() {
       g_view_onsize_timer = 0;
-      var net_width = view.width - 2 * e_left_border.offsetWidth;
-      var net_height = view.height - e_top_border.offsetHeight -
-                       e_bottom_border.offsetHeight;
+      var net_width = view.width - e_border_middle_left.offsetWidth -
+        e_border_middle_right.offsetWidth;
+      var net_height = view.height - e_border_top_middle.offsetHeight -
+        e_border_bottom_middle.offsetHeight;
       e_whole_ui.width = net_width;
       e_whole_ui.height = net_height;
       var main_height = net_height - e_toolbar.offsetHeight;
@@ -1082,7 +1090,7 @@ function NewGadget() {
   if (!CloseGadget())
     return;
 
-  OpenGadgetFile(gadget.storage.extract("blank_gadget.gg"), kMainXML);
+  OpenGadgetFile(gadget.storage.extract("blank-gadget.gg"), kMainXML);
   if (g_gadget_file_manager) {
     var manifest = g_gadget_file_manager.read(kGadgetGManifest)
         .replace("{{UUID}}", designerUtils.generateUUID())
