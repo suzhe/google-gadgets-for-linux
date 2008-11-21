@@ -58,7 +58,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot* prototype,
       prototype_(prototype),
       engine_(engine),
       code_(false),
-      function_(function) {
+      function_(function),
+      death_flag_ptr_(NULL) {
 #ifdef _DEBUG
   i++;
   DLOG("New JSFunctionSlot:#%d", i);
@@ -91,8 +92,11 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
   }
 
   Variant return_value(GetReturnType());
-  if (!q_obj_->valid_)
+  if (!q_obj_->valid_) {
+    if (death_flag_ptr_ == &death_flag)
+      death_flag_ptr_ = NULL;
     return ResultVariant(return_value);
+  }
   ScopedLogContext log_context(GetEngineContext(engine_));
   QScriptValue qval;
 
@@ -111,6 +115,8 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
         engine_->currentContext()->throwError(
             QString("Failed to convert native parameter %1 to QScriptValue")
             .arg(i));
+        if (death_flag_ptr_ == &death_flag)
+          death_flag_ptr_ = NULL;
         return ResultVariant(return_value);
       }
       args << qval;
@@ -119,6 +125,7 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
     qval = fun.call(QScriptValue(), args);
   }
 
+  /* Only if 'this' isn't dead, can we access the members of 'this' */
   if (!*death_flag_ptr) {
     if (death_flag_ptr == &death_flag)
       death_flag_ptr_ = NULL;

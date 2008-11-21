@@ -44,7 +44,6 @@
 #include <ggadget/qt/utilities.h>
 #include <ggadget/run_once.h>
 #include <ggadget/script_runtime_interface.h>
-#include <ggadget/usage_collector_interface.h>
 #include <ggadget/xml_http_request_interface.h>
 
 #include "qt_host.h"
@@ -258,16 +257,21 @@ int main(int argc, char* argv[]) {
       ggadget::kDefaultProfileDirectory,
       NULL);
 
-  std::string error;
+  QString error;
+  ggadget::qt::GGLInitFlags flags;
+  if (long_log)
+    flags |= ggadget::qt::GGL_INIT_FLAG_LONG_LOG;
+  if (enable_collector)
+    flags |= ggadget::qt::GGL_INIT_FLAG_COLLECTOR;
+
   g_main_loop = new ggadget::qt::QtMainLoop();
   if (!ggadget::qt::InitGGL(g_main_loop, GGL_APP_NAME,
                             profile_dir.c_str(),
                             kGlobalExtensions,
                             log_level,
-                            long_log,
+                            flags,
                             &error)) {
-    QMessageBox::information(NULL, "Google Gadgets",
-                             QString::fromUtf8(error.c_str()));
+    QMessageBox::information(NULL, "Google Gadgets", error);
     return 1;
   }
 
@@ -287,27 +291,10 @@ int main(int argc, char* argv[]) {
   if (background)
     ggadget::Daemonize();
 
-  if (enable_collector) {
-    ggadget::UsageCollectorFactoryInterface *collector_factory =
-        ggadget::GetUsageCollectorFactory();
-    if (collector_factory) {
-      collector_factory->SetApplicationInfo(GGL_APP_NAME, GGL_VERSION);
-      QRect rect = app.desktop()->screenGeometry();
-      std::string screen_size_param =
-          ggadget::StringPrintf("%dx%d", rect.width(), rect.height());
-      collector_factory->SetParameter(
-          ggadget::UsageCollectorFactoryInterface::PARAM_SCREEN_SIZE,
-          screen_size_param.c_str());
-    }
-  }
-
-  // Initialize the gadget manager before creating the host.
-  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
-  gadget_manager->Init();
-
   hosts::qt::QtHost host(composite, debug_mode, debug_console);
 
   // Load gadget files.
+  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
   for (size_t i = 0; i < gadget_paths.size(); ++i)
     gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
 

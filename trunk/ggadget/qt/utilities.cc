@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <string>
 #include <QtCore/QMutex>
+#include <QtGui/QApplication>
 #include <QtGui/QMessageBox>
 #include <QtGui/QPixmap>
 #include <QtGui/QDesktopWidget>
@@ -40,6 +41,7 @@
 #include <ggadget/system_utils.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/xdg/utilities.h>
+#include <ggadget/usage_collector_interface.h>
 #include "utilities.h"
 #include "utilities_internal.h"
 
@@ -432,13 +434,13 @@ static bool InitGGLInternal(
     const char *profile_dir,
     const char *extensions[],
     int log_level,
-    bool long_log,
+    GGLInitFlags flags,
     std::string *error) {
   if (!main_loop)
     main_loop = new QtMainLoop();
   ggadget::SetGlobalMainLoop(main_loop);
   ggadget::EnsureDirectories(profile_dir);
-  ggadget::SetupLogger(log_level, long_log);
+  ggadget::SetupLogger(log_level, flags.testFlag(GGL_INIT_FLAG_LONG_LOG));
 
   // Set global file manager.
   ggadget::SetupGlobalFileManager(profile_dir);
@@ -469,6 +471,20 @@ static bool InitGGLInternal(
 
   ggadget::InitXHRUserAgent(user_agent);
 
+  if (flags.testFlag(GGL_INIT_FLAG_COLLECTOR)) {
+    UsageCollectorFactoryInterface *collector_factory =
+        GetUsageCollectorFactory();
+    if (collector_factory) {
+      collector_factory->SetApplicationInfo(user_agent, GGL_VERSION);
+      QRect rect = qApp->desktop()->screenGeometry();
+      std::string screen_size_param =
+          StringPrintf("%dx%d", rect.width(), rect.height());
+      collector_factory->SetParameter(
+          UsageCollectorFactoryInterface::PARAM_SCREEN_SIZE,
+          screen_size_param.c_str());
+    }
+  }
+
   // Initialize the gadget manager before creating the host.
   ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
   gadget_manager->Init();
@@ -482,16 +498,19 @@ bool InitGGL(
     const char *profile_dir,
     const char *extensions[],
     int log_level,
-    bool long_log,
-    std::string *error
+    GGLInitFlags flags,
+    QString *error
     ) {
   if (!ggl_initialized) {
     QMutexLocker lock(&ggl_mutex);
     if (!ggl_initialized) {
+      std::string err_msg;
       if (InitGGLInternal(main_loop, user_agent, profile_dir, extensions,
-                          log_level, long_log, error)) {
-       ggl_status = true;
+                          log_level, flags, &err_msg)) {
+        ggl_status = true;
       }
+      if (error)
+        *error = QString::fromUtf8(err_msg.c_str());
       ggl_initialized = true;
     }
   }
