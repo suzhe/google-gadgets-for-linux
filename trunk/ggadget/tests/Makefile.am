@@ -99,6 +99,7 @@ xml_parser_test_SOURCES		= xml_parser_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 image_cache_test_SOURCES	= image_cache_test.cc
 permissions_test_SOURCES	= permissions_test.cc
+uuid_test_SOURCES		= uuid_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc native_main_loop.cc
 xml_http_request_test_LDADD	= $(PTHREAD_LIBS) \
