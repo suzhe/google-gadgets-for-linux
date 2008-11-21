@@ -57,6 +57,7 @@ static const char *kGstAudioSinks[] = {
 };
 
 static double kMaxGstVolume = 4.0;
+static bool g_gst_init_ok_ = false;
 
 /**
  * Gstreamer based implementation of @c Audioclip for playing back audio files.
@@ -69,7 +70,8 @@ class GstAudioclip : public AudioclipInterface {
     : playbin_(NULL),
       panorama_(NULL),
       local_state_(SOUND_STATE_ERROR),
-      local_error_(SOUND_ERROR_NO_ERROR) {
+      local_error_(SOUND_ERROR_NO_ERROR),
+      gst_state_(GST_STATE_VOID_PENDING) {
     playbin_ = gst_element_factory_make("playbin", "player");
     GstElement *videosink = gst_element_factory_make("fakesink", "fakevideo");
 
@@ -278,6 +280,7 @@ class GstAudioclip : public AudioclipInterface {
   }
 
   virtual void Play() {
+    DLOG("GstAudioclip: Play(%s)", src_.c_str());
     if (playbin_ && src_.length()) {
       if (gst_element_set_state(playbin_, GST_STATE_PLAYING) ==
           GST_STATE_CHANGE_FAILURE) {
@@ -292,6 +295,7 @@ class GstAudioclip : public AudioclipInterface {
   }
 
   virtual void Pause() {
+    DLOG("GstAudioclip: Pause(%s)", src_.c_str());
     if (playbin_ && local_state_ == SOUND_STATE_PLAYING) {
       if (gst_element_set_state(playbin_, GST_STATE_PAUSED) ==
           GST_STATE_CHANGE_FAILURE) {
@@ -301,6 +305,7 @@ class GstAudioclip : public AudioclipInterface {
   }
 
   virtual void Stop() {
+    DLOG("GstAudioclip: Stop(%s)", src_.c_str());
     if (playbin_ && local_state_ != SOUND_STATE_STOPPED) {
       // If set "NULL" state here, playbin won't produce "STATE CHANGED" message.
       if (gst_element_set_state(playbin_, GST_STATE_NULL) ==
@@ -328,13 +333,31 @@ class GstAudioclip : public AudioclipInterface {
     ASSERT(msg);
     GstState old_state, new_state;
     gst_message_parse_state_changed(msg, &old_state, &new_state, NULL);
-    State new_local_state = GstStateToLocalState(new_state);
-    if (local_state_ != new_local_state) {
-      DLOG("AudioClip OnStateChange: old=%d new=%d",
-           local_state_, new_local_state);
-      local_state_ = new_local_state;
-      on_state_change_signal_(local_state_);
+    DLOG("GstAudioclip: OnStateChange: old=%d new=%d", old_state, new_state);
+
+    // Only care about effective state change.
+    if (gst_state_ == GST_STATE_VOID_PENDING || gst_state_ == old_state) {
+      State new_local_state = GstStateToLocalState(new_state);
+      bool changed = false;
+      if (local_state_ == SOUND_STATE_STOPPED) {
+        changed = (new_local_state == SOUND_STATE_PLAYING);
+      } else if (local_state_ == SOUND_STATE_PLAYING) {
+        changed = (new_local_state == SOUND_STATE_STOPPED ||
+                   new_local_state == SOUND_STATE_PAUSED);
+      } else if (local_state_ == SOUND_STATE_PAUSED) {
+        changed = (new_local_state == SOUND_STATE_PLAYING);
+      } else if (new_local_state == SOUND_STATE_ERROR) {
+        changed = (new_local_state != local_state_);
+      }
+
+      if (changed) {
+        DLOG("GstAudioclip: local state changed: old=%d new=%d",
+             local_state_, new_local_state);
+        local_state_ = new_local_state;
+        on_state_change_signal_(local_state_);
+      }
     }
+    gst_state_ = new_state;
   }
 
   void OnError(GstMessage *msg) {
@@ -417,6 +440,7 @@ class GstAudioclip : public AudioclipInterface {
   // Audio state and the latest reported error code.
   State local_state_;
   ErrorCode local_error_;
+  GstState gst_state_;
 
   // Closure to be called when the state of audio player changes.
   Signal1<void, State> on_state_change_signal_;
@@ -425,7 +449,7 @@ class GstAudioclip : public AudioclipInterface {
 class GstAudio : public AudioInterface {
  public:
   virtual AudioclipInterface * CreateAudioclip(const char *src)  {
-    return new GstAudioclip(src);
+    return g_gst_init_ok_ ? new GstAudioclip(src) : NULL;
   }
 };
 
@@ -442,13 +466,19 @@ using namespace ggadget::framework::gst_audio;
 extern "C" {
   bool Initialize() {
     LOGI("Initialize gst_audio_framework extension.");
-    gst_init(NULL, NULL);
+    GError *error = NULL;
+    g_gst_init_ok_ = gst_init_check(NULL, NULL, &error);
+    if (error) {
+      LOGI("Failed to initialize gstreamer: %s", error->message);
+      g_error_free(error);
+    }
     return true;
   }
 
   void Finalize() {
     LOGI("Finalize gst_audio_framework extension.");
-    gst_deinit();
+    if (g_gst_init_ok_)
+      gst_deinit();
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
