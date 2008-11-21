@@ -57,12 +57,20 @@ void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
  */
 QPoint GetPopupPosition(const QRect &rect, const QSize &size);
 
+enum GGLInitFlag {
+  GGL_INIT_FLAG_LONG_LOG = 0x1,
+  GGL_INIT_FLAG_COLLECTOR = 0x2
+};
+Q_DECLARE_FLAGS(GGLInitFlags, GGLInitFlag)
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(GGLInitFlags)
+
 /* Initialize the GGL runtime system.
  *
  * @main_loop If null, InitGGL will create main_loop itself
  * @user_agent Application name
  * @profile_dir If null, kDefaultProfileDirectory will be used
- * @extensions Extensions to be loaded. 
+ * @extensions Extensions to be loaded.
  */
 bool InitGGL(
     MainLoopInterface *main_loop,
@@ -70,8 +78,8 @@ bool InitGGL(
     const char *profile_dir,
     const char *extensions[],
     int log_level,
-    bool long_log,
-    std::string *error_msg
+    GGLInitFlags flags,
+    QString *error_msg
     );
 /*
  * Show a dialog asking user confirm gadget installation
