@@ -43,6 +43,7 @@ namespace libmozjs {
 #undef JS_CompileUCFunction
 #undef JS_CompileUCScript
 #undef JS_ConvertStub
+#undef JS_DHashTableEnumerate
 #undef JS_DefineFunction
 #undef JS_DefineFunctions
 #undef JS_DefineProperty
@@ -51,7 +52,6 @@ namespace libmozjs {
 #undef JS_DestroyIdArray
 #undef JS_Finish
 #undef JS_DestroyScript
-#undef JS_DHashTableEnumerate
 #undef JS_EnterLocalRootScope
 #undef JS_Enumerate
 #undef JS_EnumerateStub
@@ -91,6 +91,7 @@ namespace libmozjs {
 #undef JS_NewString
 #undef JS_NewStringCopyN
 #undef JS_NewStringCopyZ
+#undef JS_NewUCString
 #undef JS_NewUCStringCopyN
 #undef JS_NewUCStringCopyZ
 #undef JS_PropertyStub
@@ -123,6 +124,8 @@ namespace libmozjs {
 #undef JS_ValueToInt32
 #undef JS_ValueToNumber
 #undef JS_ValueToString
+#undef JS_malloc
+#undef JS_realloc
 #undef JS_GetClass
 
 // Define real function pointers.

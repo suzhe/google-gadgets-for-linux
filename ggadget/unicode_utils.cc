@@ -340,7 +340,7 @@ size_t ConvertStringUTF8ToUTF16Buffer(const char *src, size_t src_length,
   size_t used_src_length = 0;
   size_t utf8_len;
   size_t utf16_len;
-  UTF16Char utf16[2];
+  UTF16Char utf16[2] = { 0, 0 };
   UTF32Char utf32;
   while (src_length && *src) {
     utf8_len = ConvertCharUTF8ToUTF32Internal(src, src_length, &utf32);
