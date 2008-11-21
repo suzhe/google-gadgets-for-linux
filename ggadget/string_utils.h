@@ -253,7 +253,7 @@ std::string EncodeJavaScriptString(const std::string &source);
  *     need it.
  * @return @c true if separator found.
  */
-bool SplitString(const std::string &source, const std::string &separator,
+bool SplitString(const std::string &source, const char *separator,
                  std::string *result_left, std::string *result_right);
 
 /**
@@ -263,7 +263,7 @@ bool SplitString(const std::string &source, const std::string &separator,
  * @param[out] result store the result string list.
  * @return @c true if separator found.
  */
-bool SplitStringList(const std::string &source, const std::string &separator,
+bool SplitStringList(const std::string &source, const char *separator,
                      StringVector *result);
 
 /**

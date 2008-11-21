@@ -609,17 +609,21 @@ class ContentAreaElement::Impl : public SmallObject<> {
               if (mouse_over_pin_) {
                 mouse_over_item_->ToggleItemPinnedState();
               } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
-                std::string title;
-                DetailsViewData *details_view_data = NULL;
-                int flags = 0;
-                if (!mouse_over_item_->OnDetailsView(
-                       &title, &details_view_data, &flags) &&
-                    details_view_data) {
-                  owner_->GetView()->GetGadget()->ShowDetailsView(
-                      details_view_data, title.c_str(), flags,
-                      NewFunctorSlot<bool, int>(DetailsViewFeedbackHandler(
-                          this, mouse_over_item_)));
-                  details_open_item_ = mouse_over_item_;
+                if (mouse_over_item_ == details_open_item_) {
+                  owner_->GetView()->GetGadget()->CloseDetailsView();
+                } else {
+                  std::string title;
+                  DetailsViewData *details_view_data = NULL;
+                  int flags = 0;
+                  if (!mouse_over_item_->OnDetailsView(
+                         &title, &details_view_data, &flags) &&
+                      details_view_data) {
+                    owner_->GetView()->GetGadget()->ShowDetailsView(
+                        details_view_data, title.c_str(), flags,
+                        NewFunctorSlot<bool, int>(DetailsViewFeedbackHandler(
+                            this, mouse_over_item_)));
+                    details_open_item_ = mouse_over_item_;
+                  }
                 }
               }
             }
@@ -667,7 +671,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
       bool dead = false;
       death_detector_ = &dead;
       if (!item->ProcessDetailsViewFeedback(
-            ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) && !dead) {
+            ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) && !dead) {
         RemoveContentItem(item);
       }
       if (!dead)

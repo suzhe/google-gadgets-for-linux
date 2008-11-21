@@ -186,6 +186,7 @@ bool IsValidURLComponentChar(char c) {
 static std::string EncodeURLInternal(const std::string &source,
                                      bool component) {
   std::string dest;
+  dest.reserve(source.size());
   bool (*valid_check_func)(char) = component ?
                                    IsValidURLComponentChar : IsValidURLChar;
   for (std::string::const_iterator i = source.begin(); i != source.end(); ++i) {
@@ -228,6 +229,7 @@ std::string DecodeURL(const std::string &source) {
                              (((c) >= 'a' && (c) <= 'f') ? ((c) - 'a' + 10) : \
                               -1)))
   std::string dest;
+  dest.reserve(source.size());
   std::string::const_iterator end = source.end();
   for (std::string::const_iterator i = source.begin(); i != end; ++i) {
     char src = *i;
@@ -435,10 +437,11 @@ std::string EncodeJavaScriptString(const std::string &source) {
   return EncodeJavaScriptString(utf16.c_str());
 }
 
-bool SplitString(const std::string &source, const std::string &separator,
+bool SplitString(const std::string &source, const char *separator,
                  std::string *result_left, std::string *result_right) {
-  std::string::size_type pos = source.find(separator);
-  if (pos == source.npos || !source.length()) {
+  size_t pos;
+  if (!separator || !*separator || source.empty() ||
+      (pos = source.find(separator)) == source.npos) {
     if (result_left && result_left != &source)
       *result_left = source;
     if (result_right)
@@ -451,21 +454,22 @@ bool SplitString(const std::string &source, const std::string &separator,
   if (result_left)
     *result_left = source_copy.substr(0, pos);
   if (result_right)
-    *result_right = source_copy.substr(pos + separator.length());
+    *result_right = source_copy.substr(pos + strlen(separator));
   return true;
 }
 
-bool SplitStringList(const std::string &source, const std::string &separator,
+bool SplitStringList(const std::string &source, const char *separator,
                      StringVector *result) {
   if (result)
     result->clear();
   if (!source.length())
     return false;
-  if (!separator.length()) {
+  if (!separator || !*separator) {
     if (result)
       result->push_back(source);
     return false;
   }
+  size_t separator_length = strlen(separator);
   std::string::size_type start = 0;
   bool ret = false;
   while(1) {
@@ -477,7 +481,7 @@ bool SplitStringList(const std::string &source, const std::string &separator,
       result->push_back(part);
     if (pos == std::string::npos) break;
     ret = true;
-    start = pos + separator.length();
+    start = pos + separator_length;
   }
   return ret;
 }

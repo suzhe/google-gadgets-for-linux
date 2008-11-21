@@ -159,6 +159,42 @@ TEST(UnicodeUtils, IsLegalString) {
   EXPECT_TRUE(IsLegalUTF16String(invalid_utf16_string, invalid_utf16_length));
 }
 
+TEST(UnicodeUtils, ConvertStringBuffer) {
+  UTF16Char buffer[200];
+  std::string utf8(utf8_string);
+  size_t output_length = 0;
+  UTF16String utf16(utf16_string);
+
+  EXPECT_EQ(0U, ConvertStringUTF8ToUTF16Buffer(utf8, buffer, 0,
+                                               &output_length));
+  EXPECT_EQ(0U, output_length);
+
+  EXPECT_EQ(utf8.size(),
+            ConvertStringUTF8ToUTF16Buffer(utf8, buffer, utf16.size(),
+                                           &output_length));
+  EXPECT_EQ(utf16.size(), output_length);
+  EXPECT_TRUE(utf16 == UTF16String(buffer, output_length));
+
+  EXPECT_EQ(utf8.size(),
+            ConvertStringUTF8ToUTF16Buffer(utf8, buffer, 200, &output_length));
+  EXPECT_EQ(utf16.size(), output_length);
+  EXPECT_TRUE(utf16 == UTF16String(buffer, output_length));
+
+  EXPECT_EQ(utf8.size() - 4,
+            ConvertStringUTF8ToUTF16Buffer(utf8, buffer, utf16.size() - 1,
+                                           &output_length));
+  EXPECT_EQ(utf16.size() - 2, output_length);
+  EXPECT_TRUE(utf16.substr(0, utf16.size() - 2) ==
+              UTF16String(buffer, output_length));
+
+  EXPECT_EQ(utf8.size() - 4,
+            ConvertStringUTF8ToUTF16Buffer(utf8, buffer, utf16.size() - 2,
+                                           &output_length));
+  EXPECT_EQ(utf16.size() - 2, output_length);
+  EXPECT_TRUE(utf16.substr(0, utf16.size() - 2) ==
+              UTF16String(buffer, output_length));
+}
+
 TEST(UnicodeUtils, DetectUTFEncoding) {
   std::string encoding("Garbage");
   EXPECT_FALSE(DetectUTFEncoding(std::string(""), &encoding));

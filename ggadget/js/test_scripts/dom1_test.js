@@ -13620,40 +13620,6 @@ TEST("hc_nodetextnodevalue", function() {
 
 /**
 *
-An element is created, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#i-Document
-*/
-TEST("hc_nodevalue01", function() {
-   var success;
-    var doc;
-      var newNode;
-      var newValue;
-
-      var docRef = null;
-      if (typeof(this.doc) != 'undefined') {
-        docRef = this.doc;
-      }
-      doc = load(docRef, "doc", "hc_staff");
-      newNode = doc.createElement("acronym");
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-
-});
-
-
-
-/**
-*
 An comment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -13681,72 +13647,6 @@ TEST("hc_nodevalue02", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("This should have an effect",newValue),"afterChange");
-
-});
-
-
-
-/**
-*
-A document fragment is created, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-B63ED1A3
-*/
-TEST("hc_nodevalue05", function() {
-   var success;
-    var doc;
-      var newNode;
-      var newValue;
-
-      var docRef = null;
-      if (typeof(this.doc) != 'undefined') {
-        docRef = this.doc;
-      }
-      doc = load(docRef, "doc", "hc_staff");
-      newNode = doc.createDocumentFragment();
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-
-});
-
-
-
-/**
-*
-An document is accessed, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#i-Document
-*/
-TEST("hc_nodevalue06", function() {
-   var success;
-    var newNode;
-      var newValue;
-
-      var newNodeRef = null;
-      if (typeof(this.newNode) != 'undefined') {
-        newNodeRef = this.newNode;
-      }
-      newNode = load(newNodeRef, "newNode", "hc_staff");
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
 
 });
 
@@ -19287,40 +19187,6 @@ TEST("nodetextnodevalue", function() {
 
 /**
 *
-An element is created, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#i-Document
-*/
-TEST("nodevalue01", function() {
-   var success;
-    var doc;
-      var newNode;
-      var newValue;
-
-      var docRef = null;
-      if (typeof(this.doc) != 'undefined') {
-        docRef = this.doc;
-      }
-      doc = load(docRef, "doc", "staff");
-      newNode = doc.createElement("address");
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-
-});
-
-
-
-/**
-*
 An comment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19348,72 +19214,6 @@ TEST("nodevalue02", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("This should have an effect",newValue),"afterChange");
-
-});
-
-
-
-/**
-*
-A document fragment is created, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-B63ED1A3
-*/
-TEST("nodevalue05", function() {
-   var success;
-    var doc;
-      var newNode;
-      var newValue;
-
-      var docRef = null;
-      if (typeof(this.doc) != 'undefined') {
-        docRef = this.doc;
-      }
-      doc = load(docRef, "doc", "staff");
-      newNode = doc.createDocumentFragment();
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-
-});
-
-
-
-/**
-*
-An document is accessed, setNodeValue is called with a non-null argument, but getNodeValue
-should still return null.
-
-* @author Curt Arnold
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
-* @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#i-Document
-*/
-TEST("nodevalue06", function() {
-   var success;
-    var newNode;
-      var newValue;
-
-      var newNodeRef = null;
-      if (typeof(this.newNode) != 'undefined') {
-        newNodeRef = this.newNode;
-      }
-      newNode = load(newNodeRef, "newNode", "staff");
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"initiallyNull");
-    newNode.nodeValue = "This should have no effect";
-
-      newValue = newNode.nodeValue;
-
-      ASSERT(NULL(newValue),"nullAfterAttemptedChange");
 
 });
 

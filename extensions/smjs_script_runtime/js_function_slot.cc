@@ -71,18 +71,8 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
                                    const Variant argv[]) const {
-  bool death_flag = false;
-  bool *death_flag_ptr = &death_flag;
-  if (!death_flag_ptr_) {
-    // Let the destructor inform us when this object is to be deleted.
-    death_flag_ptr_ = death_flag_ptr;
-  } else {
-    // There must be some upper stack frame containing Call() call of the same
-    // object. We just use the outer most death_flag_.
-    death_flag_ptr = death_flag_ptr_;
-  }
-
   Variant return_value(GetReturnType());
+
   if (!function_) {
     // Don't raise exception because the context_ may be invalid now.
     LOG("Finalized JavaScript function %s still be called",
@@ -113,9 +103,20 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
     }
   }
 
+  bool death_flag = false;
+  bool *death_flag_ptr = &death_flag;
+  if (!death_flag_ptr_) {
+    // Let the destructor inform us when this object is to be deleted.
+    death_flag_ptr_ = death_flag_ptr;
+  } else {
+    // There must be some upper stack frame containing Call() call of the same
+    // object. We just use the outer most death_flag_.
+    death_flag_ptr = death_flag_ptr_;
+  }
+
   jsval rval;
-  JSBool ret =  JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
-                                     argc, js_args.get(), &rval);
+  JSBool ret = JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
+                                    argc, js_args.get(), &rval);
   if (!*death_flag_ptr) {
     if (death_flag_ptr == &death_flag)
       death_flag_ptr_ = NULL;
@@ -127,11 +128,19 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
           RaiseException(context_,
               "Failed to convert JS function(%s) return value(%s) to native",
               function_info_.c_str(), PrintJSValue(context_, rval).c_str());
+        } else {
+          // Must first hold return_value in a ResultValue, to prevent the
+          // result from being deleted during GC.
+          ResultVariant result(return_value);
+          // Normal GC triggering doesn't work well if only little JS code is
+          // executed but many native objects are referenced by dead JS
+          // objects. Call MaybeGC to ensure GC is not starved.
+          JSScriptContext::MaybeGC(context_);
+          return result;
         }
       } else {
         JS_ReportPendingException(context_);
       }
-      JSScriptContext::MaybeGC(context_);
     }
   }
 

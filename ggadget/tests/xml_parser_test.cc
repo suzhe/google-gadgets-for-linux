@@ -122,19 +122,21 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
             sub_children->GetItem(0)->GetNodeType());
   EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
-               sub_children->GetItem(0)->GetNodeValue());
+               sub_children->GetItem(0)->GetNodeValue().c_str());
   EXPECT_STREQ("s1 content1 Test Entity testext",
                sub_children->GetItem(0)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
             sub_children->GetItem(1)->GetNodeType());
   // Entities in comments should not be replaced.
-  EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
+  EXPECT_STREQ(" &COMMENTS; ",
+               sub_children->GetItem(1)->GetNodeValue().c_str());
   EXPECT_STREQ(" &COMMENTS; ",
                sub_children->GetItem(1)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
             sub_children->GetItem(3)->GetNodeType());
   // Entities in cdata should not be replaced.
-  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(3)->GetNodeValue());
+  EXPECT_STREQ(" cdata &cdata; ",
+               sub_children->GetItem(3)->GetNodeValue().c_str());
   EXPECT_STREQ(" cdata &cdata; ",
                sub_children->GetItem(3)->GetTextContent().c_str());
 
@@ -142,7 +144,7 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,
             pi_node->GetNodeType());
   EXPECT_STREQ("pi", pi_node->GetNodeName().c_str());
-  EXPECT_STREQ("value", pi_node->GetNodeValue());
+  EXPECT_STREQ("value", pi_node->GetNodeValue().c_str());
   children->Unref();
   sub_children->Unref();
   ASSERT_EQ(1, domdoc->GetRefCount());
@@ -180,19 +182,21 @@ TEST(XMLParser, ParseXMLIntoDOMPreservingWhiteSpace) {
   EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
             sub_children->GetItem(0)->GetNodeType());
   EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
-               sub_children->GetItem(0)->GetNodeValue());
+               sub_children->GetItem(0)->GetNodeValue().c_str());
   EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
                sub_children->GetItem(0)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
             sub_children->GetItem(1)->GetNodeType());
   // Entities in comments should not be replaced.
-  EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
+  EXPECT_STREQ(" &COMMENTS; ",
+               sub_children->GetItem(1)->GetNodeValue().c_str());
   EXPECT_STREQ(" &COMMENTS; ",
                sub_children->GetItem(1)->GetTextContent().c_str());
   EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
             sub_children->GetItem(5)->GetNodeType());
   // Entities in cdata should not be replaced.
-  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(5)->GetNodeValue());
+  EXPECT_STREQ(" cdata &cdata; ",
+               sub_children->GetItem(5)->GetNodeValue().c_str());
   EXPECT_STREQ(" cdata &cdata; ",
                sub_children->GetItem(5)->GetTextContent().c_str());
 
@@ -200,7 +204,7 @@ TEST(XMLParser, ParseXMLIntoDOMPreservingWhiteSpace) {
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,
             pi_node->GetNodeType());
   EXPECT_STREQ("pi", pi_node->GetNodeName().c_str());
-  EXPECT_STREQ("value", pi_node->GetNodeValue());
+  EXPECT_STREQ("value", pi_node->GetNodeValue().c_str());
   children->Unref();
   sub_children->Unref();
   ASSERT_EQ(1, domdoc->GetRefCount());
@@ -322,6 +326,14 @@ void TestXMLEncoding(const char *xml, const char *name,
   ASSERT_STREQ(expected_encoding, encoding.c_str());
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
+
+  encoding.clear();
+  output.clear();
+  ASSERT_TRUE(xml_parser->ConvertContentToUTF8(xml, name, "text/xml",
+                                               hint_encoding, NULL,
+                                               &encoding, &output));
+  ASSERT_STREQ(expected_text, output.c_str());
+  ASSERT_STREQ(expected_encoding, encoding.c_str());
 }
 
 void TestXMLEncodingExpectFail(const char *xml, const char *name,

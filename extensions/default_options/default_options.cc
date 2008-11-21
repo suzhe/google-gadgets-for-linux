@@ -222,6 +222,7 @@ class DefaultOptions : public MemoryOptions {
   // the out of range data into proper format.
   static std::string EscapeValue(const std::string &input) {
     std::string result;
+    result.reserve(input.size());
     for (size_t i = 0; i < input.size(); i++) {
       char c = input[i];
       // This range is very conservative, but harmless, because only this
@@ -239,6 +240,7 @@ class DefaultOptions : public MemoryOptions {
 
   static std::string UnescapeValue(const std::string &input) {
     std::string result;
+    result.reserve(input.size());
     for (size_t i = 0; i < input.size(); i++) {
       char c = input[i];
       if (c == '=' && i < input.size() - 2) {

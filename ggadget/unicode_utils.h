@@ -132,6 +132,32 @@ size_t ConvertStringUTF8ToUTF16(const char *src, size_t src_length,
 size_t ConvertStringUTF8ToUTF16(const std::string &src, UTF16String *dest);
 
 /**
+ * Converts a utf8 string into a utf16 buffer. Doesn't output the ending
+ * zero.
+ *
+ * @param src the utf8 string to be converted.
+ * @param src_length length of the source utf8 string.
+ * @param dest the output buffer.
+ * @param dest_length the length of the destination buffer (not including the
+ *     ending zero).
+ * @param[out] used_dest_length actual output length used in output buffer
+ *     (no ending zero will be output.)
+ * @return how many bytes in source utf8 string have been converted.
+ */
+size_t ConvertStringUTF8ToUTF16Buffer(const char *src, size_t src_length,
+                                      UTF16Char *dest, size_t dest_length,
+                                      size_t *used_dest_length);
+
+/**
+ * Converts a utf8 string into a utf16 buffer.
+ *
+ * Same as above function but takes a std::string object as source.
+ */
+size_t ConvertStringUTF8ToUTF16Buffer(const std::string &src,
+                                      UTF16Char *dest, size_t dest_length,
+                                      size_t *used_dest_length);
+
+/**
  * Converts a utf16 string to a utf8 string.
  *
  * @param src the utf16 string to be converted.

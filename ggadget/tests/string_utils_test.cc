@@ -205,9 +205,9 @@ TEST(StringUtils, SplitString) {
   EXPECT_FALSE(SplitString("", "", &left, &right));
   EXPECT_STREQ("", left.c_str());
   EXPECT_STREQ("", right.c_str());
-  EXPECT_TRUE(SplitString("abcde", "", &left, &right));
-  EXPECT_STREQ("", left.c_str());
-  EXPECT_STREQ("abcde", right.c_str());
+  EXPECT_FALSE(SplitString("abcde", "", &left, &right));
+  EXPECT_STREQ("abcde", left.c_str());
+  EXPECT_STREQ("", right.c_str());
   EXPECT_TRUE(SplitString("abcde", "c", &left, &right));
   EXPECT_STREQ("ab", left.c_str());
   EXPECT_STREQ("de", right.c_str());
