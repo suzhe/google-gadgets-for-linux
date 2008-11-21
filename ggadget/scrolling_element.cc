@@ -54,6 +54,8 @@ class ScrollingElement::Impl : public SmallObject<> {
                             scrollbar_->GetPixelWidth());
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
+      // A reasonable default value.
+      scrollbar_->SetLineStep(10);
       scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
       // When user clicks the scroll bar, let the view give focus to
       // this element.
