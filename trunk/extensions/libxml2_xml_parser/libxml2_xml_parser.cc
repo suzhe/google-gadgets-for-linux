@@ -159,7 +159,7 @@ static std::string GetXMLEncodingDecl(const std::string &xml) {
   if (end_encoding_pos == std::string::npos)
     return result;
 
-  return xml.substr(encoding_pos, end_encoding_pos - encoding_pos + 1);
+  return xml.substr(encoding_pos, end_encoding_pos - encoding_pos);
 }
 
 static void ReplaceXMLEncodingDecl(std::string *xml) {
@@ -486,7 +486,7 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
 
   // We don't support full DOM2 namespaces, but we must keep all namespace
   // related information in the result DOM.
-  if (xmlele->ns)
+  if (xmlele->ns && xmlele->ns->prefix)
     element->SetPrefix(FromXmlCharPtr(xmlele->ns->prefix));
   for (xmlNsPtr ns = xmlele->nsDef; ns; ns = ns->next) {
     DOMAttrInterface *attr;
@@ -664,18 +664,7 @@ static bool ContentTypeIsXML(const char *content_type) {
 class XMLParser : public XMLParserInterface {
  public:
   virtual bool CheckXMLName(const char *name) {
-    if (!name || !*name)
-      return false;
-
-    xmlParserCtxt *ctxt =
-        xmlCreateMemoryParserCtxt(name, static_cast<int>(strlen(name)));
-    if (ctxt) {
-      const char *result = FromXmlCharPtr(xmlParseName(ctxt));
-      bool succeeded = result && strcmp(result, name) == 0;
-      xmlFreeParserCtxt(ctxt);
-      return succeeded;
-    }
-    return false;
+    return name && *name && xmlValidateName(ToXmlCharPtr(name), 0) == 0;
   }
 
   virtual bool HasXMLDecl(const std::string &content) {

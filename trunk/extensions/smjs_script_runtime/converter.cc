@@ -513,20 +513,37 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
     *js_val = JSVAL_NULL;
   } else {
     std::string source = VariantValue<std::string>()(native_val);
-    UTF16String utf16_string;
-    JSString *js_string;
-    if (ConvertStringUTF8ToUTF16(source, &utf16_string) != source.size()) {
+    size_t source_size = source.size();
+    jschar *utf16_buffer =
+        (jschar *)JS_malloc(cx, source_size * sizeof(jschar));
+    if (!utf16_buffer)
+      return JS_FALSE;
+
+    size_t dest_size = 0;
+    // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
+    // if they are compatible.
+    if (ConvertStringUTF8ToUTF16Buffer(source, utf16_buffer, source_size,
+                                       &dest_size) != source_size) {
+      dest_size = (source_size + 1) / 2;
       // Failed to convert to utf16, the source may contain arbitrary binary
       // data. This is mainly for compatibility of XMLHttpRequest.responseBody
       // to Microsoft, that combines each two bytes into one 16 bit word.
-      for (size_t i = 0; i < source.size(); i += 2)
-        utf16_string.append(1, static_cast<unsigned char>(source[i]) |
-                            (static_cast<unsigned char>(source[i + 1]) << 8));
+      for (size_t i = 0; i < source_size; i += 2) {
+        utf16_buffer[i] = static_cast<jschar>(
+            static_cast<unsigned char>(source[i]) |
+            (static_cast<unsigned char>(source[i + 1]) << 8));
+      }
     }
-    // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
-    // if they are compatible.
-    js_string = JS_NewUCStringCopyN(cx, utf16_string.c_str(),
-                                    utf16_string.size());
+
+    // Shrink the buffer size if the required dest size is far smaller than
+    // allocated.
+    if (dest_size + 16 < source_size) {
+      utf16_buffer = (jschar *)JS_realloc(cx, utf16_buffer,
+                                          dest_size * sizeof(jschar));
+    }
+
+    // Javascript adopts utf16_buffer.
+    JSString *js_string = JS_NewUCString(cx, utf16_buffer, dest_size);
     if (js_string)
       *js_val = STRING_TO_JSVAL(js_string);
     else
