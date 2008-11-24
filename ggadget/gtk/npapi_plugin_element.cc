@@ -131,9 +131,6 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
       zoom_ = owner_->GetView()->GetGraphics()->GetZoom();
       window_.window = NULL;
       window_.type = NPWindowTypeDrawable;
-      UpdateWindowCoords(static_cast<int>(ceil(owner_->GetPixelWidth())),
-                         static_cast<int>(ceil(owner_->GetPixelHeight())));
-      ASSERT(windowless_);
       if (pixmap_)
         g_object_unref(pixmap_);
       int width = static_cast<int>(ceil(owner_->GetPixelWidth() * zoom_));
@@ -232,7 +229,6 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
       x_ = x;
       y_ = y;
       gtk_fixed_move(GTK_FIXED(native_widget_), socket_, x, y);
-      return false;
     }
     if (width != width_ || height != height_ || force_layout) {
       width_ = width;
