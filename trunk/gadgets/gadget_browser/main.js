@@ -485,6 +485,7 @@ outer:
   page_label.innerText = strings.PAGE_LABEL.replace("{{PAGE}}", page + 1)
                          .replace("{{TOTAL}}", GetTotalPages());
   previous_button.visible = next_button.visible = page_label.visible = true;
+  view.setTimeout(RunThumbnailTasks, 500);
 }
 
 function UpdateCategories() {
