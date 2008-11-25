@@ -52,10 +52,12 @@ function AddThumbnailTask(plugin, index, thumbnail_element1, thumbnail_element2)
     thumbnail_element1: thumbnail_element1,
     thumbnail_element2: thumbnail_element2
   };
-  if (gWorkingTasks.length < kMaxWorkingTasks)
-    StartThumbnailTask(new_task);
-  else
-    gPendingTasks.push(new_task);
+  gPendingTasks.push(new_task);
+}
+
+function RunThumbnailTasks() {
+  while (gWorkingTasks.length < kMaxWorkingTasks && gPendingTasks.length > 0)
+    StartThumbnailTask(gPendingTasks.shift());
 }
 
 function StartThumbnailTask(task) {
@@ -109,13 +111,11 @@ function StartThumbnailTask(task) {
       for (var i = 0; i < gWorkingTasks.length; i++) {
         if (gWorkingTasks[i] == task) {
           gWorkingTasks.splice(i, 1);
-          while (gWorkingTasks.length < kMaxWorkingTasks &&
-                 gPendingTasks.length > 0) {
-            StartThumbnailTask(gPendingTasks.shift());
-          }
           break;
         }
       }
+      // Start left pending tasks.
+      RunThumbnailTasks();
     }
   }
 }
