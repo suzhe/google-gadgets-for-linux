@@ -24,6 +24,7 @@
 namespace ggadget {
 
 template <typename R> class Slot0;
+template <typename R, typename P1> class Slot1;
 class Connection;
 class DOMDocumentInterface;
 class XMLParserInterface;
@@ -109,6 +110,17 @@ class XMLHttpRequestInterface : public ScriptableInterface {
   virtual std::string GetEffectiveUrl() = 0;
 
   virtual std::string GetResponseContentType() = 0;
+
+  /**
+   * Connects a data receiver. After connected, this XMLHttpRequest object
+   * will enter streamed mode. In this mode, all received data are sent to
+   * this listener, and GetResponseText() and GetResponseBody() will only
+   * return blank strings.
+   * The receiver slot receives the data to be written, and returns number of
+   * bytes written.
+   */
+  virtual Connection *ConnectOnDataReceived(
+      Slot1<size_t, const std::string &> *receiver) = 0;
 
   class XMLHttpRequestException : public ScriptableHelperDefault {
    public:

@@ -61,8 +61,14 @@ class Plugin : public SmallObject<> {
    * The host should reset the window if window meta changes, such as resize,
    * changing view, etc.. This class will make a copy of the window object
    * passed in.
+   *
+   * @param top_window the native handle of the top level window. On X, this
+   *     should be a X Window ID.
+   * @param window NPAPI window structure.
+   * @return false if the windowless mode of the window parameter doesn't match
+   *     the current windowless state of the plugin.
    */
-  bool SetWindow(const _NPWindow &window);
+  bool SetWindow(void *top_window, const _NPWindow &window);
 
   /** Set URL of the stream that will consumed by the plugin. */
 //  bool SetURL(const char *url);
@@ -107,11 +113,12 @@ class Plugin : public SmallObject<> {
    * Creates a new Plugin instance.
    * @param mime_type MIME type of the content.
    * @param element the container element.
+   * @param top_window see SetWindow().
    * @param window see SetWindow().
    * @param parameters initial arguments.
    */
   static Plugin *Create(const char *mime_type, BasicElement *element,
-                        const _NPWindow &window,
+                        void *top_window, const _NPWindow &window,
                         const StringMap &parameters);
 
  private:

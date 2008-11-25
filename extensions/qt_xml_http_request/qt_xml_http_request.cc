@@ -541,6 +541,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return response_content_type_;
   }
 
+  virtual Connection *ConnectOnDataReceived(
+      Slot1<size_t, const std::string &> *receiver) {
+    return ondatareceived_signal_.Connect(receiver);
+  }
+
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
@@ -700,6 +705,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   HttpHandler *handler_;
   QByteArray *send_data_;
   Signal0<void> onreadystatechange_signal_;
+  Signal1<size_t, const std::string &> ondatareceived_signal_;
 
   std::string url_, host_;
   bool async_;

@@ -481,8 +481,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           worker_context_(*worker_context) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->WriteHeader(data_);
+      if (worker_context_.this_p->curl_ == worker_context_.curl &&
+          worker_context_.this_p->WriteHeader(data_) != data_.size()) {
+        // WriteHeader() failed. Terminate the request.
+        worker_context_.this_p->Done(false, false);
+      }
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
@@ -504,8 +507,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           status_(status) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->WriteBody(data_, status_, effective_url_);
+      if (worker_context_.this_p->curl_ == worker_context_.curl &&
+        worker_context_.this_p->WriteBody(data_, status_, effective_url_) !=
+            data_.size()) {
+        // WriteBody() failed. Terminate the request.
+        worker_context_.this_p->Done(false, false);
+      }
       return false;
     }
 
@@ -594,10 +601,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         response_headers_.clear();
       }
       response_headers_ += data;
-    } else {
-      size = 0;
+      return size;
     }
-    return size;
+
+    // Terminate the transfer because the header is too long.
+    LOG("XMLHttpRequest: Header too long.");
+    return 0;
   }
 
   static size_t WriteBodyCallback(void *ptr, size_t size, size_t mem_block,
@@ -607,8 +616,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     size_t data_size = size * mem_block;
     WorkerContext *context = static_cast<WorkerContext *>(user_p);
-    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu this=%p",
-    //      size, mem_block, context->this_p);
 
     unsigned short status = 0;
     std::string effective_url;
@@ -648,11 +655,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     ASSERT(state_ == LOADING && send_flag_);
     size_t size = data.length();
-    if (CheckSize(response_body_.length(), size, 1))
+    // DLOG("XMLHttpRequest: WriteBody: %zu + %zu this=%p",
+    //      response_body_.length(), size, this);
+
+    // Streamed mode.
+    if (ondatareceived_signal_.HasActiveConnections())
+      return ondatareceived_signal_(data);
+
+    // Normal mode.
+    if (CheckSize(response_body_.length(), size, 1)) {
       response_body_ += data;
-    else
-      size = CURLE_WRITE_ERROR;
-    return size;
+      return size;
+    }
+
+    // Terminate the transfer because the data is too long.
+    LOG("XMLHttpRequest: Body too long.");
+    return 0;
   }
 
   void Done(bool aborting, bool succeeded) {
@@ -861,6 +879,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return response_content_type_;
   }
 
+  virtual Connection *ConnectOnDataReceived(
+      Slot1<size_t, const std::string &> *receiver) {
+    return ondatareceived_signal_.Connect(receiver);
+  }
+
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
@@ -951,6 +974,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   curl_slist *request_headers_;
   CaseInsensitiveStringMap response_headers_map_;
   Signal0<void> onreadystatechange_signal_;
+  Signal1<size_t, const std::string &> ondatareceived_signal_;
 
   std::string url_;
   std::string host_;

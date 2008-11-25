@@ -97,6 +97,8 @@ public:
   virtual bool IsSuccessful() { return true; }
   virtual std::string GetEffectiveUrl() { return requested_url_; }
   virtual std::string GetResponseContentType() { return ""; }
+  virtual ggadget::Connection *ConnectOnDataReceived(
+      ggadget::Slot1<size_t, const std::string &> *receiver) { return NULL; }
 
   State state_;
   unsigned short return_status_;
