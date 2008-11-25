@@ -41,11 +41,14 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
         mime_type_(mime_type),
         in_object_element_(in_object_element),
         native_widget_(NULL),
+        top_x_window_(None),
         plugin_(NULL),
         scriptable_plugin_(NULL),
         plugin_failed_(false),
         parameters_(default_parameters),
-        windowless_(false), pixmap_(NULL),
+        windowless_(false),
+        pixmap_(NULL),
+        drawable_(None),
         focused_(false),
         zoom_(1.0),
         socket_(NULL),
@@ -89,8 +92,9 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
       return false;
     CreateSocket();
     UpdateWindow();
-    plugin_ = npapi::Plugin::Create(mime_type_.c_str(), owner_, window_,
-                                    parameters_);
+    plugin_ = npapi::Plugin::Create(mime_type_.c_str(), owner_,
+                                    reinterpret_cast<void *>(top_x_window_),
+                                    window_, parameters_);
     // Get the root scriptable object of the plugin.
     if (plugin_) {
       plugin_->SetSrc(src_.c_str());
@@ -127,6 +131,8 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
   void UpdateWindow() {
     GdkDrawable *gdk_drawable;
     native_widget_ = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
+    GdkWindow *gdk_window = gdk_window_get_toplevel(native_widget_->window);
+    top_x_window_ = GDK_WINDOW_XID(gdk_window);
     if (windowless_) {
       zoom_ = owner_->GetView()->GetGraphics()->GetZoom();
       window_.window = NULL;
@@ -149,10 +155,8 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
       gdk_drawable = pixmap_;
       ClearPixmap(0, 0, width, height);
     } else {
-      if (gtk_widget_get_parent(socket_) != native_widget_) {
-        fflush(stdout);
+      if (gtk_widget_get_parent(socket_) != native_widget_)
         gtk_widget_reparent(socket_, native_widget_);
-      }
       window_.window =
           reinterpret_cast<void *>(gtk_socket_get_id(GTK_SOCKET(socket_)));
       window_.type = NPWindowTypeWindow;
@@ -167,6 +171,9 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
     ws_info_.colormap =
         GDK_COLORMAP_XCOLORMAP(gdk_drawable_get_colormap(gdk_drawable));
     ws_info_.depth = gdk_drawable_get_depth(gdk_drawable);
+
+    if (plugin_)
+      plugin_->SetWindow(reinterpret_cast<void *>(top_x_window_), window_);
   }
 
   static gboolean OnPlugRemoved(GtkWidget *widget, gpointer data) {
@@ -258,21 +265,18 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
         CreateSocket();
       }
       UpdateWindow();
-      plugin_->SetWindow(window_);
     }
 
     if (native_widget_ != GTK_WIDGET(owner_->GetView()->GetNativeWidget())) {
       UpdateWindow();
-      plugin_->SetWindow(window_);
     } else if (windowless_) {
       if (owner_->IsSizeChanged() ||
           owner_->GetView()->GetGraphics()->GetZoom() != zoom_) {
         UpdateWindow();
-        plugin_->SetWindow(window_);
       }
     } else {
       if (UpdateSocketPosSize(false))
-        plugin_->SetWindow(window_);
+        plugin_->SetWindow(reinterpret_cast<void *>(top_x_window_), window_);
       if (owner_->IsReallyVisible() && (!minimized_ || popped_out_))
         gtk_widget_show(socket_);
       else
@@ -397,6 +401,7 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
   bool in_object_element_;
 
   GtkWidget *native_widget_;
+  Window top_x_window_;
   std::string src_;
   npapi::Plugin *plugin_;
   ScriptableInterface *scriptable_plugin_;
@@ -505,11 +510,13 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
     x_event.xcrossing.mode = NotifyNormal;
     x_event.xcrossing.detail = NotifyVirtual;
     x_event.xcrossing.focus = impl_->focused_;
+    x_event.xcrossing.same_screen = True;
   } else if (type == Event::EVENT_MOUSE_MOVE) {
     x_event.xmotion.type = MotionNotify;
     x_event.xmotion.x = x;
     x_event.xmotion.y = y;
     x_event.xmotion.is_hint = NotifyNormal;
+    x_event.xmotion.same_screen = True;
   } else {
     GdkEventButton *button =
         reinterpret_cast<GdkEventButton*>(event.GetOriginalEvent());
@@ -530,6 +537,8 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
       return EVENT_RESULT_HANDLED;
     }
     // Translate GdkEvent to the original XEvent.
+    x_event.xbutton.window = GDK_WINDOW_XID(button->window);
+    x_event.xbutton.root = GDK_ROOT_WINDOW();
     x_event.xbutton.type =
         button->type == GDK_BUTTON_PRESS ? ButtonPress : ButtonRelease;
     x_event.xbutton.display = impl_->ws_info_.display;
@@ -539,6 +548,9 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
     // Use the coordinates in MouseEvent structure, but not those in GdkEvent.
     x_event.xbutton.x = x;
     x_event.xbutton.y = y;
+    x_event.xbutton.x_root = static_cast<int>(round(button->x_root));
+    x_event.xbutton.y_root = static_cast<int>(round(button->y_root));
+    x_event.xbutton.same_screen = True;
   }
   // Some plugins always return 0 for mouse/keyboard events even if they
   // have handled them. Here returns HANDLED to prevent the container from

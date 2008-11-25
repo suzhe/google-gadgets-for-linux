@@ -85,9 +85,9 @@ static const SVGColorInfo kSVGColors[] = {
   { "gold",                 255, 215,   0 },
   { "goldenrod",            218, 165,  32 },
   { "gray",                 128, 128, 128 },
-  { "grey",                 128, 128, 128 },
   { "green",                  0, 128,   0 },
   { "greenyellow",          173, 255,  47 },
+  { "grey",                 128, 128, 128 },
   { "honeydew",             240, 255, 240 },
   { "hotpink",              255, 105, 180 },
   { "indianred",            205,  92,  92 },
@@ -196,7 +196,21 @@ static inline bool SVGColorNameCompare(const SVGColorInfo &c1,
   return strcmp(c1.name, c2.name) < 0;
 }
 
+#ifdef _DEBUG
+static void AssertColorSorted() {
+  static bool sorted = false;
+  if (!sorted) {
+    for (size_t i = 1; i < arraysize(kSVGColors); i++)
+      ASSERT(SVGColorNameCompare(kSVGColors[i - 1], kSVGColors[i]));
+    sorted = true;
+  }
+}
+#endif
+
 bool Color::FromString(const char *name, Color *color, double *alpha) {
+#ifdef _DEBUG
+  AssertColorSorted();
+#endif
   ASSERT(name && color);
 
   if (!name || ! *name || !color)

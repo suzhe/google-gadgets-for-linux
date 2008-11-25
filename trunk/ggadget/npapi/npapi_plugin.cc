@@ -44,181 +44,145 @@
 namespace ggadget {
 namespace npapi {
 
-const char *kFirefox3UserAgent = "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
-                                 "Gecko/20080724 Firefox/3.0.1";
+static const char *kFirefox3UserAgent =
+    "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
+    "Gecko/20080724 Firefox/3.0.1";
 
 class Plugin::Impl : public SmallObject<> {
  public:
-  static const int kStreamCallbackInterval = 50;
-
-  // Writes a block of data to the plugin stream asynchronously if the plugin
-  // can't receive the whole data at once.
-  class StreamWriter : public WatchCallbackInterface {
+  class StreamHandler {
    public:
-    StreamWriter(Impl *owner, const std::string &url,
-                 const std::string &mime_type, const std::string &headers,
-                 const std::string &data, bool notify, void *notify_data)
-        : owner_(owner), plugin_funcs_(&owner->library_info_->plugin_funcs),
-          stream_(NULL), stream_type_(NP_NORMAL),
+    StreamHandler(Impl *owner, XMLHttpRequestInterface *http_request,
+                  const std::string &method, const std::string &url_or_file,
+                  const std::string &post_data, bool notify, void *notify_data)
+        : owner_(owner),
+          plugin_funcs_(&owner->library_info_->plugin_funcs),
+          stream_(NULL),
           // These fields hold string data to live during the stream's life.
-          url_(url), mime_type_(mime_type), headers_(headers),
-          data_(data), offset_(0),
-          notify_(notify),
-          watch_id_(0), idle_count_(0),
-          on_owner_destroy_connection_(owner_->on_destroy_.Connect(
-              NewSlot(this, &StreamWriter::OnOwnerDestroy))) {
-      if (!plugin_funcs_->writeready || !plugin_funcs_->write ||
-          !plugin_funcs_->newstream)
-        return;
+          method_(method),
+          url_or_file_(url_or_file),
+          post_data_(post_data),
+          http_request_(http_request),
+          notify_(notify), notify_data_(notify_data),
+          on_abort_connection_(owner_->abort_streams_.Connect(
+              NewSlot(this, &StreamHandler::Abort))),
+          on_state_change_connection_(NULL),
+          on_data_received_connection_(NULL) {
+      if (http_request) {
+        http_request->Ref();
+        on_state_change_connection_ = http_request->ConnectOnReadyStateChange(
+            NewSlot(this, &StreamHandler::OnStateChange));
+        on_data_received_connection_ = http_request->ConnectOnDataReceived(
+            NewSlot(this, &StreamHandler::OnDataReceived));
+      }
+    }
 
-      // NPAPI uses int32/uint32 for data size.
-      // Limit data size to prevent overflow.
-      if (data.size() >= (1U << 31))
-        return;
+    virtual ~StreamHandler() {
+      if (http_request_) {
+        on_state_change_connection_->Disconnect();
+        on_data_received_connection_->Disconnect();
+        http_request_->Abort();
+        http_request_->Unref();
+      }
+      on_abort_connection_->Disconnect();
+    }
 
-      stream_ = new NPStream;
-      memset(stream_, 0, sizeof(NPStream));
-      stream_->ndata = owner;
-      stream_->url = url_.c_str();
-      stream_->headers = headers_.c_str();
-      stream_->end = static_cast<uint32>(data.size());
-      stream_->notifyData = notify_data;
-      char *mime_type_copy = strdup(mime_type_.c_str());
-      NPError err = plugin_funcs_->newstream(&owner->instance_, mime_type_copy,
-                                             stream_, false, &stream_type_);
-      free(mime_type_copy);
-      if (err == NPERR_NO_ERROR) {
-        switch (stream_type_) {
-          case NP_NORMAL:
-            break;
-          case NP_ASFILEONLY:
-          case NP_ASFILE: {
-            if (plugin_funcs_->asfile) {
-              std::string temp_name = owner->GetTempFileName();
-              if (!temp_name.empty() &&
-                  WriteFileContents(temp_name.c_str(), data)) {
-                plugin_funcs_->asfile(&owner->instance_, stream_,
-                                      temp_name.c_str());
-              }
-            }
-            DestroyStream(NPRES_DONE);
-            break;
-          }
-          case NP_SEEK:
-            LOG("Plugin needs NP_SEEK stream type which is not supported.");
-            DestroyStream(NPRES_USER_BREAK);
-            break;
+    void Abort() {
+      Done(NPRES_USER_BREAK);
+    }
+
+    void Start() {
+      if (http_request_) {
+        // HTTP mode.
+        if (http_request_->Open(method_.c_str(), url_or_file_.c_str(), true,
+                                NULL,NULL) != XMLHttpRequestInterface::NO_ERR ||
+            http_request_->Send(post_data_.c_str(), post_data_.size()) !=
+                XMLHttpRequestInterface::NO_ERR) {
+            Done(NPRES_NETWORK_ERR);
         }
       } else {
-        DestroyStream(NPRES_DONE);
+        // Local file mode.
+        std::string content;
+        if (ReadFileContents(url_or_file_.c_str(), &content) &&
+            NewStream(content.size()) &&
+            WriteStream(content) == content.size()) {
+          Done(NPRES_DONE);
+        } else {
+          Done(NPRES_NETWORK_ERR);
+        }
       }
-
-      // First call NPP_Write immediately, and schedule timer only if some
-      // data is left.
-      if (stream_ && Call(NULL, 0)) {
-        watch_id_ = GetGlobalMainLoop()->AddTimeoutWatch(
-            kStreamCallbackInterval, this);
-      }
     }
 
-    ~StreamWriter() {
-      on_owner_destroy_connection_->Disconnect();
-      DestroyStream(NPRES_DONE);
-    }
-
-    void OnOwnerDestroy() {
-      GetGlobalMainLoop()->RemoveWatch(watch_id_);
-    }
-
-    void DestroyStream(NPReason reason) {
+    void Done(NPReason reason) {
+      owner_->DoURLNotify(url_or_file_.c_str(), notify_, notify_data_, reason);
       if (stream_) {
         if (plugin_funcs_->destroystream) {
           plugin_funcs_->destroystream(&owner_->instance_, stream_, reason);
         }
-        if (notify_ && plugin_funcs_->urlnotify) {
-          plugin_funcs_->urlnotify(&owner_->instance_, url_.c_str(),
-                                   reason, stream_->notifyData);
-        }
         delete stream_;
         stream_ = NULL;
       }
-    }
-
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      if (!stream_)
-        return false;
-
-      while (offset_ < data_.size()) {
-        int32 len = plugin_funcs_->writeready(&owner_->instance_, stream_);
-        if (len <= 0) {
-          if (++idle_count_ > 5000 / kStreamCallbackInterval) {
-            LOG("Timeout to write to stream");
-            DestroyStream(NPRES_USER_BREAK);
-            return false;
-          }
-          // Plugin doesn't need data this time. Try again later.
-          return true;
-        }
-
-        idle_count_ = 0;
-        if (data_.size() < offset_ + len)
-          len = static_cast<int32>(data_.size() - offset_);
-        int32 consumed = plugin_funcs_->write(&owner_->instance_, stream_,
-                                              static_cast<int32>(offset_), len,
-                                              // This gets a non-const pointer.
-                                              &data_[offset_]);
-        // Error occurs.
-        if (consumed < 0)
-          return false;
-        offset_ += consumed;
-      }
-      return false;
-    }
-
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       delete this;
     }
 
-    Impl *owner_;
-    NPPluginFuncs *plugin_funcs_;
-    NPStream *stream_;
-    uint16 stream_type_;
-    std::string url_, mime_type_, headers_, data_;
-    size_t offset_;
-    bool notify_;
-    int watch_id_;
-    int idle_count_;
-    Connection *on_owner_destroy_connection_;
-  };
+    bool NewStream(size_t size) {
+      ASSERT(!stream_);
+      // NPAPI uses int32/uint32 for data size.
+      // Limit data size to prevent overflow.
+      if (size >= (1U << 31))
+        return false;
 
-  class XMLHttpRequestCallback {
-   public:
-    XMLHttpRequestCallback(Impl *owner, const std::string &url,
-                           XMLHttpRequestInterface *http_request,
-                           bool notify, void *notify_data)
-        : owner_(owner), url_(url),
-          http_request_(http_request),
-          notify_(notify), notify_data_(notify_data),
-          on_owner_destroy_connection_(owner->on_destroy_.Connect(
-              NewSlot(this, &XMLHttpRequestCallback::OnOwnerDestroy))),
-          on_state_change_connection_(http_request->ConnectOnReadyStateChange(
-              NewSlot(this, &XMLHttpRequestCallback::OnStateChange))) {
+      stream_ = new NPStream;
+      memset(stream_, 0, sizeof(NPStream));
+      stream_->ndata = owner_;
+      stream_->url = url_or_file_.c_str();
+      stream_->headers = headers_.c_str();
+      stream_->end = static_cast<uint32>(size);
+      stream_->notifyData = notify_data_;
+      char *mime_type_copy = strdup(mime_type_.c_str());
+      uint16 stream_type;
+      NPError err = plugin_funcs_->newstream(&owner_->instance_, mime_type_copy,
+                                             stream_, false, &stream_type);
+      free(mime_type_copy);
+      return err == NPERR_NO_ERROR && stream_type == NP_NORMAL;
     }
 
-    ~XMLHttpRequestCallback() {
-      on_owner_destroy_connection_->Disconnect();
-      on_state_change_connection_->Disconnect();
-    }
+    size_t WriteStream(const std::string &data) {
+      ASSERT(stream_);
+      size_t offset = 0;
+      int idle_count = 0;
+      size_t size = data.size();
+      while (offset < size) {
+        int32 len = plugin_funcs_->writeready(&owner_->instance_, stream_);
+        if (len <= 0) {
+          if (++idle_count > 10) {
+            LOG("Failed to write to stream");
+            return offset;
+          }
+        }
 
-    void OnOwnerDestroy() {
-      http_request_->Abort();
-      // Then OnStateChange() will be called and this object will be deleted.
+        idle_count = 0;
+        if (size < offset + len)
+          len = static_cast<int32>(size - offset);
+        int32 consumed = plugin_funcs_->write(&owner_->instance_, stream_,
+                                              static_cast<int32>(offset), len,
+                                              // This gets a non-const pointer.
+                                              const_cast<char *>(data.c_str()));
+        // Error occurs.
+        if (consumed < 0)
+          return offset;
+        offset += consumed;
+      }
+      return size;
     }
 
     std::string GetHeaders() {
+      std::string result;
+      if (!http_request_)
+        return result;
+
       const std::string *headers_ptr = NULL;
       http_request_->GetAllResponseHeaders(&headers_ptr);
-      std::string result;
       if (headers_ptr) {
         const char *p = headers_ptr->c_str();
         // Remove all '\r's according to NPAPI's requirement.
@@ -231,45 +195,74 @@ class Plugin::Impl : public SmallObject<> {
       return result;
     }
 
+    size_t OnDataReceived(const std::string &data) {
+      unsigned short status = 0;
+      http_request_->GetStatus(&status);
+      if (status == 200) {
+        if (!stream_) {
+          const std::string *length_str = NULL;
+          http_request_->GetResponseHeader("Content-Length", &length_str);
+          int length = 0;
+          if (length_str)
+            Variant(*length_str).ConvertToInt(&length);
+
+          mime_type_ = http_request_->GetResponseContentType();
+          if (mime_type_.empty())
+            mime_type_ = owner_->mime_type_;
+          headers_ = GetHeaders();
+          std::string effective_url = http_request_->GetEffectiveUrl();
+          if (url_or_file_ == owner_->location_) {
+            // Change location to the effective URL only if the request is of
+            // top level.
+            owner_->location_ = effective_url;
+          }
+          url_or_file_ = effective_url;
+          if (!NewStream(static_cast<size_t>(length))) {
+            Done(NPRES_NETWORK_ERR);
+            return 0;
+          }
+        }
+
+        size_t written = WriteStream(data);
+        if (written != data.size()) {
+          Done(NPRES_NETWORK_ERR);
+          return 0;
+        }
+      }
+      return data.size();
+    }
+
     void OnStateChange() {
       if (http_request_->GetReadyState() == XMLHttpRequestInterface::DONE) {
-        unsigned short status = 0;
-        if (http_request_->IsSuccessful() &&
-            http_request_->GetStatus(&status) ==
-                XMLHttpRequestInterface::NO_ERR &&
-            status == 200) {
-          std::string mime_type = http_request_->GetResponseContentType();
-          if (mime_type.empty())
-            mime_type = owner_->mime_type_;
-
-          std::string response;
-          http_request_->GetResponseBody(&response);
-          owner_->OnStreamReady(url_, http_request_->GetEffectiveUrl(),
-                                mime_type, GetHeaders(), response,
-                                notify_, notify_data_);
+        if (http_request_->IsSuccessful()) {
+          Done(NPRES_DONE);
         } else {
-          owner_->OnStreamError(url_, notify_, notify_data_, NPRES_NETWORK_ERR);
+          Done(NPRES_NETWORK_ERR);
         }
-        delete this;
       }
     }
 
     Impl *owner_;
-    std::string url_;
+    NPPluginFuncs *plugin_funcs_;
+    NPStream *stream_;
+    std::string method_, url_or_file_, post_data_, mime_type_, headers_;
     XMLHttpRequestInterface *http_request_;
     bool notify_;
     void *notify_data_;
-    Connection *on_owner_destroy_connection_;
+    Connection *on_abort_connection_;
     Connection *on_state_change_connection_;
+    Connection *on_data_received_connection_;
   };
 
   Impl(const char *mime_type, BasicElement *element,
-       PluginLibraryInfo *library_info, const NPWindow &window,
+       PluginLibraryInfo *library_info,
+       void *top_window, const NPWindow &window,
        const StringMap &parameters)
       : mime_type_(mime_type),
         element_(element),
         library_info_(library_info),
         plugin_root_(NULL),
+        top_window_(top_window),
         window_(window),
         windowless_(false), transparent_(false),
         init_error_(NPERR_GENERIC_ERROR),
@@ -305,16 +298,16 @@ class Plugin::Impl : public SmallObject<> {
     }
 
     if (!windowless_)
-      SetWindow(window);
+      SetWindow(top_window, window);
     // Otherwise the caller should handle the change of windowless state.
   }
 
   ~Impl() {
+    abort_streams_();
     if (!temp_dir_.empty())
       RemoveDirectory(temp_dir_.c_str(), true);
     if (plugin_root_)
       plugin_root_->Unref();
-    on_destroy_();
 
     if (library_info_->plugin_funcs.destroy) {
       NPError ret = library_info_->plugin_funcs.destroy(&instance_, NULL);
@@ -324,7 +317,7 @@ class Plugin::Impl : public SmallObject<> {
     ReleasePluginLibrary(library_info_);
   }
 
-  bool SetWindow(const NPWindow &window) {
+  bool SetWindow(void *top_window, const NPWindow &window) {
     // Host must have set the window info struct.
     if (!window.ws_info)
       return false;
@@ -340,6 +333,7 @@ class Plugin::Impl : public SmallObject<> {
     if (library_info_->plugin_funcs.setwindow &&
         library_info_->plugin_funcs.setwindow(&instance_, &window_tmp) ==
             NPERR_NO_ERROR) {
+      top_window_ = top_window;
       window_ = window_tmp;
       return true;
     }
@@ -369,29 +363,11 @@ class Plugin::Impl : public SmallObject<> {
     return plugin_root_;
   }
 
-  void OnStreamReady(const std::string &url, const std::string &effective_url,
-                     const std::string &mime_type,
-                     const std::string &headers, const std::string &data,
-                     bool notify, void *notify_data) {
-    if (url == location_) {
-      // Change location to the effective URL only if the request is of
-      // top level.
-      location_ = effective_url;
-    }
-
-    StreamWriter *writer = new StreamWriter(this, effective_url, mime_type,
-                                            headers, data, notify, notify_data);
-    if (writer->watch_id_ == 0) {
-      // The writer encountered errors or has finished its task.
-      delete writer;
-    }
-  }
-
-  void OnStreamError(const std::string &url, bool notify, void *notify_data,
-                     NPReason reason) {
+  void DoURLNotify(const char *url, bool notify, void *notify_data,
+                   NPReason reason) {
     if (notify && library_info_->plugin_funcs.urlnotify) {
-      library_info_->plugin_funcs.urlnotify(&instance_, url.c_str(),
-                                            reason, notify_data);
+      library_info_->plugin_funcs.urlnotify(&instance_, url, reason,
+                                            notify_data);
     }
   }
 
@@ -416,39 +392,35 @@ class Plugin::Impl : public SmallObject<> {
       return NPERR_NO_ERROR;
     }
 
+    if (!library_info_->plugin_funcs.writeready ||
+        !library_info_->plugin_funcs.write ||
+        !library_info_->plugin_funcs.newstream)
+      return NPERR_INVALID_PARAM;
+
+    StreamHandler *handler = NULL;
     std::string file_path = IsAbsolutePath(url) ? url : GetFileNameFromURL(url);
     if (!file_path.empty()) {
-      if (!gadget->GetPermissions()->IsRequiredAndGranted(
-          Permissions::FILE_READ)) {
-        OnStreamError(url, notify, notify_data, NPRES_USER_BREAK);
-        LOG("The gadget doesn't permit the plugin to read local files.");
+      // Only can set src to a local file. The plugin can't request to read
+      // local files.
+      if (url != location_ ||
+          !gadget->GetPermissions()->IsRequiredAndGranted(
+              Permissions::FILE_READ)) {
+        DoURLNotify(url, notify, notify_data, NPRES_USER_BREAK);
+        LOG("The plugin is not permitted to read local files.");
         return NPERR_GENERIC_ERROR;
       }
-
-      std::string content;
-      if (!ReadFileContents(file_path.c_str(), &content)) {
-        OnStreamError(url, notify, notify_data, NPRES_NETWORK_ERR);
-        return NPERR_FILE_NOT_FOUND;
-      }
-      OnStreamReady(url, url, mime_type_, "", content, notify, notify_data);
+      handler = new StreamHandler(this, NULL, "", file_path, "",
+                                  notify, notify_data);
     } else {
       XMLHttpRequestInterface *request = gadget->CreateXMLHttpRequest();
       if (!request) {
-        OnStreamError(url, notify, notify_data, NPRES_USER_BREAK);
+        DoURLNotify(url, notify, notify_data, NPRES_USER_BREAK);
         return NPERR_GENERIC_ERROR;
       }
-      request->Ref();
-      // The following object will add itself as the listener of the request.
-      XMLHttpRequestCallback *callback = new XMLHttpRequestCallback(
-          this, url, request, notify, notify_data);
-      if (request->Open(method, url, true, NULL, NULL) !=
-              XMLHttpRequestInterface::NO_ERR ||
-          request->Send(NULL) != XMLHttpRequestInterface::NO_ERR) {
-        delete callback;
-        OnStreamError(url, notify, notify_data, NPRES_NETWORK_ERR);
-      }
-      request->Unref();
+      handler = new StreamHandler(this, request, method, url, post_data,
+                                  notify, notify_data);
     }
+    handler->Start();
     return NPERR_NO_ERROR;
   }
 
@@ -618,21 +590,30 @@ class Plugin::Impl : public SmallObject<> {
         DLOG("NPN_GetValue NPNVxDisplay: %p", display_);
         break;
 #endif
+      case NPNVnetscapeWindow:
+        if (instance && instance->ndata) {
+          Impl *impl = static_cast<Impl *>(instance->ndata);
+          *static_cast<Window *>(value) =
+              reinterpret_cast<Window>(impl->top_window_);
+          break;
+        } else {
+          return NPERR_GENERIC_ERROR;
+        }
       case NPNVWindowNPObject:
         if (instance && instance->ndata) {
           Impl *impl = static_cast<Impl *>(instance->ndata);
           RetainNPObject(&impl->browser_window_npobject_);
           *static_cast<NPObject **>(value) = &impl->browser_window_npobject_;
           break;
+        } else {
+          return NPERR_GENERIC_ERROR;
         }
-        // Fall through!
       case NPNVserviceManager:
       case NPNVDOMElement:
       case NPNVPluginElementNPObject:
         // TODO: This variable is for popup window/menu purpose when
         // windowless mode is used. We must provide a parent window for
         // the plugin to show popups if we want to support.
-      case NPNVnetscapeWindow:
       case NPNVxtAppContext:
       default:
         LOG("NPNVariable %d is not supported.", variable);
@@ -879,6 +860,7 @@ class Plugin::Impl : public SmallObject<> {
   PluginLibraryInfo *library_info_;
   NPP_t instance_;
   ScriptableNPObject *plugin_root_;
+  void *top_window_;
   NPWindow window_;
   bool windowless_;
   bool transparent_;
@@ -887,7 +869,7 @@ class Plugin::Impl : public SmallObject<> {
   int temp_file_seq_;
 
   Signal1<void, const char *> on_new_message_handler_;
-  Signal0<void> on_destroy_;
+  Signal0<void> abort_streams_;
   static const NPNetscapeFuncs kContainerFuncs;
 #ifdef MOZ_X11
   // Stores the XDisplay pointer to make it available during plugin library
@@ -999,8 +981,8 @@ bool Plugin::IsWindowless() const {
   return impl_->windowless_;
 }
 
-bool Plugin::SetWindow(const NPWindow &window) {
-  return impl_->SetWindow(window);
+bool Plugin::SetWindow(void *top_window, const NPWindow &window) {
+  return impl_->SetWindow(top_window, window);
 }
 
 bool Plugin::IsTransparent() const {
@@ -1014,6 +996,7 @@ bool Plugin::HandleEvent(void *event) {
 void Plugin::SetSrc(const char *src) {
   // Start the initial data stream.
   impl_->location_ = src;
+  impl_->abort_streams_();
   impl_->HandleURL("GET", src, NULL, "", false, NULL);
 }
 
@@ -1026,7 +1009,8 @@ ScriptableInterface *Plugin::GetScriptablePlugin() {
 }
 
 Plugin *Plugin::Create(const char *mime_type, BasicElement *element,
-                       const NPWindow &window, const StringMap &parameters) {
+                       void *top_window, const NPWindow &window,
+                       const StringMap &parameters) {
 #ifdef MOZ_X11
   // Set it early because it may be used during library initialization.
   if (!Impl::display_ && window.ws_info)
@@ -1039,8 +1023,8 @@ Plugin *Plugin::Create(const char *mime_type, BasicElement *element,
     return NULL;
 
   Plugin *plugin = new Plugin();
-  plugin->impl_ = new Plugin::Impl(mime_type, element, library_info, window,
-                                   parameters);
+  plugin->impl_ = new Plugin::Impl(mime_type, element, library_info,
+                                   top_window, window, parameters);
 
   if (plugin->impl_->init_error_ != NPERR_NO_ERROR) {
     plugin->Destroy();
