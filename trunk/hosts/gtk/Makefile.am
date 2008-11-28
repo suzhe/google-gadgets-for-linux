@@ -20,14 +20,18 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 noinst_HEADERS		= gadget_browser_host.h \
+			  gtk_host_base.h \
 			  simple_gtk_host.h \
-			  sidebar_gtk_host.h
+			  sidebar_gtk_host.h \
+			  standalone_gtk_host.h
 
 bin_PROGRAMS		= ggl-gtk
 
 ggl_gtk_SOURCES		= main.cc \
+			  gtk_host_base.cc \
 			  sidebar_gtk_host.cc \
-			  simple_gtk_host.cc
+			  simple_gtk_host.cc \
+			  standalone_gtk_host.cc
 
 
 ggl_gtk_CPPFLAGS 	= @GTK2_CFLAGS@ \

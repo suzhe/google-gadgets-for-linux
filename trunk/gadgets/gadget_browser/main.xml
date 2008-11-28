@@ -106,6 +106,7 @@
   </div>
   <label color="#ffffff" size="10" wordWrap="false" vAlign="middle" bold="true"
     pinX="50%" x="50%" height="24">&GADGET_NAME;</label>
+  <div height="22" width="100%" hitTest="htcaption"/>
   <button name="close_button" pinX="24" pinY="0" x="100%" y="0"
     image="images/close_button_up.png"
     overImage="images/close_button_over.png"

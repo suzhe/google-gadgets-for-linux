@@ -277,8 +277,6 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
     }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      Permissions permissions;
-      permissions.SetGranted(Permissions::ALL_ACCESS, true);
       // The gadget manager always use positive instance ids, so this designee_id
       // won't conflict with them.
       int designee_id = -g_designer_gadget->GetInstanceID() - 1;
@@ -287,11 +285,10 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
             "another designer");
         return false;
       }
-      g_designee_gadget = new Gadget(g_designer_gadget->GetHost(),
-                                     gadget_path_.c_str(),
-                                     options_name_.c_str(),
-                                     designee_id, permissions,
-                                     Gadget::DEBUG_CONSOLE_INITIAL);
+
+      g_designee_gadget = g_designer_gadget->GetHost()->LoadGadget(
+          gadget_path_.c_str(), options_name_.c_str(), designee_id, true);
+
       if (g_designee_gadget && g_designee_gadget->IsValid()) {
         g_designee_gadget->ShowMainView();
         g_designee_close_connection = g_designee_gadget->GetMainView()->

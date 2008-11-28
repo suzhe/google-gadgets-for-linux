@@ -26,8 +26,8 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  ggadget \
 	  extensions \
 	  resources \
-	  gadgets \
 	  xdg \
+	  gadgets \
 	  hosts
 
 EXTRA_DIST = autotools cmake CMakeLists.txt

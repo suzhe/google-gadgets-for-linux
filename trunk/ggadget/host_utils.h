@@ -18,6 +18,9 @@
 #define GGADGET_HOST_UTILS_H__
 
 #include <string>
+#include <ggadget/common.h>
+#include <ggadget/variant.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
@@ -59,6 +62,100 @@ void InitXHRUserAgent(const char *app_name);
 void GetPopupPosition(int x, int y, int w, int h,
                       int w1, int h1, int sw, int sh,
                       int *x1, int *y1);
+
+
+/**
+ * Structure to hold information of a host command line argument.
+ *
+ * - id
+ *   A numeric id to identify the argument. Must be >= 0.
+ * - type
+ *   The value type argument. Only supports BOOL, INT64, DOUBLE and STRING.
+ * - short_name
+ *   Short name of the argument, such as '-d'.
+ * - long_name
+ *   Long name of the argument, such as '--debug'.
+ */
+struct HostArgumentInfo {
+  int id;
+  Variant::Type type;
+  const char *short_name;
+  const char *long_name;
+};
+
+/**
+ * Class to parse host arguments.
+ *
+ * The argument can be specified by something like "--debug 1" or "--debug=1"
+ */
+class HostArgumentParser {
+ public:
+  /**
+   * Constructor.
+   * @param args An array of known arguments' information, terminated by an
+   *        entry with id == -1. It must be statically defined.
+   */
+  explicit HostArgumentParser(const HostArgumentInfo *args);
+
+  ~HostArgumentParser();
+
+  /**
+   * Starts the parse process. All existing state will be erased.
+   * @return true if success.
+   */
+  bool Start();
+
+  /**
+   * Appends one argument.
+   * @return true if success.
+   */
+  bool AppendArgument(const char *arg);
+
+  /**
+   * Appends multiple arguments.
+   * @return true if success.
+   */
+  bool AppendArguments(int argc, const char * const argv[]);
+
+  /**
+   * Finish the parse process, and validate if the arguments are valid.
+   * @return true if all arguments are valid, otherwise returns false.
+   */
+  bool Finish();
+
+  /**
+   * Gets the value of a argument.
+   *
+   * @param id The id of the argument.
+   * @param[out] value The value of the argument if it's specified. It can be
+   *             NULL if the value is not important.
+   * @return true if the argument is specified.
+   */
+  bool GetArgumentValue(int id, Variant *value) const;
+
+  /**
+   * Enumerates remained arguments that are not in the predefined argument
+   * list.
+   *
+   * @param callback A callback to be called for each remained arguments.
+   *        Returning false to stop enumeration.
+   * @return true if all remained arguments are enumerated.
+   */
+  bool EnumerateRemainedArgs(Slot1<bool, const std::string &> *callback) const;
+
+ public:
+  /**
+   * Signature string used by hosts to identify the start and finish of a
+   * RunOnce message group.
+   */
+  static const char kStartSignature[];
+  static const char kFinishSignature[];
+
+ private:
+  class Impl;
+  Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(HostArgumentParser);
+};
 
 } // namespace ggadget
 

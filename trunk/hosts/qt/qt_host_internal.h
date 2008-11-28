@@ -130,27 +130,30 @@ class QtHost::Impl : public QObject {
     if (options.length() && path.length()) {
       OptionsInterface *opt = CreateOptions(options.c_str());
       delete opt;
-      result =
-          LoadGadget(path.c_str(), options.c_str(), id);
+      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
       DLOG("QtHost: Load gadget %s, with option %s, %s",
            path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
   }
 
-  bool LoadGadget(const char *path, const char *options_name, int instance_id) {
+  Gadget *LoadGadget(const char *path, const char *options_name,
+                     int instance_id, bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
-      return true;
+      return gadgets_[instance_id]->gadget_;
     }
 
+    Gadget::DebugConsoleConfig dcc = show_debug_console ?
+        Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
+
     Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
-                                global_permissions_, debug_console_config_);
+                                global_permissions_, dcc);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
       delete gadget;
-      return false;
+      return NULL;
     }
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
@@ -160,10 +163,10 @@ class QtHost::Impl : public QObject {
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
       delete info;
-      return false;
+      return NULL;
     }
     gadgets_[instance_id] = info;
-    return true;
+    return gadget;
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget,

@@ -33,8 +33,15 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type) {
-    return new ggadget::gtk::SingleViewHost(type, 1.0, false, true, true,
-                                            view_debug_mode_);
+    int flags = ggadget::gtk::SingleViewHost::WM_MANAGEABLE |
+                ggadget::gtk::SingleViewHost::REMOVE_ON_CLOSE |
+                ggadget::gtk::SingleViewHost::RECORD_STATES;
+    return new ggadget::gtk::SingleViewHost(type, 1.0, flags, view_debug_mode_);
+  }
+  virtual Gadget *LoadGadget(const char *path, const char *options_name,
+                             int instance_id, bool show_debug_console) {
+    return owner_->LoadGadget(path, options_name, instance_id,
+                              show_debug_console);
   }
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
@@ -42,13 +49,14 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
-  virtual void Run() {}
   virtual void ShowGadgetAboutDialog(Gadget *gadget) {
     owner_->ShowGadgetAboutDialog(gadget);
   }
   virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
-  virtual bool OpenURL(const Gadget *gadget, const char *url) { return false; }
+  virtual bool OpenURL(const Gadget *gadget, const char *url) {
+    return owner_->OpenURL(gadget, url);
+  }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

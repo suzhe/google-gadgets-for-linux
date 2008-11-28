@@ -75,6 +75,11 @@ ViewHostInterface *QtHost::NewViewHost(Gadget *gadget,
   return impl_->NewViewHost(gadget, type);
 }
 
+Gadget *QtHost::LoadGadget(const char *path, const char *options_name,
+                           int instance_id, bool show_debug_console) {
+  return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
+}
+
 void QtHost::RemoveGadget(Gadget *gadget, bool save_data) {
   impl_->RemoveGadget(gadget, save_data);
 }

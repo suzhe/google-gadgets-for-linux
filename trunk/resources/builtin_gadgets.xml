@@ -547,9 +547,10 @@
     <title locale="sl">Vreme</title>
     <description locale="sl">Prikaz vremenskih informacij za izbrane kraje</description>
   </plugin-->
-  <plugin id="designer" category="tools" thumbnail_url="resource://designer_sm.jpg" rank="1"
+  <!-- Now designer is a standalone gadget.
+    plugin id="designer" category="tools" thumbnail_url="resource://designer_sm.jpg" rank="1"
     language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
     <description locale="en">Gadget designer</description>
     <title locale="en">Gadget designer</title>
-  </plugin>
+  </plugin-->
 </plugins>

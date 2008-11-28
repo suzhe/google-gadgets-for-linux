@@ -53,6 +53,8 @@
 #include <X11/extensions/Xrender.h>
 #endif
 
+using ggadget::Variant;
+
 static ggadget::qt::QtMainLoop *g_main_loop;
 static const char kRunOnceSocketName[] = "ggl-host-socket";
 
@@ -76,7 +78,7 @@ static const char *kGlobalExtensions[] = {
   NULL
 };
 
-static const char *g_help_string =
+static const char kHelpString[] =
   "Google Gadgets for Linux " GGL_VERSION
   " (Gadget API version " GGL_API_VERSION ")\n"
   "Usage: " GGL_APP_NAME " [Options] [Gadgets]\n"
@@ -115,6 +117,90 @@ static const char *g_help_string =
   "  Can specify one or more Desktop Gadget paths.\n"
   "  If any gadgets are specified, they will be installed by using\n"
   "  GadgetManager.\n";
+
+enum ArgumentID {
+  ARG_DEBUG = 1,
+  ARG_SCRIPT_RUNTIME,
+  ARG_BACKGROUND,
+  ARG_LOG_LEVEL,
+  ARG_LONG_LOG,
+  ARG_DEBUG_CONSOLE,
+  ARG_NO_COLLECTOR,
+  ARG_HELP
+};
+
+static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
+#ifdef _DEBUG
+  { ARG_DEBUG,          Variant::TYPE_INT64,  "-d",  "--debug" },
+#endif
+#if QT_VERSION >= 0x040400
+  { ARG_SCRIPT_RUNTIME, Variant::TYPE_STRING, "-s", "--script-runtime" },
+#endif
+  { ARG_BACKGROUND,     Variant::TYPE_BOOL,   "-bg", "--background" },
+  { ARG_LOG_LEVEL,      Variant::TYPE_INT64,  "-l",  "--log-level" },
+  { ARG_LONG_LOG,       Variant::TYPE_BOOL,   "-ll", "--long-log" },
+  { ARG_DEBUG_CONSOLE,  Variant::TYPE_INT64,  "-dc", "--debug-console" },
+  { ARG_NO_COLLECTOR,   Variant::TYPE_BOOL,   "-nc", "--no-collector" },
+  { ARG_HELP,           Variant::TYPE_BOOL,   "-h",  "--help" },
+  { -1,                 Variant::TYPE_VOID, NULL, NULL } // End of list
+};
+
+struct Arguments {
+  Arguments()
+    : debug_mode(0),
+      background(false),
+#ifdef _DEBUG
+      log_level(ggadget::LOG_TRACE),
+      long_log(true),
+#else
+      log_level(ggadget::LOG_WARNING),
+      long_log(false),
+#endif
+      debug_console(ggadget::Gadget::DEBUG_CONSOLE_DISABLED),
+      no_collector(false) {
+  }
+
+  int debug_mode;
+  std::string script_runtime;
+  bool background;
+  int log_level;
+  bool long_log;
+  ggadget::Gadget::DebugConsoleConfig debug_console;
+  bool no_collector;
+};
+
+static ggadget::HostArgumentParser g_argument_parser(kArgumentsInfo);
+static Arguments g_arguments;
+
+static void ExtractArgumentsValue() {
+  // Resets arguments value.
+  g_arguments = Arguments();
+
+  ggadget::Variant arg_value;
+  if (g_argument_parser.GetArgumentValue(ARG_DEBUG, &arg_value))
+    g_arguments.debug_mode = ggadget::VariantValue<int>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_SCRIPT_RUNTIME, &arg_value))
+    g_arguments.script_runtime =
+        ggadget::VariantValue<std::string>()(arg_value);
+  if (g_arguments.script_runtime.length()) {
+    kGlobalExtensions[0] = g_arguments.script_runtime.c_str();
+  } else {
+    kGlobalExtensions[0] = "smjs-script-runtime";
+  }
+
+  if (g_argument_parser.GetArgumentValue(ARG_BACKGROUND, &arg_value))
+    g_arguments.background = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_LOG_LEVEL, &arg_value))
+    g_arguments.log_level = ggadget::VariantValue<int>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_LONG_LOG, &arg_value))
+    g_arguments.long_log = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_DEBUG_CONSOLE, &arg_value))
+    g_arguments.debug_console =
+        static_cast<ggadget::Gadget::DebugConsoleConfig>(
+            ggadget::VariantValue<int>()(arg_value));
+  if (g_argument_parser.GetArgumentValue(ARG_NO_COLLECTOR, &arg_value))
+    g_arguments.no_collector = ggadget::VariantValue<bool>()(arg_value);
+}
 
 #if defined(Q_WS_X11) && defined(HAVE_X11)
 static Display *dpy;
@@ -159,8 +245,23 @@ static bool CheckCompositingManager(Display *dpy) {
 }
 #endif
 
+static bool LoadLocalGadget(const std::string &gadget) {
+  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(gadget.c_str());
+  return true;
+}
+
 static void OnClientMessage(const std::string &data) {
-  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
+  if (data == ggadget::HostArgumentParser::kStartSignature) {
+    g_argument_parser.Start();
+  } else if (data == ggadget::HostArgumentParser::kFinishSignature) {
+    if (g_argument_parser.Finish()) {
+      ExtractArgumentsValue();
+      g_argument_parser.EnumerateRemainedArgs(
+          ggadget::NewSlot(LoadLocalGadget));
+    }
+  } else if (data.length()) {
+    g_argument_parser.AppendArgument(data.c_str());
+  }
 }
 
 static void DefaultSignalHandler(int sig) {
@@ -169,73 +270,30 @@ static void DefaultSignalHandler(int sig) {
 }
 
 int main(int argc, char* argv[]) {
-#ifdef _DEBUG
-  int log_level = ggadget::LOG_TRACE;
-  bool long_log = true;
-#else
-  int log_level = ggadget::LOG_WARNING;
-  bool long_log = false;
-#endif
-  bool composite = false;
-  int debug_mode = 0;
-  bool background = false;
-  bool enable_collector = true;
-  ggadget::Gadget::DebugConsoleConfig debug_console =
-      ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
-
   // Parse command line.
-  std::vector<std::string> gadget_paths;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
-      printf("%s", g_help_string);
-      return 0;
-#ifdef _DEBUG
-    } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
-      if (++i < argc) {
-        debug_mode = atoi(argv[i]);
-      } else {
-        debug_mode = 1;
-      }
-#endif
-#if QT_VERSION >= 0x040400
-    } else if (strcmp("-s", argv[i]) == 0 ||
-               strcmp("--script-runtime", argv[i]) == 0) {
-      if (++i < argc) {
-        if (strcmp(argv[i], "qt") == 0) {
-          kGlobalExtensions[0] = "qt-script-runtime";
-          printf("QtScript runtime is chosen. It's still incomplete\n");
-        }
-      }
-#endif
-    } else if (strcmp("-l", argv[i]) == 0 ||
-               strcmp("--log-level", argv[i]) == 0) {
-      if (++i < argc)
-        log_level = atoi(argv[i]);
-    } else if (strcmp("-ll", argv[i]) == 0 ||
-               strcmp("--long-log", argv[i]) == 0) {
-      long_log = true;
-    } else if (strcmp("-dc", argv[i]) == 0 ||
-               strcmp("--debug-console", argv[i]) == 0) {
-      debug_console = ggadget::Gadget::DEBUG_CONSOLE_ON_DEMMAND;
-      if (++i < argc) {
-        debug_console =
-            static_cast<ggadget::Gadget::DebugConsoleConfig>(atoi(argv[i]));
-      }
-    } else if (strcmp("-nc", argv[i]) == 0 ||
-               strcmp("--no-collector", argv[i]) == 0) {
-      enable_collector = false;
-    } else if (strcmp("-bg", argv[i]) == 0) {
-      background = true;
-    } else {
-      std::string path = ggadget::GetAbsolutePath(argv[i]);
-      gadget_paths.push_back(path);
+  if (argc > 1) {
+    g_argument_parser.Start();
+    if (!g_argument_parser.AppendArguments(argc - 1, argv + 1) ||
+        !g_argument_parser.Finish()) {
+      printf("Invalid arguments.\n%s", kHelpString);
+      return 1;
     }
   }
+
+  // Check --help argument first.
+  if (g_argument_parser.GetArgumentValue(ARG_HELP, NULL)) {
+    printf(kHelpString);
+    return 0;
+  }
+
+  ExtractArgumentsValue();
+
   // Parse command line before create QApplication because it will eat some
   // argv like -bg
+  bool composite = false;
 #if defined(Q_WS_X11) && defined(HAVE_X11)
   if (InitArgb() && CheckCompositingManager(dpy)) {
     composite = true;
@@ -258,17 +316,17 @@ int main(int argc, char* argv[]) {
       NULL);
 
   QString error;
-  ggadget::qt::GGLInitFlags flags;
-  if (long_log)
+  ggadget::qt::GGLInitFlags flags = ggadget::qt::GGL_INIT_FLAG_NONE;
+  if (g_arguments.long_log)
     flags |= ggadget::qt::GGL_INIT_FLAG_LONG_LOG;
-  if (enable_collector)
+  if (!g_arguments.no_collector)
     flags |= ggadget::qt::GGL_INIT_FLAG_COLLECTOR;
 
   g_main_loop = new ggadget::qt::QtMainLoop();
   if (!ggadget::qt::InitGGL(g_main_loop, GGL_APP_NAME,
                             profile_dir.c_str(),
                             kGlobalExtensions,
-                            log_level,
+                            g_arguments.log_level,
                             flags,
                             &error)) {
     QMessageBox::information(NULL, "Google Gadgets", error);
@@ -282,21 +340,22 @@ int main(int argc, char* argv[]) {
   run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
   if (run_once.IsRunning()) {
-    for (size_t i = 0; i < gadget_paths.size(); ++i)
-      run_once.SendMessage(gadget_paths[i]);
     DLOG("Another instance already exists.");
+    run_once.SendMessage(ggadget::HostArgumentParser::kStartSignature);
+    for (int i = 1; i < argc; ++i)
+      run_once.SendMessage(argv[i]);
+    run_once.SendMessage(ggadget::HostArgumentParser::kFinishSignature);
     return 0;
   }
 
-  if (background)
+  if (g_arguments.background)
     ggadget::Daemonize();
 
-  hosts::qt::QtHost host(composite, debug_mode, debug_console);
+  hosts::qt::QtHost host(composite, g_arguments.debug_mode,
+                         g_arguments.debug_console);
 
   // Load gadget files.
-  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
-  for (size_t i = 0; i < gadget_paths.size(); ++i)
-    gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+  g_argument_parser.EnumerateRemainedArgs(ggadget::NewSlot(LoadLocalGadget));
 
   // Hook popular signals to exit gracefully.
   signal(SIGHUP, DefaultSignalHandler);

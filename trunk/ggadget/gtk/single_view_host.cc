@@ -55,15 +55,9 @@ static const uint64_t kQueueDrawTimerDuration = 1000;
 
 class SingleViewHost::Impl {
  public:
-  Impl(ViewHostInterface::Type type,
-       SingleViewHost *owner,
-       double zoom,
-       bool decorated,
-       bool remove_on_close,
-       bool record_states,
-       int debug_mode)
-    : type_(type),
-      owner_(owner),
+  Impl(SingleViewHost *owner, ViewHostInterface::Type type,
+       double zoom, int flags, int debug_mode)
+    : owner_(owner),
       view_(NULL),
       window_(NULL),
       widget_(NULL),
@@ -73,10 +67,9 @@ class SingleViewHost::Impl {
       cancel_button_(NULL),
       tooltip_(new Tooltip(kShowTooltipDelay, kHideTooltipDelay)),
       binder_(NULL),
+      type_(type),
       initial_zoom_(zoom),
-      decorated_(decorated),
-      remove_on_close_(remove_on_close),
-      record_states_(record_states),
+      flags_(flags),
       debug_mode_(debug_mode),
       stop_move_drag_source_(0),
       win_x_(0),
@@ -166,7 +159,7 @@ class SingleViewHost::Impl {
     }
 
     view_ = view;
-    bool no_background = false;
+    bool transparent = false;
     // Initialize window and widget.
     // All views must be held inside GTKFixed widgets in order to support the
     // browser element.
@@ -174,6 +167,7 @@ class SingleViewHost::Impl {
     gtk_widget_show(fixed_);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       // Options view needs run in a dialog with ok and cancel buttion.
+      // Options view's background is always opaque.
       window_ = gtk_dialog_new();
       gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window_)->vbox), fixed_);
       cancel_button_ = gtk_dialog_add_button(GTK_DIALOG(window_),
@@ -191,22 +185,25 @@ class SingleViewHost::Impl {
       // details and main view only need a toplevel window.
       // buttons of details view shall be provided by view decorator.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-      gtk_window_set_type_hint(GTK_WINDOW(window_),
-                               GDK_WINDOW_TYPE_HINT_DIALOG);
+      gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
       gtk_container_add(GTK_CONTAINER(window_), fixed_);
-      no_background = true;
-      DisableWidgetBackground(window_);
-      if (!decorated_) {
-        gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
-        gtk_window_set_skip_pager_hint(GTK_WINDOW(window_), TRUE);
-        gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
-      }
+      transparent = !(flags_ & OPAQUE_BACKGROUND);
+      if (transparent)
+        DisableWidgetBackground(window_);
       widget_ = window_;
     }
 
-    gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
+    bool skip_wm = !(flags_ & WM_MANAGEABLE);
+    gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), skip_wm);
+    gtk_window_set_skip_pager_hint(GTK_WINDOW(window_), skip_wm);
+    gtk_window_set_decorated(GTK_WINDOW(window_), (flags_ & DECORATED));
     gtk_window_set_gravity(GTK_WINDOW(window_), GDK_GRAVITY_STATIC);
     SetResizable(view_->GetResizable());
+
+    if (flags_ & DIALOG_TYPE_HINT) {
+      gtk_window_set_type_hint(GTK_WINDOW(window_),
+                               GDK_WINDOW_TYPE_HINT_DIALOG);
+    }
 
     g_signal_connect(G_OBJECT(window_), "delete-event",
                      G_CALLBACK(gtk_widget_hide_on_delete), NULL);
@@ -231,8 +228,8 @@ class SingleViewHost::Impl {
     g_signal_connect(G_OBJECT(window_), "button-release-event",
                      G_CALLBACK(ButtonReleaseHandler), this);
 
-    g_signal_connect(G_OBJECT(fixed_), "size-request",
-                     G_CALLBACK(FixedSizeRequestHandler), this);
+    g_signal_connect(G_OBJECT(widget_), "size-request",
+                     G_CALLBACK(WidgetSizeRequestHandler), this);
 
     g_signal_connect(G_OBJECT(fixed_), "size-allocate",
                      G_CALLBACK(FixedSizeAllocateHandler), this);
@@ -243,7 +240,7 @@ class SingleViewHost::Impl {
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
     // input event mask effective.
-    binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
+    binder_ = new ViewWidgetBinder(view_, owner_, widget_, transparent);
 
     gtk_widget_realize(fixed_);
     gtk_widget_realize(window_);
@@ -432,7 +429,7 @@ class SingleViewHost::Impl {
     // the window size has correct default size when showing.
     AdjustWindowSize();
 
-    if (record_states_)
+    if (flags_ & RECORD_STATES)
       LoadWindowStates();
 
     // Can't use gtk_widget_show_now() here, because in some cases, it'll cause
@@ -442,12 +439,12 @@ class SingleViewHost::Impl {
     gdk_window_raise(window_->window);
 
     // gtk_window_stick() must be called everytime.
-    if (!decorated_)
+    if (!(flags_ & WM_MANAGEABLE))
       gtk_window_stick(GTK_WINDOW(window_));
 
     // Load window states again to make sure it's still correct
     // after the window is shown.
-    if (record_states_)
+    if (flags_ & RECORD_STATES)
       LoadWindowStates();
 
     // Main view and details view doesn't support modal.
@@ -510,7 +507,7 @@ class SingleViewHost::Impl {
   }
 
   void SaveWindowStates(bool save_position, bool save_keep_above) {
-    if (record_states_ && view_ && view_->GetGadget()) {
+    if ((flags_ & RECORD_STATES) && view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       if (save_position) {
@@ -529,7 +526,7 @@ class SingleViewHost::Impl {
   }
 
   void LoadWindowStates() {
-    if (record_states_ && view_ && view_->GetGadget()) {
+    if ((flags_ & RECORD_STATES) && view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
 
@@ -776,7 +773,7 @@ class SingleViewHost::Impl {
         delete impl->feedback_handler_;
         impl->feedback_handler_ = NULL;
       } else if (impl->type_ == ViewHostInterface::VIEW_HOST_MAIN &&
-                 impl->remove_on_close_ && impl->view_->GetGadget()) {
+                 (impl->flags_ & REMOVE_ON_CLOSE) && impl->view_->GetGadget()) {
         impl->view_->GetGadget()->RemoveMe(true);
       }
     }
@@ -913,7 +910,7 @@ class SingleViewHost::Impl {
     return FALSE;
   }
 
-  static void FixedSizeRequestHandler(GtkWidget *widget,
+  static void WidgetSizeRequestHandler(GtkWidget *widget,
                                       GtkRequisition *requisition,
                                       gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
@@ -1031,7 +1028,6 @@ class SingleViewHost::Impl {
     return FALSE;
   }
 
-  ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
 
@@ -1047,12 +1043,11 @@ class SingleViewHost::Impl {
   Tooltip *tooltip_;
   ViewWidgetBinder *binder_;
 
+  ViewHostInterface::Type type_;
   double initial_zoom_;
-  bool decorated_;
-  bool remove_on_close_;
-  bool record_states_;
-
+  int flags_;
   int debug_mode_;
+
   int stop_move_drag_source_;
 
   int win_x_;
@@ -1114,13 +1109,8 @@ class SingleViewHost::Impl {
 };
 
 SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
-                               double zoom,
-                               bool decorated,
-                               bool remove_on_close,
-                               bool record_states,
-                               int debug_mode)
-    : impl_(new Impl(type, this, zoom, decorated, remove_on_close,
-                     record_states, debug_mode)) {
+                               double zoom, int flags, int debug_mode)
+  : impl_(new Impl(this, type, zoom, flags, debug_mode)) {
 }
 
 SingleViewHost::~SingleViewHost() {

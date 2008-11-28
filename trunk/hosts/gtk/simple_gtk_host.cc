@@ -49,10 +49,6 @@
 using namespace ggadget;
 using namespace ggadget::gtk;
 
-namespace ggadget {
-DECLARE_VARIANT_PTR_TYPE(DecoratedViewHost);
-}
-
 namespace hosts {
 namespace gtk {
 
@@ -84,18 +80,16 @@ class SimpleGtkHost::Impl {
   };
 
  public:
-  Impl(SimpleGtkHost *owner, OptionsInterface *options,
-       double zoom, bool decorated, int view_debug_mode,
+  Impl(SimpleGtkHost *owner, const char *options,
+       int flags, int view_debug_mode,
        Gadget::DebugConsoleConfig debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
-      options_(options),
-      zoom_(zoom),
-      decorated_(decorated),
+      options_(CreateOptions(options)),
+      flags_(flags),
       view_debug_mode_(view_debug_mode),
       debug_console_config_(debug_console_config),
       gadgets_shown_(true),
-      transparent_(SupportsComposite(NULL)),
       font_size_(kDefaultFontSize),
       gadget_manager_(GetGadgetManager()),
       expanded_original_(NULL),
@@ -145,6 +139,7 @@ class SimpleGtkHost::Impl {
 #else
     gtk_widget_destroy(main_widget_);
 #endif
+    delete options_;
   }
 
   void SetupUI() {
@@ -236,55 +231,6 @@ class SimpleGtkHost::Impl {
   }
 #endif
 
-  static bool GetPermissionsDescriptionCallback(int permission,
-                                                std::string *msg) {
-    if (msg->length())
-      msg->append("\n");
-    msg->append("  ");
-    msg->append(Permissions::GetDescription(permission));
-    return true;
-  }
-
-  bool ConfirmGadget(int id, Permissions *permissions) {
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    std::string download_url, title, description;
-    if (!gadget_manager_->GetGadgetInstanceInfo(id,
-                                                GetSystemLocaleName().c_str(),
-                                                NULL, &download_url,
-                                                &title, &description))
-      return false;
-
-    // Get required permissions description.
-    std::string permissions_msg;
-    permissions->EnumerateAllRequired(
-        NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
-
-    GtkWidget *dialog = gtk_message_dialog_new(
-        NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        "%s\n\n%s\n%s\n\n%s%s\n\n%s\n%s",
-        GM_("GADGET_CONFIRM_MESSAGE"), title.c_str(), download_url.c_str(),
-        GM_("GADGET_DESCRIPTION"), description.c_str(),
-        GM_("GADGET_REQUIRED_PERMISSIONS"), permissions_msg.c_str());
-
-    GdkScreen *screen;
-    gdk_display_get_pointer(gdk_display_get_default(), &screen,
-                            NULL, NULL, NULL);
-    gtk_window_set_screen(GTK_WINDOW(dialog), screen);
-    gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
-    gtk_window_set_title(GTK_WINDOW(dialog), GM_("GADGET_CONFIRM_TITLE"));
-    gtk_window_present(GTK_WINDOW(dialog));
-    gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-
-    if (result == GTK_RESPONSE_YES) {
-      // TODO: Is it necessary to let user grant individual permissions
-      // separately?
-      permissions->GrantAllRequired();
-      return true;
-    }
-    return false;
-  }
-
   bool EnumerateGadgetInstancesCallback(int id) {
     if (!LoadGadgetInstance(id))
       gadget_manager_->RemoveGadgetInstance(id);
@@ -295,7 +241,11 @@ class SimpleGtkHost::Impl {
   bool NewGadgetInstanceCallback(int id) {
     Permissions permissions;
     if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
-      if (!permissions.HasUngranted() || ConfirmGadget(id, &permissions)) {
+      if (flags_ & GRANT_PERMISSIONS) {
+        permissions.GrantAllRequired();
+      }
+      if (!permissions.HasUngranted() ||
+          owner_->ConfirmManagedGadget(id, &permissions)) {
         // Save initial permissions.
         std::string options_name =
             gadget_manager_->GetGadgetInstanceOptionsName(id);
@@ -323,22 +273,25 @@ class SimpleGtkHost::Impl {
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
-      result =
-          LoadGadget(path.c_str(), options.c_str(), id);
+      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
       DLOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
            path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
   }
 
-  bool LoadGadget(const char *path, const char *options_name, int instance_id) {
+  Gadget *LoadGadget(const char *path, const char *options_name,
+                     int instance_id, bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
-      return true;
+      return gadgets_[instance_id].gadget;
     }
 
+    Gadget::DebugConsoleConfig dcc = show_debug_console ?
+        Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
+
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                global_permissions_, debug_console_config_);
+                                global_permissions_, dcc);
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -349,7 +302,7 @@ class SimpleGtkHost::Impl {
         gadgets_.erase(it);
       }
       delete gadget;
-      return false;
+      return NULL;
     }
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
@@ -364,7 +317,7 @@ class SimpleGtkHost::Impl {
       gtk_window_set_title(GTK_WINDOW(it->second.debug_console),
                            gadget->GetMainView()->GetCaption().c_str());
     }
-    return true;
+    return gadget;
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget,
@@ -375,11 +328,17 @@ class SimpleGtkHost::Impl {
     ASSERT(info->gadget == NULL || info->gadget == gadget);
     info->gadget = gadget;
 
-    bool decorated =
-        (decorated_ || type == ViewHostInterface::VIEW_HOST_OPTIONS);
+    int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+    if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
+      vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::RECORD_STATES |
+                   SingleViewHost::WM_MANAGEABLE);
+    else if (type == ViewHostInterface::VIEW_HOST_DETAILS)
+      vh_flags &= ~SingleViewHost::DECORATED;
+    else
+      vh_flags |= SingleViewHost::RECORD_STATES;
 
-    SingleViewHost *svh = new SingleViewHost(type, zoom_, decorated, false,
-                                             true, view_debug_mode_);
+    SingleViewHost *svh =
+        new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
 
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
       return svh;
@@ -387,7 +346,7 @@ class SimpleGtkHost::Impl {
     DecoratedViewHost *dvh;
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
       FloatingMainViewDecorator *view_decorator =
-          new FloatingMainViewDecorator(svh, transparent_);
+          new FloatingMainViewDecorator(svh, !(flags_ & NO_TRANSPARENT));
       dvh = new DecoratedViewHost(view_decorator);
       ASSERT(!info->main);
       info->main = svh;
@@ -538,8 +497,7 @@ class SimpleGtkHost::Impl {
     if (expanded_popout_)
       OnPopInHandler(expanded_original_);
 
-    DLOG("Exit...");
-    gtk_main_quit();
+    owner_->Exit();
   }
 
   void AddGadgetMenuCallback(const char *) {
@@ -580,9 +538,12 @@ class SimpleGtkHost::Impl {
     ASSERT(child);
     if (child) {
       expanded_original_ = decorated;
+      int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+      // don't show window manager's border for popout view.
+      vh_flags &= ~SingleViewHost::DECORATED;
       SingleViewHost *svh =
-          new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
-                             false, false, false, view_debug_mode_);
+          new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0, vh_flags,
+                             view_debug_mode_);
       PopOutMainViewDecorator *view_decorator =
           new PopOutMainViewDecorator(svh);
       expanded_popout_ = new DecoratedViewHost(view_decorator);
@@ -832,14 +793,14 @@ class SimpleGtkHost::Impl {
                    gtk_status_icon_position_menu, impl->status_icon_,
                    button, activate_time);
   }
-#endif
-
+#else
   static gboolean DeleteEventHandler(GtkWidget *widget,
                                      GdkEvent *event,
                                      gpointer data) {
-    gtk_main_quit();
+    owner_->Exit();
     return TRUE;
   }
+#endif
 
   static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
@@ -869,12 +830,11 @@ class SimpleGtkHost::Impl {
   SimpleGtkHost *owner_;
   OptionsInterface *options_;
 
-  double zoom_;
-  bool decorated_;
+  int flags_;
   int view_debug_mode_;
   Gadget::DebugConsoleConfig debug_console_config_;
+
   bool gadgets_shown_;
-  bool transparent_;
   int font_size_;
 
   GadgetManagerInterface *gadget_manager_;
@@ -892,10 +852,10 @@ class SimpleGtkHost::Impl {
   Permissions global_permissions_;
 };
 
-SimpleGtkHost::SimpleGtkHost(OptionsInterface *options, double zoom,
-                             bool decorated, int view_debug_mode,
+SimpleGtkHost::SimpleGtkHost(const char *options,
+                             int flags, int view_debug_mode,
                              Gadget::DebugConsoleConfig debug_console_config)
-  : impl_(new Impl(this, options, zoom, decorated, view_debug_mode,
+  : impl_(new Impl(this, options, flags, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();
   impl_->LoadGadgets();
@@ -911,16 +871,13 @@ ViewHostInterface *SimpleGtkHost::NewViewHost(Gadget *gadget,
   return impl_->NewViewHost(gadget, type);
 }
 
+Gadget *SimpleGtkHost::LoadGadget(const char *path, const char *options_name,
+                                  int instance_id, bool show_debug_console) {
+  return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
+}
+
 void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
-}
-
-bool SimpleGtkHost::LoadFont(const char *filename) {
-  return ggadget::gtk::LoadFont(filename);
-}
-
-void SimpleGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
-  ggadget::gtk::ShowGadgetAboutDialog(gadget);
 }
 
 void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
@@ -929,10 +886,6 @@ void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
 
 int SimpleGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
-}
-
-bool SimpleGtkHost::OpenURL(const Gadget *gadget, const char *url) {
-  return ggadget::gtk::OpenURL(gadget, url);
 }
 
 } // namespace gtk

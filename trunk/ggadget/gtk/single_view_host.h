@@ -43,19 +43,41 @@ namespace gtk {
 class SingleViewHost : public ViewHostInterface {
  public:
   /**
+   * Flags to control toplevel window behavior.
+   *
+   * - DECORATED
+   *   Enables window manager's decoration.
+   * - REMOVE_ON_CLOSE
+   *   Removes gadget when the view is closed.
+   * - RECORD_STATES
+   *   Records window related states, like position and keep above state.
+   * - WM_MANAGEABLE
+   *   Enables window manager to manage the window, for example, show the
+   *   window on taskbar and pager.
+   * - OPAQUE_BACKGROUND
+   *   Uses opaque background.
+   * - DIALOG_TYPE_HINT
+   *   Uses GDK_WINDOW_TYPE_HINT_DIALOG by default. To workaround problems on
+   *   some special window managers, like matchbox.
+   */
+  enum Flags {
+    DEFAULT           = 0,
+    DECORATED         = 0x01,
+    REMOVE_ON_CLOSE   = 0x02,
+    RECORD_STATES     = 0x04,
+    WM_MANAGEABLE     = 0x08,
+    OPAQUE_BACKGROUND = 0x10,
+    DIALOG_TYPE_HINT  = 0x20
+  };
+
+  /**
    * @param view The View instance associated to this host.
    * @param zoom Zoom factor used by the Graphics object.
-   * @param remove_on_close remove the gadget when the main view is closed.
-   * @param record_states records the window states (eg. position),
-   *        so that they can be restored next time.
+   * @param flags Flags to control the window behavior.
    * @param debug_mode DebugMode when drawing elements.
    */
   SingleViewHost(ViewHostInterface::Type type,
-                 double zoom,
-                 bool decorated,
-                 bool remove_on_close,
-                 bool record_states,
-                 int debug_mode);
+                 double zoom, int flags, int debug_mode);
   virtual ~SingleViewHost();
 
   virtual Type GetType() const;

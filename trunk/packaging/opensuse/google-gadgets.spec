@@ -559,6 +559,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-, root, root)
 %{_bindir}/ggl-gtk
 %{_datadir}/applications/ggl-gtk.desktop
+%{_datadir}/applications/ggl-designer.desktop
 %{_libdir}/google-gadgets/modules/gtk-*.so
 
 %files -n google-gadgets-qt

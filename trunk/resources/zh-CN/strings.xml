@@ -153,10 +153,12 @@ even in the middle of a word. -->
 <!-- Names used in *.desktop files. -->
 <HOST_GTK_DESKTOP_NAME>Google 小工具 (GTK)</HOST_GTK_DESKTOP_NAME>
 <HOST_QT_DESKTOP_NAME>Google 小工具 (Qt)</HOST_QT_DESKTOP_NAME>
+<GADGET_DESIGNER_NAME>Google 小工具设计器</GADGET_DESIGNER_NAME>
 
 <!-- Comments used in *.desktop files. -->
 <HOST_GTK_DESKTOP_COMMENT>在 GNOME/GTK 环境中运行 Google 小工具</HOST_GTK_DESKTOP_COMMENT>
 <HOST_QT_DESKTOP_COMMENT>在 KDE/Qt 环境中运行 Google 小工具</HOST_QT_DESKTOP_COMMENT>
+<GADGET_DESIGNER_COMMENT>Google 小工具设计器</GADGET_DESIGNER_COMMENT>
 
 <!-- Descriptions of Gadget API permissions. TODO: to be reviewed -->
 <PERMISSION_FILEREAD>读取本地文件和目录的内容</PERMISSION_FILEREAD>
