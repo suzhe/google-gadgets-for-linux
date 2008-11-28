@@ -285,7 +285,7 @@ int main(int argc, char* argv[]) {
 
   // Check --help argument first.
   if (g_argument_parser.GetArgumentValue(ARG_HELP, NULL)) {
-    printf(kHelpString);
+    printf("%s", kHelpString);
     return 0;
   }
 
