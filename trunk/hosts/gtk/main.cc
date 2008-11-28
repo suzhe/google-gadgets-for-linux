@@ -77,7 +77,7 @@ static const char *kGlobalExtensions[] = {
   NULL
 };
 
-static const char *kHelpString =
+static const char kHelpString[] =
   "Google Gadgets for Linux " GGL_VERSION
   " (Gadget API version " GGL_API_VERSION ")\n"
   "Usage: " GGL_APP_NAME "[Options] [Gadgets]\n"
@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
 
   // Check --help argument first.
   if (g_argument_parser.GetArgumentValue(ARG_HELP, NULL)) {
-    printf(kHelpString);
+    printf("%s", kHelpString);
     return 0;
   }
 
