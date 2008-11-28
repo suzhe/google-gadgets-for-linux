@@ -376,7 +376,7 @@ std::string DesktopEntry::GetExecCommand(int argc, const char *argv[]) const {
         for (int i = 0; i < argc && num > 0; ++i) {
           if (argv && argv[i]) {
             if (IsValidFileURL(argv[i])) {
-              std::string filename = GetFileNameFromURL(argv[i]);
+              std::string filename = GetPathFromFileURL(argv[i]);
               if (filename.length()) {
                 result.append(Impl::ShellQuote(filename.c_str()));
                 result.push_back(' ');

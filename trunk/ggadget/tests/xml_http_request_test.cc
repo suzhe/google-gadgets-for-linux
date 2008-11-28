@@ -122,7 +122,8 @@ const char *kResponse1 = "Connection: Close\r\n"
                          "Set-Cookie: COOKIE1=Value1; Path=/\r\n"
                          "TestHeader1: Value1\r\n";
 const char *kResponse2 = "TestHeader2: Value2a\r\n"
-                         "testheader2: Value2b\r\n\r\n";
+                         "testheader2: Value2b\r\n";
+const char *kResponseSep = "\r\n";
 const char *kResponse3 = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\r\n";
 const char *kResponse4 = "<root>\xBA\xBA\xD7\xD6</root>\r\n";
 const char *kResponseText = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\r\n"
@@ -218,6 +219,7 @@ class Server {
     if (instructed_) WaitFor(2); else Wait(100);
     LOG("Server write response2");
     write(s1, kResponse2, strlen(kResponse2));
+    write(s1, kResponseSep, strlen(kResponseSep));
     if (instructed_) WaitFor(3); else Wait(100);
     if (request_type != 2) {
       LOG("Server write response3");

@@ -978,6 +978,7 @@ function SelectElement(element_info) {
     view.setTimeout(UpdateSelectionPos, 0);
   } else {
     e_selection.visible = false;
+    e_combobox_border.visible = false;
     e_pin.visible = false;
     g_selected_element = null;
     g_properties_view = null;

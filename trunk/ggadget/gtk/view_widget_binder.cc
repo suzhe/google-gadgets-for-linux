@@ -410,7 +410,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     int mod = ConvertGdkModifierToModifier(event->state);
     MouseEvent e(Event::EVENT_MOUSE_MOVE,
                  event->x / impl->zoom_, event->y / impl->zoom_,
-                 0, 0, button, mod);
+                 0, 0, button, mod, event);
 #ifdef GRAB_POINTER_EXPLICITLY
     if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed() &&
         !impl->pointer_grabbed_) {

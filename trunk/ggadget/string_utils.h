@@ -223,13 +223,20 @@ std::string GetHostFromURL(const char *url);
  * Returns the filename part of a file URL, or blank string if the url is not a
  * valid file url.
  */
-std::string GetFileNameFromURL(const char *url);
+std::string GetPathFromFileURL(const char *url);
 
 /**
  * Returns the username:password part of a URL, or blank string if the url has
  * no username:password part.
  */
 std::string GetUsernamePasswordFromURL(const char *url);
+
+/**
+ * @param base_url the base URL (must be absolute).
+ * @param url an relative or absolute URL.
+ * @return the absolute URL computed from @a base_url and @a url.
+ */
+std::string GetAbsoluteURL(const char *base_url, const char *url);
 
 /**
  * Encode a string into a JavaScript string literal (without the begining and
