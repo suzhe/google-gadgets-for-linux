@@ -512,14 +512,25 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
     x_event.xcrossing.focus = impl_->focused_;
     x_event.xcrossing.same_screen = True;
   } else if (type == Event::EVENT_MOUSE_MOVE) {
+    GdkEventMotion *motion =
+        reinterpret_cast<GdkEventMotion *>(event.GetOriginalEvent());
+    if (!motion) {
+      // This event is a test event sent by view on mouse over.
+      return EVENT_RESULT_HANDLED;
+    }
     x_event.xmotion.type = MotionNotify;
+    x_event.xmotion.time = motion->time;
+    x_event.xmotion.state = static_cast<unsigned int>(motion->state);
     x_event.xmotion.x = x;
     x_event.xmotion.y = y;
-    x_event.xmotion.is_hint = NotifyNormal;
+    x_event.xmotion.x_root = static_cast<int>(round(motion->x_root));
+    x_event.xmotion.y_root = static_cast<int>(round(motion->y_root));
+    x_event.xmotion.is_hint = static_cast<char>(motion->is_hint ?
+                                                NotifyHint : NotifyNormal);
     x_event.xmotion.same_screen = True;
   } else {
     GdkEventButton *button =
-        reinterpret_cast<GdkEventButton*>(event.GetOriginalEvent());
+        reinterpret_cast<GdkEventButton *>(event.GetOriginalEvent());
     if (!button) {
       // This event is a synthesized event, such as EVENT_CLICK or EVENT_RCLICK.
       // Return HANDLED to disable default actions.
@@ -537,11 +548,9 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
       return EVENT_RESULT_HANDLED;
     }
     // Translate GdkEvent to the original XEvent.
-    x_event.xbutton.window = GDK_WINDOW_XID(button->window);
     x_event.xbutton.root = GDK_ROOT_WINDOW();
     x_event.xbutton.type =
         button->type == GDK_BUTTON_PRESS ? ButtonPress : ButtonRelease;
-    x_event.xbutton.display = impl_->ws_info_.display;
     x_event.xbutton.time = button->time;
     x_event.xbutton.state = static_cast<unsigned int>(button->state);
     x_event.xbutton.button = button->button;
@@ -551,6 +560,24 @@ EventResult NPAPIPluginElement::HandleMouseEvent(const MouseEvent &event) {
     x_event.xbutton.x_root = static_cast<int>(round(button->x_root));
     x_event.xbutton.y_root = static_cast<int>(round(button->y_root));
     x_event.xbutton.same_screen = True;
+
+    // It's weird that 64-bit Flash 10 plugin will ignore the mouse press event
+    // following a mouse motion event with the same (x,y) position. Here send
+    // a fake mouse motion event with position slightly shifted to avoid this
+    // issue.
+    XEvent x_event1;
+    memset(&x_event1, 0, sizeof(x_event1));
+    x_event1.xany.display = impl_->ws_info_.display;
+    x_event1.xmotion.type = MotionNotify;
+    x_event1.xmotion.time = x_event.xbutton.time;
+    x_event1.xmotion.state = x_event.xbutton.state;
+    x_event1.xmotion.x = x + 1;
+    x_event1.xmotion.y = y;
+    x_event1.xmotion.x_root = x_event.xbutton.x_root;
+    x_event1.xmotion.y_root = x_event.xbutton.y_root;
+    x_event1.xmotion.is_hint = NotifyNormal;
+    x_event1.xmotion.same_screen = True;
+    impl_->plugin_->HandleEvent(&x_event1);
   }
   // Some plugins always return 0 for mouse/keyboard events even if they
   // have handled them. Here returns HANDLED to prevent the container from

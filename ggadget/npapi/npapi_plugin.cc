@@ -48,6 +48,9 @@ static const char *kFirefox3UserAgent =
     "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
     "Gecko/20080724 Firefox/3.0.1";
 
+// The URL flashes use to send trace() messages in my test environment.
+static const char *kFlashTraceURL = "http://localhost:8881";
+
 class Plugin::Impl : public SmallObject<> {
  public:
   class StreamHandler {
@@ -57,7 +60,7 @@ class Plugin::Impl : public SmallObject<> {
                   const std::string &post_data, bool notify, void *notify_data)
         : owner_(owner),
           plugin_funcs_(&owner->library_info_->plugin_funcs),
-          stream_(NULL),
+          stream_(NULL), stream_offset_(0),
           // These fields hold string data to live during the stream's life.
           method_(method),
           url_or_file_(url_or_file),
@@ -114,14 +117,13 @@ class Plugin::Impl : public SmallObject<> {
     }
 
     void Done(NPReason reason) {
-      owner_->DoURLNotify(url_or_file_.c_str(), notify_, notify_data_, reason);
       if (stream_) {
-        if (plugin_funcs_->destroystream) {
+        if (plugin_funcs_->destroystream)
           plugin_funcs_->destroystream(&owner_->instance_, stream_, reason);
-        }
         delete stream_;
         stream_ = NULL;
       }
+      owner_->DoURLNotify(url_or_file_.c_str(), notify_, notify_data_, reason);
       delete this;
     }
 
@@ -149,38 +151,44 @@ class Plugin::Impl : public SmallObject<> {
 
     size_t WriteStream(const std::string &data) {
       ASSERT(stream_);
-      size_t offset = 0;
+      size_t data_offset = 0;
       int idle_count = 0;
       size_t size = data.size();
-      while (offset < size) {
+      while (data_offset < size) {
         int32 len = plugin_funcs_->writeready(&owner_->instance_, stream_);
         if (len <= 0) {
           if (++idle_count > 10) {
             LOG("Failed to write to stream");
-            return offset;
+            return data_offset;
           }
         }
 
         idle_count = 0;
-        if (size < offset + len)
-          len = static_cast<int32>(size - offset);
-        int32 consumed = plugin_funcs_->write(&owner_->instance_, stream_,
-                                              static_cast<int32>(offset), len,
-                                              // This gets a non-const pointer.
-                                              const_cast<char *>(data.c_str()));
+        if (size < data_offset + len)
+          len = static_cast<int32>(size - data_offset);
+        int32 consumed = plugin_funcs_->write(
+            &owner_->instance_, stream_,
+            static_cast<int32>(stream_offset_), len,
+            // This gets a non-const pointer.
+            const_cast<char *>(data.c_str()));
         // Error occurs.
         if (consumed < 0)
-          return offset;
-        offset += consumed;
+          return data_offset;
+        data_offset += consumed;
+        stream_offset_ += consumed;
       }
       return size;
     }
 
-    std::string GetHeaders() {
-      std::string result;
-      if (!http_request_)
-        return result;
-
+    std::string GetHeaders(unsigned short status) {
+      std::string result = StringPrintf("HTTP/1.1 %hu", status);
+      const std::string *status_text_ptr = NULL;
+      http_request_->GetStatusText(&status_text_ptr);
+      if (status_text_ptr) {
+        result += ' ';
+        result += *status_text_ptr;
+      }
+      result += '\n';
       const std::string *headers_ptr = NULL;
       http_request_->GetAllResponseHeaders(&headers_ptr);
       if (headers_ptr) {
@@ -209,7 +217,7 @@ class Plugin::Impl : public SmallObject<> {
           mime_type_ = http_request_->GetResponseContentType();
           if (mime_type_.empty())
             mime_type_ = owner_->mime_type_;
-          headers_ = GetHeaders();
+          headers_ = GetHeaders(status);
           std::string effective_url = http_request_->GetEffectiveUrl();
           if (url_or_file_ == owner_->location_) {
             // Change location to the effective URL only if the request is of
@@ -245,6 +253,7 @@ class Plugin::Impl : public SmallObject<> {
     Impl *owner_;
     NPPluginFuncs *plugin_funcs_;
     NPStream *stream_;
+    size_t stream_offset_;
     std::string method_, url_or_file_, post_data_, mime_type_, headers_;
     XMLHttpRequestInterface *http_request_;
     bool notify_;
@@ -378,6 +387,14 @@ class Plugin::Impl : public SmallObject<> {
       return NPERR_INVALID_PARAM;
     if (notify && !library_info_->plugin_funcs.urlnotify)
       return NPERR_INVALID_PARAM;
+    if (strncmp(url, "javascript:", 11) == 0) {
+      DoURLNotify(url, notify, notify_data, NPRES_DONE);
+      return NPERR_NO_ERROR;
+    }
+
+    std::string absolute_url = GetAbsoluteURL(location_.c_str(), url);
+    if (absolute_url.empty())
+      return NPERR_INVALID_PARAM;
 
     Gadget *gadget = element_->GetView()->GetGadget();
     if (!gadget)
@@ -386,7 +403,7 @@ class Plugin::Impl : public SmallObject<> {
     if (target) {
       // Let the gadget allow this OpenURL gracefully.
       bool old_interaction = gadget->SetInUserInteraction(true);
-      gadget->OpenURL(url);
+      gadget->OpenURL(absolute_url.c_str());
       gadget->SetInUserInteraction(old_interaction);
       // Mozilla also doesn't send notification if target is not NULL.
       return NPERR_NO_ERROR;
@@ -398,14 +415,15 @@ class Plugin::Impl : public SmallObject<> {
       return NPERR_INVALID_PARAM;
 
     StreamHandler *handler = NULL;
-    std::string file_path = IsAbsolutePath(url) ? url : GetFileNameFromURL(url);
+    std::string file_path = GetPathFromFileURL(absolute_url.c_str());
     if (!file_path.empty()) {
       // Only can set src to a local file. The plugin can't request to read
       // local files.
-      if (url != location_ ||
+      if (absolute_url != location_ ||
           !gadget->GetPermissions()->IsRequiredAndGranted(
               Permissions::FILE_READ)) {
-        DoURLNotify(url, notify, notify_data, NPRES_USER_BREAK);
+        DoURLNotify(absolute_url.c_str(), notify, notify_data,
+                    NPRES_USER_BREAK);
         LOG("The plugin is not permitted to read local files.");
         return NPERR_GENERIC_ERROR;
       }
@@ -414,11 +432,12 @@ class Plugin::Impl : public SmallObject<> {
     } else {
       XMLHttpRequestInterface *request = gadget->CreateXMLHttpRequest();
       if (!request) {
-        DoURLNotify(url, notify, notify_data, NPRES_USER_BREAK);
+        DoURLNotify(absolute_url.c_str(), notify, notify_data,
+                    NPRES_USER_BREAK);
         return NPERR_GENERIC_ERROR;
       }
-      handler = new StreamHandler(this, request, method, url, post_data,
-                                  notify, notify_data);
+      handler = new StreamHandler(this, request, method, absolute_url,
+                                  post_data, notify, notify_data);
     }
     handler->Start();
     return NPERR_NO_ERROR;
@@ -482,6 +501,20 @@ class Plugin::Impl : public SmallObject<> {
     } else {
       post_data.assign(buf, len);
     }
+
+    if (strcmp(url, kFlashTraceURL) == 0) {
+      size_t pos = post_data.find("\r\n\r\n");
+      if (pos != post_data.npos)
+        post_data = post_data.substr(pos + 4);
+      post_data = DecodeURL(post_data);
+      LOG("FLASH TRACE: %s", post_data.c_str());
+      if (notify && instance && instance->ndata) {
+        static_cast<Impl *>(instance->ndata)->DoURLNotify(
+            url, notify, notify_data, NPRES_DONE);
+      }
+      return NPERR_NO_ERROR;
+    }
+
     return HandleURL(instance, "POST", url, target, post_data,
                      notify, notify_data);
   }
@@ -624,6 +657,7 @@ class Plugin::Impl : public SmallObject<> {
 
   static NPError NPN_SetValue(NPP instance, NPPVariable variable, void *value) {
     ENSURE_MAIN_THREAD(NPERR_INVALID_PARAM);
+    DLOG("NPN_SetValue: %d (0x%x) %p", variable, variable, value);
     if (instance && instance->ndata) {
       Impl *impl = static_cast<Impl *>(instance->ndata);
       switch (variable) {
@@ -995,9 +1029,9 @@ bool Plugin::HandleEvent(void *event) {
 
 void Plugin::SetSrc(const char *src) {
   // Start the initial data stream.
-  impl_->location_ = src;
+  impl_->location_ = IsAbsolutePath(src) ? std::string("file://") + src : src;
   impl_->abort_streams_();
-  impl_->HandleURL("GET", src, NULL, "", false, NULL);
+  impl_->HandleURL("GET", impl_->location_.c_str(), NULL, "", false, NULL);
 }
 
 Connection *Plugin::ConnectOnNewMessage(Slot1<void, const char *> *handler) {

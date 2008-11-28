@@ -112,6 +112,11 @@ bool SplitStatusFromResponseHeaders(std::string *response_headers,
     } else {
       *status_text = response_headers->substr(0, end_of_status);
       response_headers->erase(0, end_of_status + 2);
+      size_t header_size = response_headers->size();
+      // Remove ending extra "\r\n".
+      if (header_size > 4 &&
+          strcmp(response_headers->c_str() + header_size - 4, "\r\n\r\n") == 0)
+        response_headers->erase(header_size - 2);
     }
 
     // Then extract the status text from the status line.

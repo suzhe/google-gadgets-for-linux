@@ -165,17 +165,17 @@ TEST(StringUtils, GetHostFromURL) {
   EXPECT_STREQ("a.com", GetHostFromURL("http://@a.com:1234/path/path?param=value").c_str());
 }
 
-TEST(StringUtils, GetFileNameFromURL) {
-  EXPECT_STREQ("", GetFileNameFromURL(NULL).c_str());
-  EXPECT_STREQ("", GetFileNameFromURL("").c_str());
-  EXPECT_STREQ("", GetFileNameFromURL("http://abc").c_str());
-  EXPECT_STREQ("", GetFileNameFromURL("mailto:a@b.com").c_str());
-  EXPECT_STREQ("", GetFileNameFromURL("file://").c_str());
-  EXPECT_STREQ("/", GetFileNameFromURL("file:///").c_str());
-  EXPECT_STREQ("/abc", GetFileNameFromURL("file:///abc").c_str());
-  EXPECT_STREQ("/abc/dev", GetFileNameFromURL("file:///abc/dev").c_str());
-  EXPECT_STREQ("/dev", GetFileNameFromURL("file://abc/dev").c_str());
-  EXPECT_STREQ("/dev fff", GetFileNameFromURL("file://abc/dev%20fff").c_str());
+TEST(StringUtils, GetPathFromFileURL) {
+  EXPECT_STREQ("", GetPathFromFileURL(NULL).c_str());
+  EXPECT_STREQ("", GetPathFromFileURL("").c_str());
+  EXPECT_STREQ("", GetPathFromFileURL("http://abc").c_str());
+  EXPECT_STREQ("", GetPathFromFileURL("mailto:a@b.com").c_str());
+  EXPECT_STREQ("", GetPathFromFileURL("file://").c_str());
+  EXPECT_STREQ("/", GetPathFromFileURL("file:///").c_str());
+  EXPECT_STREQ("/abc", GetPathFromFileURL("file:///abc").c_str());
+  EXPECT_STREQ("/abc/dev", GetPathFromFileURL("file:///abc/dev").c_str());
+  EXPECT_STREQ("/dev", GetPathFromFileURL("file://abc/dev").c_str());
+  EXPECT_STREQ("/dev fff", GetPathFromFileURL("file://abc/dev%20fff").c_str());
 }
 
 TEST(StringUtils, GetUsernamePasswordFromURL) {
@@ -192,6 +192,99 @@ TEST(StringUtils, GetUsernamePasswordFromURL) {
   EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com:1234").c_str());
   EXPECT_STREQ("user:pa?ss", GetUsernamePasswordFromURL("http://user:pa?ss@a.com?param=value").c_str());
   EXPECT_STREQ("user:", GetUsernamePasswordFromURL("http://user:@a.com:1234/").c_str());
+}
+
+void TestGetAbsoluteURL(const char *base_extra, const char *url_path) {
+  EXPECT_EQ(std::string("http://abc/") + url_path,
+      GetAbsoluteURL((std::string("http://abc") + base_extra).c_str(),
+                     url_path));
+  EXPECT_EQ(std::string("http://abc/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/") + base_extra).c_str(),
+                     url_path));
+  EXPECT_EQ(std::string("http://abc/def/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi") + base_extra).c_str(),
+                     url_path));
+  EXPECT_EQ(std::string("http://abc/def/ghi/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi/") + base_extra).c_str(),
+                     url_path));
+
+  std::string p1 = std::string("http://abc") + base_extra;
+  std::string p2 = std::string("/") + url_path;
+  std::string r = GetAbsoluteURL(p1.c_str(), p2.c_str());
+  EXPECT_EQ(std::string("http://abc/") + url_path, r);
+  ///EXPECT_EQ(std::string("http://abc/") + url_path,
+  //    GetAbsoluteURL((std::string("http://abc") + base_extra).c_str(),
+  //                   (std::string("/") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://abc/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/") + base_extra).c_str(),
+                     (std::string("/") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://abc/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi") + base_extra).c_str(),
+                     (std::string("/") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://abc/") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi/") + base_extra).c_str(),
+                     (std::string("/") + url_path).c_str()));
+
+  EXPECT_EQ(std::string("http://") + url_path,
+      GetAbsoluteURL((std::string("http://abc") + base_extra).c_str(),
+                     (std::string("//") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://") + url_path,
+      GetAbsoluteURL((std::string("http://abc/") + base_extra).c_str(),
+                     (std::string("//") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi") + base_extra).c_str(),
+                     (std::string("//") + url_path).c_str()));
+  EXPECT_EQ(std::string("http://") + url_path,
+      GetAbsoluteURL((std::string("http://abc/def/ghi/") + base_extra).c_str(),
+                     (std::string("//") + url_path).c_str()));
+}
+
+TEST(StringUtils, GetAbsoluteURL) {
+  EXPECT_STREQ("", GetAbsoluteURL(NULL, NULL).c_str());
+  EXPECT_STREQ("", GetAbsoluteURL(NULL, "").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL(NULL, "abc").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL(NULL, "/abc").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL(NULL, "//abc").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL("abc", NULL).c_str());
+  EXPECT_STREQ("", GetAbsoluteURL("abc", "").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL("abc", "abc").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL("abc", "/abc").c_str());
+  EXPECT_STREQ("", GetAbsoluteURL("abc", "//abc").c_str());
+  EXPECT_STREQ("http://abc", GetAbsoluteURL(NULL, "http://abc").c_str());
+  EXPECT_STREQ("http://abc", GetAbsoluteURL("", "http://abc").c_str());
+  EXPECT_STREQ("http://abc", GetAbsoluteURL("abc", "http://abc").c_str());
+  EXPECT_STREQ("http://abc", GetAbsoluteURL("http://abc", "").c_str());
+  EXPECT_STREQ("http://abc", GetAbsoluteURL("http://abc", NULL).c_str());
+  EXPECT_STREQ("http://abc/", GetAbsoluteURL("http://abc/", "").c_str());
+  EXPECT_STREQ("http://abc/", GetAbsoluteURL("http://abc/", NULL).c_str());
+
+  TestGetAbsoluteURL("", "xyz");
+  TestGetAbsoluteURL("", "xyz/");
+  TestGetAbsoluteURL("", "x/y/z");
+  TestGetAbsoluteURL("", "x/y/z?b=/f");
+  TestGetAbsoluteURL("", "x/y/z#bf");
+  TestGetAbsoluteURL("#def", "xyz");
+  TestGetAbsoluteURL("#def", "xyz/");
+  TestGetAbsoluteURL("#def", "x/y/z");
+  TestGetAbsoluteURL("#def", "x/y/z?b=/f");
+  TestGetAbsoluteURL("#def", "x/y/z#bf");
+  TestGetAbsoluteURL("?a=/h", "xyz");
+  TestGetAbsoluteURL("?a=/h", "xyz/");
+  TestGetAbsoluteURL("?a=/h", "x/y/z");
+  TestGetAbsoluteURL("?a=/h", "x/y/z?b=/f");
+  TestGetAbsoluteURL("?a=/h", "x/y/z#bf");
+
+  EXPECT_STREQ("", GetAbsoluteURL("http://abc/", "../xyz").c_str());
+  EXPECT_STREQ("http://abc/xyz",
+      GetAbsoluteURL("http://abc/def/", "../xyz").c_str());
+  EXPECT_STREQ("http://abc/xyz",
+      GetAbsoluteURL("http://abc/def/ghi", "../xyz").c_str());
+  EXPECT_STREQ("http://abc/xyz?b=/f",
+      GetAbsoluteURL("http://abc/def/ghi?c=/e", "../xyz?b=/f").c_str());
+  EXPECT_STREQ("http://abc/def/xyz/",
+      GetAbsoluteURL("http://abc/def/ghi?c=/e", "./xyz/.").c_str());
+  EXPECT_STREQ("http://abc/xyz/?b=/f",
+      GetAbsoluteURL("http://abc/def/ghi?c=/e", "../xyz/.?b=/f").c_str());
 }
 
 TEST(StringUtils, EncodeJavaScriptString) {

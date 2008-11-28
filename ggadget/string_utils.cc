@@ -344,15 +344,33 @@ bool IsValidFileURL(const char* url) {
   return StartWithNoCase(url, kFileUrlPrefix) && IsValidURLString(url);
 }
 
+// For convenience, this function only support "://" style URLs, and
+// instead of returning the position of ':', it returns the position after
+// the "://".
+static const char *GetAfterScheme(const char *url) {
+  if (!url || !IsValidSchemeStartChar(*url))
+    return NULL;
+
+  const char *colon = strchr(url, ':');
+  if (colon) {
+    for (const char *p = url; p != colon; ++p) {
+      if (!IsValidSchemeChar(*p))
+        return NULL;
+    }
+    if (colon[1] == '/' && colon[2] == '/')
+      return colon + 3;
+  }
+  return NULL;
+}
+
 std::string GetHostFromURL(const char *url) {
   if (!url || !*url)
     return std::string();
 
-  const char *start = strstr(url, "://");
+  const char *start = GetAfterScheme(url);
   if (!start)
     return std::string();
 
-  start += 3;
   const char *end = strchr(start, '/');
   // Get the part between :// and the first '/'.
   std::string result(end ? std::string(start, end - start) :
@@ -373,7 +391,7 @@ std::string GetHostFromURL(const char *url) {
   return result;
 }
 
-std::string GetFileNameFromURL(const char *url) {
+std::string GetPathFromFileURL(const char *url) {
   std::string result;
   if (IsValidFileURL(url)) {
     const char *path_part = url + arraysize(kFileUrlPrefix) - 1;
@@ -389,11 +407,10 @@ std::string GetUsernamePasswordFromURL(const char *url) {
   if (!url || !*url)
     return std::string();
 
-  const char *start = strstr(url, "://");
+  const char *start = GetAfterScheme(url);
   if (!start)
     return std::string();
 
-  start += 3;
   const char *end = strchr(start, '/');
   // Get the part between :// and the first '/'.
   std::string result(end ? std::string(start, end - start) :
@@ -403,6 +420,116 @@ std::string GetUsernamePasswordFromURL(const char *url) {
     return std::string();
 
   result.erase(pos);
+  return result;
+}
+
+std::string GetAbsoluteURL(const char *base_url, const char *url) {
+  if (!url) {
+    url = "";
+  } else if (GetAfterScheme(url)) {
+    // If url is already an absolute URL, return it directly.
+    return url;
+  }
+  if (!base_url || !*base_url)
+    return std::string();
+
+  // base_url must be an absolute URL.
+  const char *base_after_scheme = GetAfterScheme(base_url);
+  if (!base_after_scheme)
+    return std::string();
+
+  if (!*url) {
+    // url is empty, so inherits the whole base_path.
+    return base_url;
+  }
+
+  const char *base_url_end = base_url + strlen(base_url);
+  // Remove the search and anchor part from base_url.
+  const char *base_extras_pos = strchr(base_after_scheme, '?');
+  if (!base_extras_pos)
+    base_extras_pos = strchr(base_after_scheme, '#');
+  if (!base_extras_pos)
+    base_extras_pos = base_url_end;
+
+  const char *path_start = strchr(base_after_scheme, '/');
+  if (!path_start || path_start > base_extras_pos)
+    path_start = base_extras_pos;
+
+  if (*url == '/') {
+    if (url[1] == '/') {
+      // Seldom used, "//" starts a relative net_loc.
+      // Take only the scheme part of base_url.
+      return std::string(base_url, base_after_scheme) + (url + 2);
+    }
+    // url is relative but an absolute path.
+    return std::string(base_url, path_start) + url;
+  }
+
+  std::string result(base_url, base_extras_pos);
+  if (*url == '?' || *url == '#') {
+    // The path part of url is empty, so inherit the full base_path's path.
+    return result + url;
+  }
+
+  size_t path_start_index = path_start - base_url;
+  if (*path_start == '/') {
+    size_t last_slash = result.find_last_of('/');
+    if (last_slash >= path_start_index)
+      result.erase(last_slash + 1);
+  } else {
+    result += '/';
+  }
+  ASSERT(result[path_start_index] == '/');
+
+  // Normalize the result.
+  const char *url_extras_pos = strchr(url, '?');
+  if (!url_extras_pos)
+    url_extras_pos = strchr(url, '#');
+  if (!url_extras_pos)
+    url_extras_pos = url + strlen(url);
+
+  while (url < url_extras_pos) {
+    ASSERT(result[result.size() - 1] == '/');
+    const char *next_part = strchr(url, '/');
+    bool omit_part = false;
+    if (!next_part || next_part > url_extras_pos)
+      next_part = url_extras_pos;
+
+    size_t part_length = next_part - url;
+    switch (part_length) {
+      case 0:
+        // Omit consecutive '/'s.
+        omit_part = true;
+        break;
+      case 1:
+        // Omit part in /./
+        omit_part = *url == '.';
+        break;
+      case 2:
+        // Omit part in /../, and remove the last part in result.
+        if (*url == '.' && url[1] == '.') {
+          omit_part = true;
+          size_t result_size = result.size();
+          if (result_size == path_start_index + 1) {
+            // ".." exceeds the top directory.
+            return std::string();
+          }
+          result.erase(result.find_last_of('/', result_size - 2) + 1);
+        }
+        break;
+      default:
+        break;
+    }
+
+    if (*next_part == '/')
+      part_length++;
+    if (!omit_part)
+      result.append(url, part_length);
+    url += part_length;
+  }
+  ASSERT(url == url_extras_pos);
+  // Append the search and anchor part.
+  result += url;
   return result;
 }
 
