@@ -68,6 +68,7 @@ ENDMACRO(INSTALL_PKG_CONFIG _name)
 
 MACRO(INSTALL_BINARY_DESKTOP _name)
   SET(bindir ${CMAKE_INSTALL_PREFIX}/bin)
+  SET(datadir ${CMAKE_INSTALL_PREFIX}/share)
   CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/${_name}.desktop.in"
     "${CMAKE_CURRENT_BINARY_DIR}/${_name}.desktop.in"
     @ONLY)

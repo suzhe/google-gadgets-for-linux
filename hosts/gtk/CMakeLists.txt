@@ -28,8 +28,10 @@ ADD_DEFINITIONS(-DGGL_APP_NAME=\\\"ggl-gtk\\\")
 
 SET(SRCS
   main.cc
+  gtk_host_base.cc
   sidebar_gtk_host.cc
   simple_gtk_host.cc
+  standalone_gtk_host.cc
 )
 
 ADD_EXECUTABLE(ggl-gtk ${SRCS})

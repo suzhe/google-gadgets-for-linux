@@ -107,14 +107,13 @@ class SideBarGtkHost::Impl {
     GtkWidget *debug_console;
   };
 
-  Impl(SideBarGtkHost *owner, OptionsInterface *options,
-       bool decorated, int view_debug_mode,
+  Impl(SideBarGtkHost *owner, const char *options,
+       int flags, int view_debug_mode,
        Gadget::DebugConsoleConfig debug_console_config)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
-      decorated_(decorated),
       gadgets_shown_(true),
-      transparent_(false),
+      flags_(flags),
       view_debug_mode_(view_debug_mode),
       debug_console_config_(debug_console_config),
       sidebar_host_(NULL),
@@ -126,7 +125,7 @@ class SideBarGtkHost::Impl {
       sidebar_resizing_(false),
       has_strut_(false),
       sidebar_(NULL),
-      options_(options),
+      options_(CreateOptions(options)),
       auto_hide_(false),
       always_on_top_(false),
       closed_(false),
@@ -156,8 +155,10 @@ class SideBarGtkHost::Impl {
     workarea_.width = 0;
     workarea_.height = 0;
 
-    sidebar_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
-                                     decorated, false, false, view_debug_mode_);
+    int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+    sidebar_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN,
+                                       1.0, vh_flags, view_debug_mode_);
+
     sidebar_host_->ConnectOnBeginResizeDrag(
         NewSlot(this, &Impl::OnSideBarBeginResize));
     sidebar_host_->ConnectOnEndResizeDrag(
@@ -216,6 +217,7 @@ class SideBarGtkHost::Impl {
     if (status_icon_menu_)
       gtk_widget_destroy(status_icon_menu_);
 #endif
+    delete options_;
   }
 
   void OnHotKeyPressed() {
@@ -591,7 +593,6 @@ class SideBarGtkHost::Impl {
 
   void SetupUI() {
     sidebar_window_ = sidebar_host_->GetWindow();
-    transparent_ = SupportsComposite(sidebar_window_);
 
     g_signal_connect_after(G_OBJECT(sidebar_window_), "focus-out-event",
                            G_CALLBACK(ToplevelWindowFocusOutHandler), this);
@@ -649,55 +650,6 @@ class SideBarGtkHost::Impl {
   }
 #endif
 
-  static bool GetPermissionsDescriptionCallback(int permission,
-                                                std::string *msg) {
-    if (msg->length())
-      msg->append("\n");
-    msg->append("  ");
-    msg->append(Permissions::GetDescription(permission));
-    return true;
-  }
-
-  bool ConfirmGadget(int id, Permissions *permissions) {
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    std::string download_url, title, description;
-    if (!gadget_manager_->GetGadgetInstanceInfo(id,
-                                                GetSystemLocaleName().c_str(),
-                                                NULL, &download_url,
-                                                &title, &description))
-      return false;
-
-    // Get required permissions description.
-    std::string permissions_msg;
-    permissions->EnumerateAllRequired(
-        NewSlot(GetPermissionsDescriptionCallback, &permissions_msg));
-
-    GtkWidget *dialog = gtk_message_dialog_new(
-        NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        "%s\n\n%s\n%s\n\n%s%s\n\n%s\n%s",
-        GM_("GADGET_CONFIRM_MESSAGE"), title.c_str(), download_url.c_str(),
-        GM_("GADGET_DESCRIPTION"), description.c_str(),
-        GM_("GADGET_REQUIRED_PERMISSIONS"), permissions_msg.c_str());
-
-    GdkScreen *screen;
-    gdk_display_get_pointer(gdk_display_get_default(), &screen,
-                            NULL, NULL, NULL);
-    gtk_window_set_screen(GTK_WINDOW(dialog), screen);
-    gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
-    gtk_window_set_title(GTK_WINDOW(dialog), GM_("GADGET_CONFIRM_TITLE"));
-    gtk_window_present(GTK_WINDOW(dialog));
-    gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-
-    if (result == GTK_RESPONSE_YES) {
-      // TODO: Is it necessary to let user grant individual permissions
-      // separately?
-      permissions->GrantAllRequired();
-      return true;
-    }
-    return false;
-  }
-
   bool EnumerateGadgetInstancesCallback(int id) {
     if (!LoadGadgetInstance(id))
       gadget_manager_->RemoveGadgetInstance(id);
@@ -708,7 +660,11 @@ class SideBarGtkHost::Impl {
   bool NewGadgetInstanceCallback(int id) {
     Permissions permissions;
     if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
-      if (!permissions.HasUngranted() || ConfirmGadget(id, &permissions)) {
+      if (flags_ & GRANT_PERMISSIONS) {
+        permissions.GrantAllRequired();
+      }
+      if (!permissions.HasUngranted() ||
+          owner_->ConfirmManagedGadget(id, &permissions)) {
         // Save initial permissions.
         std::string options_name =
             gadget_manager_->GetGadgetInstanceOptionsName(id);
@@ -736,7 +692,7 @@ class SideBarGtkHost::Impl {
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
-      result = LoadGadget(path.c_str(), options.c_str(), id);
+      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
       DLOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
            path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
@@ -809,9 +765,9 @@ class SideBarGtkHost::Impl {
       has_strut_ = false;
       gdk_property_delete(sidebar_window_->window, net_wm_strut_);
       gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
-      // Use GDK_WINDOW_TYPE_HINT_DIALOG to prevent from being maximized in
-      // matchbox window manager.
-      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_DIALOG);
+      sidebar_host_->SetWindowType((flags_ & MATCHBOX_WORKAROUND) ?
+                                   GDK_WINDOW_TYPE_HINT_DIALOG :
+                                   GDK_WINDOW_TYPE_HINT_NORMAL);
     }
 
     DLOG("Set SideBar size: %dx%d", sidebar_width_, workarea_.height);
@@ -1002,9 +958,9 @@ class SideBarGtkHost::Impl {
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
     // The floating window must be normal window when not dragging,
     // otherwise it'll always on top.
-    // Use GDK_WINDOW_TYPE_HINT_DIALOG to prevent from being maximized in
-    // matchbox window manager.
-    info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DIALOG);
+    info->floating->SetWindowType((flags_ & MATCHBOX_WORKAROUND) ?
+                                  GDK_WINDOW_TYPE_HINT_DIALOG :
+                                  GDK_WINDOW_TYPE_HINT_NORMAL);
     info->floating->SetKeepAbove(info->old_keep_above);
     if (IsOverlapWithSideBar(gadget_id, &h)) {
       info->index_in_sidebar = sidebar_->GetIndexOfPosition(h);
@@ -1314,14 +1270,18 @@ class SideBarGtkHost::Impl {
 #endif
   }
 
-  bool LoadGadget(const char *path, const char *options_name, int instance_id) {
+  Gadget *LoadGadget(const char *path, const char *options_name,
+                     int instance_id, bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
-      return true;
+      return gadgets_[instance_id].gadget;
     }
 
+    Gadget::DebugConsoleConfig dcc = show_debug_console ?
+        Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
+
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
-                                global_permissions_, debug_console_config_);
+                                global_permissions_, dcc);
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -1332,7 +1292,7 @@ class SideBarGtkHost::Impl {
         gadgets_.erase(it);
       }
       delete gadget;
-      return false;
+      return NULL;
     }
 
     if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
@@ -1359,7 +1319,7 @@ class SideBarGtkHost::Impl {
       gtk_window_set_title(GTK_WINDOW(it->second.debug_console),
                            gadget->GetMainView()->GetCaption().c_str());
     }
-    return true;
+    return gadget;
   }
 
   DecoratedViewHost *NewDockedMainViewHost(int gadget_id) {
@@ -1389,15 +1349,19 @@ class SideBarGtkHost::Impl {
 
   DecoratedViewHost *NewFloatingMainViewHost(int gadget_id) {
     GadgetInfo *info = &gadgets_[gadget_id];
+
+    int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+    vh_flags |= SingleViewHost::RECORD_STATES;
+
     SingleViewHost *view_host =
-        new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
-                           decorated_, false, true, view_debug_mode_);
+        new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0, vh_flags,
+                           view_debug_mode_);
     view_host->ConnectOnBeginMoveDrag(
         NewSlot(this, &Impl::OnMainViewBeginMove, gadget_id));
     view_host->ConnectOnResized(
         NewSlot(this, &Impl::OnMainViewResized, gadget_id));
     FloatingMainViewDecorator *view_decorator =
-        new FloatingMainViewDecorator(view_host, transparent_);
+        new FloatingMainViewDecorator(view_host, !(flags_ & NO_TRANSPARENT));
     DecoratedViewHost *decorated_view_host =
         new DecoratedViewHost(view_decorator);
 
@@ -1423,9 +1387,12 @@ class SideBarGtkHost::Impl {
   }
 
   DecoratedViewHost *NewDetailsViewHost(int gadget_id) {
+    int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+    // don't show window manager's border for details view.
+    vh_flags &= ~SingleViewHost::DECORATED;
     SingleViewHost *view_host =
-        new SingleViewHost(ViewHostInterface::VIEW_HOST_DETAILS, 1.0,
-                           decorated_, false, false, view_debug_mode_);
+        new SingleViewHost(ViewHostInterface::VIEW_HOST_DETAILS, 1.0, vh_flags,
+                           view_debug_mode_);
     view_host->ConnectOnShowHide(
         NewSlot(this, &Impl::OnDetailsViewShowHide, gadget_id));
     view_host->ConnectOnResized(
@@ -1457,9 +1424,12 @@ class SideBarGtkHost::Impl {
   }
 
   DecoratedViewHost *NewPopOutViewHost(int gadget_id) {
+    int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
+    // don't show window manager's border for popout view.
+    vh_flags &= ~SingleViewHost::DECORATED;
     SingleViewHost *view_host =
-        new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
-                           decorated_, false, false, view_debug_mode_);
+        new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0, vh_flags,
+                           view_debug_mode_);
     //view_host->ConnectOnShowHide(
     //    NewSlot(this, &Impl::OnPopOutViewShowHide, id));
     view_host->ConnectOnResized(
@@ -1527,7 +1497,9 @@ class SideBarGtkHost::Impl {
       }
     } else if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
       // No decorator for options view.
-      return new SingleViewHost(type, 1.0, true, false, true, view_debug_mode_);
+      int vh_flags = SingleViewHost::DECORATED | SingleViewHost::RECORD_STATES |
+          SingleViewHost::WM_MANAGEABLE;
+      return new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
     } else if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
       return NewDetailsViewHost(gadget_id);
     }
@@ -1658,7 +1630,7 @@ class SideBarGtkHost::Impl {
   }
 
   void ExitMenuHandler(const char *str) {
-    gtk_main_quit();
+    owner_->Exit();
   }
 
   void LoadGadgets() {
@@ -1826,9 +1798,9 @@ class SideBarGtkHost::Impl {
 
   SideBarGtkHost *owner_;
 
-  bool decorated_;
   bool gadgets_shown_;
-  bool transparent_;
+
+  int flags_;
   int view_debug_mode_;
   Gadget::DebugConsoleConfig debug_console_config_;
 
@@ -1872,10 +1844,10 @@ class SideBarGtkHost::Impl {
   Permissions global_permissions_;
 };
 
-SideBarGtkHost::SideBarGtkHost(OptionsInterface *options, bool decorated,
-                               int view_debug_mode,
+SideBarGtkHost::SideBarGtkHost(const char *options,
+                               int flags, int view_debug_mode,
                                Gadget::DebugConsoleConfig debug_console_config)
-  : impl_(new Impl(this, options, decorated, view_debug_mode,
+  : impl_(new Impl(this, options, flags, view_debug_mode,
                    debug_console_config)) {
   impl_->SetupUI();
   impl_->LoadGadgets();
@@ -1895,16 +1867,13 @@ ViewHostInterface *SideBarGtkHost::NewViewHost(Gadget *gadget,
   return impl_->NewViewHost(gadget, type);
 }
 
+Gadget *SideBarGtkHost::LoadGadget(const char *path, const char *options_name,
+                                   int instance_id, bool show_debug_console) {
+  return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
+}
+
 void SideBarGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
-}
-
-bool SideBarGtkHost::LoadFont(const char *filename) {
-  return ggadget::gtk::LoadFont(filename);
-}
-
-void SideBarGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
-  ggadget::gtk::ShowGadgetAboutDialog(gadget);
 }
 
 void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
@@ -1913,10 +1882,6 @@ void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
 
 int SideBarGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
-}
-
-bool SideBarGtkHost::OpenURL(const Gadget *gadget, const char *url) {
-  return ggadget::gtk::OpenURL(gadget, url);
 }
 
 } // namespace gtk

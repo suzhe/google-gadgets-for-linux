@@ -14,27 +14,33 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_GTK_SIMPLE_GTK_HOST_H__
-#define HOSTS_GTK_SIMPLE_GTK_HOST_H__
+#ifndef HOSTS_GTK_STANDALONE_GTK_HOST_H__
+#define HOSTS_GTK_STANDALONE_GTK_HOST_H__
 
 #include <string>
 #include <ggadget/gadget.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
+#include <ggadget/signals.h>
 
 #include "gtk_host_base.h"
+
+namespace ggadget {
+  DECLARE_VARIANT_PTR_TYPE(Gadget);
+};
 
 namespace hosts {
 namespace gtk {
 
+using ggadget::Connection;
 using ggadget::Gadget;
-using ggadget::ViewHostInterface;;
+using ggadget::ViewHostInterface;
 
-class SimpleGtkHost : public GtkHostBase {
+class StandaloneGtkHost : public GtkHostBase {
  public:
-  SimpleGtkHost(const char *options, int flags, int view_debug_mode,
-                Gadget::DebugConsoleConfig debug_console_config);
-  virtual ~SimpleGtkHost();
+  StandaloneGtkHost(int flags, int view_debug_mode,
+                    Gadget::DebugConsoleConfig debug_console_config);
+  virtual ~StandaloneGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual Gadget *LoadGadget(const char *path, const char *options_name,
@@ -43,13 +49,28 @@ class SimpleGtkHost : public GtkHostBase {
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();
 
+ public:
+  /**
+   * Inits this standalone host with a specified gadget.
+   *
+   * If it's failed, then OnExit signal will be emitted, and false will be
+   * returned.
+   */
+  bool Init(const std::string &gadget_path);
+
+  /** Presents the main view of current gadget to user. */
+  void Present();
+
+  Connection *ConnectOnLoadGadget(
+      ggadget::Slot4<Gadget *, const char *, const char *, int, bool> *slot);
+
  private:
   class Impl;
   Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(SimpleGtkHost);
+  DISALLOW_EVIL_CONSTRUCTORS(StandaloneGtkHost);
 };
 
 } // namespace gtk
 } // namespace hosts
 
-#endif // HOSTS_GTK_SIMPLE_GTK_HOST_H__
+#endif // HOSTS_GTK_STANDALONE_GTK_HOST_H__

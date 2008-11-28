@@ -153,10 +153,12 @@ even in the middle of a word. -->
 <!-- Names used in *.desktop files. -->
 <HOST_GTK_DESKTOP_NAME>Google Gadgets (GTK)</HOST_GTK_DESKTOP_NAME>
 <HOST_QT_DESKTOP_NAME>Google Gadgets (Qt)</HOST_QT_DESKTOP_NAME>
+<GADGET_DESIGNER_NAME>Google Gadget Designer</GADGET_DESIGNER_NAME>
 
 <!-- Comments used in *.desktop files. -->
 <HOST_GTK_DESKTOP_COMMENT>Run Google Gadgets in GNOME/GTK environment</HOST_GTK_DESKTOP_COMMENT>
 <HOST_QT_DESKTOP_COMMENT>Run Google Gadgets in KDE/Qt environment</HOST_QT_DESKTOP_COMMENT>
+<GADGET_DESIGNER_COMMENT>Google Gadget Designer</GADGET_DESIGNER_COMMENT>
 
 <!-- Descriptions of Gadget API permissions. TODO: to be reviewed -->
 <PERMISSION_FILEREAD>Reads content of local files and directories</PERMISSION_FILEREAD>

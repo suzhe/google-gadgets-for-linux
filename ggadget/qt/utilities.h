@@ -58,6 +58,7 @@ void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
 QPoint GetPopupPosition(const QRect &rect, const QSize &size);
 
 enum GGLInitFlag {
+  GGL_INIT_FLAG_NONE = 0,
   GGL_INIT_FLAG_LONG_LOG = 0x1,
   GGL_INIT_FLAG_COLLECTOR = 0x2
 };

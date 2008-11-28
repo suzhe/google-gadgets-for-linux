@@ -14,6 +14,11 @@
 # limitations under the License.
 #
 
+IF(GGL_BUILD_GTK_HOST)
+# Generates ggl-gtk.desktop file
+INSTALL_BINARY_DESKTOP(ggl-designer)
+ENDIF(GGL_BUILD_GTK_HOST)
+
 ADD_MODULE(designer-script-utils designer_script_utils.cc)
 TARGET_LINK_LIBRARIES(designer-script-utils ggadget${GGL_EPOCH})
 

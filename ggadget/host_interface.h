@@ -53,6 +53,20 @@ class HostInterface {
                                          ViewHostInterface::Type type) = 0;
 
   /**
+   * Loads a gadget instance from a specified path.
+   *
+   * @param path Path to the gadget file or directory.
+   * @param options_name Options name for the gadget instance.
+   * @param instance_id Unique instance id.
+   * @param show_debug_console If it's true then shows debug console of this
+   *        gadget instance as early as possible.
+   *
+   * @return the newly created gadget instance, or NULL if failed.
+   */
+  virtual Gadget *LoadGadget(const char *path, const char *options_name,
+                             int instance_id, bool show_debug_console) = 0;
+
+  /**
    * Requests that the gadget be removed from the container (e.g. sidebar).
    * The specified gadget shall be removed in the next main loop cycle,
    * otherwise the behavior is undefined.

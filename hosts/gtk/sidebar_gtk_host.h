@@ -20,31 +20,30 @@
 #include <string>
 #include <ggadget/common.h>
 #include <ggadget/gadget.h>
+#include <ggadget/signals.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
+
+#include "gtk_host_base.h"
 
 namespace hosts {
 namespace gtk {
 
 using ggadget::Gadget;
-using ggadget::HostInterface;
 using ggadget::ViewHostInterface;;
-using ggadget::OptionsInterface;
 
-class SideBarGtkHost : public ggadget::HostInterface {
+class SideBarGtkHost : public GtkHostBase {
  public:
-  SideBarGtkHost(OptionsInterface *options, bool decorated,
-                 int view_debug_mode,
+  SideBarGtkHost(const char *options, int flags, int view_debug_mode,
                  Gadget::DebugConsoleConfig debug_console_config);
   virtual ~SideBarGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
+  virtual Gadget *LoadGadget(const char *path, const char *options_name,
+                             int instance_id, bool show_debug_console);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual bool LoadFont(const char *filename);
-  virtual void ShowGadgetAboutDialog(Gadget *gadget);
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();
-  virtual bool OpenURL(const Gadget *gadget, const char *url);
 
  private:
   class Impl;

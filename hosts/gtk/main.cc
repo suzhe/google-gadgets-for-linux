@@ -45,6 +45,9 @@
 #include <ggadget/xml_http_request_interface.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
+#include "standalone_gtk_host.h"
+
+using ggadget::Variant;
 
 static ggadget::gtk::MainLoop g_main_loop;
 
@@ -74,7 +77,7 @@ static const char *kGlobalExtensions[] = {
   NULL
 };
 
-static const char *g_help_string =
+static const char *kHelpString =
   "Google Gadgets for Linux " GGL_VERSION
   " (Gadget API version " GGL_API_VERSION ")\n"
   "Usage: " GGL_APP_NAME "[Options] [Gadgets]\n"
@@ -87,14 +90,20 @@ static const char *g_help_string =
   "      2 - Draw bounding boxes around all elements.\n"
   "      4 - Draw bounding boxes around clip region.\n"
 #endif
-  "  -z zoom, --zoom zoom\n"
-  "      Specify initial zoom factor for View, no effect for sidebar.\n"
   "  -b, --border\n"
   "      Draw window border for Main View.\n"
+  "  -nt, --no-transparent\n"
+  "      Don't use transparent window.\n"
+  "  -nd, --no-decorator\n"
+  "      Don't use main view decorator (Only for standalone gadgets).\n"
   "  -ns, --no-sidebar\n"
   "      Use dashboard mode instead of sidebar mode.\n"
+  "  -mb, --matchbox\n"
+  "      Enable matchbox workaround.\n"
   "  -bg, --background\n"
   "      Run in background.\n"
+  "  -sa, --standalone\n"
+  "      Run specified Gadgets in standalone mode.\n"
   "  -l loglevel, --log-level loglevel\n"
   "      Specify the minimum gadget.debug log level.\n"
   "      0 - Trace(All)  1 - Info  2 - Warning  3 - Error  >=4 - No log\n"
@@ -107,16 +116,230 @@ static const char *g_help_string =
   "      2 - Open debug console when gadget is added to debug startup code\n"
   "  -nc, --no-collector\n"
   "      Disable the usage collector\n"
+  "  -gp, --grant-permissions\n"
+  "      Grant all permissions required by gadgets silently.\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths.\n"
   "  If any gadgets are specified, they will be installed by using\n"
-  "  GadgetManager.\n";
+  "  GadgetManager, or run as standalone windows if option -sa is specified.\n";
+
+enum ArgumentID {
+  ARG_DEBUG = 1,
+  ARG_BORDER,
+  ARG_NO_TRANSPARENT,
+  ARG_NO_DECORATOR,
+  ARG_NO_SIDEBAR,
+  ARG_MATCHBOX,
+  ARG_BACKGROUND,
+  ARG_STANDALONE,
+  ARG_LOG_LEVEL,
+  ARG_LONG_LOG,
+  ARG_DEBUG_CONSOLE,
+  ARG_NO_COLLECTOR,
+  ARG_GRANT_PERMISSIONS,
+  ARG_HELP
+};
+
+static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
+#ifdef _DEBUG
+  { ARG_DEBUG,             Variant::TYPE_INT64, "-d",  "--debug" },
+#endif
+  { ARG_BORDER,            Variant::TYPE_BOOL,  "-b",  "--border" },
+  { ARG_NO_TRANSPARENT,    Variant::TYPE_BOOL,  "-nt", "--no-transparent" },
+  { ARG_NO_DECORATOR,      Variant::TYPE_BOOL,  "-nd", "--no-decorator" },
+  { ARG_NO_SIDEBAR,        Variant::TYPE_BOOL,  "-ns", "--no-sidebar" },
+  { ARG_MATCHBOX,          Variant::TYPE_BOOL,  "-mb", "--matchbox" },
+  { ARG_BACKGROUND,        Variant::TYPE_BOOL,  "-bg", "--background" },
+  { ARG_STANDALONE,        Variant::TYPE_BOOL,  "-sa", "--standalone" },
+  { ARG_LOG_LEVEL,         Variant::TYPE_INT64, "-l",  "--log-level" },
+  { ARG_LONG_LOG,          Variant::TYPE_BOOL,  "-ll", "--long-log" },
+  { ARG_DEBUG_CONSOLE,     Variant::TYPE_INT64, "-dc", "--debug-console" },
+  { ARG_NO_COLLECTOR,      Variant::TYPE_BOOL,  "-nc", "--no-collector" },
+  { ARG_GRANT_PERMISSIONS, Variant::TYPE_BOOL, "-gp", "--grant-permissions" },
+  { ARG_HELP,              Variant::TYPE_BOOL,  "-h",  "--help" },
+  { -1,                    Variant::TYPE_VOID, NULL, NULL } // End of list
+};
+
+struct Arguments {
+  Arguments()
+    : debug_mode(0),
+      wm_border(false),
+      no_sidebar(false),
+      no_transparent(false),
+      no_decorator(false),
+      matchbox(false),
+      background(false),
+      standalone(false),
+#ifdef _DEBUG
+      log_level(ggadget::LOG_TRACE),
+      long_log(true),
+#else
+      log_level(ggadget::LOG_WARNING),
+      long_log(false),
+#endif
+      debug_console(ggadget::Gadget::DEBUG_CONSOLE_DISABLED),
+      no_collector(false),
+      grant_permissions(false) {
+  }
+
+  int debug_mode;
+  bool wm_border;
+  bool no_sidebar;
+  bool no_transparent;
+  bool no_decorator;
+  bool matchbox;
+  bool background;
+  bool standalone;
+  int log_level;
+  bool long_log;
+  ggadget::Gadget::DebugConsoleConfig debug_console;
+  bool no_collector;
+  bool grant_permissions;
+};
+
+static ggadget::HostArgumentParser g_argument_parser(kArgumentsInfo);
+static Arguments g_arguments;
+
+static ggadget::HostInterface *g_managed_host = NULL;
+static int g_live_host_count = 0;
+static bool g_gadget_manager_initialized = false;
+
+static void ExtractArgumentsValue() {
+  // Resets arguments value.
+  g_arguments = Arguments();
+
+  // no_transparent must be initialized dynamically.
+  g_arguments.no_transparent = !ggadget::gtk::SupportsComposite(NULL);
+
+  ggadget::Variant arg_value;
+  if (g_argument_parser.GetArgumentValue(ARG_DEBUG, &arg_value))
+    g_arguments.debug_mode = ggadget::VariantValue<int>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_BORDER, &arg_value))
+    g_arguments.wm_border = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_NO_SIDEBAR, &arg_value))
+    g_arguments.no_sidebar = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_NO_TRANSPARENT, &arg_value))
+    g_arguments.no_transparent = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_NO_DECORATOR, &arg_value))
+    g_arguments.no_decorator = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_MATCHBOX, &arg_value))
+    g_arguments.matchbox = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_BACKGROUND, &arg_value))
+    g_arguments.background = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_STANDALONE, &arg_value))
+    g_arguments.standalone = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_LOG_LEVEL, &arg_value))
+    g_arguments.log_level = ggadget::VariantValue<int>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_LONG_LOG, &arg_value))
+    g_arguments.long_log = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_DEBUG_CONSOLE, &arg_value))
+    g_arguments.debug_console =
+        static_cast<ggadget::Gadget::DebugConsoleConfig>(
+            ggadget::VariantValue<int>()(arg_value));
+  if (g_argument_parser.GetArgumentValue(ARG_NO_COLLECTOR, &arg_value))
+    g_arguments.no_collector = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_GRANT_PERMISSIONS, &arg_value))
+    g_arguments.grant_permissions = ggadget::VariantValue<bool>()(arg_value);
+}
+
+static void OnHostExit(ggadget::HostInterface *host) {
+  if (host == g_managed_host)
+    g_managed_host = NULL;
+
+  delete host;
+
+  --g_live_host_count;
+  if (g_live_host_count <= 0 && gtk_main_level() > 0) {
+    DLOG("No host is running, exit.");
+    gtk_main_quit();
+  }
+}
+
+static int GetHostFlagsFromArguments() {
+  int flags = hosts::gtk::GtkHostBase::NONE;
+  if (g_arguments.wm_border)
+    flags |= hosts::gtk::GtkHostBase::WINDOW_MANAGER_BORDER;
+  if (g_arguments.no_decorator)
+    flags |= hosts::gtk::GtkHostBase::NO_MAIN_VIEW_DECORATOR;
+  if (g_arguments.no_transparent)
+    flags |= hosts::gtk::GtkHostBase::NO_TRANSPARENT;
+  if (g_arguments.matchbox)
+    flags |= hosts::gtk::GtkHostBase::MATCHBOX_WORKAROUND;
+  if (g_arguments.grant_permissions)
+    flags |= hosts::gtk::GtkHostBase::GRANT_PERMISSIONS;
+
+  return flags;
+}
+
+static ggadget::HostInterface *GetManagedHost() {
+  if (!g_managed_host) {
+    // Init gadget manager before creating managed host.
+    if (!g_gadget_manager_initialized) {
+      ggadget::GetGadgetManager()->Init();
+      g_gadget_manager_initialized = true;
+    }
+    hosts::gtk::GtkHostBase *host;
+    if (g_arguments.no_sidebar) {
+      host = new hosts::gtk::SimpleGtkHost(
+          kOptionsName, GetHostFlagsFromArguments(),
+          g_arguments.debug_mode, g_arguments.debug_console);
+    } else {
+      host = new hosts::gtk::SideBarGtkHost(
+          kOptionsName, GetHostFlagsFromArguments(),
+          g_arguments.debug_mode, g_arguments.debug_console);
+    }
+    g_managed_host = host;
+    host->ConnectOnExit(ggadget::NewSlot(OnHostExit, g_managed_host));
+    ++g_live_host_count;
+  }
+  return g_managed_host;
+}
+
+static ggadget::Gadget *LoadManagedGadget(const char *path,
+                                          const char *options_name,
+                                          int instance_id,
+                                          bool show_debug_console) {
+  return GetManagedHost()->LoadGadget(path, options_name, instance_id,
+                                      show_debug_console);
+}
+
+static bool LoadLocalGadget(const std::string &gadget) {
+  std::string path = ggadget::GetAbsolutePath(gadget.c_str());
+  if (g_arguments.standalone) {
+    hosts::gtk::StandaloneGtkHost *host = new hosts::gtk::StandaloneGtkHost(
+        GetHostFlagsFromArguments(), g_arguments.debug_mode,
+        g_arguments.debug_console);
+    host->ConnectOnExit(ggadget::NewSlot(
+        OnHostExit, static_cast<ggadget::HostInterface*>(host)));
+    host->ConnectOnLoadGadget(ggadget::NewSlot(LoadManagedGadget));
+    ++g_live_host_count;
+
+    // Don't care the return value. OnHostExit will be called if it's failed.
+    host->Init(path);
+  } else {
+    ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(path.c_str());
+  }
+  return true;
+}
 
 static void OnClientMessage(const std::string &data) {
-  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(data.c_str());
+  if (data == ggadget::HostArgumentParser::kStartSignature) {
+    g_argument_parser.Start();
+  } else if (data == ggadget::HostArgumentParser::kFinishSignature) {
+    if (g_argument_parser.Finish()) {
+      ExtractArgumentsValue();
+      if (!g_arguments.standalone) {
+        GetManagedHost();
+      }
+      g_argument_parser.EnumerateRemainedArgs(
+          ggadget::NewSlot(LoadLocalGadget));
+    }
+  } else if (data.length()) {
+    g_argument_parser.AppendArgument(data.c_str());
+  }
 }
 
 static void DefaultSignalHandler(int sig) {
@@ -127,21 +350,8 @@ static void DefaultSignalHandler(int sig) {
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
-#ifdef _DEBUG
-  int log_level = ggadget::LOG_TRACE;
-  bool long_log = true;
-#else
-  int log_level = ggadget::LOG_WARNING;
-  bool long_log = false;
-#endif
-  int debug_mode = 0;
-  double zoom = 1.0;
-  bool decorated = false;
-  bool sidebar = true;
-  bool background = false;
-  bool enable_collector = true;
-  ggadget::Gadget::DebugConsoleConfig debug_console =
-      ggadget::Gadget::DEBUG_CONSOLE_DISABLED;
+  // set locale according to env vars
+  setlocale(LC_ALL, "");
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
@@ -158,78 +368,39 @@ int main(int argc, char* argv[]) {
   run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
   // Parse command line.
-  std::vector<std::string> gadget_paths;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
-      printf("%s", g_help_string);
-      return 0;
-    } else if (strcmp("-b", argv[i]) == 0 ||
-               strcmp("--border", argv[i]) == 0) {
-      decorated = true;
-    } else if (strcmp("-bg", argv[i]) == 0 ||
-               strcmp("--background", argv[i]) == 0) {
-      background = true;
-    } else if (strcmp("-ns", argv[i]) == 0 ||
-               strcmp("--no-sidebar", argv[i]) == 0) {
-      sidebar = false;
-#ifdef _DEBUG
-    } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
-      if (++i < argc) {
-        debug_mode = atoi(argv[i]);
-      } else {
-        debug_mode = 1;
-      }
-#endif
-    } else if (strcmp("-z", argv[i]) == 0 || strcmp("--zoom", argv[i]) == 0) {
-      if (++i < argc) {
-        zoom = strtod(argv[i], NULL);
-        if (zoom <= 0)
-          zoom = 1.0;
-        DLOG("Use zoom factor %lf", zoom);
-      }
-    } else if (strcmp("-l", argv[i]) == 0 ||
-               strcmp("--log-level", argv[i]) == 0) {
-      if (++i < argc)
-        log_level = atoi(argv[i]);
-    } else if (strcmp("-ll", argv[i]) == 0 ||
-               strcmp("--long-log", argv[i]) == 0) {
-      long_log = true;
-    } else if (strcmp("-dc", argv[i]) == 0 ||
-               strcmp("--debug-console", argv[i]) == 0) {
-      debug_console = ggadget::Gadget::DEBUG_CONSOLE_ON_DEMMAND;
-      if (++i < argc) {
-        debug_console =
-            static_cast<ggadget::Gadget::DebugConsoleConfig>(atoi(argv[i]));
-      }
-    } else if (strcmp("-nc", argv[i]) == 0 ||
-               strcmp("--no-collector", argv[i]) == 0) {
-      enable_collector = false;
-    } else {
-      std::string path = ggadget::GetAbsolutePath(argv[i]);
-      if (!path.empty()) {
-        if (run_once.IsRunning()) {
-          run_once.SendMessage(path);
-        } else {
-          gadget_paths.push_back(path);
-        }
-      }
+  if (argc > 1) {
+    g_argument_parser.Start();
+    if (!g_argument_parser.AppendArguments(argc - 1, argv + 1) ||
+        !g_argument_parser.Finish()) {
+      printf("Invalid arguments.\n%s", kHelpString);
+      return 1;
     }
   }
 
+  // Check --help argument first.
+  if (g_argument_parser.GetArgumentValue(ARG_HELP, NULL)) {
+    printf(kHelpString);
+    return 0;
+  }
+
+  // If another instance is already running, then send all arguments to it.
   if (run_once.IsRunning()) {
     gdk_notify_startup_complete();
     DLOG("Another instance already exists.");
+    run_once.SendMessage(ggadget::HostArgumentParser::kStartSignature);
+    for (int i = 1; i < argc; ++i)
+      run_once.SendMessage(argv[i]);
+    run_once.SendMessage(ggadget::HostArgumentParser::kFinishSignature);
     exit(0);
   }
 
-  // set locale according to env vars
-  setlocale(LC_ALL, "");
+  ExtractArgumentsValue();
 
-  ggadget::SetupLogger(log_level, long_log);
+  ggadget::SetupLogger(g_arguments.log_level, g_arguments.long_log);
 
   // Puth the process into background in the early stage to prevent from
   // printing any log messages.
-  if (background)
+  if (g_arguments.background)
     ggadget::Daemonize();
 
   // Set global file manager.
@@ -264,7 +435,7 @@ int main(int argc, char* argv[]) {
   ext_manager->SetReadonly();
   ggadget::InitXHRUserAgent(GGL_APP_NAME);
 
-  if (enable_collector) {
+  if (!g_arguments.no_collector) {
     ggadget::UsageCollectorFactoryInterface *collector_factory =
         ggadget::GetUsageCollectorFactory();
     if (collector_factory) {
@@ -283,27 +454,12 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // Initialize the gadget manager before creating the host.
-  ggadget::GadgetManagerInterface *gadget_manager = ggadget::GetGadgetManager();
-  gadget_manager->Init();
-
-  ggadget::HostInterface *host;
-  ggadget::OptionsInterface *options = ggadget::CreateOptions(kOptionsName);
-
-  if (sidebar) {
-    host = new hosts::gtk::SideBarGtkHost(options, decorated,
-                                          debug_mode, debug_console);
-  } else {
-    host = new hosts::gtk::SimpleGtkHost(options, zoom, decorated,
-                                         debug_mode, debug_console);
-  }
+  // Only init managed host if it's not standalone mode.
+  if (!g_arguments.standalone)
+    GetManagedHost();
 
   // Load gadget files.
-  if (gadget_paths.size()) {
-    for (size_t i = 0; i < gadget_paths.size(); ++i) {
-      gadget_manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
-    }
-  }
+  g_argument_parser.EnumerateRemainedArgs(ggadget::NewSlot(LoadLocalGadget));
 
   // Hook popular signals to exit gracefully.
   signal(SIGHUP, DefaultSignalHandler);
@@ -313,10 +469,10 @@ int main(int argc, char* argv[]) {
   signal(SIGUSR2, DefaultSignalHandler);
 
   gdk_notify_startup_complete();
-  gtk_main();
 
-  delete host;
-  delete options;
+  // Only starts main loop if there is at least one live host.
+  if (g_live_host_count > 0)
+    gtk_main();
 
   return 0;
 }

@@ -18,6 +18,8 @@
 
 #include <sys/time.h>
 #include <ctime>
+#include <string>
+#include <map>
 
 #include "dir_file_manager.h"
 #include "file_manager_factory.h"
@@ -33,6 +35,7 @@
 #include "script_runtime_interface.h"
 #include "script_runtime_manager.h"
 #include "slot.h"
+#include "string_utils.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 
@@ -84,8 +87,9 @@ bool SetupGlobalFileManager(const char *profile_dir) {
   return true;
 }
 
-static int g_log_level;
-static bool g_long_log;
+static int g_log_level = LOG_TRACE;
+static bool g_long_log = true;
+static Connection *g_global_listener_connection = NULL;
 
 static std::string DefaultLogListener(LogLevel level,
                                const char *filename,
@@ -116,7 +120,10 @@ static std::string DefaultLogListener(LogLevel level,
 void SetupLogger(int log_level, bool long_log) {
   g_log_level = log_level;
   g_long_log = long_log;
-  ConnectGlobalLogListener(NewSlot(DefaultLogListener));
+  if (!g_global_listener_connection) {
+    g_global_listener_connection =
+        ConnectGlobalLogListener(NewSlot(DefaultLogListener));
+  }
 }
 
 bool CheckRequiredExtensions(std::string *message) {
@@ -196,5 +203,267 @@ void GetPopupPosition(int x, int y, int w, int h,
     *x1 = BestPosition(sw, x, w1);
   }
 }
+
+class HostArgumentParser::Impl {
+ public:
+  Impl(const HostArgumentInfo *args)
+    : args_(args), last_id_(-1), last_type_(Variant::TYPE_VOID),
+      started_(false), error_occurred_(false) {
+    ASSERT(args);
+#ifdef _DEBUG
+    for (const HostArgumentInfo *arg = args_; arg->id >= 0; ++arg) {
+      // An argument must have at least one name.
+      if ((!arg->short_name || !*arg->short_name) &&
+          (!arg->long_name || !*arg->long_name)) {
+        ASSERT_M(false, ("Argument %d doesn't have a name.", arg->id));
+      }
+      switch (arg->type) {
+        case Variant::TYPE_BOOL:
+        case Variant::TYPE_INT64:
+        case Variant::TYPE_DOUBLE:
+        case Variant::TYPE_STRING:
+          break;
+        default:
+          ASSERT_M(false, ("Type of argument %d is invalid.", arg->id));
+          break;
+      }
+    }
+#endif
+  }
+
+  bool SetArgumentValue(int id, Variant::Type type, const std::string &value) {
+    bool result = false;
+    switch(type) {
+      case Variant::TYPE_BOOL:
+        bool bool_value;
+        if (Variant(value).ConvertToBool(&bool_value)) {
+          specified_args_[id] = Variant(bool_value);
+          result = true;
+        }
+        break;
+      case Variant::TYPE_INT64:
+        int64_t int_value;
+        if (Variant(value).ConvertToInt64(&int_value)) {
+          specified_args_[id] = Variant(int_value);
+          result = true;
+        }
+        break;
+      case Variant::TYPE_DOUBLE:
+        double double_value;
+        if (Variant(value).ConvertToDouble(&double_value)) {
+          specified_args_[id] = Variant(double_value);
+          result = true;
+        }
+        break;
+      case Variant::TYPE_STRING:
+        specified_args_[id] = Variant(value);
+        result = true;
+        break;
+      default:
+        DLOG("Type of argument %d is invalid.", id);
+        return false;
+    }
+
+    return result;
+  }
+
+  const HostArgumentInfo *args_;
+  int last_id_;
+  Variant::Type last_type_;
+  bool started_;
+  bool error_occurred_;
+
+  typedef std::map<int, Variant> ArgumentValueMap;
+  ArgumentValueMap specified_args_;
+  StringVector remained_args_;
+};
+
+HostArgumentParser::HostArgumentParser(const HostArgumentInfo *args)
+  : impl_(new Impl(args)) {
+}
+
+HostArgumentParser::~HostArgumentParser() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+bool HostArgumentParser::Start() {
+  if (impl_->started_) {
+    DLOG("Argument parse process is already started.");
+    return false;
+  }
+
+  impl_->last_id_ = -1;
+  impl_->last_type_ = Variant::TYPE_VOID;
+  impl_->started_ = true;
+  impl_->error_occurred_ = false;
+  impl_->remained_args_.clear();
+  impl_->specified_args_.clear();
+  return true;
+}
+
+bool HostArgumentParser::AppendArgument(const char *arg) {
+  ASSERT(arg && *arg);
+
+  if (!impl_->started_) {
+    DLOG("Argument parse process is not started yet.");
+    return false;
+  }
+  if (impl_->error_occurred_) {
+    DLOG("Error has been occurred.");
+    return false;
+  }
+
+  std::string arg_str = TrimString(arg);
+
+  // If last argument doesn't have a value yet, then this argument must be the
+  // value.
+  // Boolean arguments will not be handled here, because they always have
+  // default value.
+  if (impl_->last_id_ >= 0 &&
+      impl_->specified_args_[impl_->last_id_].type() == Variant::TYPE_VOID) {
+    if (impl_->SetArgumentValue(impl_->last_id_, impl_->last_type_, arg_str)) {
+      impl_->last_id_ = -1;
+      impl_->last_type_ = Variant::TYPE_VOID;
+      return true;
+    }
+    DLOG("Invalid value for argument %d: %s", impl_->last_id_, arg_str.c_str());
+    impl_->error_occurred_ = true;
+    return false;
+  }
+
+  std::string arg_name, arg_value;
+  SplitString(arg_str, "=", &arg_name, &arg_value);
+
+  arg_name = TrimString(arg_name);
+  arg_value = TrimString(arg_value);
+
+  // Find the argument in known arguments list.
+  if (arg_name.length()) {
+    for (const HostArgumentInfo *a = impl_->args_; a->id >= 0; ++a) {
+      if ((a->short_name && strcmp(a->short_name, arg_name.c_str()) == 0) ||
+          (a->long_name && strcmp(a->long_name, arg_name.c_str()) == 0)) {
+        if (impl_->specified_args_.find(a->id) !=
+            impl_->specified_args_.end()) {
+          DLOG("Argument %s is already specified.", arg_name.c_str());
+          impl_->error_occurred_ = true;
+          return false;
+        }
+
+        // Boolean arguments have default "true" value.
+        if (a->type == Variant::TYPE_BOOL && arg_value.empty())
+          arg_value = "true";
+
+        bool result = false;
+        if (arg_value.length()) {
+          result = impl_->SetArgumentValue(a->id, a->type, arg_value);
+        } else {
+          // Value is not specified yet.
+          impl_->specified_args_[a->id] = Variant();
+          result = true;
+        }
+
+        if (result) {
+          impl_->last_id_ = a->id;
+          impl_->last_type_ = a->type;
+        } else {
+          DLOG("Invalid value for argument %d: %s", a->id, arg_value.c_str());
+          impl_->error_occurred_ = true;
+        }
+        return result;
+      }
+    }
+  }
+
+  // The argument is not found, it might be a remained argument, or the value
+  // of previous boolean argument.
+  if (impl_->last_id_ >= 0 && impl_->last_type_ == Variant::TYPE_BOOL) {
+    if (impl_->SetArgumentValue(impl_->last_id_, impl_->last_type_, arg_str)) {
+      impl_->last_id_ = -1;
+      impl_->last_type_ = Variant::TYPE_VOID;
+      return true;
+    }
+  }
+
+  impl_->last_id_ = -1;
+  impl_->last_type_ = Variant::TYPE_VOID;
+  impl_->remained_args_.push_back(arg_str);
+  return true;
+}
+
+bool HostArgumentParser::AppendArguments(int argc, const char * const argv[]) {
+  // argc == 0 is allowed.
+  ASSERT(argv || argc == 0);
+
+  if (!impl_->started_) {
+    DLOG("Argument parse process is not started yet.");
+    return false;
+  }
+  if (impl_->error_occurred_) {
+    DLOG("Error has been occurred.");
+    return false;
+  }
+
+  bool result = true;
+  for (int i = 0; i < argc; ++i) {
+    result = AppendArgument(argv[i]);
+    if (!result)
+      break;
+  }
+  return result;
+}
+
+bool HostArgumentParser::Finish() {
+  if (!impl_->started_) {
+    DLOG("Argument parse process is not started yet.");
+    return false;
+  }
+
+  impl_->started_ = false;
+  if (impl_->error_occurred_) {
+    DLOG("Error has been occurred.");
+    return false;
+  }
+
+  Impl::ArgumentValueMap::iterator it = impl_->specified_args_.begin();
+  Impl::ArgumentValueMap::iterator end = impl_->specified_args_.end();
+  for (; it != end; ++it) {
+    if (it->second.type() == Variant::TYPE_VOID) {
+      DLOG("Argument %d has no value.", it->first);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool HostArgumentParser::GetArgumentValue(int id, Variant *value) const {
+  Impl::ArgumentValueMap::const_iterator it = impl_->specified_args_.find(id);
+  if (it != impl_->specified_args_.end()) {
+    if (value)
+      *value = it->second;
+    return it->second.type() != Variant::TYPE_VOID;
+  }
+  if (value)
+    *value = Variant();
+  return false;
+}
+
+bool HostArgumentParser::EnumerateRemainedArgs(
+    Slot1<bool, const std::string &> *callback) const {
+  ASSERT(callback);
+  StringVector::const_iterator it = impl_->remained_args_.begin();
+  StringVector::const_iterator end = impl_->remained_args_.end();
+  bool result = true;
+  for (; it != end; ++it) {
+    result = (*callback)(*it);
+    if (!result) break;
+  }
+  delete callback;
+  return result;
+}
+
+const char HostArgumentParser::kStartSignature[] = "<|START|>";
+const char HostArgumentParser::kFinishSignature[] = "<|FINISH|>";
 
 } // namespace ggadget
