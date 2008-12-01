@@ -61,9 +61,11 @@ static JSBool LocaleCompare(JSContext *cx, JSString *s1, JSString *s2,
   if (!chars1 || !chars2)
     return JS_FALSE;
 
+  size_t length1 = JS_GetStringLength(s1);
+  size_t length2 = JS_GetStringLength(s2);
   std::string locale_s1, locale_s2;
-  if (!ConvertUTF16ToLocaleString(chars1, &locale_s1) ||
-      !ConvertUTF16ToLocaleString(chars2, &locale_s2)) {
+  if (!ConvertUTF16ToLocaleString(chars1, length1, &locale_s1) ||
+      !ConvertUTF16ToLocaleString(chars2, length2, &locale_s2)) {
     RaiseException(cx, "Failed to convert strings to locale strings");
     return JS_FALSE;
   }

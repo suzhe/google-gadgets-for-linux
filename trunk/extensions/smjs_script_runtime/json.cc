@@ -52,20 +52,22 @@ static void AppendStringToJSON(JSContext *cx, JSString *str,
   *json += '"';
   const jschar *chars = JS_GetStringChars(str);
   if (chars) {
-    for (const jschar *p = chars; *p; p++) {
-      switch (*p) {
+    size_t length = JS_GetStringLength(str);
+    for (size_t i = 0; i < length; i++) {
+      jschar c = chars[i];
+      switch (c) {
         // The following special chars are not so complete, but also works.
         case '"': *json += "\\\""; break;
         case '\\': *json += "\\\\"; break;
         case '\n': *json += "\\n"; break;
         case '\r': *json += "\\r"; break;
         default:
-          if (*p >= 0x7f || *p < 0x20) {
+          if (c >= 0x7f || c < 0x20) {
             char buf[10];
-            snprintf(buf, sizeof(buf), "\\u%04X", *p);
+            snprintf(buf, sizeof(buf), "\\u%04X", c);
             *json += buf;
           } else {
-            *json += static_cast<char>(*p);
+            *json += static_cast<char>(c);
           }
           break;
       }

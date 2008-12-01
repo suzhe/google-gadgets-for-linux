@@ -44,9 +44,14 @@
 namespace ggadget {
 namespace npapi {
 
-static const char *kFirefox3UserAgent =
-    "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
-    "Gecko/20080724 Firefox/3.0.1";
+static const char *kUserAgent = "ggl/" GGL_VERSION;
+// We used to masquerade Firefox to enable transparent mode for Flash plugin 10,
+// but this will cause stream problems if nspluginwrapper is used.
+// In addition, the plugin can only draw on 24-bit surface, which can't pass
+// transparency information to our 32-bit composition environment and makes
+// transparent mode can't get desired effect.
+//    "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
+//    "Gecko/20080724 Firefox/3.0.1";
 
 // The URL flashes use to send trace() messages in my test environment.
 static const char *kFlashTraceURL = "http://localhost:8881";
@@ -566,12 +571,7 @@ class Plugin::Impl : public SmallObject<> {
 
   static const char *NPN_UserAgent(NPP instance) {
     CHECK_MAIN_THREAD();
-    // Returns the same UserAgent string with firefox-3.0.1.
-    // When wmode transparent/opaque is used, flash player 10 beta 2 plugin for
-    // Linux first try to detect browser's user agent string, and if the string
-    // is not one of those it expects, it will turn to window mode, no matter
-    // whether browser-side support windowless mode or not.
-    return kFirefox3UserAgent;
+    return kUserAgent;
   }
 
   static uint32 NPN_MemFlush(uint32 size) {

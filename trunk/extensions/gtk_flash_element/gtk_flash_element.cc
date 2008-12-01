@@ -67,7 +67,8 @@ extern "C" {
   }
 
   bool RegisterElementExtension(ggadget::ElementFactory *factory) {
-    ggadget::gtk::g_default_flash_params["wmode"] = "transparent";
+    // For now we prefer windowed mode. See nsapi_plugins.cc for details.
+    // ggadget::gtk::g_default_flash_params["wmode"] = "transparent";
     if (factory) {
       LOGI("Register gtk_flash_element extension, using name \"flash\".");
       factory->RegisterElementClass(
