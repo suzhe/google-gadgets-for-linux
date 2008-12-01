@@ -359,11 +359,15 @@ bool ConvertLocaleStringToUTF16(const char *input, UTF16String *result);
  * Converts a UTF16 string to a locale string, depending on the LC_CTYPE
  * category of the current locale.
  *
- * @param input a NULL-terminated UTF16 string.
+ * @param input a UTF16 string.
+ * @param input_size
  * @param[out] result the converted result.
  * @return @c true if succeeds.
  */
-bool ConvertUTF16ToLocaleString(const UTF16Char *input, std::string *result);
+bool ConvertUTF16ToLocaleString(const UTF16Char *input, size_t input_size,
+                                std::string *result);
+
+bool ConvertUTF16ToLocaleString(const UTF16String &input, std::string *result);
 
 /**
  * Converts a locale string to a UTF8 string, depending on the LC_CTYPE
@@ -379,11 +383,15 @@ bool ConvertLocaleStringToUTF8(const char *input, std::string *result);
  * Converts a UTF8 string to a locale string, depending on the LC_CTYPE
  * category of the current locale.
  *
- * @param input a NULL-terminated UTF16 string.
+ * @param input a UTF8 string.
+ * @param input_size
  * @param[out] result the converted result.
  * @return @c true if succeeds.
  */
-bool ConvertUTF8ToLocaleString(const char *input, std::string *result);
+bool ConvertUTF8ToLocaleString(const char *input, size_t input_size,
+                               std::string *result);
+
+bool ConvertUTF8ToLocaleString(const std::string &input, std::string *result);
 
 /**
  * Compares two locale strings, depending on the LC_COLLATE category of the

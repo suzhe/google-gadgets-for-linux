@@ -166,10 +166,12 @@ static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
   JSString *js_string = JS_ValueToString(cx, js_val);
   if (js_string) {
     jschar *chars = JS_GetStringChars(js_string);
-    // Don't cast chars to UTF16Char *, to let the compiler check if they
-    // are compatible.
-    *native_val = Variant(chars);
-    return JS_TRUE;
+    if (chars) {
+      // Don't cast chars to UTF16Char *, to let the compiler check if they
+      // are compatible.
+      *native_val = Variant(UTF16String(chars, JS_GetStringLength(js_string)));
+      return JS_TRUE;
+    }
   }
   return JS_FALSE;
 }
@@ -514,8 +516,11 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
   } else {
     std::string source = VariantValue<std::string>()(native_val);
     size_t source_size = source.size();
+
+    // Though JSAPI doesn't require the string to be NULL-terminated, we found
+    // that all JSAPI created strings are NULL-terminated, so we do the same.
     jschar *utf16_buffer =
-        (jschar *)JS_malloc(cx, source_size * sizeof(jschar));
+        (jschar *)JS_malloc(cx, (source_size + 1) * sizeof(jschar));
     if (!utf16_buffer)
       return JS_FALSE;
 
@@ -534,12 +539,13 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
             (static_cast<unsigned char>(source[i + 1]) << 8));
       }
     }
+    utf16_buffer[dest_size] = 0;
 
     // Shrink the buffer size if the required dest size is far smaller than
     // allocated.
     if (dest_size + 16 < source_size) {
       utf16_buffer = (jschar *)JS_realloc(cx, utf16_buffer,
-                                          dest_size * sizeof(jschar));
+                                          (dest_size + 1) * sizeof(jschar));
     }
 
     // Javascript adopts utf16_buffer.

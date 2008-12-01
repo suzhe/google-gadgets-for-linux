@@ -741,11 +741,10 @@ bool DetectAndConvertStreamToUTF8(const std::string &stream,
 }
 
 // Here we assume that if wchar_t is 2 bytes, the encoding is UTF16, and
-// if wchar_t is 4 bytes, the encoding is UTF32. We should ensure this
-// assumption in our configuration script.
-COMPILE_ASSERT(sizeof(wchar_t) == sizeof(UTF16Char) ||
-               sizeof(wchar_t) == sizeof(UTF32Char),
-               wchar_t_must_be_2_bytes_or_4_bytes);
+// if wchar_t is 4 bytes, the encoding is UTF32.
+#if GGL_SIZEOF_WCHAR_T != 2 && GGL_SIZEOF_WCHAR_T != 4
+#error wchar_t must be 2 bytes or 4 bytes
+#endif
 
 bool ConvertLocaleStringToUTF16(const char *input, UTF16String *result) {
   ASSERT(input && result);
@@ -762,35 +761,38 @@ bool ConvertLocaleStringToUTF16(const char *input, UTF16String *result) {
 
   bool success = true;
   mbstowcs(buffer, input, buffer_size);
-  if (sizeof(wchar_t) == sizeof(UTF16Char)) {
-    result->assign(reinterpret_cast<UTF16Char *>(buffer));
-  } else {
-    success = ConvertStringUTF32ToUTF16(reinterpret_cast<UTF32Char *>(buffer),
-                                        buffer_size - 1, result) ==
-              buffer_size - 1;
-  }
+#if GGL_SIZEOF_WCHAR_T == 2
+  result->assign(reinterpret_cast<UTF16Char *>(buffer));
+#else
+  success = ConvertStringUTF32ToUTF16(reinterpret_cast<UTF32Char *>(buffer),
+                                      buffer_size - 1, result) ==
+            buffer_size - 1;
+#endif
 
   delete [] buffer;
   return success;
 }
 
-bool ConvertUTF16ToLocaleString(const UTF16Char *input, std::string *result) {
+bool ConvertUTF16ToLocaleString(const UTF16Char *input, size_t input_size,
+                                std::string *result) {
   ASSERT(input && result);
   if (!input || !result)
     return false;
 
   result->clear();
+  if (!input_size)
+    return true;
+
   const wchar_t *wchar_input = NULL;
+#if GGL_SIZEOF_WCHAR_T == 2
+  UTF16String utf16(input, input_size);
+  wchar_input = utf16.c_str();
+#else
   UTF32String utf32;
-  if (sizeof(wchar_t) == sizeof(UTF16Char)) {
-    wchar_input = reinterpret_cast<const wchar_t *>(input);
-  } else {
-    size_t input_size = 0;
-    for (; input[input_size]; input_size++);
-    if (ConvertStringUTF16ToUTF32(input, input_size, &utf32) != input_size)
-      return false;
-    wchar_input = reinterpret_cast<const wchar_t *>(utf32.c_str());
-  }
+  if (ConvertStringUTF16ToUTF32(input, input_size, &utf32) != input_size)
+    return false;
+  wchar_input = reinterpret_cast<const wchar_t *>(utf32.c_str());
+#endif
 
   size_t buffer_size = wcstombs(NULL, wchar_input, 0) + 1;
   if (buffer_size == 0) // wcstombs returns (size_t)-1 on error.
@@ -803,6 +805,10 @@ bool ConvertUTF16ToLocaleString(const UTF16Char *input, std::string *result) {
   result->assign(buffer);
   delete [] buffer;
   return true;
+}
+
+bool ConvertUTF16ToLocaleString(const UTF16String &input, std::string *result) {
+  return ConvertUTF16ToLocaleString(input.c_str(), input.size(), result);
 }
 
 bool ConvertLocaleStringToUTF8(const char *input, std::string *result) {
@@ -820,42 +826,42 @@ bool ConvertLocaleStringToUTF8(const char *input, std::string *result) {
 
   bool success = true;
   mbstowcs(buffer, input, buffer_size);
-  if (sizeof(wchar_t) == sizeof(UTF16Char)) {
-    success = ConvertStringUTF16ToUTF8(reinterpret_cast<UTF16Char *>(buffer),
-                                       buffer_size - 1, result) ==
-              buffer_size - 1;
-  } else {
-    success = ConvertStringUTF32ToUTF8(reinterpret_cast<UTF32Char *>(buffer),
-                                       buffer_size - 1, result) ==
-              buffer_size - 1;
-  }
+#if GGL_SIZEOF_WCHAR_T == 2
+  success = ConvertStringUTF16ToUTF8(reinterpret_cast<UTF16Char *>(buffer),
+                                     buffer_size - 1, result) ==
+            buffer_size - 1;
+#else
+  success = ConvertStringUTF32ToUTF8(reinterpret_cast<UTF32Char *>(buffer),
+                                     buffer_size - 1, result) ==
+            buffer_size - 1;
+#endif
 
   delete [] buffer;
   return success;
 }
 
-bool ConvertUTF8ToLocaleString(const char *input, std::string *result) {
+bool ConvertUTF8ToLocaleString(const char *input, size_t input_size,
+                               std::string *result) {
   ASSERT(input && result);
   if (!input || !result)
     return false;
 
   result->clear();
-  size_t input_size = strlen(input);
   if (!input_size)
     return true;
 
   const wchar_t *wchar_input = NULL;
-  UTF32String utf32;
+#if GGL_SIZEOF_WCHAR_T == 2
   UTF16String utf16;
-  if (sizeof(wchar_t) == sizeof(UTF16Char)) {
-    if (ConvertStringUTF8ToUTF16(input, input_size, &utf16) != input_size)
-      return false;
-    wchar_input = reinterpret_cast<const wchar_t *>(utf16.c_str());
-  } else {
-    if (ConvertStringUTF8ToUTF32(input, input_size, &utf32) != input_size)
-      return false;
-    wchar_input = reinterpret_cast<const wchar_t *>(utf32.c_str());
-  }
+  if (ConvertStringUTF8ToUTF16(input, input_size, &utf16) != input_size)
+    return false;
+  wchar_input = reinterpret_cast<const wchar_t *>(utf16.c_str());
+#else
+  UTF32String utf32;
+  if (ConvertStringUTF8ToUTF32(input, input_size, &utf32) != input_size)
+    return false;
+  wchar_input = reinterpret_cast<const wchar_t *>(utf32.c_str());
+#endif
 
   size_t buffer_size = wcstombs(NULL, wchar_input, 0) + 1;
   if (buffer_size == 0) // wcstombs returns (size_t)-1 on error.
@@ -868,6 +874,10 @@ bool ConvertUTF8ToLocaleString(const char *input, std::string *result) {
   result->assign(buffer);
   delete [] buffer;
   return true;
+}
+
+bool ConvertUTF8ToLocaleString(const std::string &input, std::string *result) {
+  return ConvertUTF8ToLocaleString(input.c_str(), input.size(), result);
 }
 
 int CompareLocaleStrings(const char *s1, const char *s2) {

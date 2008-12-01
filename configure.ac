@@ -495,6 +495,7 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long int)
 AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(double)
+AC_CHECK_SIZEOF(wchar_t)
 
 GGL_SIZEOF_CHAR=$ac_cv_sizeof_char
 GGL_SIZEOF_SHORT_INT=$ac_cv_sizeof_short_int
@@ -502,6 +503,7 @@ GGL_SIZEOF_INT=$ac_cv_sizeof_int
 GGL_SIZEOF_LONG_INT=$ac_cv_sizeof_long_int
 GGL_SIZEOF_SIZE_T=$ac_cv_sizeof_size_t
 GGL_SIZEOF_DOUBLE=$ac_cv_sizeof_double
+GGL_SIZEOF_WCHAR_T=$ac_cv_sizeof_wchar_t
 
 AC_SUBST(GGL_SIZEOF_CHAR)
 AC_SUBST(GGL_SIZEOF_SHORT_INT)
@@ -509,6 +511,7 @@ AC_SUBST(GGL_SIZEOF_INT)
 AC_SUBST(GGL_SIZEOF_LONG_INT)
 AC_SUBST(GGL_SIZEOF_SIZE_T)
 AC_SUBST(GGL_SIZEOF_DOUBLE)
+AC_SUBST(GGL_SIZEOF_WCHAR_T)
 
 if test x$ac_cv_type_size_t != xyes; then
   AC_MSG_ERROR([
