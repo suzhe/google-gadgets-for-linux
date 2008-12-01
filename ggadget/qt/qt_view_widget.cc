@@ -39,17 +39,14 @@ namespace qt {
 
 static const double kDragThreshold = 3;
 
-QtViewWidget::QtViewWidget(ViewInterface *view,
-                           bool composite,
-                           bool decorated,
-                           bool movable,
-                           bool support_input_mask)
+QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     : view_(view),
       drag_files_(NULL),
-      composite_(composite),
-      movable_(movable),
+      composite_(flags.testFlag(QtViewWidget::FLAG_COMPOSITE)),
+      movable_(flags.testFlag(QtViewWidget::FLAG_MOVABLE)),
       enable_input_mask_(false),
-      support_input_mask_(support_input_mask && composite),
+      support_input_mask_(flags.testFlag(QtViewWidget::FLAG_INPUT_MASK) &&
+                          flags.testFlag(QtViewWidget::FLAG_COMPOSITE)),
       offscreen_pixmap_(NULL),
       mouse_drag_moved_(false),
       child_(NULL),
@@ -59,7 +56,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
   setMouseTracking(true);
   setAcceptDrops(true);
   AdjustToViewSize();
-  if (!decorated) {
+  if (!flags.testFlag(QtViewWidget::FLAG_WM_DECORATED)) {
     setWindowFlags(Qt::FramelessWindowHint);
     SkipTaskBar();
   }

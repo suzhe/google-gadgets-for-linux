@@ -31,13 +31,21 @@ namespace qt {
 
 class QtViewHost : public ViewHostInterface {
  public:
+  enum Flag {
+    FLAG_NONE = 0,
+    FLAG_COMPOSITE = 0x1,
+    FLAG_WM_DECORATED = 0x2,
+    FLAG_RECORD_STATES = 0x4
+  };
+  Q_DECLARE_FLAGS(Flags, Flag)
+
   /**
    * @param parent If not null, this view host will be shown at the popup
    *               position of parent
    */
   QtViewHost(ViewHostInterface::Type type,
-             double zoom, bool composite, bool decorated,
-             bool record_states, int debug_mode, QWidget* parent);
+             double zoom, Flags flags,
+             int debug_mode, QWidget* parent);
   virtual ~QtViewHost();
 
   virtual Type GetType() const;
@@ -82,6 +90,7 @@ class QtViewHost : public ViewHostInterface {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS(QtViewHost::Flags)
 
 } // namespace qt
 } // namespace ggadget

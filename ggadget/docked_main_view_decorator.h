@@ -34,7 +34,7 @@ class DockedMainViewDecorator : public MainViewDecoratorBase {
    *
    * by default, only bottom resize border is visible.
    */
-  void SetResizeBorderVisible(bool top, bool left, bool bottom, bool right);
+  void SetResizeBorderVisible(int borders);
 
   /**
    * Connects a handler to OnUndock signal.

@@ -33,8 +33,9 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type) {
-    return new ggadget::qt::QtViewHost(type, 1.0, true, false, true,
-                                       view_debug_mode_, NULL);
+    return new ggadget::qt::QtViewHost(
+        type, 1.0, ggadget::qt::QtViewHost::FLAG_RECORD_STATES,
+        view_debug_mode_, NULL);
   }
   virtual Gadget *LoadGadget(const char *path, const char *options_name,
                              int instance_id, bool show_debug_console) {

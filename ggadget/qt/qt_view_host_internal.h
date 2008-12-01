@@ -26,9 +26,7 @@ class QtViewHost::Impl : public QObject {
   Impl(QtViewHost *owner,
        ViewHostInterface::Type type,
        double zoom,
-       bool composite,
-       bool decorated,
-       bool record_states,
+       QtViewHost::Flags flags,
        int debug_mode,
        QWidget *parent)
     : owner_(owner),
@@ -39,17 +37,19 @@ class QtViewHost::Impl : public QObject {
       dialog_(NULL),
       debug_mode_(debug_mode),
       zoom_(zoom),
-      decorated_(decorated),
-      record_states_(record_states),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
-      composite_(composite),
+      record_states_(flags.testFlag(QtViewHost::FLAG_RECORD_STATES)),
       input_shape_mask_(false),
       keep_above_(false),
+      flags_(QtViewWidget::FLAG_MOVABLE | QtViewWidget::FLAG_INPUT_MASK),
       parent_widget_(parent) {
-    if (type != ViewHostInterface::VIEW_HOST_MAIN) {
-      composite_ = false;
-    }
+    if (flags.testFlag(QtViewHost::FLAG_WM_DECORATED))
+      flags_ |= QtViewWidget::FLAG_WM_DECORATED;
+
+    if (flags.testFlag(QtViewHost::FLAG_COMPOSITE) &&
+        type != ViewHostInterface::VIEW_HOST_MAIN)
+      flags_ |= QtViewWidget::FLAG_COMPOSITE;
   }
 
   ~Impl() {
@@ -77,7 +77,7 @@ class QtViewHost::Impl : public QObject {
       case ViewHostInterface::VIEW_HOST_MAIN:
         return "main_view";
       case ViewHostInterface::VIEW_HOST_OPTIONS:
-        return "options_view";
+        return "flags_view";
       case ViewHostInterface::VIEW_HOST_DETAILS:
         return "details_view";
       default:
@@ -146,10 +146,7 @@ class QtViewHost::Impl : public QObject {
       return true;
     }
 
-    widget_ = new QtViewWidget(view_, composite_, decorated_,
-                               true,    // movable
-                               true);   // support_input_mask
-    // Initialize window and widget.
+    widget_ = new QtViewWidget(view_, flags_);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       QVBoxLayout *layout = new QVBoxLayout();
       widget_->setFixedSize(D2I(view_->GetWidth()), D2I(view_->GetHeight()));
@@ -271,15 +268,14 @@ class QtViewHost::Impl : public QObject {
   QDialog *dialog_;     // Top level window of the view
   int debug_mode_;
   double zoom_;
-  bool decorated_;      // frameless or not
-  bool record_states_;
   Connection *onoptionchanged_connection_;
 
   Slot1<bool, int> *feedback_handler_;
 
-  bool composite_;
+  bool record_states_;
   bool input_shape_mask_;
   bool keep_above_;
+  QtViewWidget::Flags flags_;
   QWidget *parent_widget_;
   QString caption_;
   QMenu context_menu_;
