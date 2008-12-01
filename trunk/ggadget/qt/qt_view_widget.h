@@ -29,11 +29,16 @@ namespace qt {
 class QtViewWidget : public QWidget {
   Q_OBJECT
  public:
-  QtViewWidget(ViewInterface* view,
-               bool composite,
-               bool decorated,
-               bool movable,
-               bool support_input_mask);
+  enum Flag {
+    FLAG_NONE = 0,
+    FLAG_COMPOSITE = 0x1,
+    FLAG_WM_DECORATED = 0x2,
+    FLAG_MOVABLE = 0x4,
+    FLAG_INPUT_MASK = 0x8
+  };
+  Q_DECLARE_FLAGS(Flags, Flag)
+
+  QtViewWidget(ViewInterface* view, Flags flags);
   ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
@@ -87,6 +92,7 @@ class QtViewWidget : public QWidget {
   DISALLOW_EVIL_CONSTRUCTORS(QtViewWidget);
 };
 
+Q_DECLARE_OPERATORS_FOR_FLAGS(QtViewWidget::Flags)
 
 } // end of namespace qt
 } // end of namespace ggadget

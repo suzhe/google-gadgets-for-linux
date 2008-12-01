@@ -63,8 +63,13 @@ class DockedMainViewDecorator::Impl : public SmallObject<> {
     on_undock_signal_();
   }
 
-  void SetupResizeBorder(bool top, bool left, bool bottom, bool right) {
-    bool visibles[4] = { top, left, bottom, right };
+  void SetupResizeBorder(int borders) {
+    bool visibles[4] = {
+      borders & BORDER_TOP,
+      borders & BORDER_LEFT,
+      borders & BORDER_BOTTOM,
+      borders & BORDER_RIGHT
+    };
     for (size_t i = 0; i < 4; ++i) {
       if (!visibles[i] && resize_borders_[i]) {
         owner_->GetChildren()->RemoveElement(resize_borders_[i]);
@@ -116,7 +121,7 @@ DockedMainViewDecorator::DockedMainViewDecorator(ViewHostInterface *host)
   : MainViewDecoratorBase(host, "main_view_docked", true, false, true),
     impl_(new Impl(this)) {
   SetDecoratorShowHideTimeout(0, 0);
-  SetResizeBorderVisible(false, false, true, false);
+  SetResizeBorderVisible(BORDER_BOTTOM);
 }
 
 DockedMainViewDecorator::~DockedMainViewDecorator() {
@@ -124,9 +129,8 @@ DockedMainViewDecorator::~DockedMainViewDecorator() {
   impl_ = NULL;
 }
 
-void DockedMainViewDecorator::SetResizeBorderVisible(bool top, bool left,
-                                                     bool bottom, bool right) {
-  impl_->SetupResizeBorder(top, left, bottom, right);
+void DockedMainViewDecorator::SetResizeBorderVisible(int borders) {
+  impl_->SetupResizeBorder(borders);
   UpdateViewSize();
 }
 

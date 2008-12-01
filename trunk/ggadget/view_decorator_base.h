@@ -33,6 +33,13 @@ namespace ggadget {
  */
 class ViewDecoratorBase : public View {
  public:
+  enum Border {
+    BORDER_NONE = 0x0,
+    BORDER_TOP = 0x1,
+    BORDER_LEFT = 0x2,
+    BORDER_BOTTOM = 0x4,
+    BORDER_RIGHT = 0x8
+  };
   /**
    * Constructor.
    *

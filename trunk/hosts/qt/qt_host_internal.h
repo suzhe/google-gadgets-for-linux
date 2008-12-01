@@ -172,14 +172,18 @@ class QtHost::Impl : public QObject {
   ViewHostInterface *NewViewHost(Gadget *gadget,
                                  ViewHostInterface::Type type) {
     QWidget *parent = NULL;
-    bool record_states = true;
-    if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
+    QtViewHost::Flags flags;
+
+    if (composite_)
+      flags |= QtViewHost::FLAG_COMPOSITE;
+
+    if (type == ViewHostInterface::VIEW_HOST_DETAILS)
       parent = static_cast<QWidget*>(gadget->GetMainView()->GetNativeWidget());
-      record_states = false;
-    }
+    else
+      flags |= QtViewHost::FLAG_RECORD_STATES;
+
     QtViewHost *qvh = new QtViewHost(
-        type, 1.0, composite_, false, record_states,
-        view_debug_mode_, parent);
+        type, 1.0, flags, view_debug_mode_, parent);
     QObject::connect(this, SIGNAL(show(bool)),
                      qvh->GetQObject(), SLOT(OnShow(bool)));
 
@@ -277,7 +281,10 @@ class QtHost::Impl : public QObject {
       expanded_original_ = decorated;
       QtViewHost *qvh = new QtViewHost(
           ViewHostInterface::VIEW_HOST_MAIN, 1.0,
-          composite_, false, false, view_debug_mode_,
+          composite_ ?
+          QtViewHost::FLAG_COMPOSITE :
+          QtViewHost::FLAG_NONE,
+          view_debug_mode_,
           static_cast<QWidget*>(decorated->GetNativeWidget()));
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       PopOutMainViewDecorator *view_decorator =

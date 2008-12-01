@@ -43,10 +43,11 @@ namespace ggadget {
 namespace qt {
 
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
-                       double zoom, bool composite, bool decorated,
-                       bool record_states, int debug_mode, QWidget *parent)
-  : impl_(new Impl(this, type, zoom, composite,
-                   decorated, record_states, debug_mode, parent)) {
+                       double zoom,
+                       QtViewHost::Flags flags,
+                       int debug_mode,
+                       QWidget *parent)
+  : impl_(new Impl(this, type, zoom, flags, debug_mode, parent)) {
 }
 
 QtViewHost::~QtViewHost() {
