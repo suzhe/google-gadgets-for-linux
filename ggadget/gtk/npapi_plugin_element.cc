@@ -191,6 +191,9 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
       return;
     }
     socket_ = gtk_socket_new();
+    // Plugins only support RGB surfaces. Passing a RGBA surface to it will
+    // cause BadMatch X error.
+    gtk_widget_set_colormap(socket_, gdk_rgb_get_colormap());
     // Make sure to handle the plug_removed signal, so that the socket can be
     // reused after the plug is removed.
     g_signal_connect(socket_, "plug_removed",

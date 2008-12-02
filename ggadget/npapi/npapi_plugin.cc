@@ -45,13 +45,6 @@ namespace ggadget {
 namespace npapi {
 
 static const char *kUserAgent = "ggl/" GGL_VERSION;
-// We used to masquerade Firefox to enable transparent mode for Flash plugin 10,
-// but this will cause stream problems if nspluginwrapper is used.
-// In addition, the plugin can only draw on 24-bit surface, which can't pass
-// transparency information to our 32-bit composition environment and makes
-// transparent mode can't get desired effect.
-//    "Mozilla/5.0 (Linux; U; en-US; rv:1.9.1.0) "
-//    "Gecko/20080724 Firefox/3.0.1";
 
 // The URL flashes use to send trace() messages in my test environment.
 static const char *kFlashTraceURL = "http://localhost:8881";
