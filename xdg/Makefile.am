@@ -23,7 +23,6 @@ intl_desktop_file_SOURCES= intl_desktop_file.cc
 intl_desktop_file_CPPFLAGS= $(PREDEFINED_MACROS)
 intl_desktop_file_CXXFLAGS= $(DEFAULT_COMPILE_FLAGS)
 intl_desktop_file_LDADD= $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-intl_desktop_file_LDFLAGS = -R$(libdir)
 
 noinst_SCRIPTS=intl-desktop-file.sh
 

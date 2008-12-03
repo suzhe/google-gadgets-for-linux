@@ -324,6 +324,23 @@ class SideBarGtkHost::Impl {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
+  // Returns true if any menu item is added.
+  bool AddFloatingGadgetToMenu(MenuInterface *menu, int priority) {
+    bool result = false;
+    for (GadgetsMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
+      Gadget *gadget = it->second.gadget;
+      if (gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR) {
+        std::string caption = gadget->GetMainView()->GetCaption();
+        menu->AddItem(caption.c_str(), 0, 0,
+                      NewSlot(this, &Impl::FloatingGadgetMenuHandler, gadget),
+                      priority);
+        result = true;
+      }
+    }
+    return result;
+  }
+
   void OnSideBarMenu(MenuInterface *menu) {
     const int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
@@ -386,6 +403,9 @@ class SideBarGtkHost::Impl {
                    NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
     }
     menu->AddItem(NULL, 0, 0, NULL, priority);
+    if (AddFloatingGadgetToMenu(menu, priority)) {
+      menu->AddItem(NULL, 0, 0, NULL, priority);
+    }
     menu->AddItem(GM_("MENU_ITEM_EXIT"), 0,
                   MenuInterface::MENU_ITEM_ICON_QUIT,
                   NewSlot(this, &Impl::ExitMenuHandler), priority);
@@ -1348,8 +1368,6 @@ class SideBarGtkHost::Impl {
   }
 
   DecoratedViewHost *NewFloatingMainViewHost(int gadget_id) {
-    GadgetInfo *info = &gadgets_[gadget_id];
-
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
     vh_flags |= SingleViewHost::RECORD_STATES;
 
@@ -1371,6 +1389,8 @@ class SideBarGtkHost::Impl {
         NewSlot(this, &Impl::OnMainViewClose, gadget_id));
     view_decorator->SetButtonVisible(MainViewDecoratorBase::POP_IN_OUT_BUTTON,
                                      false);
+
+    GadgetInfo *info = &gadgets_[gadget_id];
     info->main_decorator = decorated_view_host;
     info->floating = view_host;
 
@@ -1407,7 +1427,6 @@ class SideBarGtkHost::Impl {
         new DecoratedViewHost(view_decorator);
     view_decorator->ConnectOnClose(
         NewSlot(this, &Impl::OnDetailsViewClose, gadget_id));
-    gadgets_[gadget_id].details = view_host;
 
     // It's ok to get the toplevel window, because decorated view host will set
     // decorated view into single view host.
@@ -1418,6 +1437,19 @@ class SideBarGtkHost::Impl {
                            G_CALLBACK(ToplevelWindowFocusOutHandler), this);
     g_signal_connect_after(G_OBJECT(toplevel), "focus-in-event",
                            G_CALLBACK(ToplevelWindowFocusInHandler), this);
+
+    GadgetInfo *info = &gadgets_[gadget_id];
+    info->details = view_host;
+    if (info->floating) {
+      view_host->SetKeepAbove(info->floating->IsKeepAbove());
+      gtk_window_set_transient_for(GTK_WINDOW(toplevel),
+                                   GTK_WINDOW(info->floating->GetWindow()));
+    } else {
+      view_host->SetKeepAbove(always_on_top_);
+      gtk_window_set_transient_for(GTK_WINDOW(toplevel),
+                                   GTK_WINDOW(sidebar_window_));
+    }
+
     // Set initial window position to reduce flicker when showing the view.
     SetDetailsViewPosition(gadget_id);
     return decorated_view_host;
@@ -1444,7 +1476,6 @@ class SideBarGtkHost::Impl {
         new DecoratedViewHost(view_decorator);
     view_decorator->ConnectOnClose(
         NewSlot(this, &Impl::OnPopOutViewClose, gadget_id));
-    gadgets_[gadget_id].popout = view_host;
 
     // It's ok to get the toplevel window, because decorated view host will set
     // decorated view into single view host.
@@ -1455,6 +1486,19 @@ class SideBarGtkHost::Impl {
                            G_CALLBACK(ToplevelWindowFocusOutHandler), this);
     g_signal_connect_after(G_OBJECT(toplevel), "focus-in-event",
                            G_CALLBACK(ToplevelWindowFocusInHandler), this);
+
+    GadgetInfo *info = &gadgets_[gadget_id];
+    info->popout = view_host;
+    if (info->floating) {
+      view_host->SetKeepAbove(info->floating->IsKeepAbove());
+      gtk_window_set_transient_for(GTK_WINDOW(toplevel),
+                                   GTK_WINDOW(info->floating->GetWindow()));
+    } else {
+      view_host->SetKeepAbove(always_on_top_);
+      gtk_window_set_transient_for(GTK_WINDOW(toplevel),
+                                   GTK_WINDOW(sidebar_window_));
+    }
+
     return decorated_view_host;
   }
 
@@ -1530,6 +1574,10 @@ class SideBarGtkHost::Impl {
   }
 
   // handlers for menu items
+  void FloatingGadgetMenuHandler(const char *str, Gadget *gadget) {
+    gadget->ShowMainView();
+  }
+
   void AddGadgetMenuHandler(const char *str) {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }

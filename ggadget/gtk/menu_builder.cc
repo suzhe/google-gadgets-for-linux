@@ -132,7 +132,7 @@ class MenuBuilder::Impl {
                                   int priority) {
     GtkMenuItem *item = NULL;
 
-    if (!text || !*text) {
+    if (!text || !*text || (style & MENU_ITEM_FLAG_SEPARATOR)) {
       item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
     } else if (style & MENU_ITEM_FLAG_CHECKED) {
       item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_mnemonic(
@@ -290,9 +290,10 @@ class MenuBuilder::Impl {
     if (item) {
       int old_style = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item),
                                                         kMenuItemStyleTag));
-      // If the checked flag has been changed, then we need re-create the menu
-      // item with new style.
-      if ((old_style ^ style) & MENU_ITEM_FLAG_CHECKED) {
+      // If the checked or separator flag has been changed, then we need
+      // re-create the menu item with new style.
+      if ((old_style ^ style) &
+          (MENU_ITEM_FLAG_CHECKED | MENU_ITEM_FLAG_SEPARATOR)) {
         // Can't re-create the item with a submenu attached.
         if (gtk_menu_item_get_submenu(item) != NULL) {
           ASSERT_M(false,
