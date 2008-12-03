@@ -103,8 +103,8 @@ class ScriptableNPObject::Impl {
 
     // We don't know how many arguments the plugin function can receive.
     // Rely on the plugin to report error if any exists.
-    virtual int GetArgCount() const {
-      return INT_MAX;
+    virtual bool HasMetadata() const {
+      return false;
     }
 
     virtual ResultVariant Call(ScriptableInterface *object,
