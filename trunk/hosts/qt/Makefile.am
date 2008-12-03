@@ -40,10 +40,7 @@ ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 ggl_qt_LDADD		= $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
-
-ggl_qt_LDFLAGS		= -R$(libdir)
+			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
 BUILT_SOURCES		= $(MOC_FILES)
 qt_host_internal.moc:qt_host_internal.h

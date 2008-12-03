@@ -38,8 +38,8 @@ class QtMenu::Impl {
       action = new QAction(QString::fromUtf8(item_text), qt_menu_);
       MenuItemInfo *info = new MenuItemInfo(qt_menu_, item_text, handler, action);
       menu_items_[item_text] = info;
-      ApplyStyle(action, style);
     }
+    ApplyStyle(action, style);
     AddAction(action, priority);
   }
 
@@ -102,6 +102,11 @@ class QtMenu::Impl {
     } else {
       action->setChecked(false);
     }
+
+    if (style & MENU_ITEM_FLAG_SEPARATOR)
+      action->setSeparator(true);
+    else
+      action->setSeparator(false);
   }
 
   QMenu *GetNativeMenu() { return qt_menu_; }

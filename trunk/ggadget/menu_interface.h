@@ -28,9 +28,11 @@ class MenuInterface {
   virtual ~MenuInterface() { }
 
  public:
+  /** Compatible with menu flags defined in Windows. */
   enum MenuItemFlag {
-    MENU_ITEM_FLAG_GRAYED = 1,
-    MENU_ITEM_FLAG_CHECKED = 8
+    MENU_ITEM_FLAG_GRAYED    = 0x0001,
+    MENU_ITEM_FLAG_CHECKED   = 0x0008,
+    MENU_ITEM_FLAG_SEPARATOR = 0x0800
   };
 
   /**
