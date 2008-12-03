@@ -293,8 +293,12 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
   if (JSVAL_IS_STRING(js_val))
     return ConvertJSToNativeString(cx, js_val, native_val);
   if (JSVAL_IS_OBJECT(js_val)) {
-    if (ConvertJSToNativeDate(cx, js_val, native_val))
-      return JS_TRUE;
+    // Don't try to convert the object to native Date, because JavaScript Date
+    // is mutable, and sometimes the script may want to read it back and
+    // change it. We only convert to native Date if the native side explicitly
+    // requires a Date.
+    // if (ConvertJSToNativeDate(cx, js_val, native_val))
+    //   return JS_TRUE;
     return ConvertJSToScriptable(cx, js_val, native_val);
   }
   return JS_FALSE;

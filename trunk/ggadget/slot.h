@@ -51,7 +51,8 @@ class Slot : public SmallObject<> {
                              int argc, const Variant argv[]) const = 0;
 
   /**
-   * @return @c true if this @c Slot can provide metadata.
+   * @return @c true if this @c Slot can provide metadata. Otherwise this Slot
+   *     is supposed to accept any number of any type of parameters.
    */
   virtual bool HasMetadata() const { return true; }
 
@@ -61,8 +62,6 @@ class Slot : public SmallObject<> {
   virtual Variant::Type GetReturnType() const { return Variant::TYPE_VOID; }
   /**
    * Get the number of arguments of the @c Slot target.
-   * If some derived class wants to accept any number of arguments,
-   * returns INT_MAX, and it should not have any default argument;
    */
   virtual int GetArgCount() const { return 0; }
   /**

@@ -289,20 +289,36 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
 
   void DoDraw(CanvasInterface *canvas) {
     if (windowless_ && plugin_) {
-      // Clear the pixmap each time because the plugin may draw outside of
-      // its area but doesn't clear and cause garbage.
-      ClearPixmap(0, 0, window_.width, window_.height);
+      Rectangle rect = plugin_->GetDirtyRect();
+      if (rect == npapi::Plugin::kWholePluginRect) {
+        rect.Set(0, 0, window_.width, window_.height);
+      }
+      int x = static_cast<int>(rect.x);
+      int y = static_cast<int>(rect.y);
+      int w = static_cast<int>(rect.w);
+      int h = static_cast<int>(rect.h);
+      ClearPixmap(x, y, w, h);
       XEvent expose_event;
       memset(&expose_event, 0, sizeof(expose_event));
       expose_event.type = GraphicsExpose;
       expose_event.xgraphicsexpose.display = ws_info_.display;
       ASSERT(GDK_IS_WINDOW(native_widget_->window));
       expose_event.xgraphicsexpose.drawable = drawable_;
-      expose_event.xgraphicsexpose.x = 0;
-      expose_event.xgraphicsexpose.y = 0;
-      expose_event.xgraphicsexpose.width = static_cast<int>(window_.width);
-      expose_event.xgraphicsexpose.height = static_cast<int>(window_.height);
+      expose_event.xgraphicsexpose.x = x;
+      expose_event.xgraphicsexpose.y = y;
+      // In fact, this GraphicsExpose's width and height are the position of
+      // the bottom-right corner.
+      expose_event.xgraphicsexpose.width = x + w;
+      expose_event.xgraphicsexpose.height = y + h;
       plugin_->HandleEvent(&expose_event);
+      plugin_->ResetDirtyRect();
+#if 0 // Debug dirty area.
+      GdkGC *gc = gdk_gc_new(pixmap_);
+      GdkColor red = { 0, 65535, 0, 0 };
+      gdk_gc_set_rgb_fg_color(gc, &red);
+      gdk_draw_rectangle(pixmap_, gc, FALSE, x, y, w - 1, h - 1);
+      g_object_unref(gc);
+#endif
       if (canvas) {
         cairo_t *cr = down_cast<CairoCanvas*>(canvas)->GetContext();
         if (zoom_ != 1.0) {

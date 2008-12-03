@@ -136,8 +136,12 @@ bool ConvertJSToNativeVariant(QScriptEngine *e, const QScriptValue &qval,
     return ConvertJSToNativeVoid(qval, val);
   if (qval.isBoolean())
     return ConvertJSToNativeBool(qval, val);
-  if (qval.isDate())
-    return ConvertJSToNativeDate(qval, val);
+  // Don't try to convert the object to native Date, because JavaScript Date
+  // is mutable, and sometimes the script may want to read it back and
+  // change it. We only convert to native Date if the native side explicitly
+  // requires a Date.
+  // if (qval.isDate())
+  //   return ConvertJSToNativeDate(qval, val);
   if (qval.isNumber())
     return ConvertJSToNativeDouble(qval, val);
   if (qval.isString())

@@ -193,6 +193,10 @@ Rectangle Rectangle::GetPolygonExtents(size_t n, const double *vertexes) {
 }
 
 void Rectangle::Union(const Rectangle &rect) {
+  if (w <= 0 || h <= 0) {
+    *this = rect;
+    return;
+  }
   double nx = std::min(x, rect.x);
   double ny = std::min(y, rect.y);
   double nw = std::max(x + w, rect.x + rect.w) - nx;

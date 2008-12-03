@@ -419,7 +419,7 @@ void ScriptableHelperImpl::RegisterStringEnumProperty(
 
 void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(name);
-  ASSERT(slot && slot->HasMetadata());
+  ASSERT(slot);
   AddPropertyInfo(name, PROPERTY_METHOD, Variant(slot), NULL, NULL);
 }
 

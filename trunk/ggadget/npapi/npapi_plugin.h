@@ -19,6 +19,7 @@
 
 #include <string>
 #include <ggadget/common.h>
+#include <ggadget/math_utils.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/small_object.h>
 
@@ -107,6 +108,16 @@ class Plugin : public SmallObject<> {
    * as Javascript.
    */
   ScriptableInterface *GetScriptablePlugin();
+
+  /**
+   * Gets and resets the current dirty rectangle that needs to be redrawn next
+   * time. If the Rectangle is kWholePluginRect, the whole plugin need to be
+   * redrawn.
+   */
+  Rectangle GetDirtyRect() const;
+  void ResetDirtyRect();
+
+  static const Rectangle kWholePluginRect;
 
  public:
   /**

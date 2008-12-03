@@ -273,7 +273,7 @@ class Plugin::Impl : public SmallObject<> {
         window_(window),
         windowless_(false), transparent_(false),
         init_error_(NPERR_GENERIC_ERROR),
-        temp_file_seq_(0),
+        dirty_rect_(kWholePluginRect),
         browser_window_npobject_(this, &kBrowserWindowClass),
         location_npobject_(this, &kLocationClass) {
     ASSERT(library_info);
@@ -311,8 +311,6 @@ class Plugin::Impl : public SmallObject<> {
 
   ~Impl() {
     abort_streams_();
-    if (!temp_dir_.empty())
-      RemoveDirectory(temp_dir_.c_str(), true);
     if (plugin_root_)
       plugin_root_->Unref();
 
@@ -444,22 +442,20 @@ class Plugin::Impl : public SmallObject<> {
   void InvalidateRect(NPRect *invalid_rect) {
     if (!invalid_rect)
       return;
-    // The current plugins seems always invalid the whole rect.
-    // Otherwise we need to consider the zoom factor of the view.
-    element_->QueueDraw();
+    if (!(dirty_rect_ == kWholePluginRect)) {
+      Rectangle rect(invalid_rect->left, invalid_rect->top,
+                     invalid_rect->right - invalid_rect->left,
+                     invalid_rect->bottom - invalid_rect->top);
+      // The current plugins seems always invalid the whole rect.
+      // Otherwise we need to consider the zoom factor of the view.
+      element_->QueueDrawRect(rect);
+      dirty_rect_.Union(rect);
+    }
   }
 
   void ForceRedraw() {
+    dirty_rect_ = kWholePluginRect;
     element_->MarkRedraw();
-  }
-
-  std::string GetTempFileName() {
-    if (temp_dir_.empty())
-      CreateTempDirectory("ggl-np-", &temp_dir_);
-    if (temp_dir_.empty())
-      return std::string();
-    std::string file_name = StringPrintf("t%d", ++temp_file_seq_);
-    return BuildFilePath(temp_dir_.c_str(), file_name.c_str());
   }
 
   static NPError HandleURL(NPP instance, const char *method, const char *url,
@@ -892,8 +888,7 @@ class Plugin::Impl : public SmallObject<> {
   bool windowless_;
   bool transparent_;
   NPError init_error_;
-  std::string temp_dir_;
-  int temp_file_seq_;
+  Rectangle dirty_rect_;
 
   Signal1<void, const char *> on_new_message_handler_;
   Signal0<void> abort_streams_;
@@ -984,6 +979,8 @@ const NPNetscapeFuncs Plugin::Impl::kContainerFuncs = {
 Display *Plugin::Impl::display_ = NULL;
 #endif
 
+const Rectangle Plugin::kWholePluginRect(-1, -1, -1, -1);
+
 Plugin::Plugin() : impl_(NULL) {
   // impl_ should be set in Plugin::Create().
 }
@@ -1033,6 +1030,14 @@ Connection *Plugin::ConnectOnNewMessage(Slot1<void, const char *> *handler) {
 
 ScriptableInterface *Plugin::GetScriptablePlugin() {
   return impl_->GetScriptablePlugin();
+}
+
+Rectangle Plugin::GetDirtyRect() const {
+  return impl_->dirty_rect_;
+}
+
+void Plugin::ResetDirtyRect() {
+  impl_->dirty_rect_.Reset();
 }
 
 Plugin *Plugin::Create(const char *mime_type, BasicElement *element,
