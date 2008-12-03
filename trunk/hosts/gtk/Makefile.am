@@ -34,16 +34,16 @@ ggl_gtk_SOURCES		= main.cc \
 			  standalone_gtk_host.cc
 
 
-ggl_gtk_CPPFLAGS 	= @GTK2_CFLAGS@ \
+ggl_gtk_CPPFLAGS 	= $(GTK2_CFLAGS) \
 			  $(PREDEFINED_MACROS) \
 			  -DGGL_APP_NAME=\"ggl-gtk\"
 
 ggl_gtk_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
-ggl_gtk_LDADD	= @GTK2_LIBS@ \
+ggl_gtk_LDADD	= $(GTK2_LIBS) \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la \
-		  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
+		  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 ggl_gtk_LDFLAGS = -R$(libdir)
 

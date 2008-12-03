@@ -326,25 +326,13 @@ if test x$build_libggadget_qt != xyes; then
   build_qt_script_runtime=no
 fi
 
+if test x$build_libggadget_npapi != xyes; then
+  build_gtk_flash_element=no
+fi
+
 ###########################################################
 ##                      Default dirs.                    ##
 ###########################################################
-GGL_PREFIX=$prefix
-GGL_EXEC_PREFIX=$exec_prefix
-GGL_LIBDIR=$libdir
-GGL_INCLUDEDIR=$includedir
-GGL_DATAROOTDIR=$datarootdir
-GGL_DATADIR=$datadir
-GGL_SYSCONFDIR=$sysconfdir
-
-AC_SUBST(GGL_PREFIX)
-AC_SUBST(GGL_EXEC_PREFIX)
-AC_SUBST(GGL_LIBDIR)
-AC_SUBST(GGL_INCLUDEDIR)
-AC_SUBST(GGL_DATAROOTDIR)
-AC_SUBST(GGL_DATADIR)
-AC_SUBST(GGL_SYSCONFDIR)
-
 GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
 GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
 GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
@@ -538,6 +526,7 @@ has_pthread=no
 AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
 
 # Check Xlib
+has_xlib=no
 AC_PATH_XTRA
 if test "x$no_x" != "xyes"; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_X11=1"
@@ -545,9 +534,11 @@ if test "x$no_x" != "xyes"; then
   AC_SUBST(X_CFLAGS)
   AC_SUBST(X_LIBS)
   AC_SUBST(X_PRE_LIBS)
+  has_xlib=yes
 else
   build_libggadget_npapi=no
   build_gtk_flash_element=no
+  build_gtkmoz_browser_element=no
 fi
 
 # Check qt4
@@ -1078,10 +1069,17 @@ AM_CONDITIONAL(
   [GGL_BUILD_GTK_HOST],
   [test x$build_gtk_host = xyes])
 
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_NPAPI],
+  [test x$build_libggadget_npapi = xyes])
+
+
+AM_CONDITIONAL([GGL_HAVE_XLIB], [test x$has_xlib = xyes])
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
 AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
+
 
 if test x$ZIP = x; then
   AC_MSG_WARN([Can't generate resource file bundle without zip command.])

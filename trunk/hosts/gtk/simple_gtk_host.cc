@@ -215,7 +215,7 @@ class SimpleGtkHost::Impl {
     gtk_container_add(GTK_CONTAINER(main_widget_), menu_bar);
     gtk_widget_show(main_widget_);
     g_signal_connect(G_OBJECT(main_widget_), "delete_event",
-                     G_CALLBACK(DeleteEventHandler), NULL);
+                     G_CALLBACK(DeleteEventHandler), this);
 #endif
   }
 
@@ -796,8 +796,9 @@ class SimpleGtkHost::Impl {
 #else
   static gboolean DeleteEventHandler(GtkWidget *widget,
                                      GdkEvent *event,
-                                     gpointer data) {
-    owner_->Exit();
+                                     gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->owner_->Exit();
     return TRUE;
   }
 #endif

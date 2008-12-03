@@ -44,11 +44,11 @@ libggadget_qtjs_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_qtjs_la_CPPFLAGS = \
-			  @QT4SCRIPT_CFLAGS@ \
+			  $(QT4SCRIPT_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_qtjs_la_LIBADD = \
-			  @QT4SCRIPT_LIBS@ \
+			  $(QT4SCRIPT_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
 
@@ -62,11 +62,11 @@ qt_script_runtime_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_script_runtime_la_CPPFLAGS = \
-			  @QT4SCRIPT_CFLAGS@ \
+			  $(QT4SCRIPT_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 qt_script_runtime_la_LIBADD = \
-			  @QT4SCRIPT_LIBS@ \
+			  $(QT4SCRIPT_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  libggadget-qtjs.la
 

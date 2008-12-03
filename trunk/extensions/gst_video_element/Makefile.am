@@ -31,12 +31,12 @@ gst_video_element_la_SOURCES = gadget_videosink.cc \
 
 gst_video_element_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
 
-gst_video_element_la_CPPFLAGS = @GSTREAMER_CFLAGS@ \
+gst_video_element_la_CPPFLAGS = $(GSTREAMER_CFLAGS) \
 				$(PREDEFINED_MACROS)
 
-gst_video_element_la_LIBADD = @GSTREAMER_LIBS@ \
-			      @PTHREAD_LIBS@ \
-			      @GSTVIDEOSINK_LIBRARIES@ \
+gst_video_element_la_LIBADD = $(GSTREAMER_LIBS) \
+			      $(PTHREAD_LIBS) \
+			      $(GSTVIDEOSINK_LIBRARIES) \
 			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_video_element_la_LDFLAGS = -avoid-version \

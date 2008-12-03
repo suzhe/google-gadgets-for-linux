@@ -39,11 +39,11 @@ libggadget_dbus@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_dbus@GGL_EPOCH@_la_CPPFLAGS = \
-			  @DBUS_CFLAGS@ \
+			  $(DBUS_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_dbus@GGL_EPOCH@_la_LIBADD = \
-			  @DBUS_LIBS@ \
+			  $(DBUS_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_dbus@GGL_EPOCH@_la_LDFLAGS = \

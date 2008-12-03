@@ -32,15 +32,16 @@ ggl_qt_SOURCES		= main.cc \
 
 nodist_ggl_qt_SOURCES	= $(MOC_FILES)
 
-ggl_qt_CPPFLAGS 	= @QT4_CFLAGS@ \
+ggl_qt_CPPFLAGS 	= $(QT4_CFLAGS) \
 			  $(PREDEFINED_MACROS) \
 			  -DGGL_APP_NAME=\"ggl-qt\"
 
 ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-ggl_qt_LDADD		= @QT4_LIBS@ \
+ggl_qt_LDADD		= $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 ggl_qt_LDFLAGS		= -R$(libdir)
 

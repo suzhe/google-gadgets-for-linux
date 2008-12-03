@@ -29,12 +29,12 @@ curl_xml_http_request_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 curl_xml_http_request_la_CPPFLAGS = \
-			  @LIBCURL_CPPFLAGS@ \
+			  $(LIBCURL_CPPFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 curl_xml_http_request_la_LIBADD = \
-			  @LIBCURL@ \
-			  @PTHREAD_LIBS@ \
+			  $(LIBCURL) \
+			  $(PTHREAD_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 curl_xml_http_request_la_LDFLAGS = \

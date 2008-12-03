@@ -33,11 +33,11 @@ dbus_script_class_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 dbus_script_class_la_CPPFLAGS = \
-			  @DBUS_CFLAGS@ \
+			  $(DBUS_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 dbus_script_class_la_LIBADD = \
-			  @DBUS_LIBS@ \
+			  $(DBUS_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 

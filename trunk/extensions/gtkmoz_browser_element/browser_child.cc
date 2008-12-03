@@ -69,6 +69,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
+#include <ggadget/string_utils.h>
 
 #include "../smjs_script_runtime/json.h"
 #include "browser_child.h"
@@ -86,6 +87,7 @@ using ggadget::gtkmoz::kGetPropertyFeedback;
 using ggadget::gtkmoz::kSetPropertyFeedback;
 using ggadget::gtkmoz::kCallbackFeedback;
 using ggadget::gtkmoz::kOpenURLFeedback;
+using ggadget::gtkmoz::kLogFeedback;
 using ggadget::gtkmoz::kPingFeedback;
 using ggadget::gtkmoz::kPingAck;
 using ggadget::gtkmoz::kPingInterval;
@@ -98,7 +100,7 @@ extern "C" {
 
 // Default down and ret fds are standard input and up fd is standard output.
 // The default values are useful when browser child is tested independently.
-static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
+static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0, g_log_fd = 2;
 static std::vector<GtkMozEmbed *> g_embeds;
 
 // The singleton GtkMozEmbed instance for temporary use when a new window
@@ -132,17 +134,37 @@ static const char kDataURLPrefix[] = "data:";
 
 static const nsIID kIScriptGlobalObjectIID = NS_ISCRIPTGLOBALOBJECT_IID;
 
+static void SendLog(const char *format, ...) PRINTF_ATTRIBUTE(1, 2);
+static void SendLog(const char *format, ...) {
+#ifdef _DEBUG
+  va_list ap;
+  va_start(ap, format);
+  std::string log = ggadget::StringVPrintf(format, ap);
+  va_end(ap);
+
+  if (g_log_fd == 2) {
+    fprintf(stderr, "browser_child: %s\n", log.c_str());
+  } else {
+    std::string buffer = ggadget::StringPrintf(
+        "%s\n%s\n%s\n", kLogFeedback, log.c_str(), kEndOfMessage);
+    if (write(g_log_fd, buffer.c_str(), buffer.size()) !=
+        static_cast<ssize_t>(buffer.size()))
+      fprintf(stderr, "browser_child: Failed to send log.");
+  }
+#endif
+}
+
 static int FindBrowserIdByJSContext(JSContext *cx) {
   JSObject *js_global = JS_GetGlobalObject(cx);
   if (!js_global) {
-    fprintf(stderr, "browser_child: No global object\n");
+    SendLog("No global object\n");
     return -1;
   }
 
   JSClass *cls = JS_GET_CLASS(cx, js_global);
   if (!cls || ((~cls->flags) & (JSCLASS_HAS_PRIVATE |
                                 JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
-    fprintf(stderr, "browser_child: Global object is not a nsISupports\n");
+    SendLog("Global object is not a nsISupports\n");
     return -1;
   }
   nsIXPConnectWrappedNative *global_wrapper =
@@ -167,7 +189,7 @@ static int FindBrowserIdByJSContext(JSContext *cx) {
         return static_cast<int>(it - g_embeds.begin());
     }
   }
-  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from JS context\n");
+  SendLog("Can't find GtkMozEmbed from JS context\n");
   return -1;
 }
 
@@ -471,8 +493,7 @@ static int FindBrowserIdByContentPolicyContext(nsISupports *context,
       }
     }
   }
-  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from "
-          "ContentPolicy context\n");
+  SendLog("Can't find GtkMozEmbed from ContentPolicy context.");
   return -1;
 }
 
@@ -512,8 +533,17 @@ class ContentPolicy : public nsIContentPolicy {
       // request_origin is NULL or "about:blank".
       if (request_origin) {
         request_origin->GetSpec(origin_spec);
-        if (!origin_spec.Equals(nsCString("about:blank")) &&
-            !origin_spec.Equals(url_spec) &&
+        SendLog("ShouldLoad:\n"
+                " origin: %s\n"
+                "    url: %s", origin_spec.get(), url_spec.get());
+
+        // Treats urls with the same base url but different refs as equal.
+        std::string tmp_origin(origin_spec.get());
+        std::string tmp_url(url_spec.get());
+        tmp_origin = tmp_origin.substr(0, tmp_origin.find_last_of('#'));
+        tmp_url = tmp_url.substr(0, tmp_url.find_last_of('#'));
+        if (tmp_origin != tmp_url &&
+            !origin_spec.Equals(nsCString("about:blank")) &&
             !url_scheme.Equals(nsCString("javascript"))) {
           PRBool is_loading = PR_FALSE;
           int browser_id = FindBrowserIdByContentPolicyContext(context,
@@ -583,7 +613,7 @@ static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
 
 static void RemoveBrowser(size_t id) {
   if (id >= g_embeds.size()) {
-    fprintf(stderr, "browser_child: Invalid browser id %zd to remove\n", id);
+    SendLog("Invalid browser id %zd to remove.", id);
     return;
   }
   GtkMozEmbed *embed = g_embeds[id];
@@ -601,21 +631,20 @@ static void RemoveBrowser(size_t id) {
 
 static void NewBrowser(int param_count, const char **params, size_t id) {
   if (param_count != 3) {
-    fprintf(stderr, "browser_child: Incorrect param count for %s: "
-            "3 expected, %d given", kSetContentCommand, param_count);
+    SendLog("Incorrect param count for %s: 3 expected, %d given.",
+            kSetContentCommand, param_count);
     return;
   }
 
   // The new id can be less than or equals to the current size.
   if (id > kMaxBrowserId) {
-    fprintf(stderr, "browser_child: New browser id is too big: %zd\n", id);
+    SendLog("New browser id is too big: %zd.", id);
     return;
   }
   if (id >= g_embeds.size()) {
     g_embeds.resize(id + 1, NULL);
   } else if (g_embeds[id] != NULL) {
-    fprintf(stderr, "browser_child: Warning: new browser id slot is "
-            "not empty: %zd\n", id);
+    SendLog("Warning: new browser id slot is not empty: %zd.", id);
     RemoveBrowser(id);
   }
 
@@ -634,13 +663,13 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
 
 static GtkMozEmbed *GetGtkEmbedByBrowserId(size_t id) {
   if (id >= g_embeds.size()) {
-    fprintf(stderr, "browser_child: Invalid browser id %zd\n", id);
+    SendLog("Invalid browser id %zd.", id);
     return NULL;
   }
 
   GtkMozEmbed *embed = g_embeds[id];
   if (!GTK_IS_WIDGET(embed)) {
-    fprintf(stderr, "browser_child: Invalid browser by id %zd\n", id);
+    SendLog("Invalid browser by id %zd.", id);
     return NULL;
   }
   return embed;
@@ -648,8 +677,8 @@ static GtkMozEmbed *GetGtkEmbedByBrowserId(size_t id) {
 
 static void SetContent(int param_count, const char **params, size_t id) {
   if (param_count != 4) {
-    fprintf(stderr, "browser_child: Incorrect param count for %s: "
-            "4 expected, %d given\n", kSetContentCommand, param_count);
+    SendLog("Incorrect param count for %s: 4 expected, %d given.",
+            kSetContentCommand, param_count);
     return;
   }
 
@@ -660,7 +689,7 @@ static void SetContent(int param_count, const char **params, size_t id) {
   // params[2]: mime type; params[3]: JSON encoded content string.
   nsString content;
   if (!DecodeJSONString(params[3], &content)) {
-    fprintf(stderr, "browser_child: Invalid JSON string: %s\n", params[3]);
+    SendLog("Invalid JSON string: %s", params[3]);
     return;
   }
 
@@ -668,20 +697,19 @@ static void SetContent(int param_count, const char **params, size_t id) {
   std::string url(utf8.get(), utf8.Length());
   std::string data;
   if (!ggadget::EncodeBase64(url, false, &data)) {
-    fprintf(stderr, "browser_child: Unable to convert to base64: %s\n",
-            url.c_str());
+    SendLog("Unable to convert to base64: %s", url.c_str());
     return;
   }
 
   url = (std::string(kDataURLPrefix) + params[2]) + ";base64," + data;
-  //fprintf(stderr, "browser_child: URL: (%d) %s\n", url.size(), url.c_str());
+  SendLog("URL: (%zd) %s", url.size(), url.c_str());
   gtk_moz_embed_load_url(embed, url.c_str());
 }
 
 static void OpenURL(int param_count, const char **params, size_t id) {
   if (param_count != 3) {
-    fprintf(stderr, "browser_child: Incorrect param count for %s: "
-            "3 expected, %d given\n", kOpenURLCommand, param_count);
+    SendLog("Incorrect param count for %s: 3 expected, %d given.",
+            kOpenURLCommand, param_count);
     return;
   }
 
@@ -699,7 +727,7 @@ static void ProcessDownMessage(int param_count, const char **params) {
     return;
   }
   if (param_count < 2) {
-    fprintf(stderr, "browser_child: No enough command parameter\n");
+    SendLog("No enough command parameter\n");
     return;
   }
 
@@ -720,7 +748,7 @@ static void ProcessDownMessage(int param_count, const char **params) {
     RemoveBrowser(id);
     return;
   }
-  fprintf(stderr, "browser_child: Invalid command: %s\n", params[0]);
+  SendLog("Invalid command: %s", params[0]);
 }
 
 static void ProcessDownMessages() {
@@ -740,7 +768,7 @@ static void ProcessDownMessages() {
         params[param_count] = start;
         param_count++;
       } else {
-        fprintf(stderr, "browser_child: Extra parameter: %s\n", start);
+        SendLog("Extra parameter: %s", start);
         // Don't exit to recover from the error status.
       }
       curr_pos = end_of_line_pos + 1;
@@ -898,7 +926,7 @@ int main(int argc, char **argv) {
   if (argc >= 2)
     g_down_fd = g_ret_fd = static_cast<int>(strtol(argv[1], NULL, 0));
   if (argc >= 3)
-    g_up_fd = static_cast<int>(strtol(argv[2], NULL, 0));
+    g_up_fd = g_log_fd = static_cast<int>(strtol(argv[2], NULL, 0));
   if (argc >= 4)
     g_ret_fd = static_cast<int>(strtol(argv[3], NULL, 0));
 

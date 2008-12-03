@@ -18,7 +18,7 @@ EXTRA_DIST = CMakeLists.txt
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-AM_CPPFLAGS 		= @DBUS_CFLAGS@ $(PREDEFINED_MACROS)
+AM_CPPFLAGS 		= $(DBUS_CFLAGS) $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \

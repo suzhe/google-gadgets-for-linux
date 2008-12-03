@@ -71,7 +71,6 @@ class GadgetsMetadata::Impl {
         on_update_done_(NULL) {
     ASSERT(parser_);
     ASSERT(file_manager_);
-    Init();
   }
 
   void Init() {

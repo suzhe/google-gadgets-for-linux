@@ -246,7 +246,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  zip_file_manager.cc
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
-			  @LTDLINCL@ \
+			  $(LTDLINCL) \
 			  $(PREDEFINED_MACROS)
 
 libggadget@GGL_EPOCH@_la_CXXFLAGS = \
@@ -258,7 +258,7 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
 			  -export-dynamic \
-			  @LIBLTDL@
+			  $(LIBLTDL)
 
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget@GGL_EPOCH@.pc

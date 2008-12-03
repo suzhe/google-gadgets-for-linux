@@ -33,11 +33,11 @@ gtkmoz_browser_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 gtkmoz_browser_element_la_CPPFLAGS = \
-			  @GTK2_CFLAGS@ \
+			  $(GTK2_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 gtkmoz_browser_element_la_LIBADD = \
-			  @GTK2_LIBS@ \
+			  $(GTK2_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gtkmoz_browser_element_la_LDFLAGS = \
@@ -56,16 +56,16 @@ gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \
 				  -fno-strict-aliasing
 
-gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
-				  @GTKMOZEMBED_CFLAGS@ \
+gtkmoz_browser_child_CPPFLAGS	= $(GTK2_CFLAGS) \
+				  $(GTKMOZEMBED_CFLAGS) \
 				  $(PREDEFINED_MACROS)
 
-gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
-				  @GTKMOZEMBED_LIBS@ \
+gtkmoz_browser_child_LDADD	= $(GTK2_LIBS) \
+				  $(GTKMOZEMBED_LIBS) \
 				  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 				  -ldl
 
-gtkmoz_browser_child_LDFLAGS	= @GTKMOZEMBED_LDFLAGS@
+gtkmoz_browser_child_LDFLAGS	= $(GTKMOZEMBED_LDFLAGS)
 
 endif
