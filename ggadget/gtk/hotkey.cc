@@ -499,6 +499,7 @@ class HotKeyGrabber::Impl {
     if (!root_window_ || is_grabbing_ == grabbing)
       return;
 
+#ifdef GDK_WINDOWING_X11
     unsigned int masks[4];
     // Pressing the hotkey with capslock or numlock turned on should be
     // allowed. So the hotkey with all possible mask combinations must be
@@ -508,7 +509,6 @@ class HotKeyGrabber::Impl {
     masks[2] = masks[0] | KeyEvent::GetX11MaskForModifierKey(GDK_Caps_Lock);
     masks[3] = masks[1] | masks[2];
 
-#ifdef GDK_WINDOWING_X11
     if (grabbing && hotkey_.IsValid()) {
       for (int i = 0; i < 4; ++i) {
         gdk_error_trap_push();

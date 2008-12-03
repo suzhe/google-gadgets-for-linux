@@ -1,10 +1,10 @@
-prefix=@GGL_PREFIX@
-exec_prefix=@GGL_EXEC_PREFIX@
-libdir=@GGL_LIBDIR@
-includedir=@GGL_INCLUDEDIR@
-datarootdir=@GGL_DATAROOTDIR@
-datadir=@GGL_DATADIR@
-sysconfdir=@GGL_SYSCONFDIR@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+sysconfdir=@sysconfdir@
 
 ggl_module_dir=@GGL_MODULE_DIR@
 ggl_resource_dir=@GGL_RESOURCE_DIR@

@@ -29,11 +29,11 @@ qt_system_framework_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_system_framework_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
+			  $(QT4_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 qt_system_framework_la_LIBADD = \
-			  @QT4_LIBS@ \
+			  $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 

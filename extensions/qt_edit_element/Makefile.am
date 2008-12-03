@@ -32,11 +32,11 @@ qt_edit_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 qt_edit_element_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
+			  $(QT4_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 qt_edit_element_la_LIBADD = \
-			  @QT4_LIBS@ \
+			  $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 

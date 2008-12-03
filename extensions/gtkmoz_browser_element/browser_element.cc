@@ -512,6 +512,12 @@ class BrowserElement::Impl {
         if (params.size() == 1 && strcmp(params[0], kPingFeedback) == 0) {
           Write(ret_fd_, kPingAckFull, arraysize(kPingAckFull) - 1);
           ping_flag_ = true;
+#ifdef _DEBUG
+        } else if (params.size() >= 2 && strcmp(params[0], kLogFeedback) == 0) {
+          for (size_t i = 1; i < params.size(); ++i) {
+            DLOG("browser_child: %s", params[i]);
+          }
+#endif
         } else if (params.size() < 2) {
           LOG("No enough feedback parameters");
         } else {

@@ -19,13 +19,13 @@ EXTRA_DIST = CMakeLists.txt
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-AM_CPPFLAGS		= @QT4_CFLAGS@ \
+AM_CPPFLAGS		= $(QT4_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-LDADD			= @QT4_LIBS@ \
-			  @QT4SCRIPT_LIBS@ \
+LDADD			= $(QT4_LIBS) \
+			  $(QT4SCRIPT_LIBS) \
 			  ../libggadget-qtjs.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \

@@ -24,16 +24,10 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-if GGL_HAVE_RSVG
-  RSVG_IMAGE_H=rsvg_image.h
-  RSVG_IMAGE_CC=rsvg_image.cc
-endif
-
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
 			  cairo_image_base.h \
-			  pixbuf_image.h \
-			  $(RSVG_IMAGE_H)
+			  pixbuf_image.h
 
 gtkincludedir		= $(GGL_INCLUDE_DIR)/ggadget/gtk
 gtkinclude_HEADERS	= cairo_graphics.h \
@@ -41,7 +35,6 @@ gtkinclude_HEADERS	= cairo_graphics.h \
 			  key_convert.h \
 			  main_loop.h \
 			  menu_builder.h \
-			  npapi_plugin_element.h \
 			  single_view_host.h \
 			  tooltip.h \
 			  utilities.h \
@@ -58,39 +51,45 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  key_convert.cc \
 			  main_loop.cc \
 			  menu_builder.cc \
-			  npapi_plugin_element.cc \
 			  pixbuf_image.cc \
 			  single_view_host.cc \
 			  tooltip.cc \
 			  utilities.cc \
-			  view_widget_binder.cc \
-			  $(RSVG_IMAGE_CC)
+			  view_widget_binder.cc
 
 libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS) \
 			  -fno-strict-aliasing
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
-			  @GTK2_CFLAGS@ \
-			  @RSVG_CFLAGS@ \
-			  @STARTUP_NOTIFICATION_CFLAGS@ \
+			  $(GTK2_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
-			  @GTK2_LIBS@ \
-			  @RSVG_LIBS@ \
-			  @STARTUP_NOTIFICATION_LIBS@ \
+			  $(GTK2_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
 			  -export-dynamic
 
 if GTK2_TARGET_X11
-libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS += $(X_CFLAGS)
-libggadget_gtk@GGL_EPOCH@_la_LIBADD += $(X_LIBS)
+  libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS += $(X_CFLAGS) $(STARTUP_NOTIFICATION_CFLAGS)
+  libggadget_gtk@GGL_EPOCH@_la_LIBADD += $(X_LIBS) $(STARTUP_NOTIFICATION_LIBS)
+endif
+
+if GGL_HAVE_RSVG
+  noinst_HEADERS += rsvg_image.h
+  libggadget_gtk@GGL_EPOCH@_la_SOURCES += rsvg_image.cc
+  libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS += $(RSVG_CFLAGS)
+  libggadget_gtk@GGL_EPOCH@_la_LIBADD += $(RSVG_LIBS)
+endif
+
+if GGL_BUILD_LIBGGADGET_NPAPI
+  gtkinclude_HEADERS += npapi_plugin_element.h
+  libggadget_gtk@GGL_EPOCH@_la_SOURCES += npapi_plugin_element.cc
+  libggadget_gtk@GGL_EPOCH@_la_LIBADD += $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
 endif
 
 pkgconfigdir= $(libdir)/pkgconfig

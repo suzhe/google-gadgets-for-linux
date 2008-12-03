@@ -29,11 +29,11 @@ gst_audio_framework_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 gst_audio_framework_la_CPPFLAGS = \
-			  @GSTREAMER_CFLAGS@ \
+			  $(GSTREAMER_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 gst_audio_framework_la_LIBADD = \
-			  @GSTREAMER_LIBS@ \
+			  $(GSTREAMER_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_audio_framework_la_LDFLAGS = \

@@ -27,7 +27,6 @@ analytics_usage_collector_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 analytics_usage_collector_la_CPPFLAGS = \
-			  @LIBCURL_CPPFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 analytics_usage_collector_la_LIBADD = \

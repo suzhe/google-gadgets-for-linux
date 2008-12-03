@@ -65,11 +65,11 @@ libggadget_qt@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_qt@GGL_EPOCH@_la_CPPFLAGS = \
-			  @QT4_CFLAGS@ \
+			  $(QT4_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_qt@GGL_EPOCH@_la_LIBADD = \
-			  @QT4_LIBS@ \
+			  $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 

@@ -29,11 +29,11 @@ libxml2_xml_parser_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libxml2_xml_parser_la_CPPFLAGS = \
-			  @XML_CPPFLAGS@ \
+			  $(XML_CPPFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libxml2_xml_parser_la_LIBADD = \
-			  @XML_LIBS@ \
+			  $(XML_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libxml2_xml_parser_la_LDFLAGS = \
