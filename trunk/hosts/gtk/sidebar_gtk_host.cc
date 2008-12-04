@@ -503,11 +503,11 @@ class SideBarGtkHost::Impl {
           x - static_cast<int>(dragging_offset_x_),
           y - static_cast<int>(dragging_offset_y_));
       info->floating->ShowView(false, 0, NULL);
+      // make sure that the floating window can move on to the sidebar.
+      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       info->old_keep_above = info->floating->IsKeepAbove();
       info->floating->SetKeepAbove(true);
       gdk_window_raise(info->floating->GetWindow()->window);
-      // make sure that the floating window can move on to the sidebar.
-      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
     } else {
       info->floating->ShowView(false, 0, NULL);
       info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
@@ -921,6 +921,8 @@ class SideBarGtkHost::Impl {
       gtk_widget_get_pointer(window, &x, &y);
       dragging_offset_x_ = x;
       dragging_offset_y_ = y;
+      // make sure that the floating window can move on to the sidebar.
+      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       info->old_keep_above = info->floating->IsKeepAbove();
       info->floating->SetKeepAbove(true);
 
@@ -931,9 +933,6 @@ class SideBarGtkHost::Impl {
       // Raise gadget window after raising sidebar window, to make sure it's on
       // top of sidebar window.
       gdk_window_raise(window->window);
-
-      // make sure that the floating window can move on to the sidebar.
-      info->floating->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       return true;
     }
     return false;
