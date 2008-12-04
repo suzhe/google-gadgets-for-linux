@@ -28,7 +28,10 @@
 #include <fontconfig/fontconfig.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
+
+#ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
+#endif
 
 #if defined(HAVE_STARTUP_NOTIFICATION) && defined(GDK_WINDOWING_X11)
 #define SN_API_NOT_YET_FROZEN
