@@ -92,6 +92,8 @@ class SimpleGtkHost::Impl {
       gadgets_shown_(true),
       font_size_(kDefaultFontSize),
       gadget_manager_(GetGadgetManager()),
+      on_new_gadget_instance_connection_(NULL),
+      on_remove_gadget_instance_connection_(NULL),
       expanded_original_(NULL),
       expanded_popout_(NULL),
       hotkey_grabber_(NULL) {
@@ -115,10 +117,12 @@ class SimpleGtkHost::Impl {
     }
 
     // Connect gadget related signals.
-    gadget_manager_->ConnectOnNewGadgetInstance(
-        NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    gadget_manager_->ConnectOnRemoveGadgetInstance(
-        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
+    on_new_gadget_instance_connection_ =
+        gadget_manager_->ConnectOnNewGadgetInstance(
+            NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    on_remove_gadget_instance_connection_ =
+        gadget_manager_->ConnectOnRemoveGadgetInstance(
+            NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
 
     // Initializes global permissions.
     // FIXME: Supports customizable global permissions.
@@ -126,6 +130,9 @@ class SimpleGtkHost::Impl {
   }
 
   ~Impl() {
+    on_new_gadget_instance_connection_->Disconnect();
+    on_remove_gadget_instance_connection_->Disconnect();
+
     for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->second.debug_console)
@@ -842,6 +849,8 @@ class SimpleGtkHost::Impl {
   int font_size_;
 
   GadgetManagerInterface *gadget_manager_;
+  Connection *on_new_gadget_instance_connection_;
+  Connection *on_remove_gadget_instance_connection_;
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   GtkStatusIcon *status_icon_;
 #else

@@ -49,6 +49,9 @@ static const char *kUserAgent = "ggl/" GGL_VERSION;
 // The URL flashes use to send trace() messages in my test environment.
 static const char *kFlashTraceURL = "http://localhost:8881";
 
+// Timeout before releasing a plugin library.
+static const int kReleasePluginLibraryTimeout = 1000;
+
 class Plugin::Impl : public SmallObject<> {
  public:
   class StreamHandler {
@@ -276,6 +279,7 @@ class Plugin::Impl : public SmallObject<> {
         dirty_rect_(kWholePluginRect),
         browser_window_npobject_(this, &kBrowserWindowClass),
         location_npobject_(this, &kLocationClass) {
+    DLOG("New NPAPI Plugin for library: %p", library_info_);
     ASSERT(library_info);
     memset(&instance_, 0, sizeof(instance_));
     instance_.ndata = this;
@@ -309,6 +313,18 @@ class Plugin::Impl : public SmallObject<> {
     // Otherwise the caller should handle the change of windowless state.
   }
 
+  class ReleasePluginLibraryCallback : public WatchCallbackInterface {
+   public:
+    ReleasePluginLibraryCallback(PluginLibraryInfo *info) : info_(info) { }
+    virtual bool Call(MainLoopInterface *, int) { return false; }
+    virtual void OnRemove(MainLoopInterface *, int) {
+      ReleasePluginLibrary(info_);
+      delete this;
+    }
+   private:
+    PluginLibraryInfo *info_;
+  };
+
   ~Impl() {
     abort_streams_();
     if (plugin_root_)
@@ -319,7 +335,11 @@ class Plugin::Impl : public SmallObject<> {
       if (ret != NPERR_NO_ERROR)
         LOG("Failed to destroy plugin instance - nperror code %d.", ret);
     }
-    ReleasePluginLibrary(library_info_);
+
+    // Release the plugin library immediately may cause crash in plugin.
+    GetGlobalMainLoop()->AddTimeoutWatch(
+        kReleasePluginLibraryTimeout,
+        new ReleasePluginLibraryCallback(library_info_));
   }
 
   bool SetWindow(void *top_window, const NPWindow &window) {
