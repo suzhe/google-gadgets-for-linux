@@ -31,7 +31,8 @@ check_PROGRAMS		= perfmon_test \
 			  filesystem_test \
 			  filesystem_file_test \
 			  filesystem_folder_test \
-			  filesystem_textstream_test
+			  filesystem_textstream_test \
+			  filesystem_binarystream_test
 
 
 memory_test_SOURCES = memory_test.cc
@@ -40,6 +41,7 @@ filesystem_test_SOURCES = filesystem_test.cc
 filesystem_file_test_SOURCES = filesystem_file_test.cc
 filesystem_folder_test_SOURCES = filesystem_folder_test.cc
 filesystem_textstream_test_SOURCES = filesystem_textstream_test.cc
+filesystem_binarystream_test_SOURCES = filesystem_binarystream_test.cc
 perfmon_test_SOURCES = perfmon_test.cc $(top_srcdir)/ggadget/tests/native_main_loop.cc
 
 if GGL_BUILD_LIBGGADGET_DBUS

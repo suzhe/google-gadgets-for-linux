@@ -264,14 +264,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return NO_ERR;
   }
 
-  virtual ExceptionCode Send(const char *data, size_t size) {
+  virtual ExceptionCode Send(const std::string &data) {
     if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: Send: Invalid state: %d", state_);
       return INVALID_STATE_ERR;
     }
 
-    if (!CheckSize(size, 0, 512)) {
-      LOG("XMLHttpRequest: Send: Size too big: %zu", size);
+    if (!CheckSize(data.size(), 0, 512)) {
+      LOG("XMLHttpRequest: Send: Size too big: %zu", data.size());
       return SYNTAX_ERR;
     }
 
@@ -296,8 +296,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (session_)
         session_->RestoreCookie(request_header_);
 
-      if (data && size > 0) {
-        send_data_ = new QByteArray(data, static_cast<int>(size));
+      if (data.size()) {
+        send_data_ = new QByteArray(data.c_str(),
+                                    static_cast<int>(data.size()));
         http_->request(*request_header_, *send_data_);
       } else {
         http_->request(*request_header_);
@@ -316,11 +317,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual ExceptionCode Send(const DOMDocumentInterface *data) {
-    if (!data)
-      return Send(static_cast<char *>(NULL), 0);
-
-    std::string xml = data->GetXML();
-    return Send(xml.c_str(), xml.size());
+    return Send(data ? data->GetXML() : std::string());
   }
 
   void Done(bool aborting, bool succeeded) {
@@ -568,13 +565,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void ScriptSend(const Variant &v_data) {
     std::string data;
     if (v_data.ConvertToString(&data)) {
-      CheckException(Send(data.c_str(), data.length()));
+      CheckException(Send(data));
     } else if (v_data.type() == Variant::TYPE_SCRIPTABLE) {
       ScriptableInterface *scriptable =
           VariantValue<ScriptableInterface *>()(v_data);
-      if (!scriptable ||
-          scriptable->IsInstanceOf(DOMDocumentInterface::CLASS_ID)) {
+      if (!scriptable) {
+        CheckException(Send(std::string()));
+      } else if (scriptable->IsInstanceOf(DOMDocumentInterface::CLASS_ID)) {
         CheckException(Send(down_cast<DOMDocumentInterface *>(scriptable)));
+      } else if (scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
+        CheckException(
+            Send(down_cast<ScriptableBinaryData *>(scriptable)->data()));
       } else {
         CheckException(SYNTAX_ERR);
       }
@@ -678,7 +679,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         Done(false, false);
       } else {
         redirected_times_++;
-        Send(NULL, 0);
+        Send(std::string());
       }
     } else {
       if (error)

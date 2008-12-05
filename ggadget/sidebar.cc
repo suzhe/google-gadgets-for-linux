@@ -572,15 +572,24 @@ class SideBar::Impl : public View {
   void Layout() {
     double y = 0;
     size_t count = children_->GetCount();
+    double sidebar_width = main_div_->GetPixelWidth();
     for (size_t i = 0; i < count; ++i) {
       ViewElement *e = down_cast<ViewElement *>(children_->GetItemByIndex(i));
-      double width = main_div_->GetPixelWidth();
+      double width = sidebar_width;
       double height = ceil(e->GetPixelHeight());
       // Just ignore the OnSizing result, to set child view's width forcely.
       e->OnSizing(&width, &height);
-      e->SetSize(width, ceil(height));
+      e->SetSize(sidebar_width, ceil(height));
       e->SetPixelX(0);
-      e->SetPixelY(ceil(y));
+
+      double old_y = e->GetPixelY();
+      double new_y = ceil(y);
+      e->SetPixelY(new_y);
+      View *child_view = e->GetChildView();
+      if (old_y != new_y && child_view) {
+        onview_moved_signal_(child_view);
+      }
+
       if (e->IsVisible())
         y += e->GetPixelHeight();
       y += kGadgetSpacing;
@@ -703,6 +712,7 @@ class SideBar::Impl : public View {
   Signal4<void, View*, size_t, double, double> onundock_signal_;
   Signal1<void, View*> onclick_signal_;
   Signal1<void, MenuInterface *> onmenu_signal_;
+  Signal1<void, View*> onview_moved_signal_;
 };
 
 SideBar::SideBar(ViewHostInterface *view_host)
@@ -801,6 +811,10 @@ Connection *SideBar::ConnectOnClose(Slot0<void> *slot) {
 
 Connection *SideBar::ConnectOnSizeEvent(Slot0<void> *slot) {
   return impl_->ConnectOnSizeEvent(slot);
+}
+
+Connection *SideBar::ConnectOnViewMoved(Slot1<void, View *> *slot) {
+  return impl_->onview_moved_signal_.Connect(slot);
 }
 
 }  // namespace ggadget

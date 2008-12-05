@@ -58,6 +58,10 @@ class GtkHostBase : public ggadget::HostInterface {
   }
 
  public:
+  void Exit() {
+    on_exit_signal_();
+  }
+
   Connection *ConnectOnExit(ggadget::Slot0<void> *callback) {
     return on_exit_signal_.Connect(callback);
   }
@@ -69,10 +73,6 @@ class GtkHostBase : public ggadget::HostInterface {
                      const std::string &description, Permissions *permissions);
 
   bool ConfirmManagedGadget(int id, Permissions *permissions);
-
-  void Exit() {
-    on_exit_signal_();
-  }
 
  private:
   ggadget::Signal0<void> on_exit_signal_;

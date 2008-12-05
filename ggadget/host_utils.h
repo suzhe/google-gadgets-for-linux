@@ -134,14 +134,24 @@ class HostArgumentParser {
   bool GetArgumentValue(int id, Variant *value) const;
 
   /**
+   * Enumerates all recognized arguments.
+   *
+   * @param slot A callback to be called for each recognized arguments, in
+   *        unified format, such as --debug=1.
+   *        Returning false to stop enumeration.
+   * @return true if all recognized arguments are enumerated.
+   */
+  bool EnumerateRecognizedArgs(Slot1<bool, const std::string &> *slot) const;
+
+  /**
    * Enumerates remained arguments that are not in the predefined argument
    * list.
    *
-   * @param callback A callback to be called for each remained arguments.
+   * @param slot A callback to be called for each remained arguments.
    *        Returning false to stop enumeration.
    * @return true if all remained arguments are enumerated.
    */
-  bool EnumerateRemainedArgs(Slot1<bool, const std::string &> *callback) const;
+  bool EnumerateRemainedArgs(Slot1<bool, const std::string &> *slot) const;
 
  public:
   /**

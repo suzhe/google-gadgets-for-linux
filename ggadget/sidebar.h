@@ -187,6 +187,12 @@ class SideBar {
    */
   Connection *ConnectOnSizeEvent(Slot0<void> *slot);
 
+  /**
+   * Connects a slot to OnViewMoved signal, which will be emitted when a child
+   * view is moved inside sidebar.
+   */
+  Connection *ConnectOnViewMoved(Slot1<void, View *> *slot);
+
  private:
   class Impl;
   Impl *impl_;

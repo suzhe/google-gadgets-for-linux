@@ -43,7 +43,15 @@ class ScriptableBinaryData : public ScriptableHelperDefault {
  protected:
   virtual ~ScriptableBinaryData() { }
 
+  virtual void DoClassRegister() {
+    RegisterProperty("size", NewSlot(&ScriptableBinaryData::size), NULL);
+    RegisterMethod("getByte", NewSlot(&ScriptableBinaryData::GetByte));
+  }
+
  public:
+  int GetByte(size_t i) const {
+    return i < data_.size() ? data_[i] : 0;
+  }
   std::string data() const { return data_; }
   size_t size() const { return data_.size(); }
 

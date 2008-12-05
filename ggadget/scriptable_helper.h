@@ -359,7 +359,7 @@ class ScriptableHelper : public I,
   /**
    * The subclass overrides this method to register class-wide scriptable
    * properties.
-   */ 
+   */
   virtual void DoClassRegister() { }
 
  private:

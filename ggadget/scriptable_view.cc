@@ -203,8 +203,10 @@ class ScriptableView::Impl : public SmallObject<> {
     xmldoc->Unref();
 
     // Fire "onopen" event here, to make sure that it's only fired once.
-    SimpleEvent e(Event::EVENT_OPEN);
-    view_->OnOtherEvent(e);
+    view_->OnOtherEvent(SimpleEvent(Event::EVENT_OPEN));
+    // Fire "onsize" event here. Some gadgets rely on it to initialize
+    // view layout.
+    view_->OnOtherEvent(SimpleEvent(Event::EVENT_SIZE));
     return true;
   }
 

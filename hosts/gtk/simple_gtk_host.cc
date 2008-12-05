@@ -609,6 +609,9 @@ class SimpleGtkHost::Impl {
 
     bool main_dock_right = (x > width);
 
+    double mx, my;
+    info->main_decorator->ViewCoordToNativeWidgetCoord(0, 0, &mx, &my);
+    y += static_cast<int>(my);
     if (info->popout && info->popout->IsVisible()) {
       int popout_width, popout_height;
       info->popout->GetWindowSize(&popout_width, &popout_height);

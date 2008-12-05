@@ -331,6 +331,160 @@ function WebBrowser() {
   this.navigate2 = _ActiveXObject_OpenUrl_;
 }
 
+// Emulates the ADODB.Stream class, only with very limited functionalities.
+var adModeRead = 1;
+var adModeWrite = 2;
+var adModeUnknown = 0;
+var adTypeBinary = 1;
+var adTypeText = 2;
+var adWriteChar = 0;
+var adWriteLine = 1;
+
+function ADODBStream() {
+}
+
+ADODBStream.prototype.Type = adTypeBinary;
+ADODBStream.prototype.Mode = adModeUnknown;
+ADODBStream.prototype.read_file_stream_ = null;
+ADODBStream.prototype.write_data_ = [];
+
+ADODBStream.prototype.getType_ = function() {
+  return (this.type != undefined ? this.type : this.Type);
+};
+
+ADODBStream.prototype.Cancel = function() {
+};
+ADODBStream.prototype.cancel = ADODBStream.prototype.Cancel;
+
+ADODBStream.prototype.Close = function() {
+  if (this.read_file_stream_)
+    this.read_file_stream_.Close();
+  this.read_file_stream_ = null;
+};
+ADODBStream.prototype.close = ADODBStream.prototype.Close;
+
+ADODBStream.prototype.CopyTo = function() {
+  throw "ADODB.Stream: Unimplemented: CopyTo";
+};
+ADODBStream.prototype.copyTo = ADODBStream.prototype.CopyTo;
+
+ADODBStream.prototype.Flush = function() {
+};
+ADODBStream.prototype.flush = ADODBStream.prototype.Flush;
+
+ADODBStream.prototype.LoadFromFile = function(fileName) {
+  var type = this.getType_();
+  this.Mode = adModeRead; // Switch to read mode.
+  if (type == adTypeBinary) { // binary type.
+    this.read_file_stream_ =
+      framework.system.filesystem.OpenBinaryFile(fileName, 1, false);
+  } else if (type == adTypeText) { // text type.
+    this.read_file_stream_ =
+      framework.system.filesystem.OpenTextFile(fileName, 1, false);
+  } else {
+    throw "ADODB.Stream: Invalid Type: " + this.Type;
+  }
+
+  if (!this.read_file_stream_) {
+    throw "ADODB.Stream: Failed to load from file: " + fileName;
+  }
+};
+ADODBStream.prototype.loadFromFile = ADODBStream.prototype.LoadFromFile;
+
+ADODBStream.prototype.Open = function(source, mode) {
+  if (mode != undefined)
+    this.Mode = mode;
+};
+ADODBStream.prototype.open = ADODBStream.prototype.Open;
+
+ADODBStream.prototype.Read = function(numBytes) {
+  if (this.Mode != adModeRead || !this.read_file_stream_)
+    throw "ADODB.Stream: Not a readable stream.";
+
+  var type = this.getType_();
+  if (type != adTypeBinary)
+    throw "ADODB.Stream: Read can not be called against a text stream.";
+
+  if (numBytes == undefined || numBytes < 0)
+    return this.read_file_stream_.ReadAll();
+
+  return this.read_file_stream_.Read(numBytes);
+};
+ADODBStream.prototype.read = ADODBStream.prototype.Read;
+
+ADODBStream.prototype.ReadText = function(numChars) {
+  if (this.Mode != adModeRead || !this.read_file_stream_)
+    throw "ADODB.Stream: Not a readable stream.";
+
+  var type = this.getType_();
+  if (type != adTypeText)
+    throw "ADODB.Stream: ReadText can not be called against a binary stream.";
+
+  if (numChars == undefined || numChars < 0)
+    return this.read_file_stream_.ReadAll();
+
+  return this.read_file_stream_.Read(numChars);
+};
+ADODBStream.prototype.readText = ADODBStream.prototype.ReadText;
+
+ADODBStream.prototype.SaveToFile = function(fileName, options) {
+  if (this.Mode != adModeWrite)
+    throw "ADODB.Stream: Not a writable stream.";
+
+  var type = this.getType_();
+  var stream = null;
+  if (type == adTypeBinary) {
+    stream = framework.system.filesystem.OpenBinaryFile(fileName, 2, true);
+  } else if (type == adTypeText) {
+    stream = framework.system.filesystem.OpenTextFile(fileName, 2, true);
+  } else {
+    throw "ADODB.Stream: Invalid Type: " + this.Type;
+  }
+
+  if (!stream) {
+    throw "ADODB.Stream: Failed to create stream for writing.";
+  }
+
+  for (i in this.write_data_) {
+    stream.Write(this.write_data_[i]);
+  }
+  stream.Close();
+};
+ADODBStream.prototype.saveToFile = ADODBStream.prototype.SaveToFile;
+
+ADODBStream.prototype.SetEOS = function() {
+};
+ADODBStream.prototype.setEOS = ADODBStream.prototype.SetEOS;
+
+ADODBStream.prototype.SkipLine = function() {
+  if (this.Mode != adModeRead || !this.read_file_stream_)
+    throw "ADODB.Stream: Not a readable stream.";
+
+  var type = this.getType_();
+  if (type != adTypeText)
+    throw "ADODB.Stream: SkipLine can not be called against a binary stream.";
+
+  this.read_file_stream_.SkipLine();
+};
+ADODBStream.prototype.skipLine = ADODBStream.prototype.SkipLine;
+
+ADODBStream.prototype.Write = function(data) {
+  this.Mode = adModeWrite;
+  this.write_data_.push(data);
+};
+ADODBStream.prototype.write = ADODBStream.prototype.Write;
+
+ADODBStream.prototype.WriteText = function(data, options) {
+  this.Mode = adModeWrite;
+  data = data + "";
+  if (options == adWriteLine &&
+      (!data.length || data.charAt(data.length - 1) != '\n'))
+    this.write_data_.push(data + "\n");
+  else
+    this.write_data_.push(data);
+};
+ADODBStream.prototype.writeText = ADODBStream.prototype.WriteText;
+
 // Emulates some popular ActiveX objects
 // "Microsoft.XMLHTTP"
 // "Microsoft.XMLDOM"
@@ -365,6 +519,8 @@ function ActiveXObject(name) {
   } else if (name.match(/^wmplayer.ocx/)) {
     return view.appendElement('<object classId="progid:WMPlayer.OCX.7"/>')
         .object;
+  } else if (name == "adodb.stream") {
+    return new ADODBStream();
   } else {
     throw "Unsupported ActiveXObject: " + name;
   }

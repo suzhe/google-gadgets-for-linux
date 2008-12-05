@@ -246,7 +246,8 @@ static bool CheckCompositingManager(Display *dpy) {
 #endif
 
 static bool LoadLocalGadget(const std::string &gadget) {
-  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(gadget.c_str());
+  std::string path = ggadget::GetAbsolutePath(gadget.c_str());
+  ggadget::GetGadgetManager()->NewGadgetInstanceFromFile(path.c_str());
   return true;
 }
 
@@ -268,6 +269,21 @@ static void DefaultSignalHandler(int sig) {
   DLOG("Signal caught: %d, exit.", sig);
   g_main_loop->Quit();
 }
+
+static bool SendArgumentCallback(const std::string &arg,
+                                 ggadget::RunOnce *run_once) {
+  run_once->SendMessage(arg);
+  return true;
+}
+
+static bool SendPathCallback(const std::string &path,
+                             ggadget::RunOnce *run_once) {
+  std::string abs_path = ggadget::GetAbsolutePath(path.c_str());
+  if (abs_path.length())
+    run_once->SendMessage(abs_path);
+  return true;
+}
+
 
 int main(int argc, char* argv[]) {
   // set locale according to env vars
@@ -342,8 +358,10 @@ int main(int argc, char* argv[]) {
   if (run_once.IsRunning()) {
     DLOG("Another instance already exists.");
     run_once.SendMessage(ggadget::HostArgumentParser::kStartSignature);
-    for (int i = 1; i < argc; ++i)
-      run_once.SendMessage(argv[i]);
+    g_argument_parser.EnumerateRecognizedArgs(
+        NewSlot(SendArgumentCallback, &run_once));
+    g_argument_parser.EnumerateRemainedArgs(
+        NewSlot(SendPathCallback, &run_once));
     run_once.SendMessage(ggadget::HostArgumentParser::kFinishSignature);
     return 0;
   }

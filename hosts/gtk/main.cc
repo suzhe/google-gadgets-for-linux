@@ -206,6 +206,7 @@ static Arguments g_arguments;
 static ggadget::HostInterface *g_managed_host = NULL;
 static int g_live_host_count = 0;
 static bool g_gadget_manager_initialized = false;
+static ggadget::Signal0<void> g_exit_all_hosts_signal;
 
 static void ExtractArgumentsValue() {
   // Resets arguments value.
@@ -292,6 +293,17 @@ static ggadget::HostInterface *GetManagedHost() {
           g_arguments.debug_mode, g_arguments.debug_console);
     }
     g_managed_host = host;
+
+    // Make sure that the managed host will be remove when exits.
+    ggadget::Connection *connection = g_exit_all_hosts_signal.Connect(
+        ggadget::NewSlot(host, &hosts::gtk::GtkHostBase::Exit));
+
+    // Make sure that the connection to g_exit_all_hosts_signal will be
+    // disconnected when the host exits.
+    host->ConnectOnExit(
+        ggadget::NewSlot(connection, &ggadget::Connection::Disconnect));
+
+    // Make sure that the host will be deleted when exits.
     host->ConnectOnExit(ggadget::NewSlot(OnHostExit, g_managed_host));
     ++g_live_host_count;
   }
@@ -312,8 +324,23 @@ static bool LoadLocalGadget(const std::string &gadget) {
     hosts::gtk::StandaloneGtkHost *host = new hosts::gtk::StandaloneGtkHost(
         GetHostFlagsFromArguments(), g_arguments.debug_mode,
         g_arguments.debug_console);
+
+    // Make sure that the managed host will be remove when exits.
+    ggadget::Connection *connection = g_exit_all_hosts_signal.Connect(
+        ggadget::NewSlot(static_cast<hosts::gtk::GtkHostBase *>(host),
+                         &hosts::gtk::GtkHostBase::Exit));
+
+    // Make sure that the connection to g_exit_all_hosts_signal will be
+    // disconnected when the host exits.
+    host->ConnectOnExit(
+        ggadget::NewSlot(connection, &ggadget::Connection::Disconnect));
+
+    // Make sure that the host will be deleted when exits.
     host->ConnectOnExit(ggadget::NewSlot(
         OnHostExit, static_cast<ggadget::HostInterface*>(host)));
+
+    // Standalone host can't load more than one gadgets, so the LoadGadget task
+    // must be handled by managed host.
     host->ConnectOnLoadGadget(ggadget::NewSlot(LoadManagedGadget));
     ++g_live_host_count;
 
@@ -344,7 +371,21 @@ static void OnClientMessage(const std::string &data) {
 
 static void DefaultSignalHandler(int sig) {
   DLOG("Signal caught: %d, exit.", sig);
-  gtk_main_quit();
+  g_exit_all_hosts_signal();
+}
+
+static bool SendArgumentCallback(const std::string &arg,
+                                 ggadget::RunOnce *run_once) {
+  run_once->SendMessage(arg);
+  return true;
+}
+
+static bool SendPathCallback(const std::string &path,
+                             ggadget::RunOnce *run_once) {
+  std::string abs_path = ggadget::GetAbsolutePath(path.c_str());
+  if (abs_path.length())
+    run_once->SendMessage(abs_path);
+  return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -388,8 +429,10 @@ int main(int argc, char* argv[]) {
     gdk_notify_startup_complete();
     DLOG("Another instance already exists.");
     run_once.SendMessage(ggadget::HostArgumentParser::kStartSignature);
-    for (int i = 1; i < argc; ++i)
-      run_once.SendMessage(argv[i]);
+    g_argument_parser.EnumerateRecognizedArgs(
+        NewSlot(SendArgumentCallback, &run_once));
+    g_argument_parser.EnumerateRemainedArgs(
+        NewSlot(SendPathCallback, &run_once));
     run_once.SendMessage(ggadget::HostArgumentParser::kFinishSignature);
     exit(0);
   }
