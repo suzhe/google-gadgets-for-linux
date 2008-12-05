@@ -39,7 +39,7 @@ PluginLibraryInfo::PluginLibraryInfo()
   plugin_funcs.size = sizeof(plugin_funcs);
 }
 
-static const char *kEnvBrowserPluginsDir = "BROWSER_PLUGINS_DIR";
+static const char kEnvBrowserPluginsDir[] = "BROWSER_PLUGINS_DIR";
 
 static void ScanDirsForPlugins(const std::vector<std::string> &dirs,
                                std::vector<std::string> *paths) {
@@ -73,10 +73,14 @@ static void GetPluginPaths(std::vector<std::string> *paths) {
   std::vector<std::string> dirs;
   char *env_paths = getenv(kEnvBrowserPluginsDir);
   DLOG("Search plugins in dirs: %s", env_paths);
-  if (env_paths) {
+  if (env_paths)
     SplitStringList(env_paths, ":", &dirs);
-    ScanDirsForPlugins(dirs, paths);
-  }
+
+  // Search for user installed plugins first.
+  dirs.insert(dirs.begin(), BuildFilePath(GetHomeDirectory().c_str(),
+                                          ".mozilla", "plugins", NULL));
+  ScanDirsForPlugins(dirs, paths);
+
 #ifdef GGL_DEFAULT_BROWSER_PLUGINS_DIR
   DLOG("And in dirs: %s", GGL_DEFAULT_BROWSER_PLUGINS_DIR);
   dirs.clear();

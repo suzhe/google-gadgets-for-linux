@@ -139,6 +139,8 @@ class SideBarGtkHost::Impl {
       net_wm_strut_(GDK_NONE),
       net_wm_strut_partial_(GDK_NONE),
       gadget_manager_(GetGadgetManager()),
+      on_new_gadget_instance_connection_(NULL),
+      on_remove_gadget_instance_connection_(NULL),
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
       status_icon_(NULL),
       status_icon_menu_(NULL),
@@ -188,10 +190,12 @@ class SideBarGtkHost::Impl {
     LoadGlobalOptions();
 
     // Connect gadget manager related signals.
-    gadget_manager_->ConnectOnNewGadgetInstance(
-        NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    gadget_manager_->ConnectOnRemoveGadgetInstance(
-        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
+    on_new_gadget_instance_connection_ =
+        gadget_manager_->ConnectOnNewGadgetInstance(
+            NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    on_remove_gadget_instance_connection_ =
+        gadget_manager_->ConnectOnRemoveGadgetInstance(
+            NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
 
     // Initializes global permissions.
     // FIXME: Supports customizable global permissions.
@@ -200,6 +204,9 @@ class SideBarGtkHost::Impl {
 
   ~Impl() {
     SaveGlobalOptions();
+
+    on_new_gadget_instance_connection_->Disconnect();
+    on_remove_gadget_instance_connection_->Disconnect();
 
     if (auto_hide_source_)
       g_source_remove(auto_hide_source_);
@@ -1907,6 +1914,9 @@ class SideBarGtkHost::Impl {
   GdkAtom net_wm_strut_partial_;
 
   GadgetManagerInterface *gadget_manager_;
+  Connection *on_new_gadget_instance_connection_;
+  Connection *on_remove_gadget_instance_connection_;
+
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   GtkStatusIcon *status_icon_;
   GtkWidget *status_icon_menu_;
