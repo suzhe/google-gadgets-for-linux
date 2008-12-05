@@ -1008,6 +1008,9 @@ class View::Impl : public SmallObject<> {
       case Event::EVENT_RESTORE:
         FireEvent(&scriptable_event, onrestore_event_);
         break;
+      case Event::EVENT_SIZE:
+        FireEvent(&scriptable_event, onsize_event_);
+        break;
       case Event::EVENT_SIZING:
         FireEvent(&scriptable_event, onsizing_event_);
         break;

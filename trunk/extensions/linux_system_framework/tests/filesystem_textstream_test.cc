@@ -103,32 +103,37 @@ TEST(FileSystem, Read) {
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
-  EXPECT_EQ("this ", ti->Read(5));
+  std::string result;
+  EXPECT_TRUE(ti->Read(5, &result));
+  EXPECT_EQ("this ", result);
   EXPECT_FALSE(ti->IsAtEndOfLine());
   EXPECT_FALSE(ti->IsAtEndOfStream());
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(6, ti->GetColumn());
-  EXPECT_EQ("is a test", ti->Read(9));
+  EXPECT_TRUE(ti->Read(9, &result));
+  EXPECT_EQ("is a test", result);
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(15, ti->GetColumn());
   EXPECT_TRUE(ti->IsAtEndOfLine());
   EXPECT_FALSE(ti->IsAtEndOfStream());
-  ti->Skip(1);
+  EXPECT_TRUE(ti->Skip(1));
   EXPECT_EQ(2, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
-  EXPECT_EQ("\xe4\xb8\xad", ti->Read(1));
+  EXPECT_TRUE(ti->Read(1, &result));
+  EXPECT_EQ("\xe4\xb8\xad", result);
   EXPECT_EQ(2, ti->GetLine());
   EXPECT_EQ(2, ti->GetColumn());
-  EXPECT_EQ("\xe6\x96\x87", ti->ReadLine());
+  EXPECT_TRUE(ti->ReadLine(&result));
+  EXPECT_EQ("\xe6\x96\x87", result);
   EXPECT_EQ(3, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
   ti->SkipLine();
   EXPECT_EQ(4, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
-  EXPECT_EQ("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97",
-            ti->Read(1000));
+  EXPECT_TRUE(ti->Read(1000, &result));
+  EXPECT_EQ("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97", result);
   EXPECT_FALSE(ti->IsAtEndOfLine());
   EXPECT_TRUE(ti->IsAtEndOfStream());
   EXPECT_EQ(4, ti->GetLine());
@@ -142,12 +147,13 @@ TEST(FileSystem, Read) {
                                false,
                                TRISTATE_USE_DEFAULT);
   ASSERT_TRUE(ti != NULL);
+  EXPECT_TRUE(ti->ReadAll(&result));
   EXPECT_EQ(
       "this is a test\n"
       "\xe4\xb8\xad\xe6\x96\x87\n"
       "another test\n"
       "\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97",
-      ti->ReadAll());
+      result);
   EXPECT_EQ(4, ti->GetLine());
   EXPECT_EQ(6, ti->GetColumn());
 
@@ -170,27 +176,27 @@ TEST(FileSystem, Write) {
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
-  ti->Write("this ");
+  EXPECT_TRUE(ti->Write("this "));
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(6, ti->GetColumn());
-  ti->Write("is a test");
+  EXPECT_TRUE(ti->Write("is a test"));
   EXPECT_EQ(1, ti->GetLine());
   EXPECT_EQ(15, ti->GetColumn());
-  ti->WriteBlankLines(1);
+  EXPECT_TRUE(ti->WriteBlankLines(1));
   EXPECT_EQ(2, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
-  ti->Write("\xe4\xb8\xad");
+  EXPECT_TRUE(ti->Write("\xe4\xb8\xad"));
   EXPECT_EQ(2, ti->GetLine());
   EXPECT_EQ(2, ti->GetColumn());
-  ti->WriteLine("\xe6\x96\x87");
+  EXPECT_TRUE(ti->WriteLine("\xe6\x96\x87"));
   EXPECT_EQ(3, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
 
-  ti->WriteBlankLines(1);
+  EXPECT_TRUE(ti->WriteBlankLines(1));
   EXPECT_EQ(4, ti->GetLine());
   EXPECT_EQ(1, ti->GetColumn());
-  ti->Write("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97");
+  EXPECT_TRUE(ti->Write("\xe5\x9d\x8f??\xe6\x96\x87\xe5\xad\x97"));
   EXPECT_EQ(4, ti->GetLine());
   EXPECT_EQ(6, ti->GetColumn());
 

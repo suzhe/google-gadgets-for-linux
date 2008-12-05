@@ -267,6 +267,14 @@ class HostArgumentParser::Impl {
     return result;
   }
 
+  const HostArgumentInfo *GetArgumentInfoById(int id) {
+    for (const HostArgumentInfo *p = args_; p->id >= 0; ++p) {
+      if (p->id == id)
+        return p;
+    }
+    return NULL;
+  }
+
   const HostArgumentInfo *args_;
   int last_id_;
   Variant::Type last_type_;
@@ -449,17 +457,37 @@ bool HostArgumentParser::GetArgumentValue(int id, Variant *value) const {
   return false;
 }
 
+bool HostArgumentParser::EnumerateRecognizedArgs(
+    Slot1<bool, const std::string &> *slot) const {
+  ASSERT(slot);
+  Impl::ArgumentValueMap::const_iterator it = impl_->specified_args_.begin();
+  Impl::ArgumentValueMap::const_iterator end = impl_->specified_args_.end();
+  bool result = true;
+  for (; it != end; ++it) {
+    const HostArgumentInfo *info = impl_->GetArgumentInfoById(it->first);
+    const char *name = info->long_name ? info->long_name : info->short_name;
+    std::string value;
+    if (info && name && it->second.ConvertToString(&value)) {
+      std::string arg = StringPrintf("%s=%s", name, value.c_str());
+      result = (*slot)(arg);
+      if (!result) break;
+    }
+  }
+  delete slot;
+  return result;
+}
+
 bool HostArgumentParser::EnumerateRemainedArgs(
-    Slot1<bool, const std::string &> *callback) const {
-  ASSERT(callback);
+    Slot1<bool, const std::string &> *slot) const {
+  ASSERT(slot);
   StringVector::const_iterator it = impl_->remained_args_.begin();
   StringVector::const_iterator end = impl_->remained_args_.end();
   bool result = true;
   for (; it != end; ++it) {
-    result = (*callback)(*it);
+    result = (*slot)(*it);
     if (!result) break;
   }
-  delete callback;
+  delete slot;
   return result;
 }
 

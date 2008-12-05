@@ -62,14 +62,14 @@ public:
   }
   virtual ExceptionCode SetRequestHeader(const char *header,
                                          const char *value) { return NO_ERR; }
-  virtual ExceptionCode Send(const char *data, size_t size) {
+  virtual ExceptionCode Send(const std::string &data) {
     ChangeState(HEADERS_RECEIVED);
     ChangeState(LOADING);
     ChangeState(DONE);
     return NO_ERR;
   }
   virtual ExceptionCode Send(const ggadget::DOMDocumentInterface *data) {
-    return Send(NULL, 0);
+    return Send(std::string());
   }
   virtual void Abort() { ChangeState(DONE); }
   virtual ExceptionCode GetAllResponseHeaders(const std::string **result) {

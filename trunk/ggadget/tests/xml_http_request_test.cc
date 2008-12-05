@@ -62,7 +62,7 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid state.
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
+            request->Send(std::string()));
   ASSERT_FALSE(request->IsSuccessful());
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Valid request.
@@ -259,8 +259,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->Send(std::string()));
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
   ASSERT_TRUE(request->IsSuccessful());
@@ -335,8 +334,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_FALSE(request->IsSuccessful());
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->Send(std::string()));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
   ASSERT_FALSE(request->IsSuccessful());
@@ -454,15 +452,13 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request1->Open("HEAD", url1, true, NULL, NULL));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request1->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->Send(std::string()));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request1->GetReadyState());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request2->Open("POST", url2, true, NULL, NULL));
   const char *post_data = "Some Data To Post.##\r\n";
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request2->Send(post_data, strlen(post_data)));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->Send(post_data));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request2->GetReadyState());
 
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
@@ -503,24 +499,21 @@ TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request3->Open("GET", url3, true, NULL, NULL));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request3->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request3->Send(std::string()));
   Wait(100);
   request3->Abort();
   ASSERT_FALSE(request3->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request3->Open("GET", url3, true, NULL, NULL));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request3->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request3->Send(std::string()));
   Wait(100);
   request3->Abort();
   ASSERT_FALSE(request3->IsSuccessful());
 
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request3->Open("GET", url3, true, NULL, NULL));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request3->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request3->Send(std::string()));
 
   for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   pthread_join(server3.thread_, NULL);

@@ -32,6 +32,7 @@ class FileInterface;
 class FoldersInterface;
 class FolderInterface;
 class TextStreamInterface;
+class BinaryStreamInterface;
 
 enum IOMode {
   IO_MODE_READING = 1,
@@ -40,10 +41,10 @@ enum IOMode {
 };
 
 enum Tristate {
-  TRISTATE_TRUE = 0xffffffff,
+  TRISTATE_USE_DEFAULT = -2,
+  TRISTATE_MIXED = -2,
+  TRISTATE_TRUE = -1,
   TRISTATE_FALSE = 0,
-  TRISTATE_USE_DEFAULT = 0xfffffffe,
-  TRISTATE_MIXED = 0xfffffffe,
 };
 
 enum FileAttribute {
@@ -150,6 +151,13 @@ class FileSystemInterface : public SmallObject<> {
                                             IOMode mode,
                                             bool create,
                                             Tristate format) = 0;
+  /** Create a file as a BinaryStream. */
+  virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
+                                                  bool overwrite) = 0;
+  /** Open a file as a BinaryStream. */
+  virtual BinaryStreamInterface *OpenBinaryFile(const char *filename,
+                                                IOMode mode,
+                                                bool create) = 0;
   /** Retrieve the standard input, output or error stream. */
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode) = 0;
@@ -249,6 +257,8 @@ class FolderInterface : public SmallObject<> {
   virtual FilesInterface *GetFiles() = 0;
   virtual TextStreamInterface *CreateTextFile(const char *filename,
                                               bool overwrite, bool unicode) = 0;
+  virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
+                                                  bool overwrite) = 0;
 };
 
 /** IFileCollection. */
@@ -297,6 +307,7 @@ class FileInterface : public SmallObject<> {
   virtual bool Move(const char *dest) = 0;
   virtual TextStreamInterface *OpenAsTextStream(IOMode IOMode,
                                                 Tristate Format) = 0;
+  virtual BinaryStreamInterface *OpenAsBinaryStream(IOMode IOMode) = 0;
 };
 
 class TextStreamInterface : public SmallObject<> {
@@ -316,22 +327,50 @@ class TextStreamInterface : public SmallObject<> {
   /** Is the current position at the end of a line? */
   virtual bool IsAtEndOfLine() = 0;
   /** Read a specific number of characters into a string. */
-  virtual std::string Read(int characters) = 0;
+  virtual bool Read(int characters, std::string *result) = 0;
   /** Read an entire line into a string. */
-  virtual std::string ReadLine() = 0;
+  virtual bool ReadLine(std::string *result) = 0;
   /** Read the entire stream into a string. */
-  virtual std::string ReadAll() = 0;
+  virtual bool ReadAll(std::string *result) = 0;
   /** Write a string to the stream. */
-  virtual void Write(const std::string &text) = 0;
+  virtual bool Write(const std::string &text) = 0;
   /** Write a string and an end of line to the stream. */
-  virtual void WriteLine(const std::string &text) = 0;
+  virtual bool WriteLine(const std::string &text) = 0;
   /** Write a number of blank lines to the stream. */
-  virtual void WriteBlankLines(int lines) = 0;
+  virtual bool WriteBlankLines(int lines) = 0;
   /** Skip a specific number of characters. */
-  virtual void Skip(int characters) = 0;
+  virtual bool Skip(int characters) = 0;
   /** Skip a line. */
-  virtual void SkipLine() = 0;
+  virtual bool SkipLine() = 0;
   /** Close a text stream. */
+  virtual void Close() = 0;
+};
+
+/**
+ * Additional interface to support binary file. Not in Microsoft's
+ * Scripting.FileSystemObject.
+ */
+class BinaryStreamInterface : public SmallObject<> {
+ protected:
+  virtual ~BinaryStreamInterface() { }
+
+ public:
+  virtual void Destroy() = 0;
+
+ public:
+  /** Get current position of the stream, in number of bytes. */
+  virtual int64_t GetPosition() = 0;
+  /** Is the current position at the end of the stream? */
+  virtual bool IsAtEndOfStream() = 0;
+  /** Read a specific number of bytes. */
+  virtual bool Read(int64_t bytes, std::string *result) = 0;
+  /** Read the entire stream into a string. */
+  virtual bool ReadAll(std::string *result) = 0;
+  /** Write a string to the stream. */
+  virtual bool Write(const std::string &data) = 0;
+  /** Skip a specific number of bytes. */
+  virtual bool Skip(int64_t bytes) = 0;
+  /** Close the stream. */
   virtual void Close() = 0;
 };
 

@@ -97,7 +97,7 @@ class Plugin::Impl : public SmallObject<> {
         // HTTP mode.
         if (http_request_->Open(method_.c_str(), url_or_file_.c_str(), true,
                                 NULL,NULL) != XMLHttpRequestInterface::NO_ERR ||
-            http_request_->Send(post_data_.c_str(), post_data_.size()) !=
+            http_request_->Send(post_data_) !=
                 XMLHttpRequestInterface::NO_ERR) {
             Done(NPRES_NETWORK_ERR);
         }

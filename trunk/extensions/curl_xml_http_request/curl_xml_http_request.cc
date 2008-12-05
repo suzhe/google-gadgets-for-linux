@@ -290,12 +290,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   struct WorkerContext {
     WorkerContext(XMLHttpRequest *a_this_p, CURL *a_curl, bool a_async,
                   curl_slist *a_request_headers,
-                  const char *a_request_data, size_t a_request_size)
+                  const std::string &a_request_data)
         : this_p(a_this_p), curl(a_curl),
           request_headers(a_request_headers),
+          request_data(a_request_data),
           request_offset(0), async(a_async) {
-      if (a_request_data && a_request_size > 0)
-        request_data.assign(a_request_data, a_request_size);
     }
     XMLHttpRequest *this_p;
     CURL *curl;
@@ -305,14 +304,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     bool async;
   };
 
-  virtual ExceptionCode Send(const char *data, size_t size) {
+  virtual ExceptionCode Send(const std::string &data) {
     if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: Send: Invalid state: %d", state_);
       return INVALID_STATE_ERR;
     }
 
-    if (!CheckSize(size, 0, 512)) {
-      LOG("XMLHttpRequest: Send: Size too big: %zu", size);
+    if (!CheckSize(data.size(), 0, 512)) {
+      LOG("XMLHttpRequest: Send: Size too big: %zu", data.size());
       return SYNTAX_ERR;
     }
 
@@ -335,15 +334,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     WorkerContext *context = new WorkerContext(this, curl_, async_,
-                                               request_headers_,
-                                               data, size);
+                                               request_headers_, data);
     request_headers_ = NULL;
 
-    if (data && size > 0) {
+    if (data.size()) {
+      DLOG("Send: data length: %zu, method: %d", data.size(), method_);
       if (method_ == HTTP_POST) {
         // CURLOPT_POSTFIELDSIZE_LARGE doesn't work on 32bit curl.
         curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
-                         static_cast<long>(size));
+                         static_cast<long>(data.size()));
         // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
         curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
                          context->request_data.c_str());
@@ -352,7 +351,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         curl_easy_setopt(curl_, CURLOPT_READDATA, context);
         // CURLOPT_INFILESIZE_LARGE doesn't work on 32bit curl.
         curl_easy_setopt(curl_, CURLOPT_INFILESIZE,
-                         static_cast<long>(size));
+                         static_cast<long>(data.size()));
       }
     }
 
@@ -403,11 +402,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual ExceptionCode Send(const DOMDocumentInterface *data) {
-    if (!data)
-      return Send(static_cast<char *>(NULL), 0);
-
-    std::string xml = data->GetXML();
-    return Send(xml.c_str(), xml.size());
+    return Send(data ? data->GetXML() : std::string());
   }
 
   static void GetStatusAndEffectiveUrl(CURL *curl, unsigned short *status,
@@ -906,13 +901,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void ScriptSend(const Variant &v_data) {
     std::string data;
     if (v_data.ConvertToString(&data)) {
-      CheckException(Send(data.c_str(), data.length()));
+      CheckException(Send(data));
     } else if (v_data.type() == Variant::TYPE_SCRIPTABLE) {
       ScriptableInterface *scriptable =
           VariantValue<ScriptableInterface *>()(v_data);
-      if (!scriptable ||
-          scriptable->IsInstanceOf(DOMDocumentInterface::CLASS_ID)) {
+      if (!scriptable) {
+        CheckException(Send(std::string()));
+      } else if (scriptable->IsInstanceOf(DOMDocumentInterface::CLASS_ID)) {
         CheckException(Send(down_cast<DOMDocumentInterface *>(scriptable)));
+      } else if (scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
+        CheckException(
+            Send(down_cast<ScriptableBinaryData *>(scriptable)->data()));
       } else {
         CheckException(SYNTAX_ERR);
       }

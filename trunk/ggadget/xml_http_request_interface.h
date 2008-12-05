@@ -69,7 +69,7 @@ class XMLHttpRequestInterface : public ScriptableInterface {
                              const char *user, const char *password) = 0;
   virtual ExceptionCode SetRequestHeader(const char *header,
                                          const char *value) = 0;
-  virtual ExceptionCode Send(const char *data, size_t size) = 0;
+  virtual ExceptionCode Send(const std::string &data) = 0;
   virtual ExceptionCode Send(const DOMDocumentInterface *data) = 0;
   virtual void Abort() = 0;
 

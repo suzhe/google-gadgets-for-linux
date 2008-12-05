@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "scriptable_binary_data.h"
 #include "scriptable_file_system.h"
 #include "scriptable_enumerator.h"
 #include "file_system_interface.h"
@@ -40,15 +41,29 @@ static const Variant kCopyDefaultArgs[] = {
 static const Variant kOpenAsTextStreamDefaultArgs[] = {
   Variant(IO_MODE_READING), Variant(TRISTATE_FALSE)
 };
+// Default args for File.OpenAsBinaryStream().
+static const Variant kOpenAsBinaryStreamDefaultArgs[] = {
+  Variant(IO_MODE_READING)
+};
 // Default args for FileSystem.CreateTextFile() and Folder.CreateTextFile().
 static const Variant kCreateTextFileDefaultArgs[] = {
   Variant(),
   Variant(true), Variant(false)
 };
+// Default args for FileSystem.CreateBinaryFile() and Folder.CreateBinaryFile().
+static const Variant kCreateBinaryFileDefaultArgs[] = {
+  Variant(),
+  Variant(true)
+};
 // Default args for FileSystem.OpenTextFile().
 static const Variant kOpenTextFileDefaultArgs[] = {
   Variant(),
   Variant(IO_MODE_READING), Variant(false), Variant(TRISTATE_FALSE)
+};
+// Default args for FileSystem.OpenBinaryFile().
+static const Variant kOpenBinaryFileDefaultArgs[] = {
+  Variant(),
+  Variant(IO_MODE_READING), Variant(false)
 };
 // Default args for FileSystem.DeleteFile() and FileSystem.DeleteFolder()
 static const Variant kDeleteFileOrFolderDefaultArgs[] = {
@@ -107,23 +122,24 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
         RegisterProperty("AtEndOfLine",
                          NewSlot(stream, &TextStreamInterface::IsAtEndOfLine),
                          NULL);
-        RegisterMethod("Read", NewSlot(stream, &TextStreamInterface::Read));
+        RegisterMethod("Read",
+                       NewSlot(this, &ScriptableTextStream::Read));
         RegisterMethod("ReadLine",
-                       NewSlot(stream, &TextStreamInterface::ReadLine));
+                       NewSlot(this, &ScriptableTextStream::ReadLine));
         RegisterMethod("ReadAll",
-                       NewSlot(stream, &TextStreamInterface::ReadAll));
+                       NewSlot(this, &ScriptableTextStream::ReadAll));
+        RegisterMethod("Skip",
+                       NewSlot(this, &ScriptableTextStream::Skip));
+        RegisterMethod("SkipLine",
+                       NewSlot(this, &ScriptableTextStream::SkipLine));
       }
       if (impl->CanWrite()) {
-        RegisterMethod("Write", NewSlot(stream, &TextStreamInterface::Write));
+        RegisterMethod("Write",
+                       NewSlot(this, &ScriptableTextStream::Write));
         RegisterMethod("WriteLine",
-                       NewSlot(stream, &TextStreamInterface::WriteLine));
+                       NewSlot(this, &ScriptableTextStream::WriteLine));
         RegisterMethod("WriteBlankLines",
-                       NewSlot(stream, &TextStreamInterface::WriteBlankLines));
-      }
-      if (impl->CanRead() || impl->CanWrite()) {
-        RegisterMethod("Skip", NewSlot(stream, &TextStreamInterface::Skip));
-        RegisterMethod("SkipLine",
-                       NewSlot(stream, &TextStreamInterface::SkipLine));
+                       NewSlot(this, &ScriptableTextStream::WriteBlankLines));
       }
       RegisterMethod("Close", NewSlot(stream, &TextStreamInterface::Close));
     }
@@ -133,7 +149,137 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
       stream_ = NULL;
     }
 
+    std::string Read(int characters) {
+      std::string result;
+      if (!stream_->Read(characters, &result))
+        SetPendingException(new FileSystemException("TextStream.Read"));
+      return result;
+    }
+
+    std::string ReadLine() {
+      std::string result;
+      if (!stream_->ReadLine(&result))
+        SetPendingException(new FileSystemException("TextStream.ReadLine"));
+      return result;
+    }
+
+    std::string ReadAll() {
+      std::string result;
+      if (!stream_->ReadAll(&result))
+        SetPendingException(new FileSystemException("TextStream.ReadAll"));
+      return result;
+    }
+
+    void Write(const Variant &data) {
+      std::string text;
+      if (!data.ConvertToString(&text) || !stream_->Write(text))
+        SetPendingException(new FileSystemException("TextStream.Write"));
+    }
+
+    void WriteLine(const Variant &data) {
+      std::string text;
+      if (!data.ConvertToString(&text) || !stream_->WriteLine(text))
+        SetPendingException(new FileSystemException("TextStream.WriteLine"));
+    }
+
+    void WriteBlankLines(int lines) {
+      if (!stream_->WriteBlankLines(lines))
+        SetPendingException(
+            new FileSystemException("TextStream.WriteBlankLines"));
+    }
+
+    void Skip(int characters) {
+      if (!stream_->Skip(characters))
+        SetPendingException(new FileSystemException("TextStream.Skip"));
+    }
+
+    void SkipLine() {
+      if (!stream_->SkipLine())
+        SetPendingException(new FileSystemException("TextStream.SkipLine"));
+    }
+
     TextStreamInterface *stream_;
+  };
+
+  class ScriptableBinaryStream : public ScriptableHelperDefault {
+   public:
+    DEFINE_CLASS_ID(0x6310117247434e8e, ScriptableInterface);
+    ScriptableBinaryStream(BinaryStreamInterface *stream, Impl *impl)
+        : stream_(stream) {
+      ASSERT(stream);
+      if (impl->CanRead()) {
+        RegisterProperty("Position",
+                         NewSlot(stream, &BinaryStreamInterface::GetPosition),
+                         NULL);
+        RegisterProperty("AtEndOfStream",
+                         NewSlot(stream,
+                                 &BinaryStreamInterface::IsAtEndOfStream),
+                         NULL);
+        RegisterMethod("Read",
+                       NewSlot(this, &ScriptableBinaryStream::Read));
+        RegisterMethod("ReadAll",
+                       NewSlot(this, &ScriptableBinaryStream::ReadAll));
+        RegisterMethod("Skip",
+                       NewSlot(this, &ScriptableBinaryStream::Skip));
+      }
+      if (impl->CanWrite()) {
+        RegisterMethod("Write",
+                       NewSlot(this, &ScriptableBinaryStream::Write));
+      }
+      RegisterMethod("Close", NewSlot(stream, &BinaryStreamInterface::Close));
+    }
+
+    virtual ~ScriptableBinaryStream() {
+      stream_->Destroy();
+      stream_ = NULL;
+    }
+
+    ScriptableBinaryData *Read(int64_t bytes) {
+      std::string data;
+      ScriptableBinaryData *result = NULL;
+      if (stream_->Read(bytes, &data))
+        result = new ScriptableBinaryData(data);
+      else
+        SetPendingException(new FileSystemException("BinaryStream.Read"));
+
+      return result;
+    }
+
+    ScriptableBinaryData *ReadAll() {
+      std::string data;
+      ScriptableBinaryData *result = NULL;
+      if (stream_->ReadAll(&data))
+        result = new ScriptableBinaryData(data);
+      else
+        SetPendingException(new FileSystemException("BinaryStream.Read"));
+
+      return result;
+    }
+
+    void Write(const Variant &data) {
+      bool result = false;
+      if (data.type() == Variant::TYPE_STRING) {
+        result = stream_->Write(VariantValue<const std::string &>()(data));
+      } else if (data.type() == Variant::TYPE_SCRIPTABLE) {
+        ScriptableInterface *scriptable =
+            VariantValue<ScriptableInterface *>()(data);
+        if (scriptable &&
+            scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
+          result = stream_->Write(
+              down_cast<ScriptableBinaryData *>(scriptable)->data());
+        }
+      }
+
+      if (!result)
+        SetPendingException(new FileSystemException("BinaryStream.Write"));
+    }
+
+    void Skip(int64_t bytes) {
+      if (!stream_->Skip(bytes))
+        SetPendingException(new FileSystemException("BinaryStream.Skip"));
+    }
+
+    BinaryStreamInterface *stream_;
   };
 
   class ScriptableFolder;
@@ -281,6 +427,10 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
                        NewSlotWithDefaultArgs(
                            NewSlot(this, &ScriptableFolder::CreateTextFile),
                            kCreateTextFileDefaultArgs));
+        RegisterMethod("CreateBinaryFile",
+                       NewSlotWithDefaultArgs(
+                           NewSlot(this, &ScriptableFolder::CreateBinaryFile),
+                           kCreateBinaryFileDefaultArgs));
       }
     }
 
@@ -372,6 +522,17 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
       return new ScriptableTextStream(stream, impl_);
     }
 
+    ScriptableBinaryStream *CreateBinaryFile(const char *filename,
+                                             bool overwrite) {
+      BinaryStreamInterface *stream =
+          folder_->CreateBinaryFile(filename, overwrite);
+      if (!stream) {
+        SetPendingException(new FileSystemException("Folder.CreateBinaryFile"));
+        return NULL;
+      }
+      return new ScriptableBinaryStream(stream, impl_);
+    }
+
     FolderInterface *folder_;
     Impl *impl_;
   };
@@ -421,6 +582,10 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
                        NewSlotWithDefaultArgs(
                            NewSlot(this, &ScriptableFile::OpenAsTextStream),
                            kOpenAsTextStreamDefaultArgs));
+        RegisterMethod("OpenAsBinaryStream",
+                       NewSlotWithDefaultArgs(
+                           NewSlot(this, &ScriptableFile::OpenAsBinaryStream),
+                           kOpenAsBinaryStreamDefaultArgs));
         RegisterProperty("Attributes",
                          (impl->CanRead() ?
                           NewSlot(file, &FileInterface::GetAttributes) :
@@ -503,6 +668,15 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
         return NULL;
       }
       return new ScriptableTextStream(stream, impl_);
+    }
+
+    ScriptableBinaryStream *OpenAsBinaryStream(IOMode mode) {
+      BinaryStreamInterface *stream = file_->OpenAsBinaryStream(mode);
+      if (!stream) {
+        SetPendingException(new FileSystemException("File.OpenAsBinaryStream"));
+        return NULL;
+      }
+      return new ScriptableBinaryStream(stream, impl_);
     }
 
     FileInterface *file_;
@@ -623,6 +797,18 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
     return new ScriptableTextStream(stream, this);
   }
 
+  ScriptableBinaryStream *CreateBinaryFile(const char *filename,
+                                           bool overwrite) {
+    BinaryStreamInterface *stream =
+        filesystem_->CreateBinaryFile(filename, overwrite);
+    if (!stream) {
+      owner_->SetPendingException(new FileSystemException(
+          "Filesystem.CreateBinaryFile"));
+      return NULL;
+    }
+    return new ScriptableBinaryStream(stream, this);
+  }
+
   ScriptableTextStream *OpenTextFile(const char *filename, IOMode mode,
                                      bool create, Tristate format) {
     TextStreamInterface *stream =
@@ -633,6 +819,18 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
       return NULL;
     }
     return new ScriptableTextStream(stream, this);
+  }
+
+  ScriptableBinaryStream *OpenBinaryFile(const char *filename, IOMode mode,
+                                         bool create) {
+    BinaryStreamInterface *stream =
+        filesystem_->OpenBinaryFile(filename, mode, create);
+    if (!stream) {
+      owner_->SetPendingException(new FileSystemException(
+          "FileSystem.OpenBinaryFile"));
+      return NULL;
+    }
+    return new ScriptableBinaryStream(stream, this);
   }
 
   ScriptableTextStream *GetStandardStream(StandardStreamType type,
@@ -706,6 +904,9 @@ ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem,
     RegisterMethod("OpenTextFile",
                    NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::OpenTextFile),
                                           kOpenTextFileDefaultArgs));
+    RegisterMethod("OpenBinaryFile",
+                   NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::OpenBinaryFile),
+                                          kOpenBinaryFileDefaultArgs));
     RegisterMethod("GetStandardStream",
         NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::GetStandardStream),
                                kGetStandardStreamDefaultArgs));
@@ -729,6 +930,8 @@ ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem,
     RegisterMethod("CreateTextFile",
                    NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CreateTextFile),
                                           kCreateTextFileDefaultArgs));
+    RegisterMethod("CreateBinaryFile", NewSlotWithDefaultArgs(
+        NewSlot(impl_, &Impl::CreateBinaryFile), kCreateBinaryFileDefaultArgs));
   }
 }
 

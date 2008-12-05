@@ -30,9 +30,9 @@ using namespace ggadget;
 
 static const HostArgumentInfo kArgumentsInfo[] = {
   { 1, Variant::TYPE_BOOL, "-a1", "--argument-1" },
-  { 2, Variant::TYPE_INT64, "-a2", "--argument-2" },
+  { 2, Variant::TYPE_INT64, "-a2", NULL },
   { 3, Variant::TYPE_DOUBLE, "-a3", "--argument-3" },
-  { 4, Variant::TYPE_STRING, "-a4", "--argument-4" },
+  { 4, Variant::TYPE_STRING, NULL, "--argument-4" },
   { -1, Variant::TYPE_VOID, NULL, NULL }
 };
 
@@ -45,6 +45,11 @@ static const char *kGoodArgv2[] = {
   "-a1", "hello", "-a2", "12345", "world", "-a3=3.14", "test"
 };
 static const int kGoodArgc2 = arraysize(kGoodArgv2);
+
+static const char *kGoodArgv3[] = {
+  "-a1", "hello", "-a2", "12345", "world", "--argument-4=3.14", "test"
+};
+static const int kGoodArgc3 = arraysize(kGoodArgv3);
 
 static const char *kBadArgv1[] = {
   "-a1=abc", "-a2=test", "--argument-3=0x64"
@@ -117,6 +122,28 @@ TEST(HostUtils, HostArgumentParserGood2) {
   int count = 0;
   ASSERT_TRUE(parser.EnumerateRemainedArgs(
       NewSlot(RemainedArgsCallback, &count)));
+}
+
+bool RecognizedArgsCallback(const std::string &arg, int *count) {
+  static const char *kRecognizedArgs[] = {
+    "--argument-1=true", "-a2=12345", "--argument-4=3.14" };
+  EXPECT_GT(3, *count);
+  EXPECT_STREQ(kRecognizedArgs[*count], arg.c_str());
+  ++ *count;
+  return true;
+}
+
+TEST(HostUtils, HostArgumentParserGood3) {
+  HostArgumentParser parser(kArgumentsInfo);
+  ASSERT_TRUE(parser.Start());
+  EXPECT_FALSE(parser.Start());
+  ASSERT_TRUE(parser.AppendArguments(kGoodArgc3, kGoodArgv3));
+  ASSERT_TRUE(parser.Finish());
+  EXPECT_FALSE(parser.Finish());
+
+  int count = 0;
+  ASSERT_TRUE(parser.EnumerateRecognizedArgs(
+      NewSlot(RecognizedArgsCallback, &count)));
 }
 
 TEST(HostUtils, HostArgumentParserBad1) {

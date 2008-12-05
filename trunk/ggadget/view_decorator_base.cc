@@ -238,10 +238,6 @@ void ViewDecoratorBase::SetChildView(View *child_view) {
     if (child_view) {
       impl_->child_resizable_ = child_view->GetResizable();
       SetResizable(impl_->child_resizable_);
-    } else {
-      // Don't allow to resize the view when child view is switched out.
-      // Don't call this->SetResizable() here, it might be overloaded.
-      View::SetResizable(RESIZABLE_FALSE);
     }
 
     OnChildViewChanged();

@@ -395,89 +395,83 @@ class TextStream : public TextStreamInterface {
       return true;
     return content_[readingptr_] == '\n';
   }
-  virtual std::string Read(int characters) {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
+  virtual bool Read(int characters, std::string *result) {
+    if (mode_ != IO_MODE_READING || !result)
+      return false;
 
     size_t size = GetUTF8CharsLength(&content_[readingptr_],
                                      characters,
                                      content_.size() - readingptr_);
-    std::string result = content_.substr(readingptr_, size);
+    *result = content_.substr(readingptr_, size);
     readingptr_ += size;
-    UpdatePosition(result);
-    return result;
+    UpdatePosition(*result);
+    return true;
   }
 
-  virtual std::string ReadLine() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
+  virtual bool ReadLine(std::string *result) {
+    if (mode_ != IO_MODE_READING || !result)
+      return false;
 
-    std::string result;
     std::string::size_type position = content_.find('\n', readingptr_);
     if (position == std::string::npos) {
-      result = content_.substr(readingptr_);
+      *result = content_.substr(readingptr_);
       readingptr_ = content_.size();
-      UpdatePosition(result);
+      UpdatePosition(*result);
     } else {
-      result = content_.substr(readingptr_, position - readingptr_);
+      *result = content_.substr(readingptr_, position - readingptr_);
       readingptr_ = position + 1;
       col_ = 1;
       ++line_;
     }
-    return result;
+    return true;
   }
-  virtual std::string ReadAll() {
-    // FIXME: should throw exception in this situation.
-    if (mode_ != IO_MODE_READING)
-      return std::string();
+  virtual bool ReadAll(std::string *result) {
+    if (mode_ != IO_MODE_READING || !result)
+      return false;
 
-    std::string result;
-    result = content_.substr(readingptr_);
+    *result = content_.substr(readingptr_);
     readingptr_ = content_.size();
-    UpdatePosition(result);
-    return result;
+    UpdatePosition(*result);
+    return true;
   }
 
-  virtual void Write(const std::string &text) {
-    // FIXME: should throw exception in this situation.
+  virtual bool Write(const std::string &text) {
     if (mode_ == IO_MODE_READING)
-      return;
+      return false;
 
     std::string copy = text;
     FixCRLF(&copy);
-    WriteString(copy);
+    bool result = WriteString(copy);
     UpdatePosition(copy);
+    return result;
   }
-  virtual void WriteLine(const std::string &text) {
-    // FIXME: should throw exception in this situation.
+  virtual bool WriteLine(const std::string &text) {
     if (mode_ == IO_MODE_READING)
-      return;
+      return false;
 
-    Write(text);
-    Write("\n");
+    return Write(text) && Write("\n");
   }
-  virtual void WriteBlankLines(int lines) {
-    // FIXME: should throw exception in this situation.
+  virtual bool WriteBlankLines(int lines) {
     if (mode_ == IO_MODE_READING)
-      return;
+      return false;
 
     for (int i = 0; i < lines; ++i)
-      Write("\n");
+      if (!Write("\n")) return false;
+
+    return true;
   }
 
-  virtual void Skip(int characters) {
-    // FIXME: should throw exception in this situation.
+  virtual bool Skip(int characters) {
     if (mode_ != IO_MODE_READING)
-      return;
-    Read(characters);
+      return false;
+    std::string data;
+    return Read(characters, &data);
   }
-  virtual void SkipLine() {
-    // FIXME: should throw exception in this situation.
+  virtual bool SkipLine() {
     if (mode_ != IO_MODE_READING)
-      return;
-    ReadLine();
+      return false;
+    std::string data;
+    return ReadLine(&data);
   }
 
   virtual void Close() {
@@ -510,7 +504,7 @@ class TextStream : public TextStreamInterface {
       return write(fd_, buffer.c_str(), buffer.size()) ==
           static_cast<ssize_t>(buffer.size());
     }
-    return true;
+    return false;
   }
 
  private:
@@ -523,29 +517,127 @@ class TextStream : public TextStreamInterface {
   size_t readingptr_;
 };
 
-static TextStreamInterface *OpenTextFile(const char *filename,
-                                         IOMode mode,
-                                         bool create,
-                                         bool overwrite,
-                                         Tristate format) {
-  ASSERT(filename);
-  ASSERT(*filename);
+class BinaryStream : public BinaryStreamInterface {
+ public:
+  BinaryStream(int fd, IOMode mode)
+      : fd_(fd), mode_(mode), size_(0), pos_(0) {
+  }
+  ~BinaryStream() { Close(); }
 
+  bool Init() {
+    size_ = lseek(fd_, 0, SEEK_END);
+    pos_ = lseek(fd_, 0, SEEK_SET);
+    return (size_ != -1 && pos_ != -1);
+  }
+
+  virtual void Destroy() { delete this; }
+
+  virtual int64_t GetPosition() {
+    return static_cast<int64_t>(pos_);
+  }
+
+  virtual bool IsAtEndOfStream() {
+    return pos_ >= size_;
+  }
+
+  virtual bool Read(int64_t bytes, std::string *result) {
+    if (mode_ != IO_MODE_READING || !result ||
+        bytes < 0 || bytes > static_cast<int64_t>(kMaxFileSize))
+      return false;
+
+    result->reserve(bytes);
+    result->resize(bytes);
+    ssize_t read_bytes = read(fd_, const_cast<char *>(result->c_str()),
+                              static_cast<size_t>(bytes));
+    if (read_bytes == -1) {
+      *result = std::string();
+      // Return to current position.
+      lseek(fd_, pos_, SEEK_SET);
+      return false;
+    }
+
+    result->resize(read_bytes);
+    pos_ = lseek(fd_, 0, SEEK_CUR);
+    return true;
+  }
+
+  virtual bool ReadAll(std::string *result) {
+    if (mode_ != IO_MODE_READING || !result)
+      return false;
+
+    return Read(size_ - pos_, result);
+  }
+
+  virtual bool Write(const std::string &data) {
+    if (mode_ == IO_MODE_READING)
+      return false;
+
+    size_t written_bytes = 0;
+    size_t data_size = data.size();
+    const char *data_ptr = data.c_str();
+    while (written_bytes < data_size) {
+      ssize_t write_bytes = write(fd_, data_ptr, data_size - written_bytes);
+      if (write_bytes == -1) {
+        lseek(fd_, pos_, SEEK_SET);
+        return false;
+      }
+      written_bytes += write_bytes;
+      data_ptr += write_bytes;
+    }
+
+    pos_ = lseek(fd_, 0, SEEK_CUR);
+    size_ = lseek(fd_, 0, SEEK_END);
+    lseek(fd_, pos_, SEEK_SET);
+    return true;
+  }
+
+  virtual bool Skip(int64_t bytes) {
+    if (mode_ != IO_MODE_READING)
+      return false;
+
+    if (bytes + pos_ > size_)
+      pos_ = lseek(fd_, size_, SEEK_SET);
+    else
+      pos_ = lseek(fd_, bytes, SEEK_CUR);
+
+    return pos_ != -1;
+  }
+
+  virtual void Close() {
+    if (fd_ == -1)
+      return;
+    if (fd_ > STDERR_FILENO) {
+      close(fd_);
+    }
+    fd_ = -1;
+  }
+
+ private:
+  int fd_;
+  IOMode mode_;
+  off_t size_;
+  off_t pos_;
+};
+
+// Returns fd of the opened file.
+static int OpenFile(const char *filename, IOMode mode, bool create,
+                    bool overwrite) {
+  ASSERT(filename && *filename);
   int flags = 0;
 
   switch (mode) {
-  case IO_MODE_READING:
-    flags = O_RDONLY;
-    break;
-  case IO_MODE_APPENDING:
-    flags = O_APPEND | O_WRONLY;
-    break;
-  case IO_MODE_WRITING:
-    flags = O_TRUNC | O_WRONLY;
-    break;
-  default:
-    ASSERT(false);
-    break;
+    case IO_MODE_READING:
+      flags = O_RDONLY;
+      break;
+    case IO_MODE_APPENDING:
+      flags = O_APPEND | O_WRONLY;
+      break;
+    case IO_MODE_WRITING:
+      flags = O_TRUNC | O_WRONLY;
+      break;
+    default:
+      ASSERT(false);
+      break;
   }
 
   if (create) {
@@ -556,11 +648,34 @@ static TextStreamInterface *OpenTextFile(const char *filename,
     flags |= O_EXCL;
   }
 
-  int fd = open(filename, flags, S_IRUSR | S_IWUSR);
+  return open(filename, flags, S_IRUSR | S_IWUSR);
+}
+
+static TextStreamInterface *OpenTextFile(const char *filename,
+                                         IOMode mode,
+                                         bool create,
+                                         bool overwrite,
+                                         Tristate format) {
+  int fd = OpenFile(filename, mode, create, overwrite);
   if (fd == -1)
     return NULL;
 
   TextStream *stream = new TextStream(fd, mode, format == TRISTATE_TRUE);
+  if (stream->Init())
+    return stream;
+  stream->Destroy();
+  return NULL;
+}
+
+static BinaryStreamInterface *OpenBinaryFile(const char *filename,
+                                             IOMode mode,
+                                             bool create,
+                                             bool overwrite) {
+  int fd = OpenFile(filename, mode, create, overwrite);
+  if (fd == -1)
+    return NULL;
+
+  BinaryStream *stream = new BinaryStream(fd, mode);
   if (stream->Init())
     return stream;
   stream->Destroy();
@@ -889,11 +1004,13 @@ class File : public FileInterface {
                                                 Tristate format) {
     if (path_.empty())
       return NULL;
-    return linux_system::OpenTextFile(path_.c_str(),
-                                      mode,
-                                      false,
-                                      true,
-                                      format);
+    return linux_system::OpenTextFile(path_.c_str(), mode, false, true, format);
+  }
+
+  virtual BinaryStreamInterface *OpenAsBinaryStream(IOMode mode) {
+    if (path_.empty())
+      return NULL;
+    return linux_system::OpenBinaryFile(path_.c_str(), mode, false, true);
   }
 
  private:
@@ -1264,12 +1381,30 @@ class Folder : public FolderInterface {
       // if not, generate the absolute path
       file = ggadget::BuildFilePath(path_.c_str(), str_path.c_str(), NULL);
     }
-    return linux_system::OpenTextFile(
-        file.c_str(),
-        IO_MODE_WRITING,
-        true,
-        overwrite,
-        unicode ? TRISTATE_TRUE : TRISTATE_FALSE);
+    return linux_system::OpenTextFile(file.c_str(), IO_MODE_WRITING,
+                                      true, overwrite,
+                                      unicode ? TRISTATE_TRUE : TRISTATE_FALSE);
+  }
+
+  virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
+                                                  bool overwrite) {
+    if (!filename || !*filename)
+      return NULL;
+    if (path_.empty())
+      return NULL;
+
+    std::string str_path(ggadget::NormalizeFilePath(filename));
+    std::string file;
+
+    if (ggadget::IsAbsolutePath(str_path.c_str())) {
+      // indicates filename is already the absolute path
+      file = str_path;
+    } else {
+      // if not, generate the absolute path
+      file = ggadget::BuildFilePath(path_.c_str(), str_path.c_str(), NULL);
+    }
+    return linux_system::OpenBinaryFile(file.c_str(), IO_MODE_WRITING,
+                                        true, overwrite);
   }
 
  private:
@@ -1542,10 +1677,7 @@ TextStreamInterface *FileSystem::CreateTextFile(const char *filename,
                                                 bool unicode) {
   if (filename == NULL || !*filename)
     return NULL;
-  return linux_system::OpenTextFile(filename,
-                                    IO_MODE_WRITING,
-                                    true,
-                                    overwrite,
+  return linux_system::OpenTextFile(filename, IO_MODE_WRITING, true, overwrite,
                                     unicode ? TRISTATE_TRUE : TRISTATE_FALSE);
 }
 
@@ -1556,6 +1688,22 @@ TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
   if (filename == NULL || !*filename)
     return NULL;
   return linux_system::OpenTextFile(filename, mode, create, true, format);
+}
+
+BinaryStreamInterface *FileSystem::CreateBinaryFile(const char *filename,
+                                                    bool overwrite) {
+  if (filename == NULL || !*filename)
+    return NULL;
+  return linux_system::OpenBinaryFile(filename, IO_MODE_WRITING,
+                                      true, overwrite);
+}
+
+BinaryStreamInterface *FileSystem::OpenBinaryFile(const char *filename,
+                                                  IOMode mode,
+                                                  bool create) {
+  if (filename == NULL || !*filename)
+    return NULL;
+  return linux_system::OpenBinaryFile(filename, mode, create, true);
 }
 
 TextStreamInterface *

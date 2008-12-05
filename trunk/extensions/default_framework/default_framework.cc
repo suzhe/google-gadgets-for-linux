@@ -195,6 +195,15 @@ class DefaultFileSystem : public FileSystemInterface {
                                             Tristate format) {
     return NULL;
   }
+  virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
+                                                  bool overwrite) {
+    return NULL;
+  }
+  virtual BinaryStreamInterface *OpenBinaryFile(const char *filename,
+                                                IOMode mode,
+                                                bool create) {
+    return NULL;
+  }
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode) {
     return NULL;

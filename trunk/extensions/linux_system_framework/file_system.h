@@ -61,6 +61,11 @@ class FileSystem : public FileSystemInterface {
                                             IOMode mode,
                                             bool create,
                                             Tristate format);
+  virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
+                                                  bool overwrite);
+  virtual BinaryStreamInterface *OpenBinaryFile(const char *filename,
+                                                IOMode mode,
+                                                bool create);
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode);
   virtual std::string GetFileVersion(const char *filename);
