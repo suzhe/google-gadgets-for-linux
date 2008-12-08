@@ -113,7 +113,6 @@ function ResetGlobals() {
 function view_onopen() {
   InitMetadata();
   plugin.onAddCustomMenuItems = AddGlobalMenu;
-  view_onsize();
   InitToolBar();
   NewGadget();
   e_selection.oncontextmenu = AddElementContextMenu;

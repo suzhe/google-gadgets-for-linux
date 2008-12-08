@@ -565,7 +565,8 @@ class BasicElement::Impl : public SmallObject<> {
       }
 
       canvas->PushState();
-      canvas->IntersectRectClipRegion(0, 0, width, height);
+      if (!indirect_draw)
+        canvas->IntersectRectClipRegion(0, 0, width, height);
       canvas->MultiplyOpacity(opacity_);
 
       // Only do draw when it's direct draw or the content has been changed.
