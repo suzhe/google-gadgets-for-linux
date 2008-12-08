@@ -135,7 +135,8 @@ class CairoCanvas::Impl : public SmallObject<> {
     return true;
   }
 
-  cairo_t *CreateContext(double w, double h, double zoom, cairo_format_t fmt) {
+  static cairo_t *CreateContext(double w, double h, double zoom,
+                                cairo_format_t fmt) {
     ASSERT(w > 0);
     ASSERT(h > 0);
     ASSERT(zoom > 0);
@@ -398,8 +399,9 @@ class CairoCanvas::Impl : public SmallObject<> {
         }
 
         // Use conceal_index to represent the first byte that won't be displayed.
-        assert(cluster_it != cluster_index.begin());
-        int conceal_index = *(--cluster_it);
+        int conceal_index = 0;
+        if (cluster_it != cluster_index.begin())
+          conceal_index = *(--cluster_it);
 
         // Get the text that will finally be displayed.
         if (trimming == TRIMMING_CHARACTER) {
@@ -593,8 +595,11 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
     return false;
   }
 
+  cairo_antialias_t pre = cairo_get_antialias(impl_->cr_);
+  cairo_set_antialias(impl_->cr_, CAIRO_ANTIALIAS_NONE);
   cairo_rectangle(impl_->cr_, x, y, w, h);
   cairo_clip(impl_->cr_);
+  cairo_set_antialias(impl_->cr_, pre);
   return true;
 }
 
@@ -613,18 +618,19 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
   double src_zoom = cimg->GetZoom();
-  if (src_zoom == 1.0) {
-    // no scaling needed
-    cairo_set_source_surface(impl_->cr_, s, x, y);
-    cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
-  } else {
-    double inv_zoom = 1.0 / src_zoom;
-    cairo_save(impl_->cr_);
-    cairo_scale(impl_->cr_, inv_zoom, inv_zoom);
-    cairo_set_source_surface(impl_->cr_, s, x * src_zoom, y * src_zoom);
-    cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
-    cairo_restore(impl_->cr_);
-  }
+  double inv_zoom = 1.0 / src_zoom;
+
+  cairo_save(impl_->cr_);
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+  IntersectRectClipRegion(x, y, img->GetWidth(), img->GetHeight());
+#endif
+  cairo_scale(impl_->cr_, inv_zoom, inv_zoom);
+  cairo_set_source_surface(impl_->cr_, s, x * src_zoom, y * src_zoom);
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+  cairo_pattern_set_extend(cairo_get_source(impl_->cr_), CAIRO_EXTEND_PAD);
+#endif
+  cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
+  cairo_restore(impl_->cr_);
 
   return true;
 }
@@ -638,9 +644,9 @@ bool CairoCanvas::DrawRawImage(double x, double y,
   if (!Impl::ConvertFormat(format, &cairo_format))
     return false;
 
-  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)const_cast<char*>(data),
-                                                                 cairo_format,
-                                                                 w, h, stride);
+  cairo_surface_t *surface = cairo_image_surface_create_for_data(
+      (unsigned char*)const_cast<char*>(data), cairo_format, w, h, stride);
+
   if (surface) {
     cairo_set_source_surface(impl_->cr_, surface, x, y);
     cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
@@ -702,20 +708,20 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
     smask = new_mask->GetSurface();
   }
 
-  if (src_zoom == 1.0 && mask_zoom == 1.0) {
-    // no scaling needed
-    cairo_set_source_surface(impl_->cr_, simg, x, y);
-    cairo_mask_surface(impl_->cr_, smask, mx, my);
-  } else {
-    double inv_src_zoom = 1.0 / src_zoom;
-    double combine_zoom = src_zoom / mask_zoom;
-    cairo_save(impl_->cr_);
-    cairo_scale(impl_->cr_, inv_src_zoom, inv_src_zoom);
-    cairo_set_source_surface(impl_->cr_, simg, x * src_zoom, y * src_zoom);
-    cairo_scale(impl_->cr_, combine_zoom, combine_zoom);
-    cairo_mask_surface(impl_->cr_, smask, mx * mask_zoom, my * mask_zoom);
-    cairo_restore(impl_->cr_);
-  }
+  double inv_src_zoom = 1.0 / src_zoom;
+  double combine_zoom = src_zoom / mask_zoom;
+  cairo_save(impl_->cr_);
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+  IntersectRectClipRegion(x, y, img->GetWidth(), img->GetHeight());
+#endif
+  cairo_scale(impl_->cr_, inv_src_zoom, inv_src_zoom);
+  cairo_set_source_surface(impl_->cr_, simg, x * src_zoom, y * src_zoom);
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+  cairo_pattern_set_extend(cairo_get_source(impl_->cr_), CAIRO_EXTEND_PAD);
+#endif
+  cairo_scale(impl_->cr_, combine_zoom, combine_zoom);
+  cairo_mask_surface(impl_->cr_, smask, mx * mask_zoom, my * mask_zoom);
+  cairo_restore(impl_->cr_);
 
   if (new_mask)
     new_mask->Destroy();

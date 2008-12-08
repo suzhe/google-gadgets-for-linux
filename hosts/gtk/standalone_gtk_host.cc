@@ -339,7 +339,7 @@ class StandaloneGtkHost::Impl {
   }
 
   void ShowGadgetDebugConsole(Gadget *gadget) {
-    ASSERT(gadget && gadget == gadget_);
+    ASSERT(gadget && (!gadget_ || gadget == gadget_));
 
     if (!debug_console_) {
       debug_console_ = NewGadgetDebugConsole(gadget);

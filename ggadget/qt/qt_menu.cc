@@ -105,8 +105,6 @@ class QtMenu::Impl {
 
     if (style & MENU_ITEM_FLAG_SEPARATOR)
       action->setSeparator(true);
-    else
-      action->setSeparator(false);
   }
 
   QMenu *GetNativeMenu() { return qt_menu_; }

@@ -206,6 +206,7 @@ class ScriptableView::Impl : public SmallObject<> {
     view_->OnOtherEvent(SimpleEvent(Event::EVENT_OPEN));
     // Fire "onsize" event here. Some gadgets rely on it to initialize
     // view layout.
+    view_->Layout();
     view_->OnOtherEvent(SimpleEvent(Event::EVENT_SIZE));
     return true;
   }

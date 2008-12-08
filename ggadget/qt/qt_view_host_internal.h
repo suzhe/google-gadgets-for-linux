@@ -48,7 +48,7 @@ class QtViewHost::Impl : public QObject {
       flags_ |= QtViewWidget::FLAG_WM_DECORATED;
 
     if (flags.testFlag(QtViewHost::FLAG_COMPOSITE) &&
-        type != ViewHostInterface::VIEW_HOST_MAIN)
+        type != ViewHostInterface::VIEW_HOST_OPTIONS)
       flags_ |= QtViewWidget::FLAG_COMPOSITE;
   }
 
