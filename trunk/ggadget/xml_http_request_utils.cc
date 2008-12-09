@@ -83,19 +83,33 @@ static const char *kForbiddenHeaders[] = {
   "Via"
 };
 
-bool IsForbiddenHeader(const char *header) {
-    if (strncasecmp("Proxy-", header, 6) == 0 ||
-        strncasecmp("Sec-", header, 4) == 0) {
-      return true;
-    }
+static const char *kUniqueHeaders[] = {
+  "Content-Type"
+};
 
-    const char **found = std::lower_bound(
-        kForbiddenHeaders, kForbiddenHeaders + arraysize(kForbiddenHeaders),
-        header, CaseInsensitiveCharPtrComparator());
-    if (found != kForbiddenHeaders + arraysize(kForbiddenHeaders) &&
-        strcasecmp(*found, header) == 0)
-      return true;
-    return false;
+bool IsForbiddenHeader(const char *header) {
+  if (strncasecmp("Proxy-", header, 6) == 0 ||
+      strncasecmp("Sec-", header, 4) == 0) {
+    return true;
+  }
+
+  const char **found = std::lower_bound(
+      kForbiddenHeaders, kForbiddenHeaders + arraysize(kForbiddenHeaders),
+      header, CaseInsensitiveCharPtrComparator());
+  if (found != kForbiddenHeaders + arraysize(kForbiddenHeaders) &&
+      strcasecmp(*found, header) == 0)
+    return true;
+  return false;
+}
+
+bool IsUniqueHeader(const char *header) {
+  const char **found = std::lower_bound(
+      kUniqueHeaders, kUniqueHeaders + arraysize(kUniqueHeaders),
+      header, CaseInsensitiveCharPtrComparator());
+  if (found != kUniqueHeaders + arraysize(kUniqueHeaders) &&
+      strcasecmp(*found, header) == 0)
+    return true;
+  return false;
 }
 
 bool SplitStatusFromResponseHeaders(std::string *response_headers,

@@ -90,7 +90,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         main_loop_(main_loop),
         xml_parser_(xml_parser),
         response_dom_(NULL),
-        request_headers_(NULL),
         default_user_agent_(default_user_agent),
         status_(0),
         state_(UNSENT),
@@ -250,7 +249,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     // Disable the default "Expect: 100-continue" request header.
-    request_headers_ = curl_slist_append(request_headers_, "Expect:");
+    request_headers_map_["Expect"] = "";
 
     async_ = async;
     ChangeState(OPENED);
@@ -279,11 +278,21 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
-    std::string whole_header(header);
-    whole_header += ": ";
-    whole_header += ReformatHttpHeaderValue(value);
-    request_headers_ = curl_slist_append(request_headers_,
-                                         whole_header.c_str());
+    std::string header_str(header);
+    CaseInsensitiveStringMap::iterator it =
+        request_headers_map_.find(header_str);
+    if (it != request_headers_map_.end()) {
+      if (IsUniqueHeader(header)) {
+        it->second = ReformatHttpHeaderValue(value);
+      } else {
+        if (it->second.length())
+          it->second += ", ";
+        it->second += ReformatHttpHeaderValue(value);
+      }
+    } else {
+      request_headers_map_[header_str] = ReformatHttpHeaderValue(value);
+    }
+
     return NO_ERR;
   }
 
@@ -303,6 +312,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     size_t request_offset;
     bool async;
   };
+
+  curl_slist *AssembleRequestHeaders() {
+    CaseInsensitiveStringMap::iterator it = request_headers_map_.begin();
+    CaseInsensitiveStringMap::iterator end = request_headers_map_.end();
+    curl_slist *curl_headers = NULL;
+    for (; it != end; ++it) {
+      std::string whole_header = it->first + ": " + it->second;
+      curl_headers = curl_slist_append(curl_headers, whole_header.c_str());
+    }
+    return curl_headers;
+  }
 
   virtual ExceptionCode Send(const std::string &data) {
     if (state_ != OPENED || send_flag_) {
@@ -333,10 +353,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return ABORT_ERR;
     }
 
-    WorkerContext *context = new WorkerContext(this, curl_, async_,
-                                               request_headers_, data);
-    request_headers_ = NULL;
+    curl_slist *request_headers = AssembleRequestHeaders();
+    request_headers_map_.clear();
 
+    WorkerContext *context = new WorkerContext(this, curl_, async_,
+                                               request_headers, data);
     if (data.size()) {
       DLOG("Send: data length: %zu, method: %d", data.size(), method_);
       if (method_ == HTTP_POST) {
@@ -680,11 +701,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       curl_ = NULL;
     }
 
-    if (request_headers_) {
-      curl_slist_free_all(request_headers_);
-      request_headers_ = NULL;
-    }
-
+    request_headers_map_.clear();
     bool save_send_flag = send_flag_;
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
@@ -970,7 +987,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
   DOMDocumentInterface *response_dom_;
-  curl_slist *request_headers_;
+  CaseInsensitiveStringMap request_headers_map_;
   CaseInsensitiveStringMap response_headers_map_;
   Signal0<void> onreadystatechange_signal_;
   Signal1<size_t, const std::string &> ondatareceived_signal_;
