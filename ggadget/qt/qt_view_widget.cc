@@ -21,6 +21,7 @@
 #include <QtGui/QMouseEvent>
 #include <ggadget/graphics_interface.h>
 #include <ggadget/gadget.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/qt/qt_canvas.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/qt/qt_menu.h>
@@ -42,6 +43,7 @@ static const double kDragThreshold = 3;
 QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     : view_(view),
       drag_files_(NULL),
+      drag_urls_(NULL),
       composite_(flags.testFlag(QtViewWidget::FLAG_COMPOSITE)),
       movable_(flags.testFlag(QtViewWidget::FLAG_MOVABLE)),
       enable_input_mask_(false),
@@ -71,6 +73,7 @@ QtViewWidget::~QtViewWidget() {
   }
   if (offscreen_pixmap_) delete offscreen_pixmap_;
   if (drag_files_) delete [] drag_files_;
+  if (drag_urls_) delete [] drag_urls_;
 }
 
 void QtViewWidget::paintEvent(QPaintEvent *event) {
@@ -336,25 +339,56 @@ void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
 void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
   if (!view_) return;
   DLOG("drag enter");
-  if (event->mimeData()->hasUrls()) {
-    drag_urls_.clear();
-    if (drag_files_)
-      delete [] drag_files_;
 
+  bool accept = false;
+  delete [] drag_files_;
+  delete [] drag_urls_;
+  drag_files_ = drag_urls_ = NULL;
+  drag_text_ = std::string();
+  drag_files_and_urls_.clear();
+
+  if (event->mimeData()->hasText()) {
+    drag_text_ = event->mimeData()->text().toUtf8().data();
+    accept = true;
+  }
+  if (event->mimeData()->hasUrls()) {
     QList<QUrl> urls = event->mimeData()->urls();
     drag_files_ = new const char *[urls.size() + 1];
-    if (!drag_files_) return;
-
-    for (int i = 0; i < urls.size(); i++) {
-      std::string url = urls[i].toString().toUtf8().data();
-      if (url.substr(0, 7) == "file://")
-        url = url.substr(7);
-      drag_urls_.push_back(url);
-      drag_files_[i] = drag_urls_[i].c_str();
+    drag_urls_ = new const char *[urls.size() + 1];
+    if (!drag_files_ || !drag_urls_) {
+      delete [] drag_files_;
+      delete [] drag_urls_;
+      drag_files_ = drag_urls_ = NULL;
+      return;
     }
-    drag_files_[urls.size()] = NULL;
-    event->acceptProposedAction();
+
+    size_t files_count = 0;
+    size_t urls_count = 0;
+    for (int i = 0; i < urls.size(); i++) {
+      std::string url = urls[i].toEncoded().data();
+      if (url.length()) {
+        if (IsValidFileURL(url.c_str())) {
+          std::string path = GetPathFromFileURL(url.c_str());
+          if (path.length()) {
+            drag_files_and_urls_.push_back(path);
+            drag_files_[files_count++] =
+                drag_files_and_urls_[drag_files_and_urls_.size() - 1].c_str();
+          }
+        } else if (IsValidURL(url.c_str())) {
+          drag_files_and_urls_.push_back(url);
+          drag_urls_[urls_count++] =
+              drag_files_and_urls_[drag_files_and_urls_.size() - 1].c_str();
+        }
+      }
+    }
+
+    drag_files_[files_count] = NULL;
+    drag_urls_[urls_count] = NULL;
+    accept = accept || files_count || urls_count;
   }
+
+  if (accept)
+    event->acceptProposedAction();
 }
 
 void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
@@ -362,6 +396,8 @@ void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
   DLOG("drag leave");
   DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0);
   drag_event.SetDragFiles(drag_files_);
+  drag_event.SetDragUrls(drag_urls_);
+  drag_event.SetDragText(drag_text_.length() ? drag_text_.c_str() : NULL);
   view_->OnDragEvent(drag_event);
 }
 
@@ -370,6 +406,8 @@ void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
   DragEvent drag_event(Event::EVENT_DRAG_MOTION,
                        event->pos().x(), event->pos().y());
   drag_event.SetDragFiles(drag_files_);
+  drag_event.SetDragUrls(drag_urls_);
+  drag_event.SetDragText(drag_text_.length() ? drag_text_.c_str() : NULL);
   if (view_->OnDragEvent(drag_event) != EVENT_RESULT_UNHANDLED)
     event->acceptProposedAction();
   else
@@ -382,6 +420,8 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   DragEvent drag_event(Event::EVENT_DRAG_DROP,
                        event->pos().x(), event->pos().y());
   drag_event.SetDragFiles(drag_files_);
+  drag_event.SetDragUrls(drag_urls_);
+  drag_event.SetDragText(drag_text_.length() ? drag_text_.c_str() : NULL);
   if (view_->OnDragEvent(drag_event) == EVENT_RESULT_UNHANDLED) {
     event->ignore();
   }

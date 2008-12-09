@@ -68,7 +68,9 @@ class QtViewWidget : public QWidget {
   void SetInputMask(QPixmap *pixmap);
   ViewInterface *view_;
   const char **drag_files_;
-  std::vector<std::string> drag_urls_;
+  const char **drag_urls_;
+  std::string drag_text_;
+  std::vector<std::string> drag_files_and_urls_;
   bool composite_;
   bool movable_;
   bool enable_input_mask_;
