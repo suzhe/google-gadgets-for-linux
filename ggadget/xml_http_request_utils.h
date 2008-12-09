@@ -24,14 +24,15 @@ namespace ggadget {
 bool IsValidHTTPHeaderValue(const char *s);
 
 bool IsValidHTTPToken(const char *s);
-/*
- * Checks if header is forbidden
- */
+/** Checks if header is forbidden. */
 bool IsForbiddenHeader(const char *header);
 
-/*
- * Splits status information from http response @response. status will be removed from
- * @response and stored in @status_text.
+/** Checks if a header should be unique. */
+bool IsUniqueHeader(const char *header);
+
+/**
+ * Splits status information from http response @response.
+ * Status will be removed from @response and stored in @status_text.
  *
  * If @response is already splitted, nothing is done and this function
  * returns false.
@@ -39,7 +40,8 @@ bool IsForbiddenHeader(const char *header);
 bool SplitStatusFromResponseHeaders(std::string *response,
                                     std::string *status_text);
 
-/* Parse response headers and setup @response_headers_map,
+/**
+ * Parse response headers and setup @response_headers_map,
  * @response_content_type and @response_encoding.
  */
 void ParseResponseHeaders(const std::string &response_headers,
@@ -47,26 +49,17 @@ void ParseResponseHeaders(const std::string &response_headers,
                           std::string *response_content_type,
                           std::string *response_encoding);
 
-/*
- * Makes sure backoff options is created
- */
+/** Makes sure backoff options is created. */
 bool EnsureXHRBackoffOptions(uint64_t now);
 
-/*
- * Saves backoff data into options
- */
+/** Saves backoff data into options. */
 void SaveXHRBackoffData(uint64_t now);
 
-/*
- * Checks if @request is allowed by backoff policy
- */
+/** Checks if @request is allowed by backoff policy. */
 bool IsXHRBackoffRequestOK(uint64_t now, const char *request);
 
-/*
- * Reports if the request is failed of successful to backoff
- */
-bool XHRBackoffReportResult(uint64_t now,
-                            const char *request,
+/** Reports if the request is failed of successful to backoff. */
+bool XHRBackoffReportResult(uint64_t now, const char *request,
                             unsigned short status);
 } // end of namespace ggadget
 

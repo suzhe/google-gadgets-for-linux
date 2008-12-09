@@ -260,7 +260,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
-    request_header_->setValue(header, value);
+    if (IsUniqueHeader(header))
+      request_header_->setValue(header, value);
+    else
+      request_header_->addValue(header, value);
     return NO_ERR;
   }
 
