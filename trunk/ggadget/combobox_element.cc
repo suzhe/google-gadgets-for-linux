@@ -33,6 +33,7 @@
 #include "graphics_interface.h"
 #include "element_factory.h"
 #include "small_object.h"
+#include "scrollbar_element.h"
 
 namespace ggadget {
 
@@ -312,6 +313,10 @@ class ComboBoxElement::Impl : public SmallObject<> {
     }
   }
 
+  ScrollBarElement *GetScrollBar() {
+    return droplist_->GetScrollBar();
+  }
+
   DEFINE_DELEGATE_GETTER(GetListBox, src->impl_->droplist_,
                          ComboBoxElement, ListBoxElement);
 
@@ -344,6 +349,9 @@ ComboBoxElement::ComboBoxElement(View *view, const char *name)
 
 void ComboBoxElement::DoClassRegister() {
   BasicElement::DoClassRegister();
+  RegisterProperty("scrollbar",
+                   NewSlot(&Impl::GetScrollBar, &ComboBoxElement::impl_),
+                   NULL);
   RegisterProperty("background",
                    NewSlot(&ComboBoxElement::GetBackground),
                    NewSlot(&ComboBoxElement::SetBackground));
