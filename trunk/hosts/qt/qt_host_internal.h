@@ -28,13 +28,13 @@ class QtHost::Impl : public QObject {
   Q_OBJECT
  public:
   struct GadgetInfo {
-    GadgetInfo(Gadget *g) : gadget_(g), debug_console_(NULL) {}
+    GadgetInfo() : gadget(NULL), debug_console(NULL) {}
     ~GadgetInfo() {
-      if (debug_console_) delete debug_console_;
-      if (gadget_) delete gadget_;
+      delete debug_console;
+      delete gadget;
     }
-    Gadget *gadget_;
-    QWidget* debug_console_;
+    Gadget *gadget;
+    QWidget* debug_console;
   };
   Impl(QtHost *host, bool composite,
        int view_debug_mode,
@@ -60,9 +60,8 @@ class QtHost::Impl : public QObject {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       DLOG("Close Gadget: %s",
-           it->second->gadget_->GetManifestInfo(kManifestName).c_str());
-      it->second->gadget_->CloseMainView();  // TODO: Save window state. A little hacky!
-      delete it->second;
+           it->second.gadget->GetManifestInfo(kManifestName).c_str());
+      it->second.gadget->CloseMainView();  // TODO: Save window state. A little hacky!
     }
   }
 
@@ -141,31 +140,34 @@ class QtHost::Impl : public QObject {
                      int instance_id, bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
-      return gadgets_[instance_id]->gadget_;
+      return gadgets_[instance_id].gadget;
     }
+
+    // Create GadgetInfo here so when during Gadget creation, if DebugConsole
+    // shall be created, this information will be ready.
+    GadgetInfo *info = &gadgets_[instance_id];
 
     Gadget::DebugConsoleConfig dcc = show_debug_console ?
         Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
 
     Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
                                 global_permissions_, dcc);
+    info->gadget = gadget;
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
-      delete gadget;
+      gadgets_.erase(instance_id);
       return NULL;
     }
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));
 
-    GadgetInfo *info = new GadgetInfo(gadget);
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
-      delete info;
+      gadgets_.erase(instance_id);
       return NULL;
     }
-    gadgets_[instance_id] = info;
     return gadget;
   }
 
@@ -233,8 +235,7 @@ class QtHost::Impl : public QObject {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
     if (it != gadgets_.end()) {
       DLOG("Close Gadget: %s",
-           it->second->gadget_->GetManifestInfo(kManifestName).c_str());
-      delete it->second;
+           it->second.gadget->GetManifestInfo(kManifestName).c_str());
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
@@ -324,14 +325,14 @@ class QtHost::Impl : public QObject {
   void ShowGadgetDebugConsole(Gadget *gadget) {
     if (!gadget) return;
     GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
-    if (it == gadgets_.end() || !it->second) return;
-    GadgetInfo *info = it->second;
-    if (info->debug_console_) {
+    if (it == gadgets_.end()) return;
+    GadgetInfo *info = &(it->second);
+    if (info->debug_console) {
       DLOG("Gadget has already opened a debug console: %p",
-           info->debug_console_);
+           info->debug_console);
       return;
     }
-    NewGadgetDebugConsole(gadget, &info->debug_console_);
+    NewGadgetDebugConsole(gadget, &info->debug_console);
   }
 
   GadgetManagerInterface *gadget_manager_;
@@ -345,7 +346,7 @@ class QtHost::Impl : public QObject {
   DecoratedViewHost *expanded_popout_;
   DecoratedViewHost *expanded_original_;
 
-  typedef std::map<int, GadgetInfo*> GadgetsMap;
+  typedef std::map<int, GadgetInfo> GadgetsMap;
   GadgetsMap gadgets_;
 
   QMenu menu_;
