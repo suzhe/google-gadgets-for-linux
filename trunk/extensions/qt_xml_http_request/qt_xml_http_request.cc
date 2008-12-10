@@ -307,13 +307,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         http_->request(*request_header_);
       }
     } else {
-      // Do backoff checking to avoid DDOS attack to the server.
-      if (!IsXHRBackoffRequestOK(main_loop_->GetCurrentTime(),
-                                 host_.c_str())) {
-        Abort();
-        return NETWORK_ERR;
-      }
-      ASSERT(0);
+      // QtXmlHttpRequest doesn't support Sync mode XHR.
       return NETWORK_ERR;
     }
     return NO_ERR;
