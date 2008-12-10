@@ -26,9 +26,7 @@
 #include <QtNetwork/QHttp>
 #include <QtNetwork/QHttpHeader>
 
-#define COOKIE_SUPPORT 0     // TODO: Cookie support is not ready
-
-#if COOKIE_SUPPORT
+#if QT_VERSION >= 0x040400
 #include <QtNetwork/QNetworkCookie>
 #endif
 
@@ -62,7 +60,7 @@ static const Variant kSendDefaultArgs[] = { Variant("") };
 
 class Session {
  public:
-#if COOKIE_SUPPORT
+#if QT_VERSION >= 0x040400
   void RestoreCookie(QHttpRequestHeader *header) {
     QString str;
     for (int i = 0; i < cookies_.size(); i++) {
@@ -200,18 +198,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     url_ = url;
     host_ = qurl.host().toStdString();
+    delete http_;
     http_ = new QHttp(qurl.host(), mode);
     http_->setUser(user_, password_);
+    delete handler_;
     handler_ = new HttpHandler(this, http_);
 
     std::string path = "/";
     size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
     if (sep != std::string::npos) path = url_.substr(sep);
 
-    request_header_ = new QHttpRequestHeader(method_, path.c_str());
-    request_header_->setValue("Host", host_.c_str());
-    if (!default_user_agent_.isEmpty())
-      request_header_->setValue("User-Agent", default_user_agent_);
+    if (!request_header_) {
+      request_header_ = new QHttpRequestHeader(method_, path.c_str());
+      request_header_->setValue("Host", host_.c_str());
+      if (!default_user_agent_.isEmpty())
+        request_header_->setValue("User-Agent", default_user_agent_);
+    }
     DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
     return NO_ERR;
   }
@@ -220,6 +222,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                              const char *user, const char *password) {
     DLOG("Open %s with %s", url, method);
     Abort();
+    redirected_times_ = 0;
 
     if (strcasecmp(method, "HEAD") != 0 && strcasecmp(method, "GET") != 0
         && strcasecmp(method, "POST") != 0) {
@@ -357,18 +360,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void FreeResource() {
-    if (handler_) {
-      delete handler_;
-      handler_ = NULL;
-    }
-    if (request_header_) {
-      delete request_header_;
-      request_header_ = NULL;
-    }
-    if (http_) {
-      delete http_;
-      http_ = NULL;
-    }
+    delete handler_;
+    handler_ = NULL;
+    delete request_header_;
+    request_header_ = NULL;
+    delete send_data_;
+    send_data_ = NULL;
+    delete http_;
+    http_ = NULL;
+
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();
@@ -378,11 +378,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (response_dom_) {
       response_dom_->Unref();
       response_dom_ = NULL;
-    }
-
-    if (send_data_) {
-      delete send_data_;
-      send_data_ = NULL;
     }
   }
 
@@ -648,36 +643,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           << header.toString()  << "\n";
 #endif
 
-      if (session_)
-        session_->SaveCookie(header);
-
       if (ChangeState(HEADERS_RECEIVED))
         ChangeState(LOADING);
     }
+    if (session_)
+      session_->SaveCookie(header);
   }
 
   void OnRequestFinished(int id, bool error) {
     if ((status_ >= 300 && status_ <= 303) || status_ == 307) {
-      FreeResource();
-      if (redirected_times_ == kMaxRedirectTimes) {
-        LOG("Too much redirect, abort this request");
-        Done(false, false);
-        return;
-      }
-      if (((status_ == 301 || status_ == 302) && method_ == "POST") ||
-          status_ == 303) {
-        method_ = "GET";
-      }
-      send_flag_ = false;
-      if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
-        // TODO: Why do the state changes?
-        // ChangeState(HEADERS_RECEIVED);
-        // ChangeState(LOADING);
-        Done(false, false);
-      } else {
-        redirected_times_++;
-        Send(std::string());
-      }
+      Redirect();
     } else {
       if (error)
         LOG("Error %s", http_->errorString().toStdString().c_str());
@@ -690,6 +665,34 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
            response_body_.length(),
            array.length());
       Done(true, !error);
+    }
+  }
+
+  // When redirect happens, request_header_, send_data_ will be reused.
+  void Redirect() {
+    if (redirected_times_ == kMaxRedirectTimes) {
+      LOG("Too much redirect, abort this request");
+      FreeResource();
+      Done(false, false);
+      return;
+    }
+    DLOG("Redirected to %s", redirected_url_.c_str());
+    if (((status_ == 301 || status_ == 302) && method_ == "POST") ||
+        status_ == 303) {
+      method_ = "GET";
+    }
+    if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
+      FreeResource();
+      Done(false, false);
+    } else {
+      redirected_times_++;
+      if (session_)
+        session_->RestoreCookie(request_header_);
+
+      if (send_data_)
+        http_->request(*request_header_, *send_data_);
+      else
+        http_->request(*request_header_);
     }
   }
 
