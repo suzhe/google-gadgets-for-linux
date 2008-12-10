@@ -223,7 +223,8 @@ class View::Impl : public SmallObject<> {
       need_redraw_(true),
       theme_changed_(false),
       resize_border_specified_(false),
-      mouse_over_(false) {
+      mouse_over_(false),
+      view_focused_(false) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -964,6 +965,7 @@ class View::Impl : public SmallObject<> {
 #endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
+        view_focused_ = true;
         // Restore focus to the original focused element if it is still there.
         if (focused_element_.Get() &&
             (!focused_element_.Get()->IsReallyEnabled() ||
@@ -973,6 +975,7 @@ class View::Impl : public SmallObject<> {
         }
         break;
       case Event::EVENT_FOCUS_OUT:
+        view_focused_ = false;
         if (focused_element_.Get()) {
           focused_element_.Get()->OnOtherEvent(SimpleEvent(
               Event::EVENT_FOCUS_OUT));
@@ -1422,7 +1425,8 @@ class View::Impl : public SmallObject<> {
               Event::EVENT_FOCUS_OUT)) != EVENT_RESULT_CANCELED) {
         ElementHolder old_focused_element(focused_element_.Get());
         focused_element_.Reset(element_holder.Get());
-        if (focused_element_.Get()) {
+        // Only fire onfocusin event when the view is focused.
+        if (view_focused_ && focused_element_.Get()) {
           // The enabled or visible state may changed, so check again.
           if (!focused_element_.Get()->IsReallyEnabled() ||
               focused_element_.Get()->OnOtherEvent(SimpleEvent(
@@ -1687,6 +1691,7 @@ class View::Impl : public SmallObject<> {
   bool theme_changed_           : 1;
   bool resize_border_specified_ : 1;
   bool mouse_over_              : 1;
+  bool view_focused_            : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;

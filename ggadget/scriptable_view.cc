@@ -191,6 +191,9 @@ class ScriptableView::Impl : public SmallObject<> {
       }
     }
 
+    // Call layout here to make sure all elements' initial layout is correct
+    // prior to running any script code.
+    view_->Layout();
     view_->EnableEvents(true);
 
     if (script_context_ && !HandleAllScriptElements(view_element, filename)) {
@@ -206,7 +209,6 @@ class ScriptableView::Impl : public SmallObject<> {
     view_->OnOtherEvent(SimpleEvent(Event::EVENT_OPEN));
     // Fire "onsize" event here. Some gadgets rely on it to initialize
     // view layout.
-    view_->Layout();
     view_->OnOtherEvent(SimpleEvent(Event::EVENT_SIZE));
     return true;
   }
