@@ -216,6 +216,17 @@ TEST(Variant, TestString) {
   ASSERT_STREQ("", str.c_str());
   ASSERT_TRUE(v6.ConvertToString(&str));
   ASSERT_STREQ(VariantValue<const char *>()(v6), str.c_str());
+
+  Variant v9(" 123.4  ");
+  ASSERT_TRUE(v9.ConvertToDouble(&d));
+  ASSERT_EQ(123.4, d);
+
+  Variant v10(" 1234  ");
+  ASSERT_TRUE(v10.ConvertToInt(&i));
+  ASSERT_EQ(1234, i);
+
+  Variant v11(" 1234 abc");
+  ASSERT_FALSE(v11.ConvertToInt(&i));
 }
 
 TEST(Variant, TestJSON) {
