@@ -533,35 +533,103 @@ std::string GetAbsoluteURL(const char *base_url, const char *url) {
   return result;
 }
 
-std::string EncodeJavaScriptString(const UTF16Char *source) {
+std::string EncodeJavaScriptString(const UTF16Char *source, char quote) {
   ASSERT(source);
+  ASSERT(quote == '"' || quote == '\'');
 
-  std::string dest;
+  std::string dest(1, quote);
   for (const UTF16Char *p = source; *p; p++) {
-    switch (*p) {
-      // The following special chars are not so complete, but also works.
-      case '"': dest += "\\\""; break;
-      case '\\': dest += "\\\\"; break;
-      case '\n': dest += "\\n"; break;
-      case '\r': dest += "\\r"; break;
-      default:
-        if (*p >= 0x7f || *p < 0x20) {
-          char buf[10];
-          snprintf(buf, sizeof(buf), "\\u%04X", *p);
-          dest += buf;
-        } else {
-          dest += static_cast<char>(*p);
-        }
-        break;
+    if (*p == quote) {
+      dest += "\\";
+      dest += quote;
+    } else {
+      switch (*p) {
+        // The following special chars are not so complete, but also works.
+        case '\\': dest += "\\\\"; break;
+        case '\b': dest += "\\b"; break;
+        case '\f': dest += "\\f"; break;
+        case '\n': dest += "\\n"; break;
+        case '\r': dest += "\\r"; break;
+        case '\t': dest += "\\t"; break;
+        case '\v': dest += "\\v"; break;
+        default:
+          if (*p >= 0x7f || *p < 0x20) {
+            char buf[10];
+            snprintf(buf, sizeof(buf), "\\u%04X", *p);
+            dest += buf;
+          } else {
+            dest += static_cast<char>(*p);
+          }
+          break;
+      }
     }
   }
+  dest += quote;
   return dest;
 }
 
-std::string EncodeJavaScriptString(const std::string &source) {
+bool DecodeJavaScriptString(const char *source, UTF16String *dest) {
+  ASSERT(dest);
+  dest->clear();
+  if (!source || !*source)
+    return false;
+  char quote = *source++;
+  if (quote != '"' && quote != '\'')
+    return false;
+
+  while (true) {
+    char c = *source++;
+    if (c == quote)
+      break;
+    if (c == '\0' || c == '\n' || c == '\r') {
+      // Unterminated string literal.
+      return false;
+    }
+    if (c == '\\') {
+      c = *source++;
+      switch (c) {
+        case 'b': *dest += '\b'; break;
+        case 'f': *dest += '\f'; break;
+        case 'n': *dest += '\n'; break;
+        case 'r': *dest += '\r'; break;
+        case 't': *dest += '\t'; break;
+        case 'v': *dest += '\v'; break;
+        case 'u': {
+          UTF16Char unichar = 0;
+          for (int i = 0; i < 4; i++) {
+            int ch = *source++;
+            if (ch >= '0' && ch <= '9') ch -= '0';
+            else if (ch >= 'A' && ch <= 'F') ch = ch - 'A' + 10;
+            else if (ch >= 'a' && ch <= 'f') ch = ch - 'a' + 10;
+            else return false;
+            unichar = static_cast<UTF16Char>((unichar << 4) + ch);
+          }
+          *dest += unichar;
+          break;
+        }
+        case '\0': return false;
+        default: *dest += c; break;
+      }
+    } else {
+      *dest += c;
+    }
+  }
+  return true;
+}
+
+std::string EncodeJavaScriptString(const std::string &source, char quote) {
   UTF16String utf16;
   ConvertStringUTF8ToUTF16(source, &utf16);
-  return EncodeJavaScriptString(utf16.c_str());
+  return EncodeJavaScriptString(utf16.c_str(), quote);
+}
+
+bool DecodeJavaScriptString(const char *source, std::string *dest) {
+  ASSERT(dest);
+  dest->clear();
+  UTF16String utf16;
+  if (!DecodeJavaScriptString(source, &utf16))
+    return false;
+  return ConvertStringUTF16ToUTF8(utf16, dest) == utf16.size();
 }
 
 bool SplitString(const std::string &source, const char *separator,

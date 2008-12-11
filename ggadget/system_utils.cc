@@ -240,7 +240,8 @@ bool WriteFileContents(const char *path, const std::string &content) {
   }
 
   bool result = true;
-  if (fwrite(content.c_str(), content.size(), 1, out_fp) != 1) {
+  if (!content.empty() &&
+      fwrite(content.c_str(), content.size(), 1, out_fp) != 1) {
     result = false;
     LOG("Error when writing to file %s: %s", path, strerror(errno));
   }

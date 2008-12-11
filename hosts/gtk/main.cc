@@ -49,8 +49,6 @@
 
 using ggadget::Variant;
 
-static ggadget::gtk::MainLoop g_main_loop;
-
 static const char kOptionsName[] = "gtk-host-options";
 static const char kRunOnceSocketName[] = "ggl-host-socket";
 
@@ -394,8 +392,9 @@ int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
-  // Set global main loop
-  ggadget::SetGlobalMainLoop(&g_main_loop);
+  // Set global main loop. Not using a global variable to ensure the main loop
+  // object lives longer than any other objects, including the static objects.
+  ggadget::SetGlobalMainLoop(new ggadget::gtk::MainLoop());
 
   std::string profile_dir =
       ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),

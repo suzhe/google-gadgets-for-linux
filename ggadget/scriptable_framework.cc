@@ -461,9 +461,9 @@ class ScriptableProcess::Impl : public SmallObject<> {
     std::string path = proc_info->GetExecutablePath();
     UTF16String utf16_path;
     ConvertStringUTF8ToUTF16(path.c_str(), path.size(), &utf16_path);
-    return StringPrintf("{\"processId\":%d,\"executablePath\":\"%s\"}",
-                        proc_info->GetProcessId(),
-                        EncodeJavaScriptString(utf16_path.c_str()).c_str());
+    return StringPrintf(
+        "{\"processId\":%d,\"executablePath\":%s}", proc_info->GetProcessId(),
+        EncodeJavaScriptString(utf16_path.c_str(), '"').c_str());
   }
 
   ScriptableArray *EnumerateProcesses() {

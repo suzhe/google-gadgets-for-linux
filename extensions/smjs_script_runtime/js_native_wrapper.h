@@ -27,6 +27,10 @@ namespace smjs {
 
 /**
  * Wraps a JavaScript object into a native @c ScriptableInterface.
+ *
+ * In case that the native side needs a Variant value and JS gives a function,
+ * the function will be wrapped into JSNativeWrapper instead of being converted
+ * to a native Slot, to ease memory management.
  */
 class JSNativeWrapper : public ScriptableHelperDefault {
  public:
@@ -62,6 +66,7 @@ class JSNativeWrapper : public ScriptableHelperDefault {
   JSContext *js_context_;
   JSObject *js_object_;
   std::string name_;
+  Slot *call_self_slot_;
 };
 
 } // namespace smjs

@@ -45,6 +45,12 @@ class BrowserElement : public BasicElement {
   /** Sets the content displayed in this element. */
   void SetContent(const std::string &content);
 
+  /**
+   * Sets the "external" object that can be accessed from browser's global
+   * window scope.
+   */
+  void SetExternalObject(ScriptableInterface *object);
+
  public:
   static BasicElement *CreateInstance(View *view, const char *name);
 

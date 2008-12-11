@@ -216,6 +216,7 @@ class AutoLocalRootScope {
 };
 
 JSScriptContext *GetJSScriptContext(JSContext *context);
+void DebugRoot(JSContext *cx);
 
 } // namespace smjs
 } // namespace ggadget

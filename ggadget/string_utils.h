@@ -239,23 +239,30 @@ std::string GetUsernamePasswordFromURL(const char *url);
 std::string GetAbsoluteURL(const char *base_url, const char *url);
 
 /**
- * Encode a string into a JavaScript string literal (without the begining and
- * ending quotes), by escaping special characters in the source string.
+ * Encode a string into a JavaScript string literal enclosed with the specified
+ * quote char, by escaping special characters in the source string.
  */
-std::string EncodeJavaScriptString(const UTF16Char *source);
-std::string EncodeJavaScriptString(const std::string &source);
+std::string EncodeJavaScriptString(const UTF16Char *source, char quote);
+std::string EncodeJavaScriptString(const std::string &source, char quote);
+
+/**
+ * Decode a JavaScript string literal (with the beginning and ending quotes).
+ * Returns false if the source is invalid JavaScript string literal.
+ */
+bool DecodeJavaScriptString(const char *source, UTF16String *dest);
+bool DecodeJavaScriptString(const char *source, std::string *dest);
 
 /**
  * Splits a string into two parts. For convenience, the impl allows
  * @a result_left or @a result_right is the same object as @a source.
  *
  * @param source the source string to split.
- * @param separator the source string will be splitted at the first occurance
+ * @param separator the source string will be split at the first occurrence
  *     of the separator.
  * @param[out] result_left the part before the separator. If separator is not
  *     found, result_left will be set to source. Can be @c NULL if the caller
  *     doesn't need it.
- * @param[out] result_right the part after the separator. If seperator is not
+ * @param[out] result_right the part after the separator. If separator is not
  *     found, result_right will be cleared. Can be @c NULL if the caller doesn't
  *     need it.
  * @return @c true if separator found.

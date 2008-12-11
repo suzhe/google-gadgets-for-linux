@@ -32,11 +32,6 @@
 // #define DEBUG_FORCE_GC
 #endif
 
-#ifdef DEBUG_JS_WRAPPER_MEMORY
-#include <jscntxt.h>
-#include <jsdhash.h>
-#endif
-
 namespace ggadget {
 namespace smjs {
 
@@ -79,36 +74,10 @@ NativeJSWrapper::~NativeJSWrapper() {
 #endif
     DetachJS(false);
   }
-  JS_SetPrivate(js_context_, js_object_, NULL);
-}
 
-#ifdef DEBUG_JS_ROOTS
-// This struct is private since JS170. Must defined same as JS structure.
-struct MyJSGCRootHashEntry {
-  JSDHashEntryHdr hdr;
-  void *root;
-  const char *name;
-};
-
-JS_STATIC_DLL_CALLBACK(JSDHashOperator) PrintRoot(JSDHashTable *table,
-                                                  JSDHashEntryHdr *hdr,
-                                                  uint32 number, void *arg) {
-  MyJSGCRootHashEntry *rhe = reinterpret_cast<MyJSGCRootHashEntry *>(hdr);
-  jsval *rp = reinterpret_cast<jsval *>(rhe->root);
-  DLOG("%d: name=%s address=%p value=%p",
-       number, rhe->name, rp, JSVAL_TO_OBJECT(*rp));
-  return JS_DHASH_NEXT;
+  if (js_context_)
+    JS_SetPrivate(js_context_, js_object_, NULL);
 }
-
-static void DebugRoot(JSContext *cx) {
-  DLOG("============== Roots ================");
-  JSRuntime *rt = JS_GetRuntime(cx);
-  JS_DHashTableEnumerate(&rt->gcRootsHash, PrintRoot, cx);
-  DLOG("=========== End of Roots ============");
-}
-#else
-#define DebugRoot(cx)
-#endif
 
 void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   ASSERT(scriptable && !scriptable_);
@@ -187,6 +156,11 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 }
 
 JSBool NativeJSWrapper::CheckNotDeleted() {
+  if (!js_context_) {
+    LOG("The context of a JS wrapped native object has already been "
+        "destroyed.");
+    return JS_FALSE;
+  }
   if (!scriptable_) {
     RaiseException(js_context_, "Native object has been deleted");
     return JS_FALSE;
@@ -339,8 +313,10 @@ void NativeJSWrapper::DetachJS(bool caused_by_native) {
   scriptable_->Unref(caused_by_native);
   scriptable_ = NULL;
 
-  JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
-  DebugRoot(js_context_);
+  if (js_context_) {
+    JS_RemoveRootRT(JS_GetRuntime(js_context_), &js_object_);
+    DebugRoot(js_context_);
+  }
 }
 
 void NativeJSWrapper::OnContextDestroy() {
@@ -350,6 +326,8 @@ void NativeJSWrapper::OnContextDestroy() {
     (*it)->Finalize();
     js_function_slots_.erase(it);
   }
+  JS_SetPrivate(js_context_, js_object_, NULL);
+  js_context_ = NULL;
 }
 
 void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
@@ -577,22 +555,26 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   if (!local_root_scope.good())
     return JS_FALSE;
 
-  const char *name = JS_GetStringBytes(idstr);
-  ResultVariant return_value = scriptable_->GetProperty(name);
+  const jschar *utf16_name = JS_GetStringChars(idstr);
+  size_t name_length = JS_GetStringLength(idstr);
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
+  ResultVariant return_value = scriptable_->GetProperty(name.c_str());
   if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   if (return_value.v().type() == Variant::TYPE_VOID) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
-    JS_DeleteProperty(js_context_, js_object_, name);
+    jsval r;
+    JS_DeleteUCProperty2(js_context_, js_object_, utf16_name, name_length, &r);
     return GetPropertyDefault(id, vp);
   }
 
   if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
     RaiseException(js_context_,
                    "Failed to convert native property %s value(%s) to jsval",
-                   name, return_value.v().Print().c_str());
+                   name.c_str(), return_value.v().Print().c_str());
     return JS_FALSE;
   }
   return JS_TRUE;
@@ -612,13 +594,17 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!local_root_scope.good())
     return JS_FALSE;
 
-  const char *name = JS_GetStringBytes(idstr);
+  const jschar *utf16_name = JS_GetStringChars(idstr);
+  size_t name_length = JS_GetStringLength(idstr);
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
   Variant prototype;
-  if (scriptable_->GetPropertyInfo(name, &prototype) ==
+  if (scriptable_->GetPropertyInfo(name.c_str(), &prototype) ==
       ScriptableInterface::PROPERTY_NOT_EXIST) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
-    JS_DeleteProperty(js_context_, js_object_, name);
+    jsval r;
+    JS_DeleteUCProperty2(js_context_, js_object_, utf16_name, name_length, &r);
     return SetPropertyDefault(id, js_val);
   }
   if (!CheckException(js_context_, scriptable_))
@@ -628,14 +614,14 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     RaiseException(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
-                   name, PrintJSValue(js_context_, js_val).c_str());
+                   name.c_str(), PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
-  if (!scriptable_->SetProperty(name, value)) {
+  if (!scriptable_->SetProperty(name.c_str(), value)) {
     RaiseException(js_context_,
                    "Failed to set native property %s (may be readonly).",
-                   name);
+                   name.c_str());
     FreeNativeValue(value);
     return JS_FALSE;
   }
@@ -715,7 +701,11 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   JSString *idstr = JS_ValueToString(js_context_, id);
   if (!idstr)
     return JS_FALSE;
-  const char *name = JS_GetStringBytes(idstr);
+
+  const jschar *utf16_name = JS_GetStringChars(idstr);
+  size_t name_length = JS_GetStringLength(idstr);
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
 
   // The JS program defines a new symbol. This has higher priority than the
   // properties of the global scriptable object.
@@ -724,22 +714,22 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
 
   Variant prototype;
   ScriptableInterface::PropertyType type =
-      scriptable_->GetPropertyInfo(name, &prototype);
+      scriptable_->GetPropertyInfo(name.c_str(), &prototype);
   if (type == ScriptableInterface::PROPERTY_NOT_EXIST) {
-    if (strcmp("toString", name) == 0) {
+    if (name == "toString") {
       // Define a default toString() operator to ease debugging.
-      JS_DefineFunction(js_context_, js_object_, name,
-                        WrapperDefaultToString, 0, 0);
+      JS_DefineUCFunction(js_context_, js_object_, utf16_name, name_length,
+                          WrapperDefaultToString, 0, 0);
       *objp = js_object_;
-    } else if (strcmp("__NATIVE_CLASS_ID__", name) == 0) {
+    } else if (name == "__NATIVE_CLASS_ID__") {
       // Register __NATIVE_CLASS_ID__ property for JS debugging.
       jsval js_val;
       ConvertNativeToJS(js_context_,
                         Variant(StringPrintf("%jx", scriptable_->GetClassId())),
                         &js_val);
-      JS_DefineProperty(js_context_, js_object_, name, js_val,
-                        JS_PropertyStub, JS_PropertyStub,
-                        JSPROP_READONLY | JSPROP_PERMANENT);
+      JS_DefineUCProperty(js_context_, js_object_, utf16_name, name_length,
+                          js_val, JS_PropertyStub, JS_PropertyStub,
+                          JSPROP_READONLY | JSPROP_PERMANENT);
       *objp = js_object_;
     }
 
@@ -753,9 +743,10 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   if (type == ScriptableInterface::PROPERTY_METHOD) {
     // Define a Javascript function.
     Slot *slot = VariantValue<Slot *>()(prototype);
-    JSFunction *function = JS_DefineFunction(js_context_, js_object_, name,
-                                             CallWrapperMethod,
-                                             slot->GetArgCount(), 0);
+    JSFunction *function = JS_DefineUCFunction(js_context_, js_object_,
+                                               utf16_name, name_length,
+                                               CallWrapperMethod,
+                                               slot->GetArgCount(), 0);
     if (!function)
       return JS_FALSE;
 
@@ -783,9 +774,9 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
     }
     // This property is a constant, register a property with initial value.
     // Then the JavaScript engine will handle it.
-    return JS_DefineProperty(js_context_, js_object_, name,
-                             js_val, JS_PropertyStub, JS_PropertyStub,
-                             JSPROP_READONLY | JSPROP_PERMANENT);
+    return JS_DefineUCProperty(js_context_, js_object_, utf16_name, name_length,
+                               js_val, JS_PropertyStub, JS_PropertyStub,
+                               JSPROP_READONLY | JSPROP_PERMANENT);
   }
 
   uintN property_attrs = 0;
@@ -799,10 +790,11 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   } else {
     property_attrs |= JSPROP_SHARED;
   }
-  return JS_DefineProperty(js_context_, js_object_, name, js_val,
-                           GetWrapperPropertyByName,
-                           SetWrapperPropertyByName,
-                           property_attrs);
+  return JS_DefineUCProperty(js_context_, js_object_,  utf16_name, name_length,
+                             js_val,
+                             GetWrapperPropertyByName,
+                             SetWrapperPropertyByName,
+                             property_attrs);
 }
 
 void NativeJSWrapper::AddJSFunctionSlot(JSFunctionSlot *slot) {

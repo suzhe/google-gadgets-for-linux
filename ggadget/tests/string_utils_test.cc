@@ -288,9 +288,28 @@ TEST(StringUtils, GetAbsoluteURL) {
 }
 
 TEST(StringUtils, EncodeJavaScriptString) {
-  UTF16Char src1[] = { '\"', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
-  std::string dest = EncodeJavaScriptString(src1);
-  EXPECT_STREQ("\\\"\\\\ab\\u0001\\u001F\\u0FFF", dest.c_str());
+  UTF16Char src[] = { '\"', '\'', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
+  std::string dest = EncodeJavaScriptString(src, '"');
+  EXPECT_STREQ("\"\\\"'\\\\ab\\u0001\\u001F\\u0FFF\"", dest.c_str());
+  dest = EncodeJavaScriptString(src, '\'');
+  EXPECT_STREQ("'\"\\\'\\\\ab\\u0001\\u001F\\u0FFF'", dest.c_str());
+}
+
+TEST(StringUtils, DecodeJavaScriptString) {
+  UTF16Char expected[] = { '\"', '\'', '\\', 'a', 'b', '(', 1, 0x1f, 0xfff, 0 };
+  const char *src1 = "\"\\\"'\\\\ab\\(\\u0001\\u001F\\u0FFF\"";
+  const char *src2 = "'\"\\\'\\\\ab\\(\\u0001\\u001F\\u0FFF'";
+  UTF16String result;
+  EXPECT_TRUE(DecodeJavaScriptString(src1, &result));
+  EXPECT_TRUE(result == expected);
+  result.clear();
+  EXPECT_TRUE(DecodeJavaScriptString(src2, &result));
+  EXPECT_TRUE(result == expected);
+  EXPECT_FALSE(DecodeJavaScriptString("'xyz", &result));
+  EXPECT_FALSE(DecodeJavaScriptString("'x\\'", &result));
+  EXPECT_FALSE(DecodeJavaScriptString("'xyz\"", &result));
+  EXPECT_FALSE(DecodeJavaScriptString("'\\u'", &result));
+  EXPECT_FALSE(DecodeJavaScriptString("'\\u123'", &result));
 }
 
 TEST(StringUtils, SplitString) {

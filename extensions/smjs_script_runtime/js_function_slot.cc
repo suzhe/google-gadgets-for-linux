@@ -14,10 +14,12 @@
   limitations under the License.
 */
 
+#include "js_function_slot.h"
+
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/string_utils.h>
-#include "js_function_slot.h"
 #include "converter.h"
+#include "js_native_wrapper.h"
 #include "js_script_context.h"
 #include "native_js_wrapper.h"
 
@@ -69,7 +71,7 @@ JSFunctionSlot::~JSFunctionSlot() {
   }
 }
 
-ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
+ResultVariant JSFunctionSlot::Call(ScriptableInterface *object, int argc,
                                    const Variant argv[]) const {
   Variant return_value(GetReturnType());
 
@@ -114,8 +116,13 @@ ResultVariant JSFunctionSlot::Call(ScriptableInterface *, int argc,
     death_flag_ptr = death_flag_ptr_;
   }
 
+  JSObject *this_object = NULL;
+  if (object && object->IsInstanceOf(JSNativeWrapper::CLASS_ID))
+    this_object = down_cast<JSNativeWrapper *>(object)->js_object();
+
   jsval rval;
-  JSBool ret = JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
+  JSBool ret = JS_CallFunctionValue(context_, this_object,
+                                    OBJECT_TO_JSVAL(function_),
                                     argc, js_args.get(), &rval);
   if (!*death_flag_ptr) {
     if (death_flag_ptr == &death_flag)

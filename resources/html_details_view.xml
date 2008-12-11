@@ -22,18 +22,7 @@
 function onopen() {
   browser.contentType = detailsViewData.getValue("contentType");
   browser.innerText = detailsViewData.getValue("content");
-
-  browser.onGetProperty = function(name) {
-    if (external[name] === undefined) return "\"undefined\"";
-    if (typeof external[name] == "function") return "\"function\"";
-    return external[name];
-  };
-  browser.onSetProperty = function(name, value) {
-    external[name] = value;
-  };
-  browser.onCallback = function(name, args) {
-    return external[name].apply(null, args);
-  };
+  browser.external = external;
 }
 function onsize() {
   browser.width = view.width - 2;
