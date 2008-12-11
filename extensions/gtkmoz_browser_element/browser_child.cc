@@ -161,18 +161,11 @@ static void SendLog(const char *format, ...) {
 #ifdef _DEBUG
   va_list ap;
   va_start(ap, format);
-  std::string log = ggadget::StringVPrintf(format, ap);
+  fprintf(stderr, "browser_child: ");
+  vfprintf(stderr, format, ap);
+  fprintf(stderr, "\n");
+  fflush(stderr);
   va_end(ap);
-
-  if (g_log_fd == 2) {
-    fprintf(stderr, "browser_child: %s\n", log.c_str());
-  } else {
-    std::string buffer = ggadget::StringPrintf(
-        "%s\n%s\n%s\n", kLogFeedback, log.c_str(), kEndOfMessage);
-    if (write(g_log_fd, buffer.c_str(), buffer.size()) !=
-        static_cast<ssize_t>(buffer.size()))
-      fprintf(stderr, "browser_child: Failed to send log.");
-  }
 #endif
 }
 
@@ -228,19 +221,21 @@ static void ForceQuit(const char *message) {
 static std::string SendFeedbackBuffer(const std::string &buffer) {
   if (write(g_up_fd, buffer.c_str(), buffer.size()) !=
       static_cast<ssize_t>(buffer.size())) {
-    fprintf(stderr, "browser_child: Failed to send feedback buffer: %s.\n",
-            buffer.c_str());
+    // Might already be forced quit on SIGPIPE.
+    ForceQuit("Failed to send feedback buffer");
     return "";
   }
+  SendLog("<-- SendFeedback: %.80s...", buffer.c_str());
 
   g_reply.clear();
   while (!gtk_main_iteration() && g_reply.empty());
 
   if (g_reply.length() < kReplyPrefixLength + 1)
-    ForceQuit("Failed to read feedback reply");
+    ForceQuit(("Failed to read feedback reply: " + g_reply).c_str());
   // Remove the reply prefix and ending '\n'.
   std::string reply = g_reply.substr(kReplyPrefixLength,
                                      g_reply.size() - 1 - kReplyPrefixLength);
+  SendLog("--> SendFeedback reply: %.40s...", reply.c_str());
   g_reply.clear();
   return reply;
 }
@@ -675,7 +670,7 @@ static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
 static void RemoveBrowser(size_t id) {
   BrowserMap::iterator it = g_browsers.find(id);
   if (it == g_browsers.end()) {
-    SendLog("Invalid browser id %zu to remove.", id);
+    // Already removed.
     return;
   }
 
@@ -733,9 +728,17 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
                       gtk_window_new(GTK_WINDOW_TOPLEVEL);
   g_signal_connect(window, "destroy", G_CALLBACK(OnBrowserDestroy),
                    reinterpret_cast<gpointer>(id));
+  // Putting the embed into a box seems to make it more stable.
+  GtkWidget *box = gtk_vbox_new(FALSE, 0);
+  gtk_container_add(GTK_CONTAINER(window), box);
+#if 0
+  GtkWidget *label = gtk_label_new("TEST");
+  gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
+#endif
   GtkMozEmbed *embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
   browser_info->embed = embed;
-  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
+  gtk_box_pack_end(GTK_BOX(box), GTK_WIDGET(embed), TRUE, TRUE, 0);
+  // gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
   g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
   gtk_widget_show_all(window);
 }

@@ -453,7 +453,9 @@ function OnDetailsView(item) {
   control.html_content = true;
 
   var details = new Object();
-  details.title = item.heading;
+  // Let the native code set the title automatically. The native code knows
+  // how to strip HTML if the content item is in HTML.
+  // details.title = item.heading;
   details.details_control = control;
   details.flags = gddDetailsViewFlagRemoveButton |
                   gddDetailsViewFlagToolbarOpen;

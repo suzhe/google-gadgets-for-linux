@@ -850,10 +850,37 @@ bool ContainsHTML(const char *s) {
   while (s[i] && s[i] != '<' && i < kMaxSearch)  // must contain <
     i++;
 
-  if (s[i] != '<')
+  if (s[i] != '<') {
+    // No tags.
+    if (i < 100) {
+      // Returns true if a short text contains entities.
+      const char *p = s;
+      while (p) {
+        p = strchr(p, '&');
+        if (p) {
+          p++;
+          const char *p1 = strchr(p, ';');
+          // Lengths of common useful entities < 8.
+          if (p1 && p1 - p < 8) {
+            if (p[1] == '#')
+              return true;
+            bool is_entity = true;
+            for (; p < p1; p++) {
+              // This is inaccurate, but common entities comply this rule.
+              if (!isalnum(*p)) {
+                is_entity = false;
+                break;
+              }
+            }
+            if (is_entity)
+              return true;
+          }
+        }
+      }
+    }
     return false;
+  }
 
-  i = 0;
   while (s[i] && i < kMaxSearch) {
     if (s[i] != '/' && s[i] != '<') {
       i++;

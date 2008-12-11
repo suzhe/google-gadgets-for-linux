@@ -27,10 +27,11 @@ function onopen() {
 function onsize() {
   browser.width = view.width - 2;
   browser.height = view.height - 2;
+  browser.visible = true;
 }
 -->
   </script>
   <!-- a background acts as input shape mask. -->
   <div width="100%" height="100%" background="#FFFFFF"/>
-  <_browser name="browser" x="1" y="1" width="298" height="248"/>
+  <_browser name="browser" visible="false" x="1" y="1" width="298" height="248"/>
 </view>
