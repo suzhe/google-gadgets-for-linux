@@ -1958,7 +1958,11 @@ BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
   } else {
     char *end_ptr;
     *output = strtod(str.c_str(), &end_ptr);
-    if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
+    // allows space and multiple % after double number.
+    while(*end_ptr == ' ') ++end_ptr;
+    bool relative = (*end_ptr == '%');
+    while(*end_ptr == '%' || *end_ptr == ' ') ++end_ptr;
+    if (relative && *end_ptr == '\0') {
       *output /= 100.0;
       return PR_RELATIVE;
     }

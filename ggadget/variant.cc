@@ -340,6 +340,8 @@ static bool ParseStringToDouble(const char *str_value, double *result) {
     return false;
 
   double d = strtod(str_value, &end_ptr);
+  // Allow space after double number.
+  while(*end_ptr == ' ') ++end_ptr;
   if (*end_ptr == '\0') {
     *result = d;
     return true;
@@ -351,6 +353,8 @@ static bool ParseStringToInt64(const char *str_value, int64_t *result) {
   char *end_ptr;
   // TODO: Check if strtoll is available
   int64_t i = static_cast<int64_t>(strtoll(str_value, &end_ptr, 10));
+  // Allow space after int64 number.
+  while(*end_ptr == ' ') ++end_ptr;
   if (*end_ptr == '\0') {
     *result = i;
     return true;

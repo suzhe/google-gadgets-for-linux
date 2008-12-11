@@ -893,7 +893,7 @@ function UpdateSelectionPos() {
     e_selection.pinY = designerUtils.getOffsetPinY(g_selected_element) +
                        kSelectionBorderWidth;
     e_selection.rotation = ElementRotationToView(g_selected_element);
-    e_rotation1.visible = e_rotation2.visible = e_pin.visible = 
+    e_rotation1.visible = e_rotation2.visible = e_pin.visible =
         g_selected_element != e_designer_view;
     e_size_top_left.visible = !g_x_fixed && !g_y_fixed &&
                               !g_width_fixed & !g_height_fixed;
@@ -963,6 +963,7 @@ function SelectElement(element_info) {
           g_properties_view.SyncFromElement();
           UpdatePositionFixed();
           view.setTimeout(UpdateSelectionPos, 0);
+          view.setTimeout(UpdateSelectionPos, 100);
           CurrentFileChanged();
           SaveUndoState();
         });
