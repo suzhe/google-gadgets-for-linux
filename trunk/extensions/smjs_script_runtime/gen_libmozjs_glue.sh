@@ -189,7 +189,7 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
 #undef MOZJS_API
 
 #ifdef JS_OPERATION_WEIGHT_BASE
-#define MOZJS_FUNC_JS_SetOoperationCallback \\
+#define MOZJS_FUNC_JS_SetOperationCallback \\
 LIBMOZJS_GLUE_H
 
 sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1)/' used_mozjs_api_list | \
@@ -197,7 +197,7 @@ sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1)/' used_mozjs_api_list | \
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
 #else
-#define MOZJS_FUNC_JS_SetOoperationCallback
+#define MOZJS_FUNC_JS_SetOperationCallback
 #endif
 
 #define MOZJS_FUNCTIONS \\
@@ -208,7 +208,7 @@ sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1) \\/' used_mozjs_api_list | \
   grep -v JS_SetOperationCallback >> libmozjs_glue.h
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
-  MOZJS_FUNC_JS_SetOoperationCallback
+  MOZJS_FUNC_JS_SetOperationCallback
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
 

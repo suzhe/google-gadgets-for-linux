@@ -322,7 +322,7 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
   void AboutMenuCallback(const char *) {
     Gadget *gadget = owner_->GetGadget();
     if (gadget)
-      gadget->GetHost()->ShowGadgetAboutDialog(gadget);
+      gadget->ShowAboutDialog();
   }
 
   void RemoveMenuCallback(const char *) {

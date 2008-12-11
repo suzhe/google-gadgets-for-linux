@@ -130,6 +130,7 @@ class SideBarGtkHost::Impl {
       auto_hide_(false),
       always_on_top_(false),
       closed_(false),
+      safe_to_exit_(true),
       font_size_(kDefaultFontSize),
       sidebar_monitor_(kDefaultMonitor),
       sidebar_position_(SIDEBAR_POSITION_RIGHT),
@@ -213,7 +214,7 @@ class SideBarGtkHost::Impl {
     if (auto_show_source_)
       g_source_remove(auto_show_source_);
 
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
@@ -340,7 +341,7 @@ class SideBarGtkHost::Impl {
   // Returns true if any menu item is added.
   bool AddFloatingGadgetToMenu(MenuInterface *menu, int priority) {
     bool result = false;
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       Gadget *gadget = it->second.gadget;
       if (gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR) {
@@ -419,7 +420,8 @@ class SideBarGtkHost::Impl {
     if (AddFloatingGadgetToMenu(menu, priority)) {
       menu->AddItem(NULL, 0, 0, NULL, priority);
     }
-    menu->AddItem(GM_("MENU_ITEM_EXIT"), 0,
+    menu->AddItem(GM_("MENU_ITEM_EXIT"),
+                  IsSafeToExit() ? 0 : MenuInterface::MENU_ITEM_FLAG_GRAYED,
                   MenuInterface::MENU_ITEM_ICON_QUIT,
                   NewSlot(this, &Impl::ExitMenuHandler), priority);
   }
@@ -555,7 +557,7 @@ class SideBarGtkHost::Impl {
   // specified one.
   // If the specified gadget_id is -1, then close all pop out windows.
   void CloseAllPopOutWindowsOfSideBar(int gadget_id) {
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->first != gadget_id && !it->second.floating) {
         CloseDetailsView(it->first);
@@ -609,7 +611,7 @@ class SideBarGtkHost::Impl {
 
   void SaveGlobalOptions() {
     // save gadgets' information
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       OptionsInterface *opt = it->second.gadget->GetOptions();
       opt->PutInternalValue(kOptionDisplayTarget,
@@ -701,44 +703,22 @@ class SideBarGtkHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    Permissions permissions;
-    if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
-      if (flags_ & GRANT_PERMISSIONS) {
-        permissions.GrantAllRequired();
-      }
-      if (!permissions.HasUngranted() ||
-          owner_->ConfirmManagedGadget(id, &permissions)) {
-        // Save initial permissions.
-        std::string options_name =
-            gadget_manager_->GetGadgetInstanceOptionsName(id);
-        OptionsInterface *options = CreateOptions(options_name.c_str());
-        // Don't save required permissions.
-        permissions.RemoveAllRequired();
-        options->PutInternalValue(kPermissionsOption,
-                                  Variant(permissions.ToString()));
-        options->Flush();
-        delete options;
-        return LoadGadgetInstance(id);
-      }
-    } else {
-      ShowAlertDialog(
-          GM_("GOOGLE_GADGETS"),
-          StringPrintf(
-              GM_("GADGET_LOAD_FAILURE"),
-              gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str());
-    }
-    return false;
+    return LoadGadgetInstance(id);
   }
 
   bool LoadGadgetInstance(int id) {
     bool result = false;
-    std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    if (options.length() && path.length()) {
-      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
-      DLOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
-           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+    safe_to_exit_ = false;
+    if (owner_->ConfirmManagedGadget(id, flags_ & GRANT_PERMISSIONS)) {
+      std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
+      std::string path = gadget_manager_->GetGadgetInstancePath(id);
+      if (options.length() && path.length()) {
+        result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
+        DLOG("SideBarGtkHost: Load gadget %s, with option %s, %s",
+             path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      }
     }
+    safe_to_exit_ = true;
     return result;
   }
 
@@ -826,7 +806,7 @@ class SideBarGtkHost::Impl {
     sidebar_host_->SetKeepAbove(always_on_top_ || sidebar_->IsMinimized());
 
     // adjust the orientation of the arrow of each gadget in the sidebar
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->second.gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
         MainViewDecoratorBase *view_decorator =
@@ -1268,7 +1248,7 @@ class SideBarGtkHost::Impl {
   }
 
   void ShowOrHideAllGadgets(bool show) {
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       if (it->second.gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR) {
         if (show)
@@ -1323,10 +1303,12 @@ class SideBarGtkHost::Impl {
     Gadget::DebugConsoleConfig dcc = show_debug_console ?
         Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
 
+    safe_to_exit_ = false;
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
                                 global_permissions_, dcc);
-    GadgetsMap::iterator it = gadgets_.find(instance_id);
+    safe_to_exit_ = true;
 
+    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
       if (it != gadgets_.end()) {
@@ -1589,7 +1571,7 @@ class SideBarGtkHost::Impl {
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
-    GadgetsMap::iterator it = gadgets_.find(instance_id);
+    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
     if (it != gadgets_.end()) {
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
@@ -1650,6 +1632,7 @@ class SideBarGtkHost::Impl {
   }
 
   void ChangeHotKeyMenuHandler(const char *) {
+    safe_to_exit_ = false;
     HotKeyDialog dialog;
     dialog.SetHotKey(hotkey_grabber_.GetHotKey());
     hotkey_grabber_.SetEnableGrabbing(false);
@@ -1662,6 +1645,7 @@ class SideBarGtkHost::Impl {
       UpdateStatusIconTooltip();
 #endif
     }
+    safe_to_exit_ = true;
   }
 
   void SideBarPositionMenuHandler(const char *str, int position) {
@@ -1683,7 +1667,7 @@ class SideBarGtkHost::Impl {
   void OnThemeChanged() {
     SimpleEvent event(Event::EVENT_THEME_CHANGED);
     sidebar_->GetSideBarViewHost()->GetView()->OnOtherEvent(event);
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       it->second.main_decorator->GetView()->OnOtherEvent(event);
       if (it->second.details)
@@ -1855,7 +1839,7 @@ class SideBarGtkHost::Impl {
   void ShowGadgetDebugConsole(Gadget *gadget) {
     if (!gadget)
       return;
-    GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
+    GadgetInfoMap::iterator it = gadgets_.find(gadget->GetInstanceID());
     if (it == gadgets_.end())
       return;
     if (it->second.debug_console) {
@@ -1869,11 +1853,23 @@ class SideBarGtkHost::Impl {
                      &it->second.debug_console);
   }
 
+  bool IsSafeToExit() {
+    if (!safe_to_exit_)
+      return false;
+    GadgetInfoMap::const_iterator it = gadgets_.begin();
+    GadgetInfoMap::const_iterator end = gadgets_.end();
+    for (; it != end; ++it) {
+      if (!it->second.gadget->IsSafeToRemove())
+        return false;
+    }
+    return true;
+  }
+
  public:  // members
   GadgetBrowserHost gadget_browser_host_;
 
-  typedef std::map<int, GadgetInfo> GadgetsMap;
-  GadgetsMap gadgets_;
+  typedef std::map<int, GadgetInfo> GadgetInfoMap;
+  GadgetInfoMap gadgets_;
 
   SideBarGtkHost *owner_;
 
@@ -1902,6 +1898,7 @@ class SideBarGtkHost::Impl {
   bool auto_hide_;
   bool always_on_top_;
   bool closed_;
+  bool safe_to_exit_;
   int  font_size_;
   int  sidebar_monitor_;
   int  sidebar_position_;
@@ -1965,6 +1962,10 @@ void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
 
 int SideBarGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
+}
+
+bool SideBarGtkHost::IsSafeToExit() const {
+  return impl_->IsSafeToExit();
 }
 
 } // namespace gtk

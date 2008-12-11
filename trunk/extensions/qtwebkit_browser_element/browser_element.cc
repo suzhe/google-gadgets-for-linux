@@ -55,14 +55,8 @@ void BrowserElement::DoClassRegister() {
                    NewSlot(&BrowserElement::SetContentType));
   RegisterProperty("innerText", NULL,
                    NewSlot(&BrowserElement::SetContent));
-  RegisterClassSignal("onGetProperty", &Impl::get_property_signal_,
-                      &BrowserElement::impl_);
-  RegisterClassSignal("onSetProperty", &Impl::set_property_signal_,
-                      &BrowserElement::impl_);
-  RegisterClassSignal("onCallback", &Impl::callback_signal_,
-                      &BrowserElement::impl_);
-  RegisterClassSignal("onOpenURL", &Impl::open_url_signal_,
-                      &BrowserElement::impl_);
+  RegisterProperty("external", NULL,
+                   NewSlot(&BrowserElement::SetExternalObject));
 }
 
 BrowserElement::~BrowserElement() {
@@ -81,6 +75,10 @@ void BrowserElement::SetContentType(const char *content_type) {
 
 void BrowserElement::SetContent(const std::string &content) {
   impl_->SetContent(content);
+}
+
+void BrowserElement::SetExternalObject(ScriptableInterface *object) {
+  impl_->external_object_.Reset(object);
 }
 
 void BrowserElement::Layout() {

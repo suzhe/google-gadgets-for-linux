@@ -9,6 +9,7 @@
 #include <QtNetwork/QNetworkRequest>
 #endif
 #include <ggadget/gadget.h>
+#include <ggadget/scriptable_holder.h>
 
 namespace ggadget {
 namespace qt {
@@ -107,15 +108,12 @@ class BrowserElement::Impl {
 
   void OpenUrl(const QString &url) const {
     std::string u = url.toStdString();
-    if (!open_url_signal_.HasActiveConnections() ||
-        open_url_signal_(u)) {
-      Gadget *gadget = owner_->GetView()->GetGadget();
-      if (gadget) {
-        // Let the gadget allow this OpenURL gracefully.
-        bool old_interaction = gadget->SetInUserInteraction(true);
-        gadget->OpenURL(u.c_str());
-        gadget->SetInUserInteraction(old_interaction);
-      }
+    Gadget *gadget = owner_->GetView()->GetGadget();
+    if (gadget) {
+      // Let the gadget allow this OpenURL gracefully.
+      bool old_interaction = gadget->SetInUserInteraction(true);
+      gadget->OpenURL(u.c_str());
+      gadget->SetInUserInteraction(old_interaction);
     }
   }
 
@@ -202,10 +200,7 @@ class BrowserElement::Impl {
   bool minimized_;
   bool popped_out_;
   std::string content_;
-  Signal1<JSONString, JSONString> get_property_signal_;
-  Signal2<void, JSONString, JSONString> set_property_signal_;
-  Signal2<JSONString, JSONString, ScriptableArray *> callback_signal_;
-  Signal1<bool, const std::string &> open_url_signal_;
+  ScriptableHolder<ScriptableInterface> external_object_;
   Connection *minimized_connection_, *restored_connection_,
              *popout_connection_, *popin_connection_,
              *dock_connection_, *undock_connection_;

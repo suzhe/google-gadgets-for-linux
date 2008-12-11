@@ -145,6 +145,9 @@ class Gadget {
    */
   void RemoveMe(bool save_data);
 
+  /** Checks if this gadget instance is safe to remove. */
+  bool IsSafeToRemove() const;
+
   /** Returns the HostInterface instance used by this gadget. */
   HostInterface *GetHost() const;
 
@@ -323,9 +326,11 @@ class Gadget {
    */
   int GetDefaultFontSize() const;
 
-  /* Check if about dialog can be shown */
+  /** Checks if about dialog can be shown. */
   bool HasAboutDialog() const;
 
+  /** Shows this gadget's about dialog. */
+  void ShowAboutDialog();
  public:
   /**
    * A utility to get the manifest infomation of a gadget without

@@ -49,6 +49,7 @@ class StandaloneGtkHost : public GtkHostBase {
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();
 
+  virtual bool IsSafeToExit() const;
  public:
   /**
    * Inits this standalone host with a specified gadget.

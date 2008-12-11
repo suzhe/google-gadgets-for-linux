@@ -120,14 +120,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     DetailsViewData *details() { return details_; }
 
     bool OnScriptBlocked(const char *filename, int lineno) {
-      ViewHostInterface *view_host = view_->GetViewHost();
-      if (!view_host)
-        return true; // Maybe in test environment, let the script continue.
-
-      return view_host->Confirm(view_,
-                                StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
-                                             filename, lineno).c_str(),
-                                false) == ViewHostInterface::CONFIRM_NO;
+      return view_->Confirm(StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
+                                         filename, lineno).c_str(),
+                            false) == ViewHostInterface::CONFIRM_NO;
     }
 
    private:
@@ -165,7 +160,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         debug_console_config_(debug_console_config),
         initialized_(false),
         has_options_xml_(false),
-        in_user_interaction_(false) {
+        in_user_interaction_(false),
+        safe_to_remove_(true) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -271,21 +267,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     Variant value = options_->GetInternalValue(kPermissionsOption);
     if (value.type() == Variant::TYPE_STRING) {
       permissions_.FromString(VariantValue<const char *>()(value));
-      GetGadgetRequiredPermissions(&manifest_info_map_, &permissions_);
-    } else {
-      GetGadgetRequiredPermissions(&manifest_info_map_, &permissions_);
-      // Grants all required permissions, and use it as initial permissions.
-      permissions_.GrantAllRequired();
-      Permissions temp = permissions_;
-      temp.RemoveAllRequired();
-      // Don't save required permissions.
-      options_->PutInternalValue(kPermissionsOption, Variant(temp.ToString()));
     }
+    GetGadgetRequiredPermissions(&manifest_info_map_, &permissions_);
 
     // Denies all permissions which are denied explicitly in global
     // permissions.
     permissions_.SetGrantedByPermissions(global_permissions, false);
-    DLOG("Permissions: %s", permissions_.ToString().c_str());
+    DLOG("Gadget permissions: %s", permissions_.ToString().c_str());
 
     if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
       host_->ShowGadgetDebugConsole(owner_);
@@ -518,7 +506,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       owner_->impl_->remove_me_timer_ = 0;
-      host_->RemoveGadget(owner_, save_data_);
+      if (owner_->impl_->IsSafeToRemove())
+        host_->RemoveGadget(owner_, save_data_);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
@@ -535,6 +524,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       remove_me_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
           0, new RemoveMeWatchCallback(host_, owner_, save_data));
     }
+  }
+
+  bool IsSafeToRemove() {
+    return safe_to_remove_ &&
+        (!main_view_ || main_view_->view()->IsSafeToDestroy()) &&
+        (!details_view_ || details_view_->view()->IsSafeToDestroy());
   }
 
   void DebugConsoleMenuCallback(const char *) {
@@ -719,6 +714,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     int flags = ViewInterface::OPTIONS_VIEW_FLAG_OK |
                 ViewInterface::OPTIONS_VIEW_FLAG_CANCEL;
 
+    safe_to_remove_ = false;
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
       ViewBundle options_view(
           host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
@@ -743,6 +739,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");
     }
+    safe_to_remove_ = true;
     return ret;
   }
 
@@ -750,6 +747,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                             ScriptableInterface *param) {
     bool ret = false;
     std::string xml;
+    safe_to_remove_ = false;
     if (file_manager_->ReadFile(xml_file, &xml)) {
       ViewBundle options_view(
           host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
@@ -777,6 +775,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     } else {
       LOG("Failed to load %s file from gadget package.", xml_file);
     }
+    safe_to_remove_ = true;
     return ret;
   }
 
@@ -1032,6 +1031,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool initialized_                        : 1;
   bool has_options_xml_                    : 1;
   bool in_user_interaction_                : 1;
+  bool safe_to_remove_                     : 1;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -1065,6 +1065,10 @@ HostInterface *Gadget::GetHost() const {
 
 void Gadget::RemoveMe(bool save_data) {
   impl_->RemoveMe(save_data);
+}
+
+bool Gadget::IsSafeToRemove() const {
+  return impl_->IsSafeToRemove();
 }
 
 bool Gadget::IsValid() const {
@@ -1212,6 +1216,13 @@ int Gadget::GetDefaultFontSize() const {
 bool Gadget::HasAboutDialog() const {
   return !GetManifestInfo(kManifestAboutText).empty() ||
       impl_->oncommand_signal_.HasActiveConnections();
+}
+
+void Gadget::ShowAboutDialog() {
+  impl_->safe_to_remove_ = false;
+  if (impl_->host_)
+    impl_->host_->ShowGadgetAboutDialog(this);
+  impl_->safe_to_remove_ = true;
 }
 
 // static methods
