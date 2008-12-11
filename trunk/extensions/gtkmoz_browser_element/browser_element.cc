@@ -209,12 +209,15 @@ class BrowserController {
     if (!child_pid_)
       StartChild();
     browser_elements_[++browser_seq_] = impl;
+    DLOG("Browser %zu added. %zu browsers open", browser_seq_,
+         browser_elements_.size());
     return browser_seq_;
   }
 
   void CloseBrowser(size_t id) {
     browser_elements_.erase(id);
     SendCommand(kCloseBrowserCommand, id, NULL);
+    DLOG("Browser %zu closed. %zu browsers left", id, browser_elements_.size());
   }
 
   bool OnUpFDReady(int) {
@@ -299,8 +302,10 @@ class BrowserController {
       return "";
     }
     Write(down_fd_, command.c_str(), command.size());
+    DLOG("[%d] ==> SendCommand: %.80s...", recursion_depth_, command.c_str());
 
-    static const uint64_t kTimeout = 5000;
+    static const uint64_t kWholeTimeout = 5000;
+    static const int kSingleTimeout = 1500;
     static const int kMaxRecursion = 500;
     if (recursion_depth_ == 0)
       command_start_time_ = ggl_main_loop->GetCurrentTime();
@@ -315,27 +320,31 @@ class BrowserController {
     std::string reply;
     do {
       struct pollfd poll_fd = { up_fd_, POLLIN, 0 };
-      int ret = poll(&poll_fd, 1, 100);
+      int ret = poll(&poll_fd, 1, kSingleTimeout);
       if (ret > 0) {
         reply = ReadUpPipe();
         if (!reply.empty())
           break;
-      } else if (ret < 0) {
+      } else {
         break;
       }
-    } while (ggl_main_loop->GetCurrentTime() - command_start_time_ < kTimeout);
+    } while (ggl_main_loop->GetCurrentTime() - command_start_time_ <
+             kWholeTimeout);
 
     --recursion_depth_;
     if (reply.empty()) {
       LOG("Failed to read command reply");
+      // Force all recursions to break;
+      command_start_time_ = 0;
       if (recursion_depth_ == 0)
         StopChild(true);
       return reply;
     }
-    DLOG("SendCommand reply: %.40s...", reply.c_str());
     // Remove the reply prefix and ending '\n'.
     reply.erase(0, kReplyPrefixLength);
     reply.erase(reply.size() - 1, 1);
+    DLOG("[%d] <== SendCommand reply: %.40s...",
+         recursion_depth_, reply.c_str());
     return reply;
   }
 
@@ -1039,12 +1048,6 @@ void BrowserController::ProcessFeedback(size_t param_count,
   if (param_count == 1 && strcmp(params[0], kPingFeedback) == 0) {
     Write(down_fd_, kPingAckFull, kPingAckFullLength);
     ping_flag_ = true;
-  #ifdef _DEBUG
-  } else if (param_count >= 2 && strcmp(params[0], kLogFeedback) == 0) {
-    for (size_t i = 1; i < param_count; ++i) {
-      DLOG("browser_child: %s", params[i]);
-    }
-  #endif
   } else if (param_count < 2) {
     LOG("No enough feedback parameters");
   } else {

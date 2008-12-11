@@ -244,19 +244,6 @@ const char kUnrefFeedback[] = "UNREF";
 const char kOpenURLFeedback[] = "OPEN";
 
 /**
- * The browser child tells the controller to print some log messages.
- *
- * Message format:
- * <code>
- * LOG\n
- * Log message (normal string)\n
- * """EOM"""\n
- * </code>
- * The controller prints out the log message and replies nothing.
- */
-const char kLogFeedback[] = "LOG";
-
-/**
  * The browser child periodically pings the controller to check if the
  * controller died.
  *
@@ -272,7 +259,7 @@ const char kPingFeedback[] = "PING";
 const char kPingAck[] = "ACK";
 const char kPingAckFull[] = "R ACK\n";
 const size_t kPingAckFullLength = sizeof(kPingAckFull) - 1;
-const int kPingInterval = 30000;  // 30 seconds.
+const int kPingInterval = 10000;  // 10 seconds.
 
 #ifndef NO_NAMESPACE
 } // namespace gtkmoz

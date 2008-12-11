@@ -403,6 +403,8 @@ TEST(StringUtils, ContainsHTML) {
   EXPECT_TRUE(ContainsHTML("1234<!-- comments -->6789"));
   EXPECT_TRUE(ContainsHTML("1234<a href=abcde>abcde</a>defg"));
   EXPECT_TRUE(ContainsHTML("1234<br>5678"));
+  EXPECT_TRUE(ContainsHTML("<b>6789</b>"));
+  EXPECT_TRUE(ContainsHTML("6789&quot;1234"));
 }
 
 TEST(StringUtils, SimpleMatchXPath) {
