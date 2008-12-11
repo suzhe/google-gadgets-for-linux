@@ -405,6 +405,7 @@ class GadgetsMetadata::Impl {
     ASSERT(request);
     ASSERT(request->GetReadyState() == XMLHttpRequestInterface::UNSENT);
 
+    EnsureInitialized();
     // TODO: Check disk free space.
     if (request_.Get())
       request_.Get()->Abort();

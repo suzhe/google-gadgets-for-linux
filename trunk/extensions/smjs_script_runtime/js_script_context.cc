@@ -26,6 +26,15 @@
 #include "js_script_runtime.h"
 #include "native_js_wrapper.h"
 
+#ifdef _DEBUG
+// #define DEBUG_JS_ROOTS
+#endif
+
+#ifdef DEBUG_JS_ROOTS
+#include <jscntxt.h>
+#include <jsdhash.h>
+#endif
+
 namespace ggadget {
 namespace smjs {
 
@@ -695,6 +704,35 @@ Connection *JSScriptContext::ConnectScriptBlockedFeedback(
 void JSScriptContext::CollectGarbage() {
   ForceGC(context_);
 }
+
+#ifdef DEBUG_JS_ROOTS
+// This struct is private since JS170. Must defined same as JS structure.
+struct MyJSGCRootHashEntry {
+  JSDHashEntryHdr hdr;
+  void *root;
+  const char *name;
+};
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator) PrintRoot(JSDHashTable *table,
+                                                  JSDHashEntryHdr *hdr,
+                                                  uint32 number, void *arg) {
+  MyJSGCRootHashEntry *rhe = reinterpret_cast<MyJSGCRootHashEntry *>(hdr);
+  jsval *rp = reinterpret_cast<jsval *>(rhe->root);
+  DLOG("%d: name=%s address=%p value=%p",
+       number, rhe->name, rp, JSVAL_TO_OBJECT(*rp));
+  return JS_DHASH_NEXT;
+}
+
+void DebugRoot(JSContext *cx) {
+  DLOG("============== Roots ================");
+  JSRuntime *rt = JS_GetRuntime(cx);
+  JS_DHashTableEnumerate(&rt->gcRootsHash, PrintRoot, cx);
+  DLOG("=========== End of Roots ============");
+}
+#else
+void DebugRoot(JSContext *) {
+}
+#endif
 
 } // namespace smjs
 } // namespace ggadget

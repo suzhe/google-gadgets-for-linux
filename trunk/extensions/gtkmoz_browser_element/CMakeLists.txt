@@ -60,9 +60,8 @@ ENDIF(NOT GTKMOZEMBED_FOUND)
 
 SET(CHILD_SRCS
   browser_child.cc
-  ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/json.cc
+  browser_child_internal.cc
   ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/libmozjs_glue.cc
-  #${CMAKE_SOURCE_DIR}/ggadget/js/js_utils.cc
 )
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-child
@@ -70,7 +69,6 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${SMJS_LIBRARIES}
   ${GTK2_LIBRARIES}
   ${GTHREAD_LIBRARIES}
-  ggadget-js${GGL_EPOCH}
   ggadget${GGL_EPOCH}
   dl
 )

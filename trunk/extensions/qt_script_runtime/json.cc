@@ -47,10 +47,7 @@ static void AppendArrayToJSON(QScriptEngine *engine, const QScriptValue &qval,
 
 static void AppendStringToJSON(QScriptEngine *engine, QString str,
                                std::string *json) {
-  *json += '"';
-  std::string s = EncodeJavaScriptString(str.utf16());
-  *json += s;
-  *json += '"';
+  *json += EncodeJavaScriptString(str.utf16(), '"');
 }
 
 static void AppendObjectToJSON(QScriptEngine *engine, const QScriptValue &qval,

@@ -146,7 +146,8 @@ class DirFileManager::Impl : public SmallObject<> {
       return false;
     }
 
-    bool result = (fwrite(data.c_str(), data.length(), 1, datafile) == 1);
+    bool result = data.empty() ||
+                  (fwrite(data.c_str(), data.length(), 1, datafile) == 1);
     // fclose() is placed first to ensure it's always called.
     result = (fclose(datafile) == 0 && result);
     if (!result) {

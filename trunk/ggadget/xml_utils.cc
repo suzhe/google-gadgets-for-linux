@@ -58,8 +58,6 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       } else {
         LOG("%s:%d:%d: Invalid bool '%s' for property %s of %s",
             filename, row, column, value, name, tag_name);
-        property_value = Variant(GadgetStrCmp("true", value) == 0 ?
-                               true : false);
         return;
       }
       break;

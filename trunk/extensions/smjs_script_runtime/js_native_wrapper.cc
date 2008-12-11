@@ -16,6 +16,7 @@
 
 #include "js_native_wrapper.h"
 #include "converter.h"
+#include "js_function_slot.h"
 #include "js_script_context.h"
 
 namespace ggadget {
@@ -36,7 +37,8 @@ static const char *kTrackerReferenceName = "[[[TrackerReference]]]";
 JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
     : js_context_(js_context),
       js_object_(js_object),
-      name_(PrintJSValue(js_context, OBJECT_TO_JSVAL(js_object))) {
+      name_(PrintJSValue(js_context, OBJECT_TO_JSVAL(js_object))),
+      call_self_slot_(NULL) {
   // Wrap this object again into a JS object, and add this object as a property
   // of the original object, to make it possible to auto detach this object
   // when the original object is finalized.
@@ -50,16 +52,24 @@ JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
   // Count the current JavaScript reference.
   Ref();
   ASSERT(GetRefCount() == 1);
+
+  if (JS_TypeOfValue(js_context, OBJECT_TO_JSVAL(js_object)) ==
+          JSTYPE_FUNCTION) {
+    // This object can be called as a function.
+    call_self_slot_ = new JSFunctionSlot(NULL, js_context, NULL, js_object);
+  }
 }
 
 JSNativeWrapper::~JSNativeWrapper() {
+  delete call_self_slot_;
   if (CheckContext())
     JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
 }
 
 bool JSNativeWrapper::CheckContext() const {
   if (!js_context_) {
-    LOG("The context of a native wrapped JS object has already been destroyed.");
+    LOG("The context of a native wrapped JS object has already been "
+        "destroyed.");
     return false;
   }
   return true;
@@ -87,6 +97,10 @@ void JSNativeWrapper::Unref(bool transient) const {
 
 ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
     const char *name, Variant *prototype) {
+  if (!*name && call_self_slot_) {
+    *prototype = Variant(&call_self_slot_);
+    return ScriptableInterface::PROPERTY_METHOD;
+  }
   return ScriptableInterface::PROPERTY_DYNAMIC;
 }
 
@@ -157,8 +171,16 @@ ResultVariant JSNativeWrapper::GetProperty(const char *name) {
     return ResultVariant(result);
 
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
+  if (!*name && call_self_slot_) {
+    // Get the default method used to call this object as a function.
+    return ResultVariant(Variant(call_self_slot_));
+  }
+
+  UTF16String utf16;
+  ConvertStringUTF8ToUTF16(name, strlen(name), &utf16);
   jsval rval;
-  if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
+  if (JS_GetUCProperty(js_context_, js_object_, utf16.c_str(), utf16.size(),
+                       &rval) &&
       !ConvertJSToNativeVariant(js_context_, rval, &result)) {
     RaiseException(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
@@ -179,7 +201,10 @@ bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
                    name, value.Print().c_str());
     return false;
   }
-  return JS_SetProperty(js_context_, js_object_, name, &js_val);
+  UTF16String utf16;
+  ConvertStringUTF8ToUTF16(name, strlen(name), &utf16);
+  return JS_SetUCProperty(js_context_, js_object_, utf16.c_str(), utf16.size(),
+                          &js_val);
 }
 
 ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
@@ -228,6 +253,8 @@ void JSNativeWrapper::FinalizeTracker(JSContext *cx, JSObject *obj) {
 void JSNativeWrapper::OnContextDestroy() {
   JS_RemoveRootRT(JS_GetRuntime(js_context_),
                   const_cast<JSObject **>(&js_object_));
+  delete call_self_slot_;
+  call_self_slot_ = NULL;
   js_context_ = NULL;
 }
 

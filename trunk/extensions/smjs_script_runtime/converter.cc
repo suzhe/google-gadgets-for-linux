@@ -133,6 +133,7 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
       ScriptableBinaryData *data =
           down_cast<ScriptableBinaryData *>(scriptable);
       *native_val = Variant(data->data());
+      DLOG("Convert binary data to string: length=%zu", data->data().size());
       return JS_TRUE;
     }
   }
@@ -299,6 +300,8 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
     // requires a Date.
     // if (ConvertJSToNativeDate(cx, js_val, native_val))
     //   return JS_TRUE;
+    // JS function is also wrapped into JSNativeWrapper instead of being
+    // converted to a JSFunctionSlot, to ease memory management.
     return ConvertJSToScriptable(cx, js_val, native_val);
   }
   return JS_FALSE;
@@ -359,9 +362,11 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
     default: {
       JSString *str = JS_ValueToString(cx, js_val);
       if (str) {
-        char *bytes = JS_GetStringBytes(str);
-        if (bytes)
-          return std::string(bytes);
+        jschar *utf16 = JS_GetStringChars(str);
+        size_t length = JS_GetStringLength(str);
+        std::string utf8;
+        ConvertStringUTF16ToUTF8(utf16, length, &utf8);
+        return utf8;
       }
       return "##ERROR##";
     }
@@ -533,15 +538,19 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
     // if they are compatible.
     if (ConvertStringUTF8ToUTF16Buffer(source, utf16_buffer, source_size,
                                        &dest_size) != source_size) {
+      DLOG("Convert non-UTF8 string data to fake UTF16 length=%zu",
+           source_size);
       dest_size = (source_size + 1) / 2;
       // Failed to convert to utf16, the source may contain arbitrary binary
       // data. This is mainly for compatibility of XMLHttpRequest.responseBody
       // to Microsoft, that combines each two bytes into one 16 bit word.
       for (size_t i = 0; i < source_size; i += 2) {
-        utf16_buffer[i] = static_cast<jschar>(
+        utf16_buffer[i / 2] = static_cast<jschar>(
             static_cast<unsigned char>(source[i]) |
             (static_cast<unsigned char>(source[i + 1]) << 8));
       }
+      if (source_size % 2)
+        utf16_buffer[dest_size - 1] = source[source_size - 1];
     }
     utf16_buffer[dest_size] = 0;
 
@@ -762,6 +771,9 @@ JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
 }
 
 JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable) {
+  if (!cx || !scriptable)
+    return JS_FALSE;
+
   ScriptableInterface *exception = scriptable->GetPendingException(true);
   if (!exception)
     return JS_TRUE;

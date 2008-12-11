@@ -58,14 +58,19 @@ class Slot : public SmallObject<> {
 
   /**
    * Get return type of the @c Slot target.
+   * This method is meaningless if HasMetadata() returns false.
    */
   virtual Variant::Type GetReturnType() const { return Variant::TYPE_VOID; }
   /**
    * Get the number of arguments of the @c Slot target.
+   * This method is meaningless if HasMetadata() returns false.
+   * Returns INT_MAX if this Slot can accept any number of parameters.
+   * @see GetArgTypes() for more details.
    */
   virtual int GetArgCount() const { return 0; }
   /**
    * Get the type list of the arguments of the @c Slot target.
+   * This method is meaningless if HasMetadata() returns false.
    * If GetArgCount() returns INT_MAX, then GetArgTypes() shall return
    * a an array terminated by TYPE_VOID, or just NULL if the arguments can have
    * any type.
@@ -74,6 +79,7 @@ class Slot : public SmallObject<> {
 
   /**
    * Get the default values of arguments.
+   * This method is meaningless if HasMetadata() returns false.
    * This method only has default implementation in all classed declaredd in
    * this header file. A costomized @c Slot class must be defined if you need
    * to provide default value policies.
