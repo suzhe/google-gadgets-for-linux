@@ -26,6 +26,7 @@
 #include <ggadget/string_utils.h>
 #include <ggadget/permissions.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/gtk/single_view_host.h>
 
 using namespace ggadget;
@@ -43,10 +44,10 @@ static bool GetPermissionsDescriptionCallback(int permission,
   return true;
 }
 
-bool GtkHostBase::ConfirmGadget(const std::string &download_url,
-                                const std::string &title,
-                                const std::string &description,
-                                Permissions *permissions) {
+static bool ShowPermissionsConfirmDialog(const std::string &download_url,
+                                         const std::string &title,
+                                         const std::string &description,
+                                         Permissions *permissions) {
   // Get required permissions description.
   std::string permissions_msg;
   permissions->EnumerateAllRequired(
@@ -71,26 +72,77 @@ bool GtkHostBase::ConfirmGadget(const std::string &download_url,
   gint result = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
 
-  if (result == GTK_RESPONSE_YES) {
+  return result == GTK_RESPONSE_YES;
+}
+
+bool GtkHostBase::ConfirmGadget(const std::string &path,
+                                const std::string &options_name,
+                                const std::string &download_url,
+                                const std::string &title,
+                                const std::string &description,
+                                Permissions *permissions) {
+  OptionsInterface *options = CreateOptions(options_name.c_str());
+  if (!options) {
+    ShowAlertDialog(GM_("GOOGLE_GADGETS"), StringPrintf(
+        GM_("GADGET_LOAD_FAILURE"), path.c_str()).c_str());
+    return false;
+  }
+
+  bool should_save_permissions = true;
+  Variant value = options->GetInternalValue(kPermissionsOption);
+  if (value.type() == Variant::TYPE_STRING) {
+    Permissions granted_permissions;
+    granted_permissions.FromString(VariantValue<const char*>()(value));
+    permissions->SetGrantedByPermissions(granted_permissions, true);
+    should_save_permissions = false;
+  }
+
+  if (permissions->HasUngranted()) {
+    should_save_permissions = true;
+    if (!ShowPermissionsConfirmDialog(download_url, title,
+                                      description, permissions)) {
+      options->DeleteStorage();
+      delete options;
+      return false;
+    }
     // TODO: Is it necessary to let user grant individual permissions
     // separately?
     permissions->GrantAllRequired();
-    return true;
   }
-  return false;
+
+  if (should_save_permissions) {
+    Permissions save_permissions = *permissions;
+    // Don't save required permissions.
+    save_permissions.RemoveAllRequired();
+    options->PutInternalValue(kPermissionsOption,
+                              Variant(save_permissions.ToString()));
+    options->Flush();
+  }
+  delete options;
+  return true;
 }
 
-bool GtkHostBase::ConfirmManagedGadget(int id, Permissions *permissions) {
+bool GtkHostBase::ConfirmManagedGadget(int id, bool grant) {
   GadgetManagerInterface *gadget_manager = GetGadgetManager();
 
+  std::string path = gadget_manager->GetGadgetInstancePath(id);
+  std::string options_name = gadget_manager->GetGadgetInstanceOptionsName(id);
   std::string download_url, title, description;
-  if (!gadget_manager->GetGadgetInstanceInfo(id,
-                                             GetSystemLocaleName().c_str(),
+  Permissions permissions;
+  if (!gadget_manager->GetGadgetInstanceInfo(id, GetSystemLocaleName().c_str(),
                                              NULL, &download_url,
-                                             &title, &description)) {
+                                             &title, &description) ||
+      !gadget_manager->GetGadgetDefaultPermissions(id, &permissions)) {
+    ShowAlertDialog(GM_("GOOGLE_GADGETS"), StringPrintf(
+        GM_("GADGET_LOAD_FAILURE"), path.c_str()).c_str());
     return false;
   }
-  return ConfirmGadget(download_url, title, description, permissions);
+
+  if (grant)
+    permissions.GrantAllRequired();
+
+  return ConfirmGadget(path, options_name, download_url, title,
+                       description, &permissions);
 }
 
 int GtkHostBase::FlagsToViewHostFlags(int flags) {

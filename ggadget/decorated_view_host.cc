@@ -186,22 +186,18 @@ bool DecoratedViewHost::ShowContextMenu(int button) {
 }
 
 void DecoratedViewHost::Alert(const ViewInterface *view, const char *message) {
-  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
-  if (view_host) view_host->Alert(view, message);
+  impl_->view_decorator_->Alert(message);
 }
 
 ViewHostInterface::ConfirmResponse DecoratedViewHost::Confirm(
     const ViewInterface *view, const char *message, bool cancel_button) {
-  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
-  return view_host ? view_host->Confirm(view, message, cancel_button) :
-         cancel_button ? CONFIRM_CANCEL : CONFIRM_NO;
+  return impl_->view_decorator_->Confirm(message, cancel_button);
 }
 
 std::string DecoratedViewHost::Prompt(const ViewInterface *view,
                                       const char *message,
                                       const char *default_value) {
-  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
-  return view_host ? view_host->Prompt(view, message, default_value) : "";
+  return impl_->view_decorator_->Prompt(message, default_value);
 }
 
 int DecoratedViewHost::GetDebugMode() const {

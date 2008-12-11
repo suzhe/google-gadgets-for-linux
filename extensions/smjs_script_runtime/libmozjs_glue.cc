@@ -47,7 +47,10 @@ namespace libmozjs {
 #undef JS_DefineFunction
 #undef JS_DefineFunctions
 #undef JS_DefineProperty
+#undef JS_DefineUCFunction
+#undef JS_DefineUCProperty
 #undef JS_DeleteProperty
+#undef JS_DeleteUCProperty2
 #undef JS_DestroyContext
 #undef JS_DestroyIdArray
 #undef JS_Finish
@@ -85,7 +88,6 @@ namespace libmozjs {
 #undef JS_NewArrayObject
 #undef JS_NewContext
 #undef JS_NewDouble
-#undef JS_NewFunction
 #undef JS_NewObject
 #undef JS_Init
 #undef JS_NewString
@@ -116,6 +118,7 @@ namespace libmozjs {
 #undef JS_SetProperty
 #undef JS_SetReservedSlot
 #undef JS_SetRuntimePrivate
+#undef JS_SetUCProperty
 #undef JS_TypeOfValue
 #undef JS_ValueToBoolean
 #undef JS_ValueToECMAInt32

@@ -89,6 +89,7 @@ class MainLoop::Impl {
     }
     GIOCondition cond =
         (type == MainLoopInterface::IO_READ_WATCH ? G_IO_IN : G_IO_OUT);
+    cond = static_cast<GIOCondition>(cond | G_IO_HUP | G_IO_ERR);
     GIOChannel *channel = g_io_channel_unix_new(fd);
     WatchNode *node = new WatchNode();
     node->type = type;
@@ -242,9 +243,9 @@ class MainLoop::Impl {
       bool ret = false;
       // Only call callback if the condition is correct.
       if ((node->type == MainLoopInterface::IO_READ_WATCH &&
-          (condition & G_IO_IN)) ||
+          (condition & (G_IO_IN | G_IO_HUP | G_IO_ERR))) ||
           (node->type == MainLoopInterface::IO_WRITE_WATCH &&
-          (condition & G_IO_OUT))) {
+          (condition & (G_IO_OUT | G_IO_HUP | G_IO_ERR)))) {
         node->calling = true;
         ret = callback->Call(main_loop, node->watch_id);
         node->calling = false;

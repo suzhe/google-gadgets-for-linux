@@ -224,7 +224,8 @@ class View::Impl : public SmallObject<> {
       theme_changed_(false),
       resize_border_specified_(false),
       mouse_over_(false),
-      view_focused_(false) {
+      view_focused_(false),
+      safe_to_destroy_(true) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -1692,6 +1693,7 @@ class View::Impl : public SmallObject<> {
   bool resize_border_specified_ : 1;
   bool mouse_over_              : 1;
   bool view_focused_            : 1;
+  bool safe_to_destroy_         : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;
@@ -1754,6 +1756,10 @@ ScriptableInterface *View::GetScriptable() const {
   return impl_->scriptable_view_;
 }
 
+bool View::IsSafeToDestroy() const {
+  return impl_->event_stack_.empty() && impl_->safe_to_destroy_;
+}
+
 void View::SetWidth(double width) {
   SetSize(width, GetHeight());
 }
@@ -1782,6 +1788,11 @@ void View::GetDefaultSize(double *width, double *height) const {
 void View::SetResizable(ViewInterface::ResizableMode resizable) {
   if (impl_->resizable_ != resizable) {
     impl_->resizable_ = resizable;
+
+    if (!impl_->resize_border_specified_ && resizable == RESIZABLE_TRUE) {
+      SetResizeBorder(8, 8, 8, 8);
+    }
+
     if (impl_->view_host_)
       impl_->view_host_->SetResizable(resizable);
   }
@@ -2070,11 +2081,13 @@ bool View::OpenURL(const char *url) const {
 
 void View::Alert(const char *message) const {
   if (impl_->view_host_) {
+    impl_->safe_to_destroy_ = false;
     bool old_interaction =
       impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
     impl_->view_host_->Alert(this, message);
     if (impl_->gadget_)
       impl_->gadget_->SetInUserInteraction(old_interaction);
+    impl_->safe_to_destroy_ = true;
   }
 }
 
@@ -2084,11 +2097,13 @@ ViewHostInterface::ConfirmResponse View::Confirm(const char *message,
     cancel_button ? ViewHostInterface::CONFIRM_CANCEL :
                     ViewHostInterface::CONFIRM_NO;
   if (impl_->view_host_) {
+    impl_->safe_to_destroy_ = false;
     bool old_interaction =
       impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
     result = impl_->view_host_->Confirm(this, message, cancel_button);
     if (impl_->gadget_)
       impl_->gadget_->SetInUserInteraction(old_interaction);
+    impl_->safe_to_destroy_ = true;
   }
   return result;
 }
@@ -2097,11 +2112,13 @@ std::string View::Prompt(const char *message,
                          const char *default_result) const {
   std::string result;
   if (impl_->view_host_) {
+    impl_->safe_to_destroy_ = false;
     bool old_interaction =
       impl_->gadget_ ? impl_->gadget_->SetInUserInteraction(true) : false;
     result = impl_->view_host_->Prompt(this, message, default_result);
     if (impl_->gadget_)
       impl_->gadget_->SetInUserInteraction(old_interaction);
+    impl_->safe_to_destroy_ = true;
   }
   return result;
 }

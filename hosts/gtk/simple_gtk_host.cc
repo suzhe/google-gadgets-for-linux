@@ -90,6 +90,7 @@ class SimpleGtkHost::Impl {
       view_debug_mode_(view_debug_mode),
       debug_console_config_(debug_console_config),
       gadgets_shown_(true),
+      safe_to_exit_(true),
       font_size_(kDefaultFontSize),
       gadget_manager_(GetGadgetManager()),
       on_new_gadget_instance_connection_(NULL),
@@ -246,44 +247,22 @@ class SimpleGtkHost::Impl {
   }
 
   bool NewGadgetInstanceCallback(int id) {
-    Permissions permissions;
-    if (gadget_manager_->GetGadgetDefaultPermissions(id, &permissions)) {
-      if (flags_ & GRANT_PERMISSIONS) {
-        permissions.GrantAllRequired();
-      }
-      if (!permissions.HasUngranted() ||
-          owner_->ConfirmManagedGadget(id, &permissions)) {
-        // Save initial permissions.
-        std::string options_name =
-            gadget_manager_->GetGadgetInstanceOptionsName(id);
-        OptionsInterface *options = CreateOptions(options_name.c_str());
-        // Don't save required permissions.
-        permissions.RemoveAllRequired();
-        options->PutInternalValue(kPermissionsOption,
-                                  Variant(permissions.ToString()));
-        options->Flush();
-        delete options;
-        return LoadGadgetInstance(id);
-      }
-    } else {
-      ShowAlertDialog(
-          GM_("GOOGLE_GADGETS"),
-          StringPrintf(
-              GM_("GADGET_LOAD_FAILURE"),
-              gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str());
-    }
-    return false;
+    return LoadGadgetInstance(id);
   }
 
   bool LoadGadgetInstance(int id) {
     bool result = false;
-    std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    if (options.length() && path.length()) {
-      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
-      DLOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
-           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+    safe_to_exit_ = false;
+    if (owner_->ConfirmManagedGadget(id, flags_ & GRANT_PERMISSIONS)) {
+      std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
+      std::string path = gadget_manager_->GetGadgetInstancePath(id);
+      if (options.length() && path.length()) {
+        result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
+        DLOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
+             path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      }
     }
+    safe_to_exit_ = true;
     return result;
   }
 
@@ -297,10 +276,12 @@ class SimpleGtkHost::Impl {
     Gadget::DebugConsoleConfig dcc = show_debug_console ?
         Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
 
+    safe_to_exit_ = false;
     Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
                                 global_permissions_, dcc);
-    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
+    safe_to_exit_ = true;
 
+    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
       if (it != gadgets_.end()) {
@@ -446,6 +427,7 @@ class SimpleGtkHost::Impl {
   }
 
   void ChangeHotKeyMenuCallback(const char *) {
+    safe_to_exit_ = false;
     HotKeyDialog dialog;
     dialog.SetHotKey(hotkey_grabber_.GetHotKey());
     hotkey_grabber_.SetEnableGrabbing(false);
@@ -460,6 +442,7 @@ class SimpleGtkHost::Impl {
       UpdateStatusIconTooltip();
 #endif
     }
+    safe_to_exit_ = true;
   }
 
   void ToggleAllGadgets() {
@@ -499,12 +482,14 @@ class SimpleGtkHost::Impl {
   }
 
   void ExitMenuCallback(const char *) {
-    // Close the poppped out view, to make sure that the main view decorator
-    // can save its states correctly.
-    if (expanded_popout_)
-      OnPopInHandler(expanded_original_);
+    if (IsSafeToExit()) {
+      // Close the poppped out view, to make sure that the main view decorator
+      // can save its states correctly.
+      if (expanded_popout_)
+        OnPopInHandler(expanded_original_);
 
-    owner_->Exit();
+      owner_->Exit();
+    }
   }
 
   void AddGadgetMenuCallback(const char *) {
@@ -834,6 +819,18 @@ class SimpleGtkHost::Impl {
                      G_CALLBACK(gtk_widget_destroyed), &info->debug_console);
   }
 
+  bool IsSafeToExit() {
+    if (!safe_to_exit_)
+      return false;
+    GadgetInfoMap::const_iterator it = gadgets_.begin();
+    GadgetInfoMap::const_iterator end = gadgets_.end();
+    for (; it != end; ++it) {
+      if (!it->second.gadget->IsSafeToRemove())
+        return false;
+    }
+    return true;
+  }
+
   typedef std::map<int, GadgetInfo> GadgetInfoMap;
   GadgetInfoMap gadgets_;
 
@@ -846,6 +843,7 @@ class SimpleGtkHost::Impl {
   Gadget::DebugConsoleConfig debug_console_config_;
 
   bool gadgets_shown_;
+  bool safe_to_exit_;
   int font_size_;
 
   GadgetManagerInterface *gadget_manager_;
@@ -899,6 +897,10 @@ void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
 
 int SimpleGtkHost::GetDefaultFontSize() {
   return impl_->font_size_;
+}
+
+bool SimpleGtkHost::IsSafeToExit() const {
+  return impl_->IsSafeToExit();
 }
 
 } // namespace gtk

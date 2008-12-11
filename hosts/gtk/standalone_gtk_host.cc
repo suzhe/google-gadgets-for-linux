@@ -61,6 +61,7 @@ class StandaloneGtkHost::Impl {
       details_view_host_(NULL),
       debug_console_(NULL),
       details_on_right_(false),
+      safe_to_exit_(true),
       flags_(flags),
       view_debug_mode_(view_debug_mode),
       debug_console_config_(debug_console_config) {
@@ -73,9 +74,11 @@ class StandaloneGtkHost::Impl {
   }
 
   bool InitFailed(const std::string &gadget_path) {
+    safe_to_exit_ = false;
     ShowAlertDialog(GM_("GOOGLE_GADGETS"),
                     StringPrintf(GM_("GADGET_LOAD_FAILURE"),
                                  gadget_path.c_str()).c_str());
+    safe_to_exit_ = true;
     owner_->Exit();
     return false;
   }
@@ -96,52 +99,20 @@ class StandaloneGtkHost::Impl {
     WebSafeEncodeBase64(options_name_sha1, false, &options_name);
     options_name = "standalone-" + options_name;
 
-    OptionsInterface *options = CreateOptions(options_name.c_str());
-    if (!options) {
-      return InitFailed(gadget_path);
-    }
-
     Permissions permissions;
     Gadget::GetGadgetRequiredPermissions(&manifest, &permissions);
-
-    bool confirmed = false;
-    options->GetInternalValue(
-        kPermissionConfirmedOption).ConvertToBool(&confirmed);
-
-    if (confirmed || (flags_ & GRANT_PERMISSIONS))
-      permissions.GrantAllRequired();
-
-    // Just return if user didn't grant permissions required by gadget.
-    if (permissions.HasUngranted() &&
-        !owner_->ConfirmGadget(gadget_path, manifest[kManifestName],
+    safe_to_exit_ = false;
+    if (!owner_->ConfirmGadget(gadget_path, options_name, gadget_path,
+                               manifest[kManifestName],
                                manifest[kManifestDescription], &permissions)) {
-      options->DeleteStorage();
-      delete options;
-      owner_->Exit();
+      safe_to_exit_ = true;
       return false;
     }
-
-    // Make sure that kPermissionConfirmedOption and kPermissionsOption will
-    // only be saved once.
-    if (!confirmed) {
-      // Don't save required permissions.
-      permissions.RemoveAllRequired();
-      options->PutInternalValue(kPermissionsOption,
-                                Variant(permissions.ToString()));
-      options->PutInternalValue(kPermissionConfirmedOption, Variant(true));
-      options->Flush();
-    }
+    safe_to_exit_ = true;
 
     if (!LoadGadget(gadget_path.c_str(), options_name.c_str(), 0, false)) {
-      options->DeleteStorage();
-      delete options;
       return InitFailed(gadget_path);
     }
-
-#ifdef _DEBUG
-    options->PutInternalValue("gadget_name", Variant(manifest[kManifestName]));
-#endif
-    delete options;
     return true;
   }
 
@@ -154,14 +125,16 @@ class StandaloneGtkHost::Impl {
                                     show_debug_console);
     }
 
-    Permissions permissions;
-    permissions.SetGranted(Permissions::ALL_ACCESS, true);
+    Permissions global_permissions;
+    global_permissions.SetGranted(Permissions::ALL_ACCESS, true);
 
     Gadget::DebugConsoleConfig dcc = show_debug_console ?
         Gadget::DEBUG_CONSOLE_INITIAL : debug_console_config_;
 
+    safe_to_exit_ = false;
     gadget_ = new Gadget(owner_, path, options_name, instance_id,
-                         permissions, dcc);
+                         global_permissions, dcc);
+    safe_to_exit_ = true;
 
     if (!gadget_->IsValid()) {
       LOG("Failed to load standalone gadget %s", path);
@@ -355,6 +328,7 @@ class StandaloneGtkHost::Impl {
   GtkWidget *debug_console_;
 
   bool details_on_right_;
+  bool safe_to_exit_;
   int flags_;
   int view_debug_mode_;
   Gadget::DebugConsoleConfig debug_console_config_;
@@ -410,6 +384,11 @@ void StandaloneGtkHost::Present() {
 Connection *StandaloneGtkHost::ConnectOnLoadGadget(
       ggadget::Slot4<Gadget *, const char *, const char *, int, bool> *slot) {
   return impl_->on_load_gadget_signal_.Connect(slot);
+}
+
+bool StandaloneGtkHost::IsSafeToExit() const {
+  return impl_->safe_to_exit_ &&
+      (!impl_->gadget_ || impl_->gadget_->IsSafeToRemove());
 }
 
 } // namespace gtk

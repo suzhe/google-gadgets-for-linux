@@ -368,8 +368,10 @@ static void OnClientMessage(const std::string &data) {
 }
 
 static void DefaultSignalHandler(int sig) {
-  DLOG("Signal caught: %d, exit.", sig);
+  DLOG("Signal caught: %d, exit forcely.", sig);
   g_exit_all_hosts_signal();
+  // Exit forcely, no matter if the hosts exit successfully.
+  exit(1);
 }
 
 static bool SendArgumentCallback(const std::string &arg,

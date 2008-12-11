@@ -58,8 +58,13 @@ class GtkHostBase : public ggadget::HostInterface {
   }
 
  public:
+  virtual bool IsSafeToExit() const {
+    return true;
+  }
+
   void Exit() {
-    on_exit_signal_();
+    if (IsSafeToExit())
+      on_exit_signal_();
   }
 
   Connection *ConnectOnExit(ggadget::Slot0<void> *callback) {
@@ -69,10 +74,11 @@ class GtkHostBase : public ggadget::HostInterface {
   static int FlagsToViewHostFlags(int flags);
 
  protected:
-  bool ConfirmGadget(const std::string &download_url, const std::string &title,
+  bool ConfirmGadget(const std::string &path, const std::string &options_name,
+                     const std::string &download_url, const std::string &title,
                      const std::string &description, Permissions *permissions);
 
-  bool ConfirmManagedGadget(int id, Permissions *permissions);
+  bool ConfirmManagedGadget(int id, bool grant);
 
  private:
   ggadget::Signal0<void> on_exit_signal_;

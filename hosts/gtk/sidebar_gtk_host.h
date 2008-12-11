@@ -45,6 +45,9 @@ class SideBarGtkHost : public GtkHostBase {
   virtual void ShowGadgetDebugConsole(Gadget *gadget);
   virtual int GetDefaultFontSize();
 
+ public:
+  virtual bool IsSafeToExit() const;
+
  private:
   class Impl;
   Impl *impl_;

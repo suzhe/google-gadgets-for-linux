@@ -104,6 +104,9 @@ class View : public ViewInterface {
   /** Gets the corresponding ScriptableView object of this View. */
   ScriptableInterface *GetScriptable() const;
 
+  /** Checks if this view is safe to destroy. */
+  bool IsSafeToDestroy() const;
+
  public: // ViewInterface methods.
   virtual Gadget *GetGadget() const;
   virtual GraphicsInterface *GetGraphics() const;
