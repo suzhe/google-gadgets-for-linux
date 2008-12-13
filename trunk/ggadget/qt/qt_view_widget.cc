@@ -336,6 +336,14 @@ void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
     event->accept();
 }
 
+// We treat inputMethodEvent as special KeyboardEvent.
+void QtViewWidget::inputMethodEvent(QInputMethodEvent *event) {
+  if (!view_) return;
+  KeyboardEvent e(Event::EVENT_KEY_DOWN, 0, 0, event);
+  if (view_->OnKeyEvent(e) != ggadget::EVENT_RESULT_UNHANDLED)
+    event->accept();
+}
+
 void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
   if (!view_) return;
   DLOG("drag enter");
