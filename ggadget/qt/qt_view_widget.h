@@ -60,6 +60,7 @@ class QtViewWidget : public QWidget {
   virtual void wheelEvent(QWheelEvent * event);
   virtual void keyPressEvent(QKeyEvent *event);
   virtual void keyReleaseEvent(QKeyEvent *event);
+  virtual void inputMethodEvent(QInputMethodEvent *event);
   virtual void dragEnterEvent(QDragEnterEvent *event);
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);

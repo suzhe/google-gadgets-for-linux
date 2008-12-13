@@ -327,7 +327,7 @@ void QtEditElement::SetDetectUrls(bool /*detect_urls*/) {
 }
 
 void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
-  const QSize s = doc_.pageSize().toSize();
+  const QSize s = doc_.documentLayout()->documentSize().toSize();
 
   if (width) *width = s.width();
   if (height) *height = s.height();
@@ -496,16 +496,39 @@ EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
   return EVENT_RESULT_HANDLED;
 }
 
+EventResult QtEditElement::HandleInputMethodEvent(QInputMethodEvent *e) {
+  if (readonly_) return EVENT_RESULT_UNHANDLED;
+
+  cursor_->removeSelectedText();
+
+  // insert commit string
+  if (!e->commitString().isEmpty() || e->replacementLength()) {
+    QTextCursor c = *cursor_;
+    c.setPosition(c.position() + e->replacementStart());
+    c.setPosition(c.position() + e->replacementLength(), QTextCursor::KeepAnchor);
+    c.insertText(e->commitString());
+    ScrollToCursor();
+    FireOnChangeEvent();
+    QueueDraw();
+  }
+
+  return EVENT_RESULT_HANDLED;
+}
+
 EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
-  QKeyEvent *qevent = static_cast<QKeyEvent*>(event.GetOriginalEvent());
+  QEvent *qevent = static_cast<QEvent*>(event.GetOriginalEvent());
+  if (qevent->type() == QEvent::InputMethod) {
+    return HandleInputMethodEvent(static_cast<QInputMethodEvent*>(qevent));
+  }
   Event::Type type = event.GetType();
   if (type == Event::EVENT_KEY_UP)
     return EVENT_RESULT_UNHANDLED;
 
+  QKeyEvent *key_event = static_cast<QKeyEvent*>(qevent);
   int mod = event.GetModifier();
   bool shift = (mod & Event::MOD_SHIFT);
   bool ctrl = (mod & Event::MOD_CONTROL);
-  int keyval = qevent->key();
+  int keyval = key_event->key();
 
   if (type == Event::EVENT_KEY_DOWN) {
     if (keyval == Qt::Key_Left) {
@@ -545,10 +568,11 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
       cursor_->deleteChar();
     } else if (keyval == Qt::Key_Insert && !shift && !ctrl) {
       overwrite_ = !overwrite_;
-    } else if (!qevent->text().isEmpty()
+    } else if (!key_event->text().isEmpty()
+               && keyval != Qt::Key_Escape
                && keyval != Qt::Key_Return
                && keyval != Qt::Key_Tab) {
-      EnterText(qevent->text());
+      EnterText(key_event->text());
     } else {
       return EVENT_RESULT_UNHANDLED;
     }

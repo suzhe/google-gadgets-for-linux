@@ -21,6 +21,7 @@
 #include <QtCore/QString>
 #include <QtGui/QTextDocument>
 #include <QtGui/QTextCursor>
+#include <QtGui/QInputMethodEvent>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/basic_element.h>
 #include <ggadget/edit_element_base.h>
@@ -105,6 +106,8 @@ class QtEditElement : public EditElementBase {
   int RequestHeight();
   int RealWidth();
   void ScrollToCursor();
+  EventResult HandleInputMethodEvent(QInputMethodEvent *e);
+
   QTextDocument doc_;
   QTextCursor *cursor_;
   bool multiline_;
