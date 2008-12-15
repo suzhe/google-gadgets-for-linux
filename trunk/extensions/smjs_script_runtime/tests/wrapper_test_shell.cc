@@ -49,12 +49,17 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
 
 static GlobalObject *global;
 
+static ScriptableInterface *NullCtor() {
+  return NULL;
+}
+
 // Called by the initialization code in js_shell.cc.
 JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
   context->RegisterClass("TestScriptable",
                          NewSlot(global, &GlobalObject::ConstructScriptable));
+  context->RegisterClass("TestNullCtor", NewSlot(NullCtor));
   return JS_TRUE;
 }
 

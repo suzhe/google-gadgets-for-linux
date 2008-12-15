@@ -279,9 +279,10 @@ NativeJSWrapper *JSScriptContext::WrapNativeObjectToJSInternal(
   NativeJSWrapperMap::const_iterator it =
       native_js_wrapper_map_.find(scriptable);
   if (it == native_js_wrapper_map_.end()) {
-    if (!js_object)
+    if (!js_object) {
       js_object = JS_NewObject(context_, NativeJSWrapper::GetWrapperJSClass(),
                                NULL, NULL);
+    }
     if (!js_object)
       return NULL;
 
@@ -469,6 +470,8 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   JSClassWithNativeCtor *cls =
       reinterpret_cast<JSClassWithNativeCtor *>(JS_GET_CLASS(cx, obj));
   ASSERT(cls);
+  // Count the reference from ClassName.prototype.
+  cls->Ref();
 
   // Create a wrapper first which doesn't really wrap a scriptable object,
   // because it is not available before the constructor is called.
@@ -484,20 +487,18 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
 
   ResultVariant return_value = cls->constructor_->Call(NULL, expected_argc,
                                                        params);
+  delete [] params;
+
   ASSERT(return_value.v().type() == Variant::TYPE_SCRIPTABLE);
   ScriptableInterface *scriptable =
       VariantValue<ScriptableInterface *>()(return_value.v());
-
   if (!scriptable) {
-    delete [] params;
-    *rval = JSVAL_NULL;
-    return JS_TRUE;
+    RaiseException(cx, "Failed to construct native object of class %s",
+                   cls->js_class_.name);
+    return JS_FALSE;
   }
 
   context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
-  delete [] params;
-  // Count the reference from ClassName.prototype.
-  cls->Ref();
   return JS_TRUE;
 }
 
