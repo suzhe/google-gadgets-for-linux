@@ -545,8 +545,8 @@ class BinaryStream : public BinaryStreamInterface {
         bytes < 0 || bytes > static_cast<int64_t>(kMaxFileSize))
       return false;
 
-    result->reserve(bytes);
-    result->resize(bytes);
+    result->reserve(static_cast<size_t>(bytes));
+    result->resize(static_cast<size_t>(bytes));
     ssize_t read_bytes = read(fd_, const_cast<char *>(result->c_str()),
                               static_cast<size_t>(bytes));
     if (read_bytes == -1) {
@@ -556,7 +556,7 @@ class BinaryStream : public BinaryStreamInterface {
       return false;
     }
 
-    result->resize(read_bytes);
+    result->resize(static_cast<size_t>(read_bytes));
     pos_ = lseek(fd_, 0, SEEK_CUR);
     return true;
   }
@@ -598,7 +598,7 @@ class BinaryStream : public BinaryStreamInterface {
     if (bytes + pos_ > size_)
       pos_ = lseek(fd_, size_, SEEK_SET);
     else
-      pos_ = lseek(fd_, bytes, SEEK_CUR);
+      pos_ = lseek(fd_, static_cast<off_t>(bytes), SEEK_CUR);
 
     return pos_ != -1;
   }

@@ -1289,4 +1289,24 @@ bool Gadget::GetGadgetRequiredPermissions(const StringMap *manifest,
   return has_permissions;
 }
 
+bool Gadget::SaveGadgetInitialPermissions(const char *options_path,
+                                          const Permissions &permissions) {
+  ASSERT(options_path && *options_path);
+  bool result = false;
+  OptionsInterface *options = CreateOptions(options_path);
+  ASSERT(options);
+  if (options) {
+    Variant value = options->GetInternalValue(kPermissionsOption);
+    if (value.type() != Variant::TYPE_STRING) {
+      Permissions tmp = permissions;
+      tmp.RemoveAllRequired();
+      options->PutInternalValue(kPermissionsOption, Variant(tmp.ToString()));
+      options->Flush();
+      result = true;
+    }
+    delete options;
+  }
+  return result;
+}
+
 } // namespace ggadget

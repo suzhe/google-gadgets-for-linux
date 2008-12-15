@@ -575,16 +575,9 @@ bool ConfirmGadget(GadgetManagerInterface *gadget_manager,
   if (gadget_manager->GetGadgetDefaultPermissions(id, &permissions)) {
     if (!permissions.HasUngranted()
         || PromptGadgetPermission(gadget_manager, id, &permissions)) {
-      // Save initial permissions.
       std::string options_name =
           gadget_manager->GetGadgetInstanceOptionsName(id);
-      OptionsInterface *options = CreateOptions(options_name.c_str());
-      // Don't save required permissions.
-      permissions.RemoveAllRequired();
-      options->PutInternalValue(kPermissionsOption,
-                                Variant(permissions.ToString()));
-      options->Flush();
-      delete options;
+      Gadget::SaveGadgetInitialPermissions(options_name.c_str(), permissions);
       return true;
     }
   }

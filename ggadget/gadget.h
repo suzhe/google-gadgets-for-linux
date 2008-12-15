@@ -109,9 +109,8 @@ class Gadget {
    *
    * The gadget's initial granted and denied permissions must be stored in its
    * options database as an internal value with key "permissions". If there is
-   * no initial permissions when creating the gadget instance, then the initial
-   * permissions will be initialized to grant all permissions required by the
-   * gadget.
+   * no initial permissions when creating the gadget instance, then the gadget
+   * instance will NOT get any permissions granted by default.
    *
    * @param host the host of this gadget.
    * @param base_path the base path of this gadget. It can be a directory,
@@ -372,6 +371,23 @@ class Gadget {
    */
   static bool GetGadgetRequiredPermissions(const StringMap *manifest,
                                            Permissions *required);
+
+  /**
+   * Saves the initial permissions of a gadget instance.
+   *
+   * The gadget's initial permissions is stored in its options database as an
+   * internal value with key "permissions".
+   *
+   * @param options_path Path to the options database of this gadget instance.
+   * @param permissions The initial permissions to be saved. Only
+   *        granted/denied permissions will be saved, required permissions will
+   *        be discarded.
+   * @return true if the initial permissions is saved successfully. If the
+   *        initial permissions was already saved before, or anything wrong
+   *        happens, false will be returned.
+   */
+  static bool SaveGadgetInitialPermissions(const char *options_path,
+                                           const Permissions &permissions);
 
  private:
   class Impl;

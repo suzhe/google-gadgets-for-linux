@@ -1034,6 +1034,8 @@ void GoogleGadgetManager::ShowGadgetBrowserDialog(HostInterface *host) {
   if (!browser_gadget_) {
     Permissions permissions;
     permissions.SetGranted(Permissions::ALL_ACCESS, true);
+    Gadget::SaveGadgetInitialPermissions(kGoogleGadgetBrowserOptionsName,
+                                         permissions);
     browser_gadget_ =
         new Gadget(host,
                    GetSystemGadgetPath(kGoogleGadgetBrowserName).c_str(),
