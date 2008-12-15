@@ -88,7 +88,7 @@ AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-GGL_VERSION_TIMESTAMP=\"081107-000000\"
+GGL_VERSION_TIMESTAMP=\"081215-000000\"
 AC_SUBST(GGL_VERSION_TIMESTAMP)
 
 # Define the version of Google Desktop Gadget API that this release supports.

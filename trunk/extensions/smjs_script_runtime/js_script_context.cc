@@ -488,6 +488,12 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   ScriptableInterface *scriptable =
       VariantValue<ScriptableInterface *>()(return_value.v());
 
+  if (!scriptable) {
+    delete [] params;
+    *rval = JSVAL_NULL;
+    return JS_TRUE;
+  }
+
   context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
   delete [] params;
   // Count the reference from ClassName.prototype.

@@ -65,7 +65,7 @@ SET(GGL_LIB_SOVERSION "0")
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-SET(GGL_VERSION_TIMESTAMP \"081107-000000\")
+SET(GGL_VERSION_TIMESTAMP \"081215-000000\")
 
 # Define the version of Google Desktop Gadget API that this release supports.
 SET(GGL_API_MAJOR_VERSION 5)

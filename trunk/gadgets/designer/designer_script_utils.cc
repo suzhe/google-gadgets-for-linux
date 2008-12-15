@@ -286,6 +286,17 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
         return false;
       }
 
+      StringMap manifest;
+      Permissions permissions;
+      if (Gadget::GetGadgetManifest(gadget_path_.c_str(), &manifest)) {
+        Gadget::GetGadgetRequiredPermissions(&manifest, &permissions);
+        permissions.GrantAllRequired();
+        Gadget::SaveGadgetInitialPermissions(options_name_.c_str(),
+                                             permissions);
+      } else {
+        LOG("Failed to load gadget's required permissions information.");
+      }
+
       g_designee_gadget = g_designer_gadget->GetHost()->LoadGadget(
           gadget_path_.c_str(), options_name_.c_str(), designee_id, true);
 
@@ -324,11 +335,14 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
   void RemoveGadget() {
     if (g_designee_gadget) {
       g_designee_close_connection->Disconnect();
-      OptionsInterface *options = g_designee_gadget->GetOptions();
-      if (options)
-        options->DeleteStorage();
       g_designee_gadget->RemoveMe(false);
       g_designee_gadget = NULL;
+    }
+
+    OptionsInterface *options = CreateOptions(designee_options_name_.c_str());
+    if (options) {
+      options->DeleteStorage();
+      delete options;
     }
   }
 

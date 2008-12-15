@@ -34,15 +34,14 @@ FOREACH(icon ${ICONS})
 ENDFOREACH(icon ${ICONS})
 
 INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/128x128.png"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps"
-    RENAME google-gadgets.png
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps"
+  RENAME google-gadgets.png
 )
 
 INSTALL(FILES "${CMAKE_SOURCE_DIR}/xdg/00-google-gadgets.xml"
   DESTINATION
   "${CMAKE_INSTALL_PREFIX}/share/mime/packages"
-  RENAME google-gadgets.xml
-    )
+)
 
 ADD_EXECUTABLE(intl_desktop_file intl_desktop_file.cc)
 TARGET_LINK_LIBRARIES(intl_desktop_file ggadget${GGL_EPOCH})
