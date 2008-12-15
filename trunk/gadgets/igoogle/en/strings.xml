@@ -24,4 +24,5 @@
 <GADGET_LOADING>Loading...</GADGET_LOADING>
 <GADGET_ERROR>Error loading gadget.</GADGET_ERROR>
 <GADGET_NOTLOADED>Options loading...</GADGET_NOTLOADED>
+<NO_OPTIONS>This gadget has no configurable option.</NO_OPTIONS>
 </strings>

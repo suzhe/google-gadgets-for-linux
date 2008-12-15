@@ -105,7 +105,8 @@ class BrowserController {
         ping_flag_(false),
         browser_seq_(0),
         recursion_depth_(0),
-        command_start_time_(0) {
+        command_start_time_(0),
+        first_command_(false) {
   }
 
   ~BrowserController() {
@@ -114,7 +115,6 @@ class BrowserController {
   }
 
   bool PingTimerCallback(int watch) {
-    LOG("************Ping Timer callback: watch=%d", watch);
     if (!ping_flag_ || browser_elements_.empty()) {
       LOG("Browser child ping timeout or there is no browser element.");
       StopChild(true);
@@ -175,10 +175,12 @@ class BrowserController {
       ping_timer_watch_ = ggl_main_loop->AddTimeoutWatch(kPingInterval * 3 / 2,
           new WatchCallbackSlot(
               NewSlot(this, &BrowserController::PingTimerCallback)));
+      first_command_ = true;
     }
   }
 
   void StopChild(bool on_error) {
+    up_buffer_.clear();
     if (child_pid_) {
       ggl_main_loop->RemoveWatch(up_fd_watch_);
       up_fd_watch_ = 0;
@@ -209,15 +211,17 @@ class BrowserController {
     if (!child_pid_)
       StartChild();
     browser_elements_[++browser_seq_] = impl;
-    DLOG("Browser %zu added. %zu browsers open", browser_seq_,
+    DLOG("Added browser %zu. Total %zu browsers open", browser_seq_,
          browser_elements_.size());
     return browser_seq_;
   }
 
   void CloseBrowser(size_t id) {
-    browser_elements_.erase(id);
-    SendCommand(kCloseBrowserCommand, id, NULL);
-    DLOG("Browser %zu closed. %zu browsers left", id, browser_elements_.size());
+    if (browser_elements_.erase(id)) {
+      SendCommand(kCloseBrowserCommand, id, NULL);
+      DLOG("Closed browser %zu. %zu browsers left", id,
+           browser_elements_.size());
+    }
   }
 
   bool OnUpFDReady(int) {
@@ -245,52 +249,48 @@ class BrowserController {
       StopChild(true);
     }
 
-    if (strncmp(up_buffer_.c_str(), kReplyPrefix, kReplyPrefixLength) == 0) {
-      // This message is a reply message.
-      if (up_buffer_[up_buffer_.size() - 1] == '\n') {
-        std::string result;
-        std::swap(result, up_buffer_);
-        return result;
-      }
-      // No a full message.
-      return "";
-    }
-
-    if (up_buffer_.size() < kEOMFullLength ||
-        strncmp(up_buffer_.c_str() + up_buffer_.size() - kEOMFullLength,
-                kEndOfMessageFull, kEOMFullLength) != 0) {
-      // Not a full message.
-      return "";
-    }
-
-    static const size_t kMaxParams = 20;
-    size_t curr_pos = 0;
-    size_t eom_pos = up_buffer_.size() - kEOMFullLength;
-    size_t param_count = 0;
-    const char *params[kMaxParams];
-    while (curr_pos <= eom_pos) {
-      size_t end_of_line_pos = up_buffer_.find('\n', curr_pos);
-      ASSERT(end_of_line_pos != up_buffer_.npos);
-      up_buffer_[end_of_line_pos] = '\0';
-      if (param_count < kMaxParams) {
-        params[param_count] = up_buffer_.c_str() + curr_pos;
-        param_count++;
+    std::string reply;
+    // In rare cases that up_buffer_ can contain more than one messages.
+    // For example, child sends a ping feedback immediately after a reply.
+    while (true) {
+      if (strncmp(up_buffer_.c_str(), kReplyPrefix, kReplyPrefixLength) == 0) {
+        // This message is a reply message.
+        size_t eom_pos = up_buffer_.find('\n');
+        if (eom_pos == up_buffer_.npos)
+          break;
+        reply = up_buffer_.substr(0, eom_pos + 1);
+        up_buffer_.erase(0, eom_pos + 1);
       } else {
-        LOG("Too many up message parameter");
-        // Don't exit to recover from the error status.
+        size_t eom_pos = up_buffer_.find(kEndOfMessageFull);
+        if (eom_pos == up_buffer_.npos)
+          break;
+
+        std::string message(up_buffer_, 0, eom_pos + kEOMFullLength);
+        up_buffer_.erase(0, eom_pos + kEOMFullLength);
+
+        static const size_t kMaxParams = 20;
+        size_t curr_pos = 0;
+        size_t param_count = 0;
+        const char *params[kMaxParams];
+        while (curr_pos <= eom_pos) {
+          size_t end_of_line_pos = message.find('\n', curr_pos);
+          ASSERT(end_of_line_pos != message.npos);
+          message[end_of_line_pos] = '\0';
+          if (param_count < kMaxParams) {
+            params[param_count] = message.c_str() + curr_pos;
+            param_count++;
+          } else {
+            LOG("Too many up message parameter");
+            // Don't exit to recover from the error status.
+          }
+          curr_pos = end_of_line_pos + 1;
+        }
+        ASSERT(curr_pos = eom_pos + 1);
+
+        ProcessFeedback(param_count, params);
       }
-      curr_pos = end_of_line_pos + 1;
     }
-    ASSERT(curr_pos = eom_pos + 1);
-
-    // Clear up_buffer_ before handling the feedback because this function
-    // may re-enter during the feedback is handled. 'temp' still holds the
-    // buffer of up_buffer_ because params use it.
-    std::string temp;
-    std::swap(temp, up_buffer_);
-
-    ProcessFeedback(param_count, params);
-    return "";
+    return reply;
   }
 
   // Defined later because it depends on BrowserElementImpl class.
@@ -320,7 +320,8 @@ class BrowserController {
     std::string reply;
     do {
       struct pollfd poll_fd = { up_fd_, POLLIN, 0 };
-      int ret = poll(&poll_fd, 1, kSingleTimeout);
+      int ret = poll(&poll_fd, 1,
+                     first_command_ ? kWholeTimeout : kSingleTimeout);
       if (ret > 0) {
         reply = ReadUpPipe();
         if (!reply.empty())
@@ -333,13 +334,16 @@ class BrowserController {
 
     --recursion_depth_;
     if (reply.empty()) {
-      LOG("Failed to read command reply");
+      LOG("Failed to read command reply: current_buffer='%s'",
+          up_buffer_.c_str());
       // Force all recursions to break;
       command_start_time_ = 0;
       if (recursion_depth_ == 0)
         StopChild(true);
       return reply;
     }
+
+    first_command_ = false;
     // Remove the reply prefix and ending '\n'.
     reply.erase(0, kReplyPrefixLength);
     reply.erase(reply.size() - 1, 1);
@@ -393,6 +397,7 @@ class BrowserController {
   bool removing_watch_;
   int recursion_depth_;
   uint64_t command_start_time_;
+  bool first_command_;
 };
 
 // Manages the objects of the host side and the browser side for a browser.
@@ -551,8 +556,9 @@ class BrowserElementImpl {
       : owner_(owner),
         object_seq_(0),
         controller_(BrowserController::get()),
-        browser_id_(controller_->AddBrowserElement(this)),
+        browser_id_(0),
         content_type_("text/html"),
+        content_updated_(false),
         socket_(NULL),
         x_(0), y_(0), width_(0), height_(0),
         minimized_(false), popped_out_(false),
@@ -568,24 +574,33 @@ class BrowserElementImpl {
             NewSlot(this, &BrowserElementImpl::OnViewDockUndock))),
         undock_connection_(owner->GetView()->ConnectOnUndockEvent(
             NewSlot(this, &BrowserElementImpl::OnViewDockUndock))) {
-  }
-
-  ~BrowserElementImpl() {
-    controller_->CloseBrowser(browser_id_);
-    for (BrowserObjectMap::iterator it = browser_objects_.begin();
-         it != browser_objects_.end(); ++it) {
-      // The browser_objects may still be referenced by host script engine.
-      it->second->OnOwnerDestroy();
-    }
-
     minimized_connection_->Disconnect();
     restored_connection_->Disconnect();
     popout_connection_->Disconnect();
     popin_connection_->Disconnect();
     dock_connection_->Disconnect();
     undock_connection_->Disconnect();
-    if (GTK_IS_WIDGET(socket_))
+  }
+
+  ~BrowserElementImpl() {
+    Deactivate();
+  }
+
+  void Deactivate() {
+    if (browser_id_) {
+      controller_->CloseBrowser(browser_id_);
+      browser_id_ = 0;
+    }
+    for (BrowserObjectMap::iterator it = browser_objects_.begin();
+         it != browser_objects_.end(); ++it) {
+      // The browser_objects may still be referenced by host script engine.
+      it->second->OnOwnerDestroy();
+    }
+
+    if (GTK_IS_WIDGET(socket_)) {
       gtk_widget_destroy(socket_);
+      socket_ = NULL;
+    }
   }
 
   void GetWidgetExtents(gint *x, gint *y, gint *width, gint *height) {
@@ -607,10 +622,13 @@ class BrowserElementImpl {
     *height = static_cast<gint>(ceil(widget_y1 - widget_y0));
   }
 
-  void CreateSocket() {
-    if (GTK_IS_SOCKET(socket_))
+  void EnsureBrowser() {
+    if (!browser_id_)
+      browser_id_ = controller_->AddBrowserElement(this);
+    if (!browser_id_ || GTK_IS_SOCKET(socket_))
       return;
 
+    content_updated_ = content_.empty();
     GtkWidget *container = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
     if (!GTK_IS_FIXED(container)) {
       LOG("BrowserElement needs a GTK_FIXED parent. Actual type: %s",
@@ -633,23 +651,29 @@ class BrowserElementImpl {
 
   static void OnSocketRealize(GtkWidget *widget, gpointer user_data) {
     BrowserElementImpl *impl = static_cast<BrowserElementImpl *>(user_data);
-    std::string browser_id_str = StringPrintf("%zu", impl->browser_id_);
-    // Convert GdkNativeWindow to intmax_t to ensure the printf format
-    // to match the data type and not to loose accuracy.
-    std::string socket_id_str = StringPrintf("0x%jx",
-        static_cast<intmax_t>(gtk_socket_get_id(GTK_SOCKET(impl->socket_))));
-    impl->controller_->SendCommand(kNewBrowserCommand, impl->browser_id_,
-                                   socket_id_str.c_str(), NULL);
-    impl->SetChildContent();
+    if (impl->browser_id_) {
+      std::string browser_id_str = StringPrintf("%zu", impl->browser_id_);
+      // Convert GdkNativeWindow to intmax_t to ensure the printf format
+      // to match the data type and not to loose accuracy.
+      std::string socket_id_str = StringPrintf("0x%jx",
+          static_cast<intmax_t>(gtk_socket_get_id(GTK_SOCKET(impl->socket_))));
+      impl->controller_->SendCommand(kNewBrowserCommand, impl->browser_id_,
+                                     socket_id_str.c_str(), NULL);
+      impl->UpdateChildContent();
+    }
   }
 
-  void SetChildContent() {
-    std::string content = EncodeJavaScriptString(content_.c_str(), '"');
-    controller_->SendCommand(kSetContentCommand, browser_id_,
-                             content_type_.c_str(), content.c_str(), NULL);
+  void UpdateChildContent() {
+    if (browser_id_ && !content_updated_) {
+      std::string content = EncodeJavaScriptString(content_.c_str(), '"');
+      controller_->SendCommand(kSetContentCommand, browser_id_,
+                               content_type_.c_str(), content.c_str(), NULL);
+      content_updated_ = true;
+    }
   }
 
   void Layout() {
+    EnsureBrowser();
     GtkWidget *container = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
     if (GTK_IS_FIXED(container) && GTK_IS_SOCKET(socket_)) {
       bool force_layout = false;
@@ -681,12 +705,10 @@ class BrowserElementImpl {
 
   void SetContent(const std::string &content) {
     content_ = content;
-    if (!GTK_IS_SOCKET(socket_)) {
-      // After the child exited, the socket_ will become an invalid GtkSocket.
-      CreateSocket();
-    } else {
-      SetChildContent();
-    }
+    content_updated_ = false;
+    if (browser_id_ && GTK_IS_SOCKET(socket_))
+      UpdateChildContent();
+    // Otherwise the content will be set when the socket is created.
   }
 
   void OnViewMinimized() {
@@ -1018,6 +1040,7 @@ class BrowserElementImpl {
 
   std::string content_type_;
   std::string content_;
+  bool content_updated_;
   GtkWidget *socket_;
   gint x_, y_, width_, height_;
   bool minimized_;
@@ -1031,16 +1054,8 @@ class BrowserElementImpl {
 BrowserController *BrowserController::instance_ = NULL;
 
 void BrowserController::DestroyAllBrowsers() {
-  while (!browser_elements_.empty()) {
-    BasicElement *element = browser_elements_.begin()->second->owner_;
-    BasicElement *parent = element->GetParentElement();
-    Elements *parent_elements = parent ? parent->GetChildren() :
-                                element->GetView()->GetChildren();
-    ASSERT(parent_elements);
-    parent_elements->RemoveElement(element);
-    // The element's destructor will call CloseBrowser() so that it can be
-    // removed from browser_elements_.
-  }
+  while (!browser_elements_.empty())
+    browser_elements_.begin()->second->Deactivate();
 }
 
 void BrowserController::ProcessFeedback(size_t param_count,
