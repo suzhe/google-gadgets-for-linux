@@ -349,6 +349,11 @@ TEST("Test global class", function() {
   // Don't call GC now to test GC on destroying the script context.
 });
 
+DEATH_TEST("Test null constructor", function() {
+  var n = new TestNullCtor();
+  ASSERT(DEATH());
+});
+
 TEST("Test default args", function() {
   var s = scriptable2.NewObject();
   ASSERT(TRUE(s.NativeOwned));

@@ -224,7 +224,7 @@ function ShowGadget() {
   var w = g_gadget_attribs.width;
   if (w) view.width = w + kBrowserMarginX;
   var h = g_gadget_attribs.height;
-  if (h) view.height = w + kBrowserMarginY;
+  if (h) view.height = h + kBrowserMarginY;
 
   RefreshGadget();
 }
