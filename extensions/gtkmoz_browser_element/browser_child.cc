@@ -104,11 +104,12 @@ class HostObjectWrapper;
 typedef std::map<size_t, HostObjectWrapper *> HostObjectMap;
 
 struct BrowserInfo {
-  BrowserInfo() : embed(NULL), browser_id(0) { }
+  BrowserInfo() : embed(NULL), browser_id(0), loaded(false) { }
   GtkMozEmbed *embed;
   size_t browser_id;
   BrowserObjectMap browser_objects;
   HostObjectMap host_objects;
+  bool loaded;
 };
 
 static size_t g_browser_object_seq = 0;
@@ -504,7 +505,10 @@ class ExternalNameSet : public nsIScriptExternalNameSet {
     JSObject *global = JS_GetGlobalObject(cx);
     NS_ENSURE_TRUE(global, NS_ERROR_FAILURE);
     BrowserInfo *browser_info = FindBrowserByJSContext(cx);
-    NS_ENSURE_TRUE(browser_info, NS_ERROR_FAILURE);
+    if (!browser_info) {
+      // This context might me in a frame which needs no window.external.
+      return NS_OK;
+    }
     JS_SetErrorReporter(cx, ReportJSError);
     HostObjectWrapper *external_wrapper =
         new HostObjectWrapper(browser_info->browser_id, cx, 0);
@@ -701,6 +705,26 @@ static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
   RemoveBrowser(reinterpret_cast<size_t>(user_data));
 }
 
+static void OnProgress(GtkMozEmbed *embed, gint cur, gint max, gpointer data) {
+  size_t browser_id = reinterpret_cast<size_t>(data);
+  SendLog("**** OnProgress browser=%zu cur=%d max=%u", browser_id, cur, max);
+  BrowserMap::iterator it = g_browsers.find(browser_id);
+  if (it != g_browsers.end() && cur == max)
+    it->second.loaded = true;
+}
+
+static gboolean CheckContentLoaded(gpointer data) {
+  size_t browser_id = reinterpret_cast<size_t>(data);
+  BrowserMap::iterator it = g_browsers.find(browser_id);
+  if (it != g_browsers.end() && !it->second.loaded) {
+    // It's weird that sometimes gtk_moz_embed_load_url from local file may
+    // cause the browser-child enter a state that no more url can be loaded.
+    // FIXME: better solution than restarting the child.
+    ForceQuit("Load url from data/local file blocked");
+  }
+  return FALSE;
+}
+
 static void NewBrowser(int param_count, const char **params, size_t id) {
   if (param_count != 3) {
     SendLog("Incorrect param count for %s: 3 expected, %d given.",
@@ -728,18 +752,12 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
                       gtk_window_new(GTK_WINDOW_TOPLEVEL);
   g_signal_connect(window, "destroy", G_CALLBACK(OnBrowserDestroy),
                    reinterpret_cast<gpointer>(id));
-  // Putting the embed into a box seems to make it more stable.
-  GtkWidget *box = gtk_vbox_new(FALSE, 0);
-  gtk_container_add(GTK_CONTAINER(window), box);
-#if 0
-  GtkWidget *label = gtk_label_new("TEST");
-  gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
-#endif
   GtkMozEmbed *embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
   browser_info->embed = embed;
-  gtk_box_pack_end(GTK_BOX(box), GTK_WIDGET(embed), TRUE, TRUE, 0);
-  // gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
+  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
   g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
+  g_signal_connect(embed, "progress", G_CALLBACK(OnProgress),
+                   reinterpret_cast<gpointer>(id));
   gtk_widget_show_all(window);
 }
 
@@ -802,8 +820,15 @@ static void SetContent(int param_count, const char **params, size_t id) {
     url = std::string(kDataURLPrefix) + params[2] + ";base64," + data;
   }
   SendLog("Content URL: %.80s...", url.c_str());
+  g_browsers[id].loaded = false;
+  // Normally data: and file: urls should be loaded immediately, but weirdly
+  // sometimes it fails (not related to removing the file). Schedule a timer
+  // to check the failure. The timer is required because OnProgress isn't
+  // called synchronously.
+  g_timeout_add(500, CheckContentLoaded, reinterpret_cast<gpointer>(id));
   gtk_moz_embed_load_url(embed, url.c_str());
 
+  // The load should finish immediately, so it's safe to delete the file now.
   if (!temp_path.empty())
     ggadget::RemoveDirectory(temp_path.c_str(), true);
 }

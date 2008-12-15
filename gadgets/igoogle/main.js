@@ -16,6 +16,8 @@
 
 var kDownloadURLOption = "download_url";
 var kModuleURLOption = "module_url_prefix";
+var kBrowserMarginX = 14;
+var kBrowserMarginY = 19;
 
 var g_user_pref_names = null;
 var g_user_pref_optional = null;
@@ -23,8 +25,6 @@ var g_gadget_attribs = null;
 
 var kUserPrefPrefix = "up_";
 var kUserAgent = "Mozilla/5.0 (compatible; Google Desktop)";
-
-var kShowOptions = "ShowOptions";
 
 var kDefaultLocale = "en-US";
 var kDefaultModuleURLPrefix = "http://gmodules.com/ig/ifr?url=";
@@ -38,8 +38,14 @@ var g_xml_request_options = null;
 
 /// Gadget init code.
 
-browser.onGetProperty = OnGetProperty;
-browser.onCallback = OnCallback;
+browser.external = {
+  ShowOptions: function() {
+    setTimeout(function() {
+      // Dispatch this asynchronously.
+      plugin.ShowOptionsDialog();
+    }, 0);
+  }
+};
 
 plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
 SetUpCommonParams();
@@ -55,25 +61,6 @@ function OnAddCustomMenuItems(menu) {
 
 function RefreshMenuHandler(item_text) {
   RefreshGadget();
-}
-
-// Options view
-
-function OnGetProperty(p) {
-  if (p == kShowOptions) {
-    return "\"function\"";
-  }
-}
-
-function ShowOptions() {
-  plugin.ShowOptionsDialog();
-}
-
-function OnCallback(f) {
-  if (f == kShowOptions) {
-    // Dispatch this asynchronously.
-    setTimeout(ShowOptions, 0);
-  }
 }
 
 function LoadOptions() {
@@ -204,26 +191,26 @@ function ViewOnSizing() {
     var w = g_gadget_attribs.width;
     var h = g_gadget_attribs.height;
     // Disallow resizing to larger than specified w, h values.
-    if (null != w && event.width > w + 4) {
-      event.width = w + 4;
+    if (null != w && event.width > w + kBrowserMarginX) {
+      event.width = w + kBrowserMarginX;
     }
-    if (null != h && event.height > h + 4) {
-      event.height = h + 4;
+    if (null != h && event.height > h + kBrowserMarginY) {
+      event.height = h + kBrowserMarginY;
     }
   }
 
   // Disallow resizing to smaller than resize border's margin.
-  if (event.width < 15)
-    event.width = 15;
-  if (event.height < 20)
-    event.height = 20;
+  if (event.width < kBrowserMarginX + 10)
+    event.width = kBrowserMarginX + 10;
+  if (event.height < kBrowserMarginY + 10)
+    event.height = kBrowserMarginY + 10;
 
   gadget.debug.trace("OnSizing: " + event.width + ", " + event.height);
 }
 
 function ViewOnSize() {
-  browser.width = view.width - 14;
-  browser.height = view.height - 19;
+  browser.width = view.width - kBrowserMarginX;
+  browser.height = view.height - kBrowserMarginY;
 }
 
 function ShowGadget() {
@@ -235,17 +222,9 @@ function ShowGadget() {
       + "\n\n" + g_gadget_attribs.description;
 
   var w = g_gadget_attribs.width;
+  if (w) view.width = w + kBrowserMarginX;
   var h = g_gadget_attribs.height;
-
-  if (w == null) {
-    w = view.width;
-  }
-  if (h == null) {
-    h = view.height;
-  }
-
-  gadget.debug.trace("Resizing to " + w + ", " + h);
-  view.resizeTo(w, h);
+  if (h) view.height = w + kBrowserMarginY;
 
   RefreshGadget();
 }

@@ -18,28 +18,20 @@
 var g_user_prefs = null;
 
 /// Gadget init code.
-opbrowser.onGetProperty = OnGetProperty;
-opbrowser.onCallback = OnCallback;
-
-// Options view
-
-function OnGetProperty(p) {
-  if (p == kSetPrefs) {
-    return "\"function\"";
-  }
-}
-
-function OnCallback(f, pref) {
-  if (f == kSetPrefs) {
-    gadget.debug.trace("SetPref " + pref);
+opbrowser.external = {
+  SetPrefs: function(id, name, value) {
+    gadget.debug.trace("SetPref id=" + id + " name='" + name +
+                       "' value='" + value + "'");
     if (null == g_user_prefs) {
       g_user_prefs = new Array();
     }
-    var index = Number(pref[0]) * 2;
-    g_user_prefs[index] = pref[1];
-    g_user_prefs[index + 1] = pref[2];
+    var index = Number(id) * 2;
+    g_user_prefs[index] = name;
+    g_user_prefs[index + 1] = value;
   }
-}
+};
+
+// Options view
 
 function OnOK() {
   gadget.debug.trace("OK pressed");
@@ -84,23 +76,26 @@ function GeneratePage() {
       + "function OnChange(e){"
         + "var obj=e.target;"
         + "if (obj.value!=null){"
-          +"window.external.SetPrefs(obj.id.substring(2,obj.id.length),"
-          +"obj.name.substring(2,obj.name.length),obj.value);}}"
+          +"window.external.SetPrefs(obj.id.substring(2),"
+          +"obj.name.substring(2),obj.value);}}"
       + "function OnLoad(){"
         + "var lang=_gel('lang_selector');"
         + "if (lang!=null) lang.style.display='none';"
-        + "var num_fields=_gel('m_numfields').value;"
-        + "for(var i=0;i<num_fields;i++){"
-          + "var obj=_gel('m_'+i);if(obj==null){continue;}"
-          + preset
-          + "obj.onchange=OnChange;obj.onclick=OnChange;}}"
+        + "var num_fields=parseInt(_gel('m_numfields').value);"
+        + "if (num_fields){"
+          + "for(var i=0;i<num_fields;i++){"
+            + "var obj=_gel('m_'+i);if(obj==null){continue;}"
+            + preset
+            + "obj.onchange=OnChange;obj.onclick=OnChange;}"
+        + "}else{_gel('_m_no_options_msg').style.display='block';}}"
       + "</script>"
       + "<body bgcolor=\"" + options.getvalue(kBGColorOption)
-      + "\" marginheight=\"0\" marginwidth=\"0\" onload=\"OnLoad()\">"
-      + code;
+      + "\" marginheight=0 marginwidth=0 onload=\"OnLoad()\">"
+      + code
+      + "<center><h6 id=_m_no_options_msg style=\"display:none;\">"
+      + strings.NO_OPTIONS + "</h6></center>";
   }
   html += "</body></html>";
-
   return html;
 }
 

@@ -259,7 +259,7 @@ const char kPingFeedback[] = "PING";
 const char kPingAck[] = "ACK";
 const char kPingAckFull[] = "R ACK\n";
 const size_t kPingAckFullLength = sizeof(kPingAckFull) - 1;
-const int kPingInterval = 10000;  // 10 seconds.
+const int kPingInterval = 30000;  // 30 seconds.
 
 #ifndef NO_NAMESPACE
 } // namespace gtkmoz
