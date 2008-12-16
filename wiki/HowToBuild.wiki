@@ -98,7 +98,7 @@ Please note that, QT based GUI is not fully functional on openSUSE 10.3, because
 
 You can use yast or zypper to install these packages.
 
-=== Fedora 8 and 9 ===
+=== Fedora 8, 9 and 10 ===
 
 If you are using Fedora 8 and later versions, you need install following mandatory packages:
   * gcc-c++
@@ -116,7 +116,7 @@ If you are using Fedora 8 and later versions, you need install following mandato
   * !NetworkManager-devel
   * gstreamer-plugins-base-devel
   * gstreamer-devel
-  * xulrunner-devel (for Fedora 9 or above) or firefox-devel (for Fedora 8) (Mandatory for GTK version, optional for Qt version)
+  * xulrunner-devel and xulrunner-devel-unstable (for Fedora 9 or above), or firefox-devel (for Fedora 8) (Mandatory for GTK version, optional for Qt version)
 
 If you want to use GUI and sidebar based on GTK library, you need following packages:
   * gtk2-devel
