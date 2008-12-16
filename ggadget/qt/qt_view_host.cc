@@ -182,7 +182,7 @@ ViewHostInterface::ConfirmResponse QtViewHost::Confirm(
       QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message),
       QMessageBox::Yes | QMessageBox::No |
-          (cancel_button ? QMessageBox::Cancel : 0),
+          (cancel_button ? QMessageBox::Cancel : QMessageBox::NoButton),
       QMessageBox::Yes);
   return ret == QMessageBox::Yes ? CONFIRM_YES :
          ret == QMessageBox::No ? CONFIRM_NO :
@@ -196,8 +196,10 @@ std::string QtViewHost::Prompt(const ViewInterface *view,
       NULL,
       QString::fromUtf8(view->GetCaption().c_str()),
       QString::fromUtf8(message),
-      QLineEdit::Normal);
-  return s.toStdString();
+      QLineEdit::Normal,
+      QString::fromUtf8(default_value)
+      );
+  return s.toUtf8().data();
 }
 
 int QtViewHost::GetDebugMode() const {
