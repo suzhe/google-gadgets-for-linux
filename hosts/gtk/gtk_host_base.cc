@@ -81,44 +81,24 @@ bool GtkHostBase::ConfirmGadget(const std::string &path,
                                 const std::string &title,
                                 const std::string &description,
                                 Permissions *permissions) {
-  OptionsInterface *options = CreateOptions(options_name.c_str());
-  if (!options) {
-    ShowAlertDialog(GM_("GOOGLE_GADGETS"), StringPrintf(
-        GM_("GADGET_LOAD_FAILURE"), path.c_str()).c_str());
-    return false;
-  }
-
   bool should_save_permissions = true;
-  Variant value = options->GetInternalValue(kPermissionsOption);
-  if (value.type() == Variant::TYPE_STRING) {
-    Permissions granted_permissions;
-    granted_permissions.FromString(VariantValue<const char*>()(value));
-    permissions->SetGrantedByPermissions(granted_permissions, true);
+  if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(),
+                                           permissions)) {
     should_save_permissions = false;
   }
-
   if (permissions->HasUngranted()) {
     should_save_permissions = true;
     if (!ShowPermissionsConfirmDialog(download_url, title,
                                       description, permissions)) {
-      options->DeleteStorage();
-      delete options;
       return false;
     }
     // TODO: Is it necessary to let user grant individual permissions
     // separately?
     permissions->GrantAllRequired();
   }
-
   if (should_save_permissions) {
-    Permissions save_permissions = *permissions;
-    // Don't save required permissions.
-    save_permissions.RemoveAllRequired();
-    options->PutInternalValue(kPermissionsOption,
-                              Variant(save_permissions.ToString()));
-    options->Flush();
+    Gadget::SaveGadgetInitialPermissions(options_name.c_str(), *permissions);
   }
-  delete options;
   return true;
 }
 

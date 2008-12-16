@@ -1309,4 +1309,25 @@ bool Gadget::SaveGadgetInitialPermissions(const char *options_path,
   return result;
 }
 
+bool Gadget::LoadGadgetInitialPermissions(const char *options_path,
+                                          Permissions *permissions) {
+  ASSERT(options_path && *options_path);
+  ASSERT(permissions);
+  bool result = false;
+  OptionsInterface *options = CreateOptions(options_path);
+  ASSERT(options);
+  if (options) {
+    Variant value = options->GetInternalValue(kPermissionsOption);
+    if (value.type() == Variant::TYPE_STRING) {
+      Permissions granted_permissions;
+      granted_permissions.FromString(VariantValue<const char*>()(value));
+      permissions->SetGrantedByPermissions(granted_permissions, true);
+      permissions->SetGrantedByPermissions(granted_permissions, false);
+      result = true;
+    }
+    delete options;
+  }
+  return result;
+}
+
 } // namespace ggadget

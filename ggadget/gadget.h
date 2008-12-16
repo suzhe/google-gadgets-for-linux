@@ -389,6 +389,22 @@ class Gadget {
   static bool SaveGadgetInitialPermissions(const char *options_path,
                                            const Permissions &permissions);
 
+  /**
+   * Loads the initial permissions of a gadget instance.
+   *
+   * The gadget's initial permissions is stored in its options database as an
+   * internal value with key "permissions".
+   *
+   * @param options_path Path to the options database of this gadget instance.
+   * @param permissions The initial permissions to be loaded. Only
+   *        granted/denied permissions will be loaded, required permissions will
+   *        not be changed.
+   * @return true if the initial permissions is loaded successfully. If the
+   *        initial permissions was not available, or anything wrong
+   *        happens, false will be returned.
+   */
+  static bool LoadGadgetInitialPermissions(const char *options_path,
+                                           Permissions *permissions);
  private:
   class Impl;
   Impl *impl_;
