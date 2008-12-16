@@ -66,7 +66,7 @@ static const CursorTypeMapping kCursorTypeMappings[] = {
   { ViewInterface::CURSOR_SIZENS, Qt::SizeVerCursor },
   { ViewInterface::CURSOR_SIZEALL, Qt::SizeAllCursor },
   { ViewInterface::CURSOR_NO, Qt::ForbiddenCursor },
-  { ViewInterface::CURSOR_HAND, Qt::OpenHandCursor },
+  { ViewInterface::CURSOR_HAND, Qt::PointingHandCursor },
   { ViewInterface::CURSOR_BUSY, Qt::BusyCursor }, // FIXME
   { ViewInterface::CURSOR_HELP, Qt::WhatsThisCursor }
 };

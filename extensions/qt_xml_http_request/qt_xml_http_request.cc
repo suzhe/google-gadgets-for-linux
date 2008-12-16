@@ -208,12 +208,21 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
     if (sep != std::string::npos) path = url_.substr(sep);
 
-    if (!request_header_) {
-      request_header_ = new QHttpRequestHeader(method_, path.c_str());
-      request_header_->setValue("Host", host_.c_str());
-      if (!default_user_agent_.isEmpty())
-        request_header_->setValue("User-Agent", default_user_agent_);
+    QHttpRequestHeader *header = new QHttpRequestHeader(method_, path.c_str());
+    if (!default_user_agent_.isEmpty())
+      header->setValue("User-Agent", default_user_agent_);
+
+    // if request_header_ is not null, it's the original header before
+    // redirect. Its header value should be copied to new header.
+    if (request_header_) {
+      QList<QPair<QString, QString> > values = request_header_->values();
+      for (int i = 0; i < values.size(); i++) {
+        header->setValue(values[i].first, values[i].second);
+      }
+      delete request_header_;
     }
+    header->setValue("Host", host_.c_str());
+    request_header_ = header;
     DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
     return NO_ERR;
   }
@@ -624,7 +633,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void OnResponseHeaderReceived(const QHttpResponseHeader &header) {
     status_ = static_cast<unsigned short>(header.statusCode());
     if ((status_ >= 300 && status_ <= 303) || status_ == 307) {
-      redirected_url_ = header.value("Location").toUtf8().data();
+      redirected_url_ = header.value("Location");
     } else {
       response_header_ = header;
       response_headers_ = header.toString().toUtf8().data();
@@ -676,12 +685,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       Done(false, false);
       return;
     }
-    DLOG("Redirected to %s", redirected_url_.c_str());
+    DLOG("Redirected to %s", redirected_url_.toUtf8().data());
     if (((status_ == 301 || status_ == 302) && method_ == "POST") ||
         status_ == 303) {
       method_ = "GET";
     }
-    if (OpenInternal(redirected_url_.c_str()) != NO_ERR) {
+    if (OpenInternal(redirected_url_.toUtf8().data()) != NO_ERR) {
       FreeResource();
       Done(false, false);
     } else {
@@ -716,7 +725,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // It will be true after send() is called in async mode.
   bool send_flag_;
 
-  std::string redirected_url_;
+  QString redirected_url_;
   int redirected_times_;
   std::string response_headers_;
   std::string response_content_type_;
