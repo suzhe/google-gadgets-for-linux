@@ -216,9 +216,10 @@ class BrowserController {
     return browser_seq_;
   }
 
-  void CloseBrowser(size_t id) {
+  void CloseBrowser(size_t id, bool send_command) {
     if (browser_elements_.erase(id)) {
-      SendCommand(kCloseBrowserCommand, id, NULL);
+      if (send_command)
+        SendCommand(kCloseBrowserCommand, id, NULL);
       DLOG("Closed browser %zu. %zu browsers left", id,
            browser_elements_.size());
     }
@@ -588,7 +589,9 @@ class BrowserElementImpl {
 
   void Deactivate() {
     if (browser_id_) {
-      controller_->CloseBrowser(browser_id_);
+      // If socket_ is not a valid socket, the child may have closed the
+      // browser by itself, so no need to send the close command.
+      controller_->CloseBrowser(browser_id_, GTK_IS_SOCKET(socket_));
       browser_id_ = 0;
     }
     for (BrowserObjectMap::iterator it = browser_objects_.begin();
