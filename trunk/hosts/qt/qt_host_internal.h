@@ -108,8 +108,19 @@ class QtHost::Impl : public QObject {
   }
 
   bool NewGadgetInstanceCallback(int id) {
+    return LoadGadgetInstance(id);
+  }
+
+  bool LoadGadgetInstance(int id) {
+    bool result = false;
     if (ggadget::qt::ConfirmGadget(gadget_manager_, id)) {
-        return LoadGadgetInstance(id);
+      std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
+      std::string path = gadget_manager_->GetGadgetInstancePath(id);
+      if (options.length() && path.length()) {
+        result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
+        DLOG("QtHost: Load gadget %s, with option %s, %s",
+             path.c_str(), options.c_str(), result ? "succeeded" : "failed");
+      }
     } else {
       QMessageBox::information(
           NULL,
@@ -118,20 +129,6 @@ class QtHost::Impl : public QObject {
               StringPrintf(
                   GM_("GADGET_LOAD_FAILURE"),
                   gadget_manager_->GetGadgetInstancePath(id).c_str()).c_str()));
-      return false;
-    }
-  }
-
-  bool LoadGadgetInstance(int id) {
-    bool result = false;
-    std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
-    std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    if (options.length() && path.length()) {
-      OptionsInterface *opt = CreateOptions(options.c_str());
-      delete opt;
-      result = (LoadGadget(path.c_str(), options.c_str(), id, false) != NULL);
-      DLOG("QtHost: Load gadget %s, with option %s, %s",
-           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return result;
   }

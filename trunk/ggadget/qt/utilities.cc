@@ -569,17 +569,25 @@ static bool PromptGadgetPermission(
   return false;
 }
 
-bool ConfirmGadget(GadgetManagerInterface *gadget_manager,
-                   int id) {
+bool ConfirmGadget(GadgetManagerInterface *gadget_manager, int id) {
   Permissions permissions;
   if (gadget_manager->GetGadgetDefaultPermissions(id, &permissions)) {
-    if (!permissions.HasUngranted()
-        || PromptGadgetPermission(gadget_manager, id, &permissions)) {
-      std::string options_name =
-          gadget_manager->GetGadgetInstanceOptionsName(id);
-      Gadget::SaveGadgetInitialPermissions(options_name.c_str(), permissions);
-      return true;
+    std::string options_name = gadget_manager->GetGadgetInstanceOptionsName(id);
+    bool should_save_permissions = true;
+    if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(),
+                                             &permissions)) {
+      should_save_permissions = false;
     }
+    if (permissions.HasUngranted()) {
+      should_save_permissions = true;
+      if (!PromptGadgetPermission(gadget_manager, id, &permissions)) {
+        return false;
+      }
+    }
+    if (should_save_permissions) {
+      Gadget::SaveGadgetInitialPermissions(options_name.c_str(), permissions);
+    }
+    return true;
   }
   return false;
 }
