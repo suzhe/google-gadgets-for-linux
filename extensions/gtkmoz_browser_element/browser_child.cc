@@ -1029,56 +1029,52 @@ static gboolean OnDownFDReady(GIOChannel *channel, GIOCondition condition,
       break;
   }
   if (read_bytes <= 0) {
-    // Because we ensure up_fd_ has data before calling ReadDownPipe(),
+    // Because we ensure up_fd_ has data before calling OnDownFDReady(),
     // read() should not return 0.
     ForceQuit("Failed to read from down pipe");
     return FALSE;
   }
 
-  if (strncmp(g_down_buffer.c_str(), kReplyPrefix, kReplyPrefixLength) == 0) {
-    // This message is a reply message.
-    if (g_down_buffer[g_down_buffer.size() - 1] == '\n') {
-      g_reply = g_down_buffer;
-      g_down_buffer.clear();
-    }
-    return TRUE;
-  }
-
-  if (g_down_buffer.size() < kEOMFullLength ||
-      strncmp(g_down_buffer.c_str() + g_down_buffer.size() - kEOMFullLength,
-              kEndOfMessageFull, kEOMFullLength) != 0) {
-    // Not a full message.
-    return TRUE;
-  }
-
-  static const int kMaxParams = 20;
-  size_t curr_pos = 0;
-  size_t eom_pos = g_down_buffer.size() - kEOMFullLength;
-  const char *params[kMaxParams];
-  int param_count = 0;
-  while (curr_pos <= eom_pos) {
-    size_t end_of_line_pos = g_down_buffer.find('\n', curr_pos);
-    NS_ASSERTION(end_of_line_pos != g_down_buffer.npos, "");
-    g_down_buffer[end_of_line_pos] = '\0';
-    if (param_count < kMaxParams) {
-      params[param_count] = g_down_buffer.c_str() + curr_pos;
-      param_count++;
+  // In rare cases that g_down_buffer can contain more than one messages.
+  // For example, controller sends a command immediately after a ping reply.
+  while (true) {
+    if (strncmp(g_down_buffer.c_str(), kReplyPrefix, kReplyPrefixLength) == 0) {
+      // This message is a reply message.
+      size_t eom_pos = g_down_buffer.find('\n');
+      if (eom_pos == g_down_buffer.npos)
+        break;
+      g_reply = g_down_buffer.substr(0, eom_pos + 1);
+      g_down_buffer.erase(0, eom_pos + 1);
     } else {
-      SendLog("Too many parameter");
-      // Don't exit to recover from the error status.
+      size_t eom_pos = g_down_buffer.find(kEndOfMessageFull);
+      if (eom_pos == g_down_buffer.npos)
+        break;
+
+      std::string message(g_down_buffer, 0, eom_pos + kEOMFullLength);
+      g_down_buffer.erase(0, eom_pos + kEOMFullLength);
+
+      static const size_t kMaxParams = 20;
+      size_t curr_pos = 0;
+      size_t param_count = 0;
+      const char *params[kMaxParams];
+      while (curr_pos <= eom_pos) {
+        size_t end_of_line_pos = message.find('\n', curr_pos);
+        ASSERT(end_of_line_pos != message.npos);
+        message[end_of_line_pos] = '\0';
+        if (param_count < kMaxParams) {
+          params[param_count] = message.c_str() + curr_pos;
+          param_count++;
+        } else {
+          SendLog("Too many up message parameter");
+          // Don't exit to recover from the error status.
+        }
+        curr_pos = end_of_line_pos + 1;
+      }
+      NS_ASSERTION(curr_pos = eom_pos + 1, "");
+      if (param_count > 0)
+        ProcessCommand(param_count, params);
     }
-    curr_pos = end_of_line_pos + 1;
   }
-  NS_ASSERTION(curr_pos = eom_pos + 1, "");
-
-  // Clear g_down_buffer before handling the command because this function
-  // may re-enter during the command is handled. 'temp' still holds the
-  // buffer of g_down_buffer because params use it.
-  std::string temp;
-  std::swap(temp, g_down_buffer);
-
-  if (param_count > 0)
-    ProcessCommand(param_count, params);
   return TRUE;
 }
 
