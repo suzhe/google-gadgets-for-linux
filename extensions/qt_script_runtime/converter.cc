@@ -19,6 +19,7 @@
 #include <QtCore/QDateTime>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
+#include <ggadget/scriptable_holder.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/unicode_utils.h>
@@ -344,10 +345,21 @@ static bool ConvertNativeUTF16ToJSString(QScriptEngine *engine,
   return true;
 }
 
-/*static bool ConvertNativeArrayToJS(QScriptEngine *engine,
+static bool ConvertNativeArrayToJS(QScriptEngine *engine,
                                    ScriptableArray *array, QScriptValue *qval) {
-  return false;
-}*/
+  ScriptableHolder<ScriptableArray> array_holder(array);
+  size_t length = array->GetCount();
+  *qval = engine->newArray(length);
+  if (!qval->isValid()) return false;
+
+  for (size_t i = 0; i < length; i++) {
+    QScriptValue item;
+    if (ConvertNativeToJS(engine, array->GetItem(i), &item)) {
+      qval->setProperty(i, item);
+    }
+  }
+  return true;
+}
 static bool ConvertNativeToJSObject(QScriptEngine *engine,
                                     const Variant &val, QScriptValue *qval) {
   ScriptableInterface *scriptable = VariantValue<ScriptableInterface *>()(val);
@@ -357,6 +369,11 @@ static bool ConvertNativeToJSObject(QScriptEngine *engine,
     return true;
   }
   JSScriptContext *ctx = GetEngineContext(engine);
+  if (scriptable->IsInstanceOf(ScriptableArray::CLASS_ID)) {
+    return ConvertNativeArrayToJS(engine,
+                                  down_cast<ScriptableArray*>(scriptable),
+                                  qval);
+  }
   *qval = ctx->GetScriptValueOfNativeObject(scriptable);
   return true;
 }
