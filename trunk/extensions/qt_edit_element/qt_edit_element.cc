@@ -99,7 +99,7 @@ QtEditElement::QtEditElement(View *view, const char *name)
       background_(NULL) {
   ConnectOnScrolledEvent(NewSlot(this, &QtEditElement::OnScrolled));
   cursor_ = new QTextCursor(&doc_);
-  SetFont(NULL);
+  SetFont(kDefaultFontName);
 }
 
 QtEditElement::~QtEditElement() {
@@ -184,14 +184,16 @@ void QtEditElement::SetColor(const char *color) {
 }
 
 std::string QtEditElement::GetFont() const {
-  return doc_.defaultFont().defaultFamily().toStdString();
+  return doc_.defaultFont().family().toUtf8().data();
 }
 
 void QtEditElement::SetFont(const char *font) {
   if (AssignIfDiffer(font, &font_family_)) {
-    QFont font(font_family_.empty() ? kDefaultFontName : font_family_.c_str(),
-               D2I(GetCurrentSize()));
-    doc_.setDefaultFont(font);
+    QFont qfont(font_family_.empty()
+                ? kDefaultFontName
+                : QString::fromUtf8(font));
+    qfont.setPointSizeF(GetCurrentSize());
+    doc_.setDefaultFont(qfont);
     QueueDraw();
   }
 }
@@ -237,7 +239,7 @@ void QtEditElement::SetPasswordChar(const char *c) {
 
 void QtEditElement::OnFontSizeChange() {
   QFont font = doc_.defaultFont();
-  font.setPixelSize(D2I(GetCurrentSize()));
+  font.setPointSizeF(GetCurrentSize());
   doc_.setDefaultFont(font);
 }
 

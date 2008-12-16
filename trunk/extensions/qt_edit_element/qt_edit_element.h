@@ -93,9 +93,6 @@ class QtEditElement : public EditElementBase {
   void CutClipboard();
   void CopyClipboard();
   void PasteClipboard();
-  void BackSpace() {}
-  void Delete() {}
-  void ToggleOverwrite() {}
   void EnterText(QString str);
   void SetWidth(int width);
   void SetHeight(int height);
