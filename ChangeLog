@@ -1,3 +1,16 @@
+* 0.10.4 - Dec 16th 2008
+  o Following reported issues have been fixed: 242, 246, 245, 253, 239, 249,
+    250, 243, 234, 254, 255
+  o Many optimizations in performance and memory consumption.
+  o Support for NPAPI plugins (like Flash) has been improved a lot.
+  o gtkmoz_browser_element has been improved a lot.
+  o gtk host now supports running a gadget in standalone mode.
+  o Gadget Designer has been improved a lot. And it now runs in standalone
+    mode, just like an ordinary application.
+  o gtk sidebar host has been improved a lot.
+  o Many bugs related to qt host have been fixed.
+  o Many other bugfixes.
+
 * 0.10.3 - Nov 7th 2008
   o Following reported issues have been fixed: 215, 214, 201, 220, 216, 194,
     229, 227, 224, 206, 204, 192, 193, 125, 164, 228, 225, 199, 235, 237,

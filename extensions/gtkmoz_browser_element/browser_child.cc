@@ -1008,7 +1008,10 @@ static void ProcessCommand(int param_count, const char **params) {
           param_count > 5 ? params[5] : "", param_count > 6 ? params[6] : "",
           result.c_str());
   result += '\n';
-  write(g_up_fd, result.c_str(), result.size());
+  if (write(g_up_fd, result.c_str(), result.size()) !=
+      static_cast<ssize_t>(result.size())) {
+    SendLog("Failed to send back result.");
+  }
 }
 
 // Read the down pipe.
