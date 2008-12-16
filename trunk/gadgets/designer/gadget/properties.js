@@ -188,7 +188,7 @@ Properties.prototype = {
     } else {
       e_combobox_border.visible = false;
     }
-  },
+  }
 
 };
 

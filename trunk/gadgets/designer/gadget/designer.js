@@ -1628,7 +1628,7 @@ function ChooseColorImage(value, enable_color, enable_image) {
   var params = {
     value: value,
     enable_color: enable_color,
-    enable_image: enable_image,
+    enable_image: enable_image
   };
 
   if (enable_image) {

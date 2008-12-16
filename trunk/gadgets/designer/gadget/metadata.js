@@ -95,7 +95,7 @@ var g_metadata = {
       height: null,
       visible: null,
       x: null,
-      y: null,
+      y: null
     },
     events: [
       "onclick", "ondblclick", "ondragdrop", "ondragout", "ondragover",
@@ -152,7 +152,7 @@ var g_metadata = {
       disabledImage: ChooseImage,
       downImage: ChooseImage,
       overImage: ChooseImage,
-      value: null,
+      value: null
     },
     events: [ "onchange" ]
   },
@@ -160,7 +160,7 @@ var g_metadata = {
   contentarea: {
     inherits: "basicElement_",
     properties: {
-      maxContentItems: null,
+      maxContentItems: null
     },
     events: [ ]
   },
@@ -169,7 +169,7 @@ var g_metadata = {
     inherits: "basicElement_",
     properties: {
       autoscroll: null,
-      background: ChooseColorOrImage,
+      background: ChooseColorOrImage
     },
     events: [ ]
   },
@@ -183,7 +183,7 @@ var g_metadata = {
       passwordChar: null,
       readonly: null,
       scrolling: null,
-      value: null,
+      value: null
     },
     events: [ "onchange" ]
   },
@@ -201,7 +201,7 @@ var g_metadata = {
   label: {
     inherits: "textBase_",
     properties: {
-      innerText: null,
+      innerText: null
     },
     events: [ ]
   },
@@ -214,7 +214,7 @@ var g_metadata = {
         "sizenesw", "sizewe", "sizens", "sizeall", "no", "hand", "busy", "help"
       ],
       href: null,
-      overColor: ChooseColorOrImage,
+      overColor: ChooseColorOrImage
     },
     events: [ ]
   },
@@ -232,7 +232,7 @@ var g_metadata = {
       thumbDownImage: ChooseImage,
       thumbImage: ChooseImage,
       thumbOverImage: ChooseImage,
-      value: null,
+      value: null
     },
     events: [ "onchange" ]
   },
@@ -255,7 +255,7 @@ var g_metadata = {
       thumbDownImage: ChooseImage,
       thumbImage: ChooseImage,
       thumbOverImage: ChooseImage,
-      value: null,
+      value: null
     },
     events: [ "onchange" ]
   },
@@ -270,7 +270,7 @@ var g_metadata = {
       itemSeparatorColor: ChooseColorOrImage,
       itemWidth: null,
       multiSelect: null,
-      selectedIndex: null,
+      selectedIndex: null
     },
     events: [ "onchange" ]
   },
@@ -278,7 +278,7 @@ var g_metadata = {
   item: {
     inherits: "basicElement_",
     properties: {
-      background: ChooseColorOrImage,
+      background: ChooseColorOrImage
     },
     events: [ ]
   },
@@ -301,7 +301,7 @@ var g_metadata = {
       value: null
     },
     events: [ "ontextchange" ]
-  },
+  }
 };
 
 // key: element type;
