@@ -30,6 +30,7 @@ A simple 'urpmi google-gadgets' command will get it installed. Choose the host y
 
 == Fedora ==
 Yum repositories:
+ * Fedora 10: http://download.opensuse.org/repositories/home:/suzhe/Fedora_10/
  * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
  * Fedora 8: http://download.opensuse.org/repositories/home:/suzhe/Fedora_8/
 
