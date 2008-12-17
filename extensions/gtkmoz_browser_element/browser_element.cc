@@ -416,6 +416,8 @@ class BrowserElementImpl {
           object_id_str_(StringPrintf("%zu", object_id)),
           call_self_(this),
           to_string_(NewSlot(this, &BrowserObjectWrapper::ToString)) {
+      if (parent_)
+        parent_->Ref();
     }
 
     virtual ~BrowserObjectWrapper() {
@@ -426,6 +428,8 @@ class BrowserElementImpl {
         owner_->controller_->SendCommand(kUnrefCommand, owner_->browser_id_,
                                          object_id_str_.c_str(), NULL);
       }
+      if (parent_)
+        parent_->Unref();
     }
 
     void OnOwnerDestroy() {
@@ -523,8 +527,8 @@ class BrowserElementImpl {
         buffer += '\n';
         buffer += wrapper_->object_id_str_;
         buffer += '\n';
-        if (wrapper_->parent_.Get())
-          buffer += wrapper_->parent_.Get()->object_id_str_;
+        if (wrapper_->parent_)
+          buffer += wrapper_->parent_->object_id_str_;
         for (int i = 0; i < argc; i++) {
           buffer += '\n';
           buffer += wrapper_->owner_->EncodeValue(argv[i]);
@@ -546,7 +550,7 @@ class BrowserElementImpl {
     };
 
     BrowserElementImpl *owner_;
-    ScriptableHolder<BrowserObjectWrapper> parent_;
+    BrowserObjectWrapper *parent_;
     size_t object_id_;
     std::string object_id_str_;
     CallSelfSlot call_self_;
