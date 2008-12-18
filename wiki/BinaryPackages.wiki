@@ -6,10 +6,21 @@
 This page collects the information of binary packages of this project built by community. If you built and are maintaining binary package for a specific operating system which is not listed here, feel free to contact us to add the link here, so that other users can find and download your package easily.
 
 == openSUSE ==
+ * openSUSE 11.1
+  google-gadgets is included in openSUSE 11.1's official repository, just find and install google-gadgets-gtk or google-gadgets-qt in YaST.
+  You can find unofficial packages at either of following YaST repositories:
+   * http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.1/
+   * http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_11.1/
 
-YaST repositories:
- * openSUSE 11.0: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.0/
- * openSUSE 10.3: http://download.opensuse.org/repositories/home:/suzhe/openSUSE_10.3/
+ * openSUSE 11.0
+  You can find unofficial packages at either of following YaST repositories:
+   * http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.0/
+   * http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_11.0/
+
+ * openSUSE 10.3
+  You can find unofficial packages at either of following YaST repositories:
+   * http://download.opensuse.org/repositories/home:/suzhe/openSUSE_10.3/
+   * http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_10.3/
 
 Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
 
