@@ -22,7 +22,7 @@
 # Commom part
 #############################################################################
 Name:           google-gadgets
-Version:        0.10.3
+Version:        0.10.4
 Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
@@ -79,6 +79,7 @@ BuildRequires:  NetworkManager-devel >= 0.6.5
 
 %if %{fedora_version} >= 9
 BuildRequires:  xulrunner-devel >= 1.9
+BuildRequires:  xulrunner-devel-unstable >= 1.9
 BuildRequires:  qt-devel >= 4.3
 BuildRequires:  libcurl-devel >= 7.16.0
 %else
@@ -107,7 +108,11 @@ Group:          System/Libraries
 Summary:        Google Gadgets main libraries
 
 %if 0%{?suse_version}
+%if %suse_version >= 1110
+Requires:       libltdl7
+%else
 Requires:       libltdl
+%endif
 Requires:       dbus-1 >= 1.0.2
 %endif
 
@@ -321,6 +326,7 @@ Summary:        QT Version of Google Gadgets
 Requires:       libggadget-qt-1_0-0 = %{version}
 Requires:       google-gadgets-common = %{version}
 Requires:       google-gadgets-gst = %{version}
+Requires:       google-gadgets-xul = %{version}
 
 %description qt
 Google Gadgets for Linux provides a platform for running desktop gadgets under
@@ -409,7 +415,8 @@ Authors:
 %build
 %if 0%{?suse_version}
 %{suse_update_config -f}
-autoreconf
+# autoreconf doesn't work on opensuse 11.1
+# autoreconf
 %configure \
   --disable-werror \
   --with-browser-plugins-dir=%{_libdir}/browser-plugins
@@ -434,8 +441,9 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/google-gadgets/modules/*.a
 rm -f $RPM_BUILD_ROOT/%{_libdir}/*.a
 
 %if 0%{?suse_version}
-%suse_update_desktop_file ggl-gtk Network WebBrowser
-%suse_update_desktop_file ggl-qt Network WebBrowser
+%suse_update_desktop_file -n ggl-gtk
+%suse_update_desktop_file -n ggl-qt
+%suse_update_desktop_file -n ggl-designer
 
 MD5SUM=$(md5sum COPYING | sed 's/ .*//')
 if test -f /usr/share/doc/licenses/md5/$MD5SUM ; then
@@ -579,6 +587,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
+* Tue Dec 16 2008 James Su <james.su@gmail.com>
+- Updates to version 0.10.4
+
 * Tue Nov 4 2008 James Su <james.su@gmail.com>
 - Updates to support version 0.10.3
 
