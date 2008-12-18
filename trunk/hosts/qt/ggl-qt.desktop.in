@@ -8,5 +8,5 @@ Icon=google-gadgets
 Terminal=false
 StartupNotify=true
 Type=Application
-Categories=KDE;Qt;Network;Utility;
-MimeType=application/x-google-gadgets;app/gg;
+Categories=KDE;Qt;Network;News;
+MimeType=application/x-google-gadget;app/gg;
