@@ -101,6 +101,10 @@ class StandaloneGtkHost::Impl {
 
     Permissions permissions;
     Gadget::GetGadgetRequiredPermissions(&manifest, &permissions);
+
+    if (flags_ & GRANT_PERMISSIONS)
+      permissions.GrantAllRequired();
+
     safe_to_exit_ = false;
     if (!owner_->ConfirmGadget(gadget_path, options_name, gadget_path,
                                manifest[kManifestName],

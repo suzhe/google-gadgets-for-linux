@@ -156,7 +156,7 @@ static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
   { ARG_LONG_LOG,          Variant::TYPE_BOOL,  "-ll", "--long-log" },
   { ARG_DEBUG_CONSOLE,     Variant::TYPE_INT64, "-dc", "--debug-console" },
   { ARG_NO_COLLECTOR,      Variant::TYPE_BOOL,  "-nc", "--no-collector" },
-  { ARG_GRANT_PERMISSIONS, Variant::TYPE_BOOL, "-gp", "--grant-permissions" },
+  { ARG_GRANT_PERMISSIONS, Variant::TYPE_BOOL,  "-gp", "--grant-permissions" },
   { ARG_HELP,              Variant::TYPE_BOOL,  "-h",  "--help" },
   { -1,                    Variant::TYPE_VOID, NULL, NULL } // End of list
 };
