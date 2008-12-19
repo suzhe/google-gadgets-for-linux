@@ -158,16 +158,18 @@ bool CheckRequiredExtensions(std::string *message) {
 void InitXHRUserAgent(const char *app_name) {
   XMLHttpRequestFactoryInterface *xhr_factory = GetXMLHttpRequestFactory();
   ASSERT(xhr_factory);
+  std::string platform(GGL_PLATFORM);
+  if (!platform.empty())
+    platform[0] = static_cast<char>(toupper(platform[0]));
   std::string user_agent = StringPrintf(
-      "%s/" GGL_VERSION " (%c%s; %s; ts:" GGL_VERSION_TIMESTAMP
+      "%s/" GGL_VERSION " (%s; %s; ts:" GGL_VERSION_TIMESTAMP
       "; api:" GGL_API_VERSION
-  #ifdef GGL_OEM_BRAND
+#ifdef GGL_OEM_BRAND
       "; oem:" GGL_OEM_BRAND ")",
-  #else
+#else
       ")",
-  #endif
-      app_name, toupper(GGL_PLATFORM[0]), GGL_PLATFORM + 1,
-      GetSystemLocaleName().c_str());
+#endif
+      app_name, platform.c_str(), GetSystemLocaleName().c_str());
   xhr_factory->SetDefaultUserAgent(user_agent.c_str());
 }
 

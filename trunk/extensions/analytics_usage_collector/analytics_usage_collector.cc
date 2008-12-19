@@ -103,14 +103,20 @@ class UsageCollector : public UsageCollectorInterface {
       }
     }
 
-    StringAppendPrintf(&url, "&utmdt=-&utmhid=%d&utmr=-&utmp=%s&utmac=%s"
-                       "&utmcc=__utma%%3D%d.%jd.%u.%u.%u.1%%3B",
-                       rand(), EncodeURLComponent(usage).c_str(),
-                       account_.c_str(),
-                       user_id_, static_cast<int64_t>(rand()) * rand(),
-                       static_cast<unsigned int>(first_use_time_),
-                       static_cast<unsigned int>(last_use_time_),
-                       static_cast<unsigned int>(this_use_time));
+    StringAppendPrintf(&url,
+        "&utmdt=-&utmhid=%d&utmr=-&utmp=%s&utmac=%s&"
+        "utmcc=__utma%%3D%d.%jd.%u.%u.%u.1%%3B%%2B__utmv%%3D%d.%s%%3B",
+        rand(), EncodeURLComponent(usage).c_str(), account_.c_str(),
+        user_id_, static_cast<int64_t>(rand()) * rand(),
+        static_cast<unsigned int>(first_use_time_),
+        static_cast<unsigned int>(last_use_time_),
+        static_cast<unsigned int>(this_use_time),
+        user_id_,
+#ifdef GGL_OEM_BRAND
+        EncodeURLComponent(GGL_OEM_BRAND).c_str());
+#else
+        "-");
+#endif
 
     DLOG("Report to Analytics: %s", url.c_str());
     request->Open("GET", url.c_str(), true, NULL, NULL);
