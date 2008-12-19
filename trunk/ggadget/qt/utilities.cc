@@ -386,8 +386,15 @@ QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget** widget) {
 }
 
 bool OpenURL(const Gadget *gadget, const char *url) {
+  Permissions default_permissions;
+  default_permissions.SetRequired(Permissions::NETWORK, true);
+  default_permissions.GrantAllRequired();
+
+  const Permissions *permissions =
+      gadget ? gadget->GetPermissions() : &default_permissions;
+
   // FIXME: Support launching desktop file.
-  return ggadget::xdg::OpenURL(gadget, url);
+  return ggadget::xdg::OpenURL(*permissions, url);
 }
 
 QPixmap GetGadgetIcon(const Gadget *gadget) {

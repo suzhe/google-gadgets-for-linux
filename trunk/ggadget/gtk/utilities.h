@@ -174,6 +174,8 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file);
  *
  * @param gadget The gadget which wants to open the url, the permissions of
  *        this gadget will be checked to see if opening the url is allowed.
+ *        If it's NULL, then only urls with http:// or https:// prefixes can
+ *        be opened.
  * @param url The url to open.
  * @return true if succeed.
  */
