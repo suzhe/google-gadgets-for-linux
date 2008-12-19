@@ -1110,15 +1110,26 @@ void GoogleGadgetManager::SendGadgetUsagePing(int type, const char *gadget_id) {
     if (it != info->attributes.end())
       version = it->second;
 
+    // Generate a human-readable gadget label.
+    std::string gadget_label;
+    it = info->attributes.find("id");
+    if (it != info->attributes.end()) {
+      gadget_label = it->second;
+      gadget_label += '-';
+    }
+    gadget_label += gadget_id;
+    gadget_label = MakeGoodFileName(gadget_label.c_str());
+
     switch (type) {
       case 0:
-        collector_->ReportGadgetUsage(gadget_id, version.c_str());
+        collector_->ReportGadgetUsage(gadget_label.c_str(), version.c_str());
         break;
       case 1:
-        collector_->ReportGadgetInstall(gadget_id, version.c_str());
+        collector_->ReportGadgetInstall(gadget_label.c_str(), version.c_str());
         break;
       case 2:
-        collector_->ReportGadgetUninstall(gadget_id, version.c_str());
+        collector_->ReportGadgetUninstall(gadget_label.c_str(),
+                                          version.c_str());
         break;
     }
   }
