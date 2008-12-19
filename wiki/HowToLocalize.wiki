@@ -1,0 +1,64 @@
+#summary Brief instruction on how to localize this project.
+
+= Introduction =
+
+This page describes the method of localizing Google Gadgets for Linux into other languages.
+
+
+= Localize main program =
+All UI strings of Google Gadgets for Linux are stored in a XML file, named strings.xml, which has the exactly same format of gadget's strings.xml. Please refer to [http://code.google.com/apis/desktop/docs/script.html#internationalization this document] about the file format.
+
+The original English strings are stored in [http://code.google.com/p/google-gadgets-for-linux/source/browse/trunk/resources/en/strings.xml resources/en/strings.xml] file. The file content looks like:
+
+{{{
+<strings>
+
+...
+
+<!-- Decorated View toolbar back button tooltip. -->
+<VD_BACK_BUTTON_TOOLTIP>Previous</VD_BACK_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar forward button tooltip. -->
+<VD_FORWARD_BUTTON_TOOLTIP>Next</VD_FORWARD_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar toggle expanded view button tooltip. -->
+<VD_POP_IN_OUT_BUTTON_TOOLTIP>Toggle Expanded View</VD_POP_IN_OUT_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar menu button tooltip. -->
+<VD_MENU_BUTTON_TOOLTIP>Menu</VD_MENU_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar remove gadget button tooltip. -->
+<VD_CLOSE_BUTTON_TOOLTIP>Remove</VD_CLOSE_BUTTON_TOOLTIP>
+
+<!-- Tooltip text shown for the add gadgets button -->
+<SIDEBAR_ADD_GADGETS_TOOLTIP>Add gadgets</SIDEBAR_ADD_GADGETS_TOOLTIP>
+<SIDEBAR_MENU_BUTTON_TOOLTIP>Menu</SIDEBAR_MENU_BUTTON_TOOLTIP>
+<SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>Minimize</SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>
+
+...
+
+</strings>
+}}}
+
+In order to  localize Google Gadgets for Linux, you need:
+ # Create a sub-directory in resources for the new language, for example ja for Japanese, ko for Korean or zh-TW for Traditional Chinese. The name should be a language code defined in RFC1766.
+ # Copy resources/en/strings.xml to the new directory.
+ # Translate all strings defined in strings.xml into the new language. Be sure to keep elements name unchanged.
+ # Add the new strings.xml into Makefile.am, just like other files.
+ # Rebuild and install.
+
+You may take resources/zh-CN/strings.xml as an example.
+
+If you want to share your localized strings.xml with other users, just submit an issue report and attach strings.xml to it. Then we'll merge it into our official release. We'd appreciate your contribution very much.
+
+= Localize built-in gadgets =
+Besides the main program, there are some builtin gadgets need localizing as well. The localization method is same.
+
+ * Gadget Browser
+   The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/gadget_browser gadgets/gadget_browser] sub-directory.
+ * Photos
+   The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/photos gadgets/photos] sub-directory.
+ * iGoogle
+   The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/igoogle gadgets/igoogle] sub-directory.
+ * Web Clip
+   The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/rss gadgets/rss] sub-directory.
+ * Gadget Designer
+   The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/designer/gadget gadgets/designer/gadget] sub-directory. [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/designer/blank_gadget gadgets/designer/blank_gadget] is the blank gadget used by Gadget Designer, it also needs localizing.
+
+If you want to share your localization work with other users, feel free to submit it to us.
