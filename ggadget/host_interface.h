@@ -98,10 +98,12 @@ class HostInterface {
 
   /**
    * Opens the given URL in the user's default web brower.
-   * Only HTTP, HTTPS URLs are supported.
-   * Only called during user interaction is allowed.
    *
-   * @param gadget The gadget wants to open the url.
+   * @param gadget The gadget which wants to open the url, the permissions of
+   *        this gadget will be checked to see if opening the url is allowed.
+   *        If it's NULL, then only urls with http:// or https:// prefixes can
+   *        be opened.
+   * @param url The url to be opened.
    */
   virtual bool OpenURL(const Gadget *gadget, const char *url) = 0;
 };

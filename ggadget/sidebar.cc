@@ -175,6 +175,7 @@ class SideBar::Impl : public View {
       original_height_(0),
       top_div_(NULL),
       main_div_(NULL),
+      google_icon_(NULL),
       add_gadget_button_(NULL),
       menu_button_(NULL),
       close_button_(NULL),
@@ -473,11 +474,13 @@ class SideBar::Impl : public View {
     top_div_->SetPixelX(kBorderWidth);
     top_div_->SetPixelY(kBorderWidth);
 
-    ImgElement *icon = new ImgElement(this, NULL);
-    top_div_->GetChildren()->InsertElement(icon, NULL);
-    icon->SetSrc(Variant(kSideBarGoogleIcon));
-    icon->SetPixelX(0);
-    icon->SetPixelY(0);
+    google_icon_ = new ImgElement(this, NULL);
+    top_div_->GetChildren()->InsertElement(google_icon_, NULL);
+    google_icon_->SetSrc(Variant(kSideBarGoogleIcon));
+    google_icon_->SetPixelX(0);
+    google_icon_->SetPixelY(0);
+    google_icon_->SetEnabled(true);
+    google_icon_->SetCursor(CURSOR_HAND);
 
     DivElement *button_div = new DivElement(this, NULL);
     top_div_->GetChildren()->InsertElement(button_div, NULL);
@@ -521,7 +524,8 @@ class SideBar::Impl : public View {
       buttons_width += button->GetPixelWidth();
     }
     button_div->SetPixelWidth(buttons_width);
-    top_div_->SetPixelHeight(std::max(icon->GetSrcHeight(), max_button_height));
+    top_div_->SetPixelHeight(
+        std::max(google_icon_->GetSrcHeight(), max_button_height));
 
     main_div_ = new DivElement(this, NULL);
     GetChildren()->InsertElement(main_div_, NULL);
@@ -701,6 +705,7 @@ class SideBar::Impl : public View {
 
   DivElement *top_div_;
   DivElement *main_div_;
+  ImgElement *google_icon_;
   ButtonElement *add_gadget_button_;
   ButtonElement *menu_button_;
   ButtonElement *close_button_;
@@ -815,6 +820,10 @@ Connection *SideBar::ConnectOnSizeEvent(Slot0<void> *slot) {
 
 Connection *SideBar::ConnectOnViewMoved(Slot1<void, View *> *slot) {
   return impl_->onview_moved_signal_.Connect(slot);
+}
+
+Connection *SideBar::ConnectOnGoogleIconClicked(Slot0<void> *slot) {
+  return impl_->google_icon_->ConnectOnClickEvent(slot);
 }
 
 }  // namespace ggadget

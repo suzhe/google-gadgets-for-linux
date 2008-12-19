@@ -172,5 +172,7 @@ even in the middle of a word. -->
 <!-- TODO: The following "Linux"s should be changed if we support platforms other than Linux. -->
 <GADGET_REQUIRE_API_VERSION>The gadget requires Google Gadgets supporting API at least version %s:&#10;&#10;%s</GADGET_REQUIRE_API_VERSION>
 <GADGET_REQUIRE_HOST_VERSION>The gadget requires Google Gadgets for Linux at least version %s:&#10;&#10;%s</GADGET_REQUIRE_HOST_VERSION>
-<GADGET_PLATFORM_NOT_SUPPORTED>The gadget doesn't work on Linux platform:%&#10;&#10;%s</GADGET_PLATFORM_NOT_SUPPORTED> 
+<GADGET_PLATFORM_NOT_SUPPORTED>The gadget doesn't work on Linux platform:%&#10;&#10;%s</GADGET_PLATFORM_NOT_SUPPORTED>
+
+<GOOGLE_HOMEPAGE_URL>http://www.google.com</GOOGLE_HOMEPAGE_URL>
 </strings>

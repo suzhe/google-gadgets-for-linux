@@ -171,5 +171,7 @@ even in the middle of a word. -->
 <GADGET_LOAD_FAILURE>无法加载小工具:&#10;&#10;%s</GADGET_LOAD_FAILURE>
 <GADGET_REQUIRE_API_VERSION>此小工具需要系统支持 %s 版本的 Google 小工具 API:&#10;&#10;%s</GADGET_REQUIRE_API_VERSION>
 <GADGET_REQUIRE_HOST_VERSION>此小工具需要 Google 小工具 for Linux 最低版本 %s:&#10;&#10;%s</GADGET_REQUIRE_HOST_VERSION>
-<GADGET_PLATFORM_NOT_SUPPORTED>此小工具不能在 Linux 平台上运行:&#10;&#10;%s</GADGET_PLATFORM_NOT_SUPPORTED> 
+<GADGET_PLATFORM_NOT_SUPPORTED>此小工具不能在 Linux 平台上运行:&#10;&#10;%s</GADGET_PLATFORM_NOT_SUPPORTED>
+
+<GOOGLE_HOMEPAGE_URL>http://www.google.cn</GOOGLE_HOMEPAGE_URL>
 </strings>

@@ -21,7 +21,7 @@
 #include <vector>
 namespace ggadget {
 
-class Gadget;
+class Permissions;
 
 namespace xdg {
 
@@ -30,11 +30,10 @@ const char kDirectoryMimeType[] = "inode/directory";
 /**
  * Opens a specified URL by system default application.
  *
- * @param gadget The gadget which wants to open the url, the permissions of
- *        this gadget will be checked to see if opening the url is allowed.
+ * @param permissions Permissions to check if the operation is allowed.
  * @param url The url to open.
  */
-bool OpenURL(const Gadget *gadget, const char *url);
+bool OpenURL(const Permissions &permissions, const char *url);
 
 /** Gets the mimetype of a specified file. */
 std::string GetFileMimeType(const char *file);

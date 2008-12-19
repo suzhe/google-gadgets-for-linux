@@ -193,6 +193,12 @@ class SideBar {
    */
   Connection *ConnectOnViewMoved(Slot1<void, View *> *slot);
 
+  /**
+   * Connects a slot to Google icon's onclick signal, which will be emitted when
+   * Google icon is clicked.
+   */
+  Connection *ConnectOnGoogleIconClicked(Slot0<void> *slot);
+
  private:
   class Impl;
   Impl *impl_;

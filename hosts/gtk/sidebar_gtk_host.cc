@@ -187,6 +187,8 @@ class SideBarGtkHost::Impl {
         NewSlot(this, &Impl::OnSideBarClick));
     sidebar_->ConnectOnViewMoved(
         NewSlot(this, &Impl::OnSideBarChildViewMoved));
+    sidebar_->ConnectOnGoogleIconClicked(
+        NewSlot(this, &Impl::OnGoogleIconClicked));
 
     LoadGlobalOptions();
 
@@ -1863,6 +1865,10 @@ class SideBarGtkHost::Impl {
         return false;
     }
     return true;
+  }
+
+  void OnGoogleIconClicked() {
+    owner_->OpenURL(NULL, GM_("GOOGLE_HOMEPAGE_URL"));
   }
 
  public:  // members

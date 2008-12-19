@@ -27,7 +27,6 @@
 #include <ggadget/logger.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
-#include <ggadget/gadget.h>
 #include <ggadget/permissions.h>
 #include <ggadget/system_utils.h>
 #include <third_party/xdgmime/xdgmime.h>
@@ -129,8 +128,7 @@ static bool OpenURLWithSystemCommand(const char *url) {
   return true;
 }
 
-bool OpenURL(const Gadget *gadget, const char *url) {
-  ASSERT(gadget);
+bool OpenURL(const Permissions &permissions, const char *url) {
   if (!url || !*url) {
     LOG("Invalid URL!");
     return false;
@@ -141,22 +139,21 @@ bool OpenURL(const Gadget *gadget, const char *url) {
     std::string new_url(kFileUrlPrefix);
     new_url.append(url);
     new_url = EncodeURL(new_url);
-    return OpenURL(gadget, new_url.c_str());
+    return OpenURL(permissions, new_url.c_str());
   } else if (GetURLScheme(url).length() == 0) {
     // URI without prefix, will be treated as http://
     // Allow mailto:xxx.
     std::string new_url(kHttpUrlPrefix);
     new_url.append(url);
-    return OpenURL(gadget, new_url.c_str());
+    return OpenURL(permissions, new_url.c_str());
   }
 
   std::string new_url(url);
   if (!IsValidURL(url))
     new_url = EncodeURL(new_url);
 
-  const Permissions *permissions = gadget->GetPermissions();
   if (IsValidWebURL(new_url.c_str())) {
-    if (!permissions->IsRequiredAndGranted(Permissions::NETWORK)) {
+    if (!permissions.IsRequiredAndGranted(Permissions::NETWORK)) {
       LOG("No permission to open a remote url: %s", url);
       return false;
     }
@@ -164,7 +161,7 @@ bool OpenURL(const Gadget *gadget, const char *url) {
   } else if (IsValidURL(new_url.c_str())) {
     // Support file or other special urls if allaccess is granted, including
     // things like mailto:xxx, trash:/, sysinfo:/, etc.
-    if (!permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
+    if (!permissions.IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
       LOG("No permission to open url: %s", url);
       return false;
     }

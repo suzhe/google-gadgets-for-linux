@@ -860,7 +860,7 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
 
   // Use ggadget::xdg::OpenURL() to open a link.
   if (desktop_entry.GetType() == ggadget::xdg::DesktopEntry::LINK) {
-    return ggadget::xdg::OpenURL(gadget, desktop_entry.GetURL().c_str());
+    return OpenURL(gadget, desktop_entry.GetURL().c_str());
   }
 
   if (desktop_entry.GetType() != ggadget::xdg::DesktopEntry::APPLICATION) {
@@ -976,10 +976,15 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
 }
 
 bool OpenURL(const Gadget *gadget, const char *url) {
-  ASSERT(gadget);
   ASSERT(url && *url);
 
-  const Permissions *permissions = gadget->GetPermissions();
+  Permissions default_permissions;
+  default_permissions.SetRequired(Permissions::NETWORK, true);
+  default_permissions.GrantAllRequired();
+
+  const Permissions *permissions =
+      gadget ? gadget->GetPermissions() : &default_permissions;
+
   std::string path;
   if (IsAbsolutePath(url)) {
     path = url;
@@ -997,7 +1002,7 @@ bool OpenURL(const Gadget *gadget, const char *url) {
       return LaunchDesktopFile(gadget, path.c_str());
   }
 
-  return ggadget::xdg::OpenURL(gadget, url);
+  return ggadget::xdg::OpenURL(*permissions, url);
 }
 
 uint64_t GetCurrentTime() {
