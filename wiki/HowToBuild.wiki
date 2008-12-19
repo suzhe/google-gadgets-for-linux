@@ -4,7 +4,7 @@
 
 = Introduction =
 
-This page describe the method of building Google Gadgets for Linux from source code. Following instruction apply to Google Gadgets for Linux 0.10.3.
+This page describe the method of building Google Gadgets for Linux from source code. Following instruction apply to Google Gadgets for Linux 0.10.4.
 
 = Preparation =
 
