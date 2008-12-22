@@ -566,8 +566,12 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
       SelectAll();
     } else if (keyval == Qt::Key_Backspace) {
       cursor_->deletePreviousChar();
+      ScrollToCursor();
+      FireOnChangeEvent();
     } else if (keyval == Qt::Key_Delete && !shift) {
       cursor_->deleteChar();
+      ScrollToCursor();
+      FireOnChangeEvent();
     } else if (keyval == Qt::Key_Insert && !shift && !ctrl) {
       overwrite_ = !overwrite_;
     } else if (!key_event->text().isEmpty()

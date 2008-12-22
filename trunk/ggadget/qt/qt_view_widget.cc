@@ -439,6 +439,16 @@ void QtViewWidget::resizeEvent(QResizeEvent *event) {
 
 }
 
+void QtViewWidget::focusInEvent(QFocusEvent *event) {
+  SimpleEvent e(Event::EVENT_FOCUS_IN);
+  view_->OnOtherEvent(e);
+}
+
+void QtViewWidget::focusOutEvent(QFocusEvent *event) {
+  SimpleEvent e(Event::EVENT_FOCUS_OUT);
+  view_->OnOtherEvent(e);
+}
+
 QSize QtViewWidget::sizeHint() const {
   return minimumSizeHint();
 }
