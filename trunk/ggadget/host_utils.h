@@ -26,6 +26,7 @@ namespace ggadget {
 
 template <typename R> class Slot0;
 class OptionsInterface;
+class Gadget;
 
 /**
  * Setup the global file manager.
@@ -63,6 +64,11 @@ void GetPopupPosition(int x, int y, int w, int h,
                       int w1, int h1, int sw, int sh,
                       int *x1, int *y1);
 
+/**
+ * Sets up a default handler to Gadget's OpenFeedbackURL signal.
+ * The handler will be set only if the gadget has feedback url.
+ */
+void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget);
 
 /**
  * Structure to hold information of a host command line argument.

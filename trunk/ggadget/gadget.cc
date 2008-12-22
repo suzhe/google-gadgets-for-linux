@@ -1001,6 +1001,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Signal1<void, int> onpluginflagschanged_signal_;
   Signal2<void, LogLevel, const std::string &> log_signal_;
 
+  Signal0<void> onopenfeedbackurl_signal_;
+
   StringMap manifest_info_map_;
   StringMap strings_map_;
 
@@ -1169,6 +1171,10 @@ Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
   return impl_->onpluginflagschanged_signal_.Connect(handler);
 }
 
+Connection *Gadget::ConnectOnOpenFeedbackURL(Slot0<void> *handler) {
+  return impl_->onopenfeedbackurl_signal_.Connect(handler);
+}
+
 XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
   if (impl_->permissions_.IsRequiredAndGranted(Permissions::NETWORK)) {
       return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
@@ -1223,6 +1229,14 @@ void Gadget::ShowAboutDialog() {
   if (impl_->host_)
     impl_->host_->ShowGadgetAboutDialog(this);
   impl_->safe_to_remove_ = true;
+}
+
+bool Gadget::HasFeedbackURL() const {
+  return impl_->onopenfeedbackurl_signal_.HasActiveConnections();
+}
+
+void Gadget::OpenFeedbackURL() {
+  impl_->onopenfeedbackurl_signal_();
 }
 
 // static methods

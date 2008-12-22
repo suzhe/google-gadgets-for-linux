@@ -24,6 +24,7 @@
 
 namespace ggadget {
 
+template <typename R> class Slot0;
 template <typename R, typename P1> class Slot1;
 template <typename R, typename P1, typename P2> class Slot2;
 class HostInterface;
@@ -282,6 +283,17 @@ class Gadget {
   Connection *ConnectOnPluginFlagsChanged(Slot1<void, int> *handler);
 
   /**
+   * Connects a slot to the OpenFeedbackURL signal. The specified slot will be
+   * called when user request to open the feedback url of this gadget instance.
+   * If this gadget instance doesn't have feedback url, then don't connect this
+   * signal.
+   *
+   * Usually, Host shall connect to this signal and decide which feedback url
+   * should be opened.
+   */
+  Connection *ConnectOnOpenFeedbackURL(Slot0<void> *handler);
+
+  /**
    * Creates a new @c XMLHttpRequestInterface instance.
    * All instances created by this gadget share the same set of cookies.
    */
@@ -330,6 +342,16 @@ class Gadget {
 
   /** Shows this gadget's about dialog. */
   void ShowAboutDialog();
+
+  /**
+   * Checks if this gadget instance has feedback url.
+   * This method checks if OpenFeedbackURL signal has active connection.
+   */
+  bool HasFeedbackURL() const;
+
+  /** Opens feedback url of this gadget instance. */
+  void OpenFeedbackURL();
+
  public:
   /**
    * A utility to get the manifest infomation of a gadget without

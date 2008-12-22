@@ -190,6 +190,7 @@ class GoogleGadgetManager : public GadgetManagerInterface {
                                      std::string *download_url,
                                      std::string *title,
                                      std::string *description);
+  virtual std::string GetGadgetInstanceFeedbackURL(int instance_id);
 
   virtual Connection *ConnectOnNewGadgetInstance(Slot1<bool, int> *callback);
   virtual Connection *ConnectOnRemoveGadgetInstance(Slot1<void, int> *callback);

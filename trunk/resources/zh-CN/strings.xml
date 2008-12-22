@@ -108,6 +108,7 @@ even in the middle of a word. -->
 <MENU_ITEM_CHANGE_HOTKEY>更改热键(&amp;H)...</MENU_ITEM_CHANGE_HOTKEY>
 <MENU_ITEM_DEBUG_CONSOLE>调试窗口(&amp;B)</MENU_ITEM_DEBUG_CONSOLE>
 <MENU_ITEM_SIDEBAR>侧栏(&amp;S)</MENU_ITEM_SIDEBAR>
+<MENU_ITEM_FEEDBACK>反馈...</MENU_ITEM_FEEDBACK>
 
 <!-- Title of the confirm dialog of third party gadget installation. -->
 <GADGET_CONFIRM_TITLE>安装第三方小工具</GADGET_CONFIRM_TITLE>
