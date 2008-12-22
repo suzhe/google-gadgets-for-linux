@@ -7,6 +7,7 @@ This page describes the method of localizing Google Gadgets for Linux into other
 
 
 = Localize main program =
+
 All UI strings of Google Gadgets for Linux are stored in a XML file, named strings.xml, which has the exactly same format of gadget's strings.xml. Please refer to [http://code.google.com/apis/desktop/docs/script.html#internationalization this document] about the file format.
 
 The original English strings are stored in [http://code.google.com/p/google-gadgets-for-linux/source/browse/trunk/resources/en/strings.xml resources/en/strings.xml] file. The file content looks like:
@@ -46,9 +47,8 @@ In order to  localize Google Gadgets for Linux, you need:
 
 You may take resources/zh-CN/strings.xml as an example.
 
-If you want to share your localized strings.xml with other users, just submit an issue report and attach strings.xml to it. Then we'll merge it into our official release. We'd appreciate your contribution very much.
-
 = Localize built-in gadgets =
+
 Besides the main program, there are some builtin gadgets need localizing as well. The localization method is same.
 
  * Gadget Browser
@@ -62,4 +62,8 @@ Besides the main program, there are some builtin gadgets need localizing as well
  * Gadget Designer
    The source code is in [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/designer/gadget gadgets/designer/gadget] sub-directory. [http://code.google.com/p/google-gadgets-for-linux/source/browse/#svn/trunk/gadgets/designer/blank_gadget gadgets/designer/blank_gadget] is the blank gadget used by Gadget Designer, it also needs localizing.
 
-If you want to share your localization work with other users, feel free to submit it to us.
+= Contribute your localization work to us =
+
+We'd very appreciate if you could contribute your localization work to us, so that other users will be benefited from it.
+
+First of all, you may follow [BecomingAContributor this instruction] to become a contributor of this project. Then you may just send your localized strings.xml file to our [http://groups.google.com/group/google-gadgets-for-linux-dev dev maillist], or submit an issue and attach the file. Then we will merge it into our source code repository.
