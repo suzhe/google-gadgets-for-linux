@@ -66,6 +66,8 @@ class QtViewWidget : public QWidget {
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
   virtual void resizeEvent(QResizeEvent *event);
+  virtual void focusInEvent(QFocusEvent *event);
+  virtual void focusOutEvent(QFocusEvent *event);
   void SetInputMask(QPixmap *pixmap);
   ViewInterface *view_;
   const char **drag_files_;
