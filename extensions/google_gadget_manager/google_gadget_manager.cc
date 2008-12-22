@@ -46,6 +46,12 @@ namespace google {
 static const int kDailyPingIntervalBase = 25 * 3600 * 1000;
 static const int kWeeklyPingIntervalBase = kDailyPingIntervalBase * 7;
 
+static const char kGadgetFeedbackURLIGoogle[] =
+    "http://www.google.com/ig/directory?root=/ig&url=%s&hl=%s";
+
+static const char kGadgetFeedbackURLDesktop[] =
+    "http://desktop.google.com/plugins/i/%s.html&hl=%s";
+
 // Note: The backoff and randomization features in this implementation is
 // very important for proper server-side operation. Please do *NOT* disable
 // or remove them.
@@ -780,6 +786,49 @@ bool GoogleGadgetManager::GetGadgetInstanceInfo(
     }
   }
   return true;
+}
+
+std::string GoogleGadgetManager::GetGadgetInstanceFeedbackURL(int instance_id) {
+  const GadgetInfo *info = GetGadgetInfoOfInstance(instance_id);
+
+  if (!info)
+    return std::string();
+
+  // If the gadget is not from plugins.xml, try to find it in plugins.xml by
+  // matching guid.
+  if (info->source != SOURCE_PLUGINS_XML) {
+    StringMap::const_iterator guid = info->attributes.find("guid");
+    if (guid != info->attributes.end()) {
+      const GadgetInfo *new_info = GetGadgetInfo(guid->second.c_str());
+      if (new_info && new_info->source == SOURCE_PLUGINS_XML &&
+          new_info->id == guid->second) {
+        info = new_info;
+      }
+    }
+  }
+
+  // Only gadgets from plugins.xml have feedback url.
+  if (info->source != SOURCE_PLUGINS_XML)
+    return std::string();
+
+  bool is_desktop = true;
+  StringMap::const_iterator it;
+  it = info->attributes.find(kModuleIDAttrib);
+  if (it != info->attributes.end()) {
+    // Only igoogle gadgets have feedback url. RSS feeds don't have.
+    if (it->second == kIGoogleModuleID)
+      is_desktop = false;
+    else
+      return std::string();
+  }
+
+  it = info->attributes.find(is_desktop ? "id" : "download_url");
+  if (it == info->attributes.end())
+    return std::string();
+
+  return StringPrintf(
+      is_desktop ? kGadgetFeedbackURLDesktop : kGadgetFeedbackURLIGoogle,
+      it->second.c_str(), GetSystemLocaleName().c_str());
 }
 
 Connection *GoogleGadgetManager::ConnectOnNewGadgetInstance(

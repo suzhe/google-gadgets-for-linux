@@ -105,6 +105,14 @@ class GadgetManagerInterface {
                                      std::string *title,
                                      std::string *description) = 0;
 
+  /**
+   * Gets feedback url of a gadget instance, where users can submit feedback of
+   * this gadget.
+   * This method returns an empty string if the instance has no feedback
+   * url.
+   */
+  virtual std::string GetGadgetInstanceFeedbackURL(int instance_id) = 0;
+
  public:
   /**
    * Connects to signals when a gadget instance is added, to be removed or

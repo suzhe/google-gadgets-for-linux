@@ -43,6 +43,7 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/permissions.h>
+#include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
 
@@ -292,6 +293,8 @@ class SimpleGtkHost::Impl {
       delete gadget;
       return NULL;
     }
+
+    SetupGadgetOpenFeedbackURLHandler(gadget);
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));

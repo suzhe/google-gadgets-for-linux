@@ -38,6 +38,7 @@
 #include "string_utils.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
+#include "gadget.h"
 
 namespace ggadget {
 
@@ -495,5 +496,36 @@ bool HostArgumentParser::EnumerateRemainedArgs(
 
 const char HostArgumentParser::kStartSignature[] = "<|START|>";
 const char HostArgumentParser::kFinishSignature[] = "<|FINISH|>";
+
+void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget) {
+  class OpenFeedbackURLSlot : public Slot0<void> {
+   public:
+    OpenFeedbackURLSlot(Gadget *gadget, const std::string &url)
+      : gadget_(gadget), url_(url) {
+    }
+    virtual ResultVariant Call(ScriptableInterface *object,
+                               int argc, const Variant argv[]) const {
+      bool old_in_user_interaction = gadget_->SetInUserInteraction(true);
+      gadget_->OpenURL(url_.c_str());
+      gadget_->SetInUserInteraction(old_in_user_interaction);
+      return ResultVariant();
+    }
+    virtual bool operator==(const Slot &another) const {
+      return false;
+    }
+   private:
+    Gadget *gadget_;
+    std::string url_;
+  };
+
+  GadgetManagerInterface *gadget_manager = GetGadgetManager();
+  if (gadget && gadget_manager) {
+    std::string url =
+        gadget_manager->GetGadgetInstanceFeedbackURL(gadget->GetInstanceID());
+    if (url.length()) {
+      gadget->ConnectOnOpenFeedbackURL(new OpenFeedbackURLSlot(gadget, url));
+    }
+  }
+}
 
 } // namespace ggadget

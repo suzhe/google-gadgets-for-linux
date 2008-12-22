@@ -325,6 +325,12 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
       gadget->ShowAboutDialog();
   }
 
+  void FeedbackMenuCallback(const char *) {
+    Gadget *gadget = owner_->GetGadget();
+    if (gadget)
+      gadget->OpenFeedbackURL();
+  }
+
   void RemoveMenuCallback(const char *) {
     Gadget *gadget = owner_->GetGadget();
     if (gadget)
@@ -805,6 +811,12 @@ void MainViewDecoratorBase::OnAddDecoratorMenuItems(MenuInterface *menu) {
                   MenuInterface::MENU_ITEM_ICON_ABOUT,
                   NewSlot(impl_, &Impl::AboutMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
+
+    if (gadget->HasFeedbackURL()) {
+      menu->AddItem(GM_("MENU_ITEM_FEEDBACK"), 0, 0,
+                    NewSlot(impl_, &Impl::FeedbackMenuCallback),
+                    MenuInterface::MENU_ITEM_PRI_GADGET);
+    }
 
     // Use MENU_ITEM_PRI_GADGET to make sure that it's the last menu item.
     menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,

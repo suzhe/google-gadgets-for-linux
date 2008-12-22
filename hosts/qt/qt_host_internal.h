@@ -17,6 +17,7 @@
 #define HOSTS_QT_HOST_INTERNAL_H__
 
 #include <QtGui/QCursor>
+#include <ggadget/host_utils.h>
 
 using namespace ggadget;
 using namespace ggadget::qt;
@@ -156,6 +157,8 @@ class QtHost::Impl : public QObject {
       gadgets_.erase(instance_id);
       return NULL;
     }
+
+    SetupGadgetOpenFeedbackURLHandler(gadget);
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));

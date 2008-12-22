@@ -47,6 +47,7 @@
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/slot.h>
 #include <ggadget/permissions.h>
+#include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
 
@@ -1321,6 +1322,8 @@ class SideBarGtkHost::Impl {
       delete gadget;
       return NULL;
     }
+
+    SetupGadgetOpenFeedbackURLHandler(gadget);
 
     if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
       MainViewDecoratorBase *view_decorator =

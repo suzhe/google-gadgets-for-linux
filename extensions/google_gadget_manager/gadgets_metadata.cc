@@ -48,7 +48,7 @@ static bool FillGadgetInfoFromManifest(const char *gadget_path,
     return false;
 
   info->attributes["author"] = manifest[kManifestAuthor];
-  info->attributes["uuid"] = manifest[kManifestId];
+  info->attributes["guid"] = ToUpper(manifest[kManifestId]);
   info->attributes["name"] = manifest[kManifestName];
   info->attributes["product_summary"] = manifest[kManifestDescription];
   info->attributes["version"] = manifest[kManifestVersion];
@@ -115,7 +115,7 @@ class GadgetsMetadata::Impl {
     return updated_date_str.empty() ? 0 : ParseDate(updated_date_str.c_str());
   }
 
-  // In the incremental plugins.xml, plugins are matched with the uuid for
+  // In the incremental plugins.xml, plugins are matched with the guid for
   // desktop gadgets, and the download_url for iGoogle gadgets.
   static std::string GetPluginID(const StringMap &table,
                                  const std::string &plugin_key) {
@@ -263,7 +263,7 @@ class GadgetsMetadata::Impl {
         continue;
 
       // Don't be confused about this id and the id attribute. This id is
-      // uuid for desktop gadgets and download_url for iGoogle gadgets, and
+      // guid for desktop gadgets and download_url for iGoogle gadgets, and
       // is used thoughout our system to identify gadgets. The id attribute
       // in the plugins.xml is not used by other parts of this system.
       std::string id = GetPluginID(new_plugins, plugin_key);
