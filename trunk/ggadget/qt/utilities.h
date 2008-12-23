@@ -29,11 +29,6 @@ class Gadget;
 class MainLoopInterface;
 namespace qt {
 
-/**
- * Shows an about dialog for a specified gadget.
- */
-void ShowGadgetAboutDialog(Gadget *gadget);
-
 Qt::CursorShape GetQtCursorShape(int type);
 
 int GetMouseButtons(const Qt::MouseButtons buttons);

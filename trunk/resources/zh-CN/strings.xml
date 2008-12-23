@@ -16,6 +16,11 @@
 -->
 
 <strings>
+<GOOGLE_GADGETS>Google 小工具</GOOGLE_GADGETS>
+<API_VERSION>（API 版本：%s）</API_VERSION>
+<GGL_COPYRIGHT>版权所有 &#169; 2008 Google Inc. 保留所有权利。&#10;由 Apache 许可证版本 2.0 授权：</GGL_COPYRIGHT>
+<GGL_DESCRIPTION>有关详情，请访问我们的项目网站：</GGL_DESCRIPTION>
+
 <!-- Short absolute time format (strftime() format) like '10:24am'.
   For some locales (such as zh-CN), 24-clock should be used, because times
   like 12:30am are confusing in these locales. -->
@@ -69,7 +74,6 @@
 <SIDEBAR_MENU_BUTTON_TOOLTIP>菜单</SIDEBAR_MENU_BUTTON_TOOLTIP>
 <SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>最小化</SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>
 
-<GOOGLE_GADGETS>Google 小工具</GOOGLE_GADGETS>
 <LOAD_EXTENSIONS_FAIL>由于在调入以下扩展模块时失败，程序无法启动：</LOAD_EXTENSIONS_FAIL>
 
 <!-- Menu item text. The & character(&amp;) will not be visible. It is put in

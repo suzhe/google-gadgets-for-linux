@@ -37,16 +37,16 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/locales.h>
 #include <ggadget/logger.h>
 #include <ggadget/messages.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/permissions.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/gadget.h>
 #include <ggadget/view.h>
-#include <ggadget/permissions.h>
-#include <ggadget/options_interface.h>
 #include "qt_host.h"
 #include "gadget_browser_host.h"
 #include "qt_host_internal.h"
@@ -92,10 +92,6 @@ bool QtHost::LoadFont(const char *filename) {
 }
 
 void QtHost::Run() {
-}
-
-void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
-  ggadget::qt::ShowGadgetAboutDialog(gadget);
 }
 
 void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {

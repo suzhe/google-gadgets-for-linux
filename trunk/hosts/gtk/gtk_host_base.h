@@ -50,9 +50,6 @@ class GtkHostBase : public ggadget::HostInterface {
   virtual bool LoadFont(const char *filename) {
     return ggadget::gtk::LoadFont(filename);
   }
-  virtual void ShowGadgetAboutDialog(Gadget *gadget) {
-    ggadget::gtk::ShowGadgetAboutDialog(gadget);
-  }
   virtual bool OpenURL(const Gadget *gadget, const char *url) {
     return ggadget::gtk::OpenURL(gadget, url);
   }

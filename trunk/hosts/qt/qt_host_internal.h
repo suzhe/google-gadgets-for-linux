@@ -75,6 +75,7 @@ class QtHost::Impl : public QObject {
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_HIDE_ALL")),
                     this, SLOT(OnHideAll()));
     menu_.addSeparator();
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_ABOUT")), this, SLOT(OnAbout()));
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_EXIT")),
                     qApp, SLOT(quit()));
     tray_.setContextMenu(&menu_);
@@ -181,7 +182,7 @@ class QtHost::Impl : public QObject {
 
     if (type == ViewHostInterface::VIEW_HOST_DETAILS)
       parent = static_cast<QWidget*>(gadget->GetMainView()->GetNativeWidget());
-    else
+    else if (type == ViewHostInterface::VIEW_HOST_MAIN)
       flags |= QtViewHost::FLAG_RECORD_STATES;
 
     QtViewHost *qvh = new QtViewHost(
@@ -379,6 +380,9 @@ class QtHost::Impl : public QObject {
       else
         OnShowAll();
     }
+  }
+  void OnAbout() {
+    ShowAboutDialog(NewViewHost(NULL, ViewHostInterface::VIEW_HOST_OPTIONS));
   }
 };
 

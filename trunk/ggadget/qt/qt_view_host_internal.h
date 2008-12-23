@@ -77,7 +77,7 @@ class QtViewHost::Impl : public QObject {
       case ViewHostInterface::VIEW_HOST_MAIN:
         return "main_view";
       case ViewHostInterface::VIEW_HOST_OPTIONS:
-        return "flags_view";
+        return "options_view";
       case ViewHostInterface::VIEW_HOST_DETAILS:
         return "details_view";
       default:

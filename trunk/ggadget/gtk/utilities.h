@@ -63,11 +63,6 @@ ViewHostInterface::ConfirmResponse ShowConfirmDialog(const char *title,
 std::string ShowPromptDialog(const char *title, const char *message,
                              const char *default_value);
 
-/**
- * Shows an about dialog for a specified gadget.
- */
-void ShowGadgetAboutDialog(Gadget *gadget);
-
 /** Load a given font into the application. */
 bool LoadFont(const char *filename);
 
