@@ -239,6 +239,8 @@ const char kSBButtonMinimizeOver[] = "resource://sidebar_minimize_over.png";
 const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";
+const char kGGLAboutView[] = "resource://ggl_about.xml";
+const char kGadgetAboutView[] = "resource://gadget_about.xml";
 
 const char kGadgetsIcon[] = "resource://google-gadgets.png";
 

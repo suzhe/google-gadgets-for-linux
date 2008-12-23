@@ -16,6 +16,11 @@
 -->
 
 <strings>
+<GOOGLE_GADGETS>Google Gadgets</GOOGLE_GADGETS>
+<API_VERSION>(API Version: %s)</API_VERSION>
+<GGL_COPYRIGHT>Copyright &#169; 2008 Google Inc. All Rights Reserved.&#10;Licensed under the Apache License, Version 2.0:</GGL_COPYRIGHT>
+<GGL_DESCRIPTION>For more information please visit our project site:</GGL_DESCRIPTION>
+
 <!-- Short absolute time format (strftime() format) like '10:24am'.
   For some locales (such as zh-CN), 24-clock should be used, because times
   like 12:30am are confusing in these locales. -->
@@ -69,7 +74,6 @@
 <SIDEBAR_MENU_BUTTON_TOOLTIP>Menu</SIDEBAR_MENU_BUTTON_TOOLTIP>
 <SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>Minimize</SIDEBAR_MINIMIZE_BUTTON_TOOLTIP>
 
-<GOOGLE_GADGETS>Google Gadgets</GOOGLE_GADGETS>
 <LOAD_EXTENSIONS_FAIL>Program can't start because it failed to load the following module(s):</LOAD_EXTENSIONS_FAIL>
 
 <!-- Menu item text. The & character(&amp;) will not be visible. It is put in

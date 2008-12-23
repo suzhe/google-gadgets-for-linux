@@ -51,8 +51,8 @@ class View : public ViewInterface {
    * Constructor.
    *
    * @param host the ViewHost instance that is associated with the View
-   *        instance. It's not owned by the View, and shall be destroyed after
-   *        destroying the View.
+   *        instance. It's owned by the View, and will be automatically
+   *        destroyed when the view is destroyed.
    * @param gadget the Gadget instance that owns this view. For debug purpose,
    *        it could be NULL.
    * @param element_factory the ElementFactory instance that shall be used by

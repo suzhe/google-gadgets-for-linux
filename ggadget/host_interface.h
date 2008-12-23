@@ -81,11 +81,6 @@ class HostInterface {
   virtual bool LoadFont(const char *filename) = 0;
 
   /**
-   * Shows an about dialog for a specified gadget.
-   */
-  virtual void ShowGadgetAboutDialog(Gadget *gadget) = 0;
-
-  /**
    * Shows a debug console that will display all logs for the gadget.
    */
   virtual void ShowGadgetDebugConsole(Gadget *gadget) = 0;

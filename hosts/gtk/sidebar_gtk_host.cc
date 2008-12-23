@@ -22,31 +22,32 @@
 #include <map>
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
-#include <ggadget/floating_main_view_decorator.h>
 #include <ggadget/docked_main_view_decorator.h>
-#include <ggadget/popout_main_view_decorator.h>
 #include <ggadget/details_view_decorator.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/floating_main_view_decorator.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/gtk/hotkey.h>
+#include <ggadget/gtk/menu_builder.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
-#include <ggadget/gtk/menu_builder.h>
-#include <ggadget/gtk/hotkey.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/locales.h>
+#include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/messages.h>
 #include <ggadget/menu_interface.h>
-#include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
+#include <ggadget/permissions.h>
+#include <ggadget/popout_main_view_decorator.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/sidebar.h>
+#include <ggadget/slot.h>
 #include <ggadget/view.h>
 #include <ggadget/view_element.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/file_manager_interface.h>
-#include <ggadget/slot.h>
-#include <ggadget/permissions.h>
 #include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
@@ -338,6 +339,7 @@ class SideBarGtkHost::Impl {
   }
 
   void OnSideBarAddGadget() {
+    ShowOrHideAll(true);
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
@@ -423,6 +425,9 @@ class SideBarGtkHost::Impl {
     if (AddFloatingGadgetToMenu(menu, priority)) {
       menu->AddItem(NULL, 0, 0, NULL, priority);
     }
+    menu->AddItem(GM_("MENU_ITEM_ABOUT"), 0,
+                  MenuInterface::MENU_ITEM_ICON_ABOUT,
+                  NewSlot(this, &Impl::AboutMenuHandler), priority);
     menu->AddItem(GM_("MENU_ITEM_EXIT"),
                   IsSafeToExit() ? 0 : MenuInterface::MENU_ITEM_FLAG_GRAYED,
                   MenuInterface::MENU_ITEM_ICON_QUIT,
@@ -1555,8 +1560,7 @@ class SideBarGtkHost::Impl {
       }
     } else if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
       // No decorator for options view.
-      int vh_flags = SingleViewHost::DECORATED | SingleViewHost::RECORD_STATES |
-          SingleViewHost::WM_MANAGEABLE;
+      int vh_flags = SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE;
       return new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
     } else if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
       return NewDetailsViewHost(gadget_id);
@@ -1695,6 +1699,15 @@ class SideBarGtkHost::Impl {
       options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
       OnThemeChanged();
     }
+  }
+
+  void AboutMenuHandler(const char *str) {
+    safe_to_exit_ = false;
+    ShowAboutDialog(new SingleViewHost(
+        ViewHostInterface::VIEW_HOST_OPTIONS, 1.0,
+        SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE,
+        view_debug_mode_));
+    safe_to_exit_ = true;
   }
 
   void ExitMenuHandler(const char *str) {

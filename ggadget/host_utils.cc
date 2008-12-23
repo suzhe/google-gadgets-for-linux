@@ -22,6 +22,7 @@
 #include <map>
 
 #include "dir_file_manager.h"
+#include "element_factory.h"
 #include "file_manager_factory.h"
 #include "file_manager_wrapper.h"
 #include "gadget_consts.h"
@@ -32,10 +33,14 @@
 #include "main_loop_interface.h"
 #include "messages.h"
 #include "options_interface.h"
+#include "scriptable_map.h"
+#include "scriptable_view.h"
 #include "script_runtime_interface.h"
 #include "script_runtime_manager.h"
 #include "slot.h"
 #include "string_utils.h"
+#include "view.h"
+#include "view_host_interface.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "gadget.h"
@@ -205,6 +210,57 @@ void GetPopupPosition(int x, int y, int w, int h,
     *y1 = y + h;
     *x1 = BestPosition(sw, x, w1);
   }
+}
+
+static bool DialogCallback(int flag, View *view) {
+  SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
+                    Event::EVENT_OK : Event::EVENT_CANCEL);
+  return view->OnOtherEvent(event) != EVENT_RESULT_CANCELED;
+}
+
+bool ShowDialogView(ViewHostInterface *view_host, const char *location,
+                    int flags, const std::map<std::string, Variant> &params) {
+  FileManagerInterface *file_manager = GetGlobalFileManager();
+  std::string xml;
+  if (!file_manager || !file_manager->ReadFile(location, &xml)) {
+    view_host->Destroy();
+    return false;
+  }
+  std::string full_path = file_manager->GetFullPath(location);
+
+  ScriptContextInterface *context =
+      ScriptRuntimeManager::get()->CreateScriptContext("js");
+  if (!context) {
+    view_host->Destroy();
+    return false;
+  }
+
+  bool ret = false;
+  ElementFactory element_factory;
+
+  View *view = new View(view_host, NULL, &element_factory, context);
+  ScriptableView *scriptable_view = new ScriptableView(view, NULL, context);
+  // Set up the "optionsViewData" variable in the opened dialog.
+  context->AssignFromNative(NULL, "", "optionsViewData",
+                            Variant(NewScriptableMap(params)));
+  if (scriptable_view->InitFromXML(xml, full_path.c_str()))
+    ret = view->ShowView(true, flags, NewSlot(DialogCallback, view));
+
+  delete scriptable_view;
+  delete view;
+  context->Destroy();
+  return ret;
+}
+
+void ShowAboutDialog(ViewHostInterface *view_host) {
+  std::map<std::string, Variant> params;
+  params["title"] = Variant(GMS_("GOOGLE_GADGETS"));
+  params["version"] = Variant(std::string(GGL_VERSION) + " " +
+      StringPrintf(GM_("API_VERSION"), GGL_API_VERSION));
+  params["copyright"] = Variant(GMS_("GGL_COPYRIGHT"));
+  params["description"] = Variant(GMS_("GGL_DESCRIPTION"));
+  ShowDialogView(view_host, kGGLAboutView, ViewInterface::OPTIONS_VIEW_FLAG_OK,
+                 params);
 }
 
 class HostArgumentParser::Impl {

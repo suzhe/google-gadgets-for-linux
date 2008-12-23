@@ -22,27 +22,28 @@
 
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
-#include <ggadget/floating_main_view_decorator.h>
-#include <ggadget/docked_main_view_decorator.h>
-#include <ggadget/popout_main_view_decorator.h>
 #include <ggadget/details_view_decorator.h>
+#include <ggadget/docked_main_view_decorator.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/floating_main_view_decorator.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/gtk/hotkey.h>
 #include <ggadget/gtk/menu_builder.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
-#include <ggadget/gtk/hotkey.h>
+#include <ggadget/host_utils.h>
 #include <ggadget/locales.h>
-#include <ggadget/messages.h>
 #include <ggadget/logger.h>
-#include <ggadget/script_runtime_manager.h>
-#include <ggadget/view.h>
 #include <ggadget/main_loop_interface.h>
-#include <ggadget/file_manager_factory.h>
+#include <ggadget/messages.h>
+#include <ggadget/script_runtime_manager.h>
 #include <ggadget/options_interface.h>
-#include <ggadget/string_utils.h>
 #include <ggadget/permissions.h>
+#include <ggadget/popout_main_view_decorator.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/view.h>
 #include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
@@ -189,6 +190,10 @@ class SimpleGtkHost::Impl {
     // Separator
     menu_builder.AddItem(NULL, 0, 0, NULL, MenuInterface::MENU_ITEM_PRI_HOST);
 
+    menu_builder.AddItem(GM_("MENU_ITEM_ABOUT"), 0,
+                         MenuInterface::MENU_ITEM_ICON_ABOUT,
+                         NewSlot(this, &Impl::AboutMenuHandler),
+                         MenuInterface::MENU_ITEM_PRI_HOST);
     menu_builder.AddItem(GM_("MENU_ITEM_EXIT"), 0,
                          MenuInterface::MENU_ITEM_ICON_QUIT,
                          NewSlot(this, &Impl::ExitMenuCallback),
@@ -320,13 +325,13 @@ class SimpleGtkHost::Impl {
     info->gadget = gadget;
 
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
-    if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
-      vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::RECORD_STATES |
-                   SingleViewHost::WM_MANAGEABLE);
-    else if (type == ViewHostInterface::VIEW_HOST_DETAILS)
+    if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE);
+    } else if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
       vh_flags &= ~SingleViewHost::DECORATED;
-    else
+    } else {
       vh_flags |= SingleViewHost::RECORD_STATES;
+    }
 
     SingleViewHost *svh =
         new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
@@ -482,6 +487,15 @@ class SimpleGtkHost::Impl {
         options_->PutInternalValue(kOptionFontSize, Variant(font_size_));
       OnThemeChanged();
     }
+  }
+
+  void AboutMenuHandler(const char *str) {
+    safe_to_exit_ = false;
+    ShowAboutDialog(new SingleViewHost(
+        ViewHostInterface::VIEW_HOST_OPTIONS, 1.0,
+        SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE,
+        view_debug_mode_));
+    safe_to_exit_ = true;
   }
 
   void ExitMenuCallback(const char *) {

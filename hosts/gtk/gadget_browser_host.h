@@ -49,9 +49,6 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
-  virtual void ShowGadgetAboutDialog(Gadget *gadget) {
-    owner_->ShowGadgetAboutDialog(gadget);
-  }
   virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
   virtual bool OpenURL(const Gadget *gadget, const char *url) {

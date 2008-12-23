@@ -17,15 +17,18 @@
 #ifndef GGADGET_HOST_UTILS_H__
 #define GGADGET_HOST_UTILS_H__
 
+#include <map>
 #include <string>
 #include <ggadget/common.h>
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
 template <typename R> class Slot0;
 class OptionsInterface;
+class ViewHostInterface;
 class Gadget;
 
 /**
@@ -65,10 +68,34 @@ void GetPopupPosition(int x, int y, int w, int h,
                       int *x1, int *y1);
 
 /**
+ * Show a stand-alone (not belonging to any gadget) dialog which is defined
+ * in XML.
+ * @param view_host a new created view host for the dialog view. It will be
+ *     automatically destroyed when the view is closed. It should be a options
+ *     view host.
+ * @param location the location of the view XML definition file which can be
+ *     loaded by the global file manager.
+ * @param flags combination of ViewInterface::OptionsViewFlags.
+ * @param params parameters to be set into the 'optionsViewData' variable
+ *     in the view script context.
+ * @return @c true if OK button is clicked, otherwise @c false.
+ */
+bool ShowDialogView(ViewHostInterface *view_host, const char *location,
+                    int flags, const std::map<std::string, Variant> &params);
+
+/**
  * Sets up a default handler to Gadget's OpenFeedbackURL signal.
  * The handler will be set only if the gadget has feedback url.
  */
 void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget);
+
+/**
+ * Show the About dialog of the application.
+ * @param view_host a new created view host for the dialog view. It will be
+ *     automatically destroyed when the view is closed. It should be a options
+ *     view host.
+ */
+void ShowAboutDialog(ViewHostInterface *view_host);
 
 /**
  * Structure to hold information of a host command line argument.

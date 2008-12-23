@@ -166,7 +166,7 @@ class SingleViewHost::Impl {
     fixed_ = gtk_fixed_new();
     gtk_widget_show(fixed_);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
-      // Options view needs run in a dialog with ok and cancel buttion.
+      // Options view needs run in a dialog with ok and cancel buttons.
       // Options view's background is always opaque.
       window_ = gtk_dialog_new();
       gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window_)->vbox), fixed_);
@@ -428,9 +428,7 @@ class SingleViewHost::Impl {
     // Adjust the window size just before showing the view, to make sure that
     // the window size has correct default size when showing.
     AdjustWindowSize();
-
-    if (flags_ & RECORD_STATES)
-      LoadWindowStates();
+    LoadWindowStates();
 
     // Can't use gtk_widget_show_now() here, because in some cases, it'll cause
     // nested main loop and prevent ggl-gtk from being quitted.
@@ -444,8 +442,7 @@ class SingleViewHost::Impl {
 
     // Load window states again to make sure it's still correct
     // after the window is shown.
-    if (flags_ & RECORD_STATES)
-      LoadWindowStates();
+    LoadWindowStates();
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
@@ -549,6 +546,8 @@ class SingleViewHost::Impl {
           opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
       if (keep_above.ConvertToBool(&is_keep_above_))
         SetKeepAbove(is_keep_above_);
+    } else {
+      gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
     }
     // Don't load size and zoom information, it's conflict with view
     // decorator.

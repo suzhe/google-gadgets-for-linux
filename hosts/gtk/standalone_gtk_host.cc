@@ -169,8 +169,7 @@ class StandaloneGtkHost::Impl {
                                  ViewHostInterface::Type type) {
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
-      vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE |
-                   SingleViewHost::RECORD_STATES);
+      vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE);
     } else if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
       vh_flags &= ~SingleViewHost::DECORATED;
     } else if (type == ViewHostInterface::VIEW_HOST_MAIN) {

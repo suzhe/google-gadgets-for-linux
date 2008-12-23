@@ -154,15 +154,8 @@ function ParseDocument(xml_request, feed) {
 }
 
 function BuildAtomDoc(xml, feed) {
-  var feed_elems = xml.getElementsByTagName("feed");
-  if (null == feed_elems) {
-    return false;
-  }
-
-  var feed_elem = feed_elems[0];
-  if (null == feed_elem) {
-    return false;
-  }
+  var feed_elem = GetElement("feed", xml);
+  if (!feed_elem) return false;
 
   feed.title = GetElementText("title", feed_elem);
   feed.description = GetElementText("subtitle", feed_elem);
@@ -181,22 +174,14 @@ function BuildAtomDoc(xml, feed) {
       item.url = GetElementAttrib("link", item_elem, "href");
 
       // description
-      var desc = GetElementText("summary", item_elem);
-      if (0 == desc.length) {
-        desc = GetElementText("content", item_elem);
-      }
+      var desc = GetElementText("content", item_elem) ||
+                 GetElementText("summary", item_elem);
       item.description = desc;
 
-      var date = GetElementText("modified", item_elem);
-      if (0 == date.length) {
-        date = GetElementText("updated", item_elem);
-      }
-      if (0 == date.length) {
-        date = GetElementText("created", item_elem);
-      }
-      if (0 == date.length) {
-        date = GetElementText("published", item_elem);
-      }
+      var date = GetElementText("modified", item_elem) ||
+                 GetElementText("updated", item_elem) ||
+                 GetElementText("created", item_elem) ||
+                 GetElementText("published", item_elem);
       item.date = ParseISO8601Date(date);
 
       feed_items[i] = item;
@@ -215,37 +200,18 @@ function BuildRSSDoc(xml, feed) {
     return true;
   }
 
-  // Older feeds use "RDF;" newer ones use "rss."
-  var rss = xml.getElementsByTagName("rss");
-  var rss_elem = null;
-  if (null != rss) {
-    rss_elem = rss[0];
-  }
-
-  if (null == rss_elem) {
-    rss =  xml.getElementsByTagName("rdf:RDF");
-    if (null != rss) {
-      rss_elem = rss[0];
-    }
-
-    if (null == rss_elem) {
-      return false;
-    } else {
-      gadget.debug.trace("RDF document found");
-    }
+  // Older feeds use "RDF"; newer ones use "rss".
+  var rss_elem = GetElement("rss", xml);
+  if (!rss_elem) {
+    rss =  GetElement("rdf:RDF", xml);
+    if (!rss_elem) return false;
+    gadget.debug.trace("RDF document found");
   } else {
     gadget.debug.trace("RSS2 document found");
   }
 
-  var channels = xml.getElementsByTagName("channel");
-  if (null == channels) {
-    return false;
-  }
-
-  var chan_elem = channels[0];
-  if (null == chan_elem) {
-    return false;
-  }
+  var chan_elem = GetElement("channel", rss_elem);
+  if (!chan_elem) return false;
 
   feed.title = GetElementText("title", chan_elem);
   feed.description = GetElementText("description", chan_elem);
@@ -325,38 +291,22 @@ function UpdateGlobalItems(feed) {
   g_feed_items.sort(ItemCompare);
 }
 
-function GetElementText(elem_name, parent) {
-  var elem = parent.getElementsByTagName(elem_name);
-  if (null == elem) {
-    return "";
+function GetElement(elem_name, parent) {
+  for (var node = parent.firstChild; node; node = node.nextSibling) {
+    if (node.nodeType == 1 && node.tagName == elem_name)
+      return node;
   }
-
-  var child = elem[0];
-  if (null == child) {
-    return "";
-  }
-
-  var text = child.text;
-  if (null == text) {
-    return "";
-  }
-
-  return TrimString(text);
+  return null;
 }
 
-function GetElementAttrib(elem_name, parent, attrib_name) {
-  var elem = parent.getElementsByTagName(elem_name);
-  if (null == elem) {
-    return "";
-  }
+function GetElementText(elem_name, parent) {
+  var element = GetElement(elem_name, parent);
+  return element ? element.text : "";
+}
 
-  var child = elem[0];
-  if (null == child) {
-    return "";
-  }
-
-  var attrib = child.getAttribute(attrib_name);
-  return TrimString(attrib);
+function GetElementAttrib(elem_name, parent, attr_name) {
+  var element = GetElement(elem_name, parent);
+  return element ? element.getAttribute(attr_name) : "";
 }
 
 function UpdateCaption(text) {

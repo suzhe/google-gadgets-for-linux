@@ -36,8 +36,10 @@
 #include "script_context_interface.h"
 #include "script_runtime_manager.h"
 #include "scriptable_array.h"
+#include "scriptable_binary_data.h"
 #include "scriptable_framework.h"
 #include "scriptable_helper.h"
+#include "scriptable_map.h"
 #include "scriptable_menu.h"
 #include "scriptable_options.h"
 #include "scriptable_view.h"
@@ -748,7 +750,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     bool ret = false;
     std::string xml;
     safe_to_remove_ = false;
-    if (file_manager_->ReadFile(xml_file, &xml)) {
+    if (file_manager_->ReadFile(xml_file, &xml) ||
+        GetGlobalFileManager()->ReadFile(xml_file, &xml)) {
       ViewBundle options_view(
           host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, &global_, NULL, true);
@@ -1225,10 +1228,52 @@ bool Gadget::HasAboutDialog() const {
 }
 
 void Gadget::ShowAboutDialog() {
-  impl_->safe_to_remove_ = false;
-  if (impl_->host_)
-    impl_->host_->ShowGadgetAboutDialog(this);
-  impl_->safe_to_remove_ = true;
+  std::string about = TrimString(GetManifestInfo(kManifestAboutText));
+  if (about.empty()) {
+    OnCommand(Gadget::CMD_ABOUT_DIALOG);
+    return;
+  }
+
+  std::string title;
+  std::string copyright;
+  if (!SplitString(about, "\n", &title, &about)) {
+    about = title;
+    title = GetManifestInfo(kManifestName);
+  }
+  title = TrimString(title);
+  about = TrimString(about);
+
+  if (!SplitString(about, "\n", &copyright, &about)) {
+    about = copyright;
+    copyright = GetManifestInfo(kManifestCopyright);
+  }
+  copyright = TrimString(copyright);
+  about = TrimString(about);
+
+  // Remove HTML tags from the text because this dialog can't render them.
+  if (ContainsHTML(title.c_str()))
+    title = ExtractTextFromHTML(title.c_str());
+  if (ContainsHTML(copyright.c_str()))
+    copyright = ExtractTextFromHTML(copyright.c_str());
+  if (ContainsHTML(about.c_str()))
+    about = ExtractTextFromHTML(about.c_str());
+
+  std::map<std::string, Variant> params;
+  params["title"] = Variant(title);
+  params["copyright"] = Variant(copyright);
+  params["about"] = Variant(about);
+
+  std::string icon_name = GetManifestInfo(kManifestIcon);
+  std::string icon_data;
+  GetFileManager()->ReadFile(icon_name.c_str(), &icon_data);
+  ScriptableHolder<ScriptableBinaryData> icon_data_holder;
+  if (!icon_data.empty()) {
+    icon_data_holder.Reset(new ScriptableBinaryData(icon_data));
+    params["icon"] = Variant(icon_data_holder.Get());
+  }
+
+  ShowXMLOptionsDialog(ViewInterface::OPTIONS_VIEW_FLAG_OK, kGadgetAboutView,
+                       NewScriptableMap(params));
 }
 
 bool Gadget::HasFeedbackURL() const {
