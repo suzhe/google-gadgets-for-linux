@@ -825,7 +825,8 @@ static void SetContent(int param_count, const char **params, size_t id) {
   // sometimes it fails (not related to removing the file). Schedule a timer
   // to check the failure. The timer is required because OnProgress isn't
   // called synchronously.
-  g_timeout_add(500, CheckContentLoaded, reinterpret_cast<gpointer>(id));
+  if (!ggadget::TrimString(content).empty())
+    g_timeout_add(500, CheckContentLoaded, reinterpret_cast<gpointer>(id));
   gtk_moz_embed_load_url(embed, url.c_str());
 
   // The load should finish immediately, so it's safe to delete the file now.
