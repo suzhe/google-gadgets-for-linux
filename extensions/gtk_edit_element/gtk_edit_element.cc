@@ -72,6 +72,8 @@ GtkEditElement::~GtkEditElement() {
 }
 
 void GtkEditElement::Layout() {
+  static int recurse_depth = 0;
+
   EditElementBase::Layout();
   int range, line_step, page_step, cur_pos;
 
@@ -82,10 +84,14 @@ void GtkEditElement::Layout() {
   SetScrollYPosition(cur_pos);
   SetYLineStep(line_step);
   SetYPageStep(page_step);
-  if (UpdateScrollBar(0, range)) {
+
+  // See DivElement::Layout() impl for the reason of recurse_depth.
+  if (UpdateScrollBar(0, range) && (range > 0 || recurse_depth < 2)) {
+    recurse_depth++;
     // If the scrollbar display state was changed, then call Layout()
     // recursively to redo Layout.
     Layout();
+    recurse_depth--;
   }
 }
 

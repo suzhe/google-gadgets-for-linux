@@ -921,10 +921,6 @@ void ContentAreaElement::RemoveAllContentItems() {
 
 void ContentAreaElement::Layout() {
   static int recurse_depth = 0;
-  // Check to prevent infinite recursion when updating scroll bar.
-  // This may be caused by a bad GetHeight() handler of a ContentItem.
-  if (++recurse_depth > 2)
-    return;
 
   ScrollingElement::Layout();
   impl_->Layout();
@@ -936,12 +932,14 @@ void ContentAreaElement::Layout() {
   int y_range = static_cast<int>(ceil(impl_->content_height_ -
                                       GetClientHeight()));
   if (y_range < 0) y_range = 0;
-  if (UpdateScrollBar(0, y_range)) {
+
+  // See DivElement::Layout() impl for the reason of recurse_depth.
+  if (UpdateScrollBar(0, y_range) && (y_range > 0 || recurse_depth < 2)) {
+    recurse_depth++;
     // Layout again to reflect change of the scroll bar.
     Layout();
+    recurse_depth++;
   }
-
-  --recurse_depth;
 }
 
 void ContentAreaElement::DoDraw(CanvasInterface *canvas) {
