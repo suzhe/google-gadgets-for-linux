@@ -28,7 +28,10 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		combo_arrow_down.png \
 		combo_arrow_over.png \
 		common.js \
+		gadget_about.xml \
+		ggl_about.xml \
 		google-gadgets.png \
+		google-gadgets-big.png \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
@@ -113,7 +116,6 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		vd_popout_normal.png \
 		vd_popout_over.png \
 		analog_clock_sm.jpg \
-		designer_sm.jpg \
 		digital_alarm_clock_sm.jpg \
 		email_sm.jpg \
 		photos_sm.jpg \
