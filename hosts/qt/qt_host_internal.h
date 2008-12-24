@@ -382,7 +382,7 @@ class QtHost::Impl : public QObject {
     }
   }
   void OnAbout() {
-    ShowAboutDialog(NewViewHost(NULL, ViewHostInterface::VIEW_HOST_OPTIONS));
+    ShowAboutDialog(host_);
   }
 };
 

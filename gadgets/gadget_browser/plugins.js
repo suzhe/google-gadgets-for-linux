@@ -52,6 +52,9 @@ var kCategoryHoliday = "holiday";
 
 var kMaxRecentlyUsedPlugins = 24;
 
+var kIGoogleMoreInfoURLPrefix = "http://www.google.com/ig/directory?url=";
+var kIGoogleURLGDIdentifier = "&synd=gd";
+
 var kTopCategories = [
   kCategoryAll, kCategoryNew, kCategoryRecommendations, kCategoryGoogle,
   kCategoryRecentlyUsed, kCategoryUpdates,
@@ -159,6 +162,15 @@ function GetPluginOtherData(plugin) {
              result_arr.join(strings.PLUGIN_DATA_SEPARATOR);
   }
   return result;
+}
+
+function GetPluginInfoURL(plugin) {
+  if (!plugin) return "";
+  if (plugin.attributes.type != kPluginTypeIGoogle)
+    return plugin.attributes.more_info_url;
+  return kIGoogleMoreInfoURLPrefix +
+         encodeURIComponent(plugin.attributes.download_url) +
+         kIGoogleURLGDIdentifier;
 }
 
 function AddPlugin(plugin) {

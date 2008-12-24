@@ -318,12 +318,6 @@ class SimpleGtkHost::Impl {
 
   ViewHostInterface *NewViewHost(Gadget *gadget,
                                  ViewHostInterface::Type type) {
-    ASSERT(gadget);
-    int gadget_id = gadget->GetInstanceID();
-    GadgetInfo *info = &gadgets_[gadget_id];
-    ASSERT(info->gadget == NULL || info->gadget == gadget);
-    info->gadget = gadget;
-
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
       vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE);
@@ -338,6 +332,12 @@ class SimpleGtkHost::Impl {
 
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
       return svh;
+
+    ASSERT(gadget);
+    int gadget_id = gadget->GetInstanceID();
+    GadgetInfo *info = &gadgets_[gadget_id];
+    ASSERT(info->gadget == NULL || info->gadget == gadget);
+    info->gadget = gadget;
 
     DecoratedViewHost *dvh;
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
@@ -491,10 +491,7 @@ class SimpleGtkHost::Impl {
 
   void AboutMenuHandler(const char *str) {
     safe_to_exit_ = false;
-    ShowAboutDialog(new SingleViewHost(
-        ViewHostInterface::VIEW_HOST_OPTIONS, 1.0,
-        SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE,
-        view_debug_mode_));
+    ShowAboutDialog(owner_);
     safe_to_exit_ = true;
   }
 

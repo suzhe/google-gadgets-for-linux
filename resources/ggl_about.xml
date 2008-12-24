@@ -36,14 +36,16 @@ function onopen() {
   </div>
   <label name="e_copyright" x="10" y="155" size="9"
     onsize="e_url1.y = e_copyright.y + e_copyright.offsetHeight"/>
+  <!-- AnchorElement's OpenURL doesn't work because this view is run
+    without a gadget. -->
   <a name="e_url1" x="10" y="185" size="9"
-    href="http://www.apache.org/licenses/LICENSE-2.0">
+    onclick="optionsViewData.openURL(event.srcElement.innerText)">
     http://www.apache.org/licenses/LICENSE-2.0
   </a>
   <label name="e_description" x="10" y="215" size="9"
     onsize="e_url2.y = e_description.y + e_description.offsetHeight"/>
   <a name="e_url2" x="10" y="230" size="9"
-    href="http://code.google.com/p/google-gadgets-for-linux">
+    onclick="optionsViewData.openURL(event.srcElement.innerText)">
     http://code.google.com/p/google-gadgets-for-linux
   </a>
 </view>
