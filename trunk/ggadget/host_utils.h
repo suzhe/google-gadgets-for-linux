@@ -28,7 +28,7 @@ namespace ggadget {
 
 template <typename R> class Slot0;
 class OptionsInterface;
-class ViewHostInterface;
+class HostInterface;
 class Gadget;
 
 /**
@@ -70,9 +70,7 @@ void GetPopupPosition(int x, int y, int w, int h,
 /**
  * Show a stand-alone (not belonging to any gadget) dialog which is defined
  * in XML.
- * @param view_host a new created view host for the dialog view. It will be
- *     automatically destroyed when the view is closed. It should be a options
- *     view host.
+ * @param host
  * @param location the location of the view XML definition file which can be
  *     loaded by the global file manager.
  * @param flags combination of ViewInterface::OptionsViewFlags.
@@ -80,8 +78,8 @@ void GetPopupPosition(int x, int y, int w, int h,
  *     in the view script context.
  * @return @c true if OK button is clicked, otherwise @c false.
  */
-bool ShowDialogView(ViewHostInterface *view_host, const char *location,
-                    int flags, const std::map<std::string, Variant> &params);
+bool ShowDialogView(HostInterface *host, const char *location, int flags,
+                    const std::map<std::string, Variant> &params);
 
 /**
  * Sets up a default handler to Gadget's OpenFeedbackURL signal.
@@ -91,11 +89,8 @@ void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget);
 
 /**
  * Show the About dialog of the application.
- * @param view_host a new created view host for the dialog view. It will be
- *     automatically destroyed when the view is closed. It should be a options
- *     view host.
  */
-void ShowAboutDialog(ViewHostInterface *view_host);
+void ShowAboutDialog(HostInterface *host);
 
 /**
  * Structure to hold information of a host command line argument.

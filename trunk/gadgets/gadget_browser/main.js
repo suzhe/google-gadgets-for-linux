@@ -284,14 +284,20 @@ function AddPluginBox(plugin, index, row, column) {
                      gPluginBoxGapX / 2);
   var y = Math.round(row * (kPluginBoxHeight + gPluginBoxGapY) +
                      gPluginBoxGapY / 2);
+  var info_url = GetPluginInfoURL(plugin);
   var box = plugins_div.appendElement(
     "<div x='" + x + "' y='" + y +
     "' width='" + kPluginBoxWidth + "' height='" + kPluginBoxHeight +
     "' enabled='true' onmouseover='pluginbox_onmouseover(" + index + ")'" +
     " onmouseout='pluginbox_onmouseout(" + index + ")'>" +
     " <img width='100%' height='100%' stretchMiddle='true'/>" +
-    " <label x='7' y='6' size='10' width='120' align='center' color='#FFFFFF'" +
-    "  trimming='character-ellipsis'/>" +
+    (info_url ?
+      " <a x='7' y='6' size='10' width='120' align='center' color='#FFFFFF'" +
+      "  overColor='#FFFFFF' underline='false' trimming='character-ellipsis'" +
+      "  onmouseover='plugin_title_onmouseover(" + index + ")'" +
+      "  onmouseout='plugin_title_onmouseout(" + index + ")'/>" :
+      " <label x='7' y='6' size='10' width='120' align='center' " +
+      "  color='#FFFFFF' trimming='character-ellipsis'/>") +
     " <img x='16' y='75' opacity='70' src='images/thumbnails_shadow.png'/>" +
     " <div x='27' y='33' width='80' height='83' background='#FFFFFF'>" +
     "  <img width='80' height='60' src='images/default_thumbnail.jpg'" +
@@ -311,7 +317,10 @@ function AddPluginBox(plugin, index, row, column) {
     "</div>");
 
   // Set it here to prevent problems caused by special chars in the title.
-  box.children.item(1).innerText = GetPluginTitle(plugin, gCurrentLanguage);
+  var title = box.children.item(1);
+  title.innerText = GetPluginTitle(plugin, gCurrentLanguage);
+  if (info_url)
+    title.href = info_url;
 
   var thumbnail_element1 = box.children.item(3).children.item(0);
   var thumbnail_element2 = box.children.item(3).children.item(1);
@@ -412,6 +421,14 @@ function pluginbox_onmouseout(index) {
   MouseOutPlugin(event.srcElement, index);
 }
 
+function plugin_title_onmouseover(index) {
+  MouseOverPlugin(event.srcElement.parentElement, index);
+}
+
+function plugin_title_onmouseout(index) {
+  MouseOutPlugin(event.srcElement.parentElement, index);
+}
+
 function add_button_onmouseover(index) {
   if (gCurrentPlugins[index].download_status != kDownloadStatusAdding)
     SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
@@ -425,6 +442,9 @@ function add_button_onmouseout(index) {
 }
 
 function MouseOverPlugin(box, index) {
+  var title = box.children.item(1);
+  if (title.href) title.underline = true;
+
   box.children.item(0).src = "images/thumbnails_hover.png";
   box.children.item(3).children.item(2).src = "images/thumbnails_hover_mask.png";
   // Show the "Add" button.
@@ -439,6 +459,7 @@ function MouseOverPlugin(box, index) {
 }
 
 function MouseOutPlugin(box, index) {
+  box.children.item(1).underline = false;
   box.children.item(0).src = "";
   box.children.item(3).children.item(2).src = "images/thumbnails_default_mask.png";
   // Hide the "Add" button when it's in normal state.

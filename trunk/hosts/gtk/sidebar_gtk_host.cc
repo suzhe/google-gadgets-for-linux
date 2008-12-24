@@ -1540,6 +1540,13 @@ class SideBarGtkHost::Impl {
   }
 
   ViewHostInterface *NewViewHost(Gadget *gadget, ViewHostInterface::Type type) {
+    // Options view host can be created without a gadget.
+    if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      // No decorator for options view.
+      int vh_flags = SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE;
+      return new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
+    }
+
     if (!gadget) return NULL;
     int gadget_id = gadget->GetInstanceID();
     GadgetInfo *info = &gadgets_[gadget_id];
@@ -1558,10 +1565,6 @@ class SideBarGtkHost::Impl {
       } else {
         return NewFloatingMainViewHost(gadget_id);
       }
-    } else if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
-      // No decorator for options view.
-      int vh_flags = SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE;
-      return new SingleViewHost(type, 1.0, vh_flags, view_debug_mode_);
     } else if (type == ViewHostInterface::VIEW_HOST_DETAILS) {
       return NewDetailsViewHost(gadget_id);
     }
@@ -1703,10 +1706,7 @@ class SideBarGtkHost::Impl {
 
   void AboutMenuHandler(const char *str) {
     safe_to_exit_ = false;
-    ShowAboutDialog(new SingleViewHost(
-        ViewHostInterface::VIEW_HOST_OPTIONS, 1.0,
-        SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE,
-        view_debug_mode_));
+    ShowAboutDialog(owner_);
     safe_to_exit_ = true;
   }
 

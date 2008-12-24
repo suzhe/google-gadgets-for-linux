@@ -27,12 +27,14 @@
 #include "file_manager_wrapper.h"
 #include "gadget_consts.h"
 #include "gadget_manager_interface.h"
+#include "host_interface.h"
 #include "locales.h"
 #include "localized_file_manager.h"
 #include "logger.h"
 #include "main_loop_interface.h"
 #include "messages.h"
 #include "options_interface.h"
+#include "scriptable_function.h"
 #include "scriptable_map.h"
 #include "scriptable_view.h"
 #include "script_runtime_interface.h"
@@ -40,7 +42,6 @@
 #include "slot.h"
 #include "string_utils.h"
 #include "view.h"
-#include "view_host_interface.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "gadget.h"
@@ -218,27 +219,24 @@ static bool DialogCallback(int flag, View *view) {
   return view->OnOtherEvent(event) != EVENT_RESULT_CANCELED;
 }
 
-bool ShowDialogView(ViewHostInterface *view_host, const char *location,
-                    int flags, const std::map<std::string, Variant> &params) {
+bool ShowDialogView(HostInterface *host, const char *location, int flags,
+                    const std::map<std::string, Variant> &params) {
   FileManagerInterface *file_manager = GetGlobalFileManager();
   std::string xml;
-  if (!file_manager || !file_manager->ReadFile(location, &xml)) {
-    view_host->Destroy();
+  if (!file_manager || !file_manager->ReadFile(location, &xml))
     return false;
-  }
   std::string full_path = file_manager->GetFullPath(location);
 
   ScriptContextInterface *context =
       ScriptRuntimeManager::get()->CreateScriptContext("js");
-  if (!context) {
-    view_host->Destroy();
+  if (!context)
     return false;
-  }
 
   bool ret = false;
   ElementFactory element_factory;
-
-  View *view = new View(view_host, NULL, &element_factory, context);
+  View *view = new View(
+      host->NewViewHost(NULL, ViewHostInterface::VIEW_HOST_OPTIONS),
+      NULL, &element_factory, context);
   ScriptableView *scriptable_view = new ScriptableView(view, NULL, context);
   // Set up the "optionsViewData" variable in the opened dialog.
   context->AssignFromNative(NULL, "", "optionsViewData",
@@ -252,15 +250,26 @@ bool ShowDialogView(ViewHostInterface *view_host, const char *location,
   return ret;
 }
 
-void ShowAboutDialog(ViewHostInterface *view_host) {
+static void AboutOpenURL(const char *url, HostInterface *host) {
+  host->OpenURL(NULL, url);
+}
+
+void ShowAboutDialog(HostInterface *host) {
   std::map<std::string, Variant> params;
   params["title"] = Variant(GMS_("GOOGLE_GADGETS"));
   params["version"] = Variant(std::string(GGL_VERSION) + " " +
       StringPrintf(GM_("API_VERSION"), GGL_API_VERSION));
   params["copyright"] = Variant(GMS_("GGL_COPYRIGHT"));
   params["description"] = Variant(GMS_("GGL_DESCRIPTION"));
-  ShowDialogView(view_host, kGGLAboutView, ViewInterface::OPTIONS_VIEW_FLAG_OK,
+  // AnchorElement's OpenURL() doesn't work because the view is run without
+  // a gadget. Provides it a working openURL().
+  ScriptableFunction *function =
+    new ScriptableFunction(NewSlot(AboutOpenURL, host));
+  function->Ref();
+  params["openURL"] = Variant(function);
+  ShowDialogView(host, kGGLAboutView, ViewInterface::OPTIONS_VIEW_FLAG_OK,
                  params);
+  function->Unref();
 }
 
 class HostArgumentParser::Impl {
