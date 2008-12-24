@@ -31,7 +31,8 @@ class DivElement::Impl : public SmallObject<> {
   Impl(DivElement *owner)
       : owner_(owner),
         background_texture_(NULL),
-        background_mode_(BACKGROUND_MODE_TILE) {
+        background_mode_(BACKGROUND_MODE_TILE),
+        layout_recurse_depth_(0) {
   }
   ~Impl() {
     delete background_texture_;
@@ -41,6 +42,7 @@ class DivElement::Impl : public SmallObject<> {
   DivElement *owner_;
   Texture *background_texture_;
   BackgroundMode background_mode_;
+  int layout_recurse_depth_;
 };
 
 DivElement::DivElement(View *view, const char *name)
@@ -84,9 +86,16 @@ void DivElement::Layout() {
   SetYPageStep(static_cast<int>(round(GetClientHeight())));
   SetXPageStep(static_cast<int>(round(GetClientWidth())));
 
-  if (UpdateScrollBar(x_range, y_range)) {
+  // Check the resurce depth to prevent infinite recursion when updating the
+  // scroll bar. This may be caused by rare case that the children height
+  // reduces while the width reduces.
+  // Check y_range > 0 to let the recursion stop after the scrollbar is shown,
+  if (UpdateScrollBar(x_range, y_range) &&
+      (y_range > 0 || impl_->layout_recurse_depth_ < 2)) {
+    impl_->layout_recurse_depth_++;
     // Layout again to reflect visibility change of the scroll bars.
     Layout();
+    impl_->layout_recurse_depth_--;
   }
 }
 

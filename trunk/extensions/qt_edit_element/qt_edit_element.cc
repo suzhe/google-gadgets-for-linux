@@ -129,6 +129,7 @@ void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
 }
 
 void QtEditElement::Layout() {
+  static int recurse_depth = 0;
   EditElementBase::Layout();
 
   int x_range, y_range, line_step, page_step, cur_pos;
@@ -136,10 +137,14 @@ void QtEditElement::Layout() {
   SetScrollYPosition(cur_pos);
   SetYLineStep(line_step);
   SetYPageStep(page_step);
-  if (UpdateScrollBar(x_range, y_range)) {
+
+  // See DivElement::Layout() impl for the reason of recurse_depth.
+  if (UpdateScrollBar(x_range, y_range) && (y_range > 0 || recurse_depth < 2)) {
+    recurse_depth++;
     // If the scrollbar display state was changed, then call Layout()
     // recursively to redo Layout.
     Layout();
+    recurse_depth--;
   }
 }
 
