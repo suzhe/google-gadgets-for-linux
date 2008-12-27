@@ -32,9 +32,19 @@ else
 
   AC_MSG_CHECKING([for libmozjs.so version >= $ggl_check_libmozjs_min_version])
 
+  AC_CHECK_HEADER([jsversion.h], [has_jsversion_h=yes], [has_jsversion_h=no])
+  if test x$has_jsversion_h = xyes; then
+    LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JSVERSION_H"
+    CPPFLAGS=$LIBMOZJS_CFLAGS
+  fi
+
   AC_LINK_IFELSE([[
     #include<jsapi.h>
+    #ifdef HAVE_JSVERSION_H
+    #include<jsversion.h>
+    #else
     #include<jsconfig.h>
+    #endif
 
     #if JS_VERSION < $ggl_check_libmozjs_min_version
     #error "libmozjs.so version is too low."
@@ -68,7 +78,11 @@ else
       // MOZILLA_1_8_BRANCH macro is not defined but the library was compiled
       // with the flag, or vise versa.
       #include <jsapi.h>
+      #ifdef HAVE_JSVERSION_H
+      #include<jsversion.h>
+      #else
       #include<jsconfig.h>
+      #endif
 
       static JSBool f(JSContext *c, JSObject *o, uintN ac, jsval *av, jsval *r) {
         return JS_TRUE;

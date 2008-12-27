@@ -59,8 +59,10 @@ gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 
 gtkmoz_browser_child_CPPFLAGS	= $(GTK2_CFLAGS) \
 				  $(GTKMOZEMBED_CFLAGS) \
+				  $(LIBMOZJS_CFLAGS) \
 				  $(PREDEFINED_MACROS)
 
+# Don't link to libmozjs explicitly.
 gtkmoz_browser_child_LDADD	= $(GTK2_LIBS) \
 				  $(GTKMOZEMBED_LIBS) \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
