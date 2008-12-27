@@ -37,7 +37,12 @@
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
+
+#ifdef HAVE_JSVERSION_H
+#include <jsversion.h>
+#else
 #include <jsconfig.h>
+#endif
 
 #include <nsComponentManagerUtils.h>
 #include <nsCOMPtr.h>

@@ -905,9 +905,6 @@ if test x$has_gtkmozembed = xno; then
     build_gtkmoz_browser_element=no
   fi
 else
-  # Add smjs related cflags, we don't want to link to smjs explicitly,
-  # so don't use its libs.
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS $LIBMOZJS_CFLAGS"
   # Add additional include dirs for mozilla 1.8 and pre 1.9
   EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR"
