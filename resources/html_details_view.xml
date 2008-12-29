@@ -20,9 +20,9 @@
   <script>
 <!--
 function onopen() {
+  browser.external = external;
   browser.contentType = detailsViewData.getValue("contentType");
   browser.innerText = detailsViewData.getValue("content");
-  browser.external = external;
 }
 function onsize() {
   browser.width = view.width - 2;

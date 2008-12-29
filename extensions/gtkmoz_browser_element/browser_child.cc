@@ -710,11 +710,11 @@ static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
   RemoveBrowser(reinterpret_cast<size_t>(user_data));
 }
 
-static void OnProgress(GtkMozEmbed *embed, gint cur, gint max, gpointer data) {
+static void OnNetStop(GtkMozEmbed *embed, gpointer data) {
   size_t browser_id = reinterpret_cast<size_t>(data);
-  SendLog("**** OnProgress browser=%zu cur=%d max=%u", browser_id, cur, max);
+  SendLog("**** OnNetStop browser=%zu", browser_id);
   BrowserMap::iterator it = g_browsers.find(browser_id);
-  if (it != g_browsers.end() && cur == max)
+  if (it != g_browsers.end())
     it->second.loaded = true;
 }
 
@@ -761,7 +761,7 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   browser_info->embed = embed;
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
   g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
-  g_signal_connect(embed, "progress", G_CALLBACK(OnProgress),
+  g_signal_connect(embed, "net_stop", G_CALLBACK(OnNetStop),
                    reinterpret_cast<gpointer>(id));
   gtk_widget_show_all(window);
 }
@@ -831,7 +831,7 @@ static void SetContent(int param_count, const char **params, size_t id) {
   // to check the failure. The timer is required because OnProgress isn't
   // called synchronously.
   if (!ggadget::TrimString(content).empty())
-    g_timeout_add(500, CheckContentLoaded, reinterpret_cast<gpointer>(id));
+    g_timeout_add(2000, CheckContentLoaded, reinterpret_cast<gpointer>(id));
   gtk_moz_embed_load_url(embed, url.c_str());
 
   // The load should finish immediately, so it's safe to delete the file now.
