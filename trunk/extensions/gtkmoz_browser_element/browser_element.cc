@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -53,10 +55,15 @@ static MainLoopInterface *ggl_main_loop = NULL;
 }
 
 extern "C" {
+  static void OnSigChild(int sig) {
+    while (waitpid(-1, NULL, WNOHANG) > 0);
+  }
+
   bool Initialize() {
     LOGI("Initialize gtkmoz_browser_element extension.");
     ggadget::gtkmoz::ggl_main_loop = ggadget::GetGlobalMainLoop();
     ASSERT(ggadget::gtkmoz::ggl_main_loop);
+    signal(SIGCHLD, OnSigChild);
     return true;
   }
 
