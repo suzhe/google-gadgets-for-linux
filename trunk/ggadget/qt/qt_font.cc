@@ -25,7 +25,7 @@ QtFont::QtFont(const std::string &family, double size,
                Style style, Weight weight)
     : size_(size), style_(style), weight_(weight) {
   font_ = new QFont(family.c_str());
-  font_->setPointSizeF(size);
+  if (size > 0) font_->setPointSizeF(size);
   if (weight == WEIGHT_BOLD)
     font_->setWeight(QFont::Bold);
   if (style == STYLE_ITALIC)

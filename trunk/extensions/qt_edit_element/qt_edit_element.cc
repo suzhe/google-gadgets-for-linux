@@ -197,7 +197,8 @@ void QtEditElement::SetFont(const char *font) {
     QFont qfont(font_family_.empty()
                 ? kDefaultFontName
                 : QString::fromUtf8(font));
-    qfont.setPointSizeF(GetCurrentSize());
+    double s = GetCurrentSize();
+    if (s > 0) qfont.setPointSizeF(s);
     doc_.setDefaultFont(qfont);
     QueueDraw();
   }
@@ -244,7 +245,8 @@ void QtEditElement::SetPasswordChar(const char *c) {
 
 void QtEditElement::OnFontSizeChange() {
   QFont font = doc_.defaultFont();
-  font.setPointSizeF(GetCurrentSize());
+  double s = GetCurrentSize();
+  if (s > 0) font.setPointSizeF(s);
   doc_.setDefaultFont(font);
 }
 
