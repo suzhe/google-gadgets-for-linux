@@ -548,8 +548,13 @@ class ZipFileManager::Impl : public SmallObject<> {
     if (base_path_.empty())
       return false;
 
-    if (unzip_handle_)
-      return true;
+    if (unzip_handle_) {
+      // unzGoToFirstFile can reset error flags of the handle.
+      if (unzGoToFirstFile(unzip_handle_) == UNZ_OK)
+        return true;
+      // The unzip handle is not usable. Reopen it.
+      unzClose(unzip_handle_);
+    }
 
     if (zip_handle_) {
       zipClose(zip_handle_, kZipGlobalComment);
