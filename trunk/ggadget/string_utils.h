@@ -29,6 +29,12 @@
 namespace ggadget {
 
 /**
+ * @defgroup StringUtilities String utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Use these functions to compare strings in gadget library code.
  * These strings include property names, file names, XML element and attribute
  * names, etc., but not include gadget element names.
@@ -347,6 +353,8 @@ bool EndWith(const char *string, const char *suffix);
 
 /** Checks if a string has a specified suffix, ignoring the case. */
 bool EndWithNoCase(const char *string, const char *suffix);
+
+/** @} */
 
 } // namespace ggadget
 

@@ -24,6 +24,12 @@ namespace ggadget {
 
 class TextFrame;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#label">
+ * label element</a>.
+ */
 class LabelElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x4b128d3ef8da40e6, BasicElement);
@@ -31,9 +37,11 @@ class LabelElement : public BasicElement {
   LabelElement(View *view, const char *name);
   virtual ~LabelElement();
 
+  //@{
   /** Gets the text frame containing the text content of this label. */
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
+  //@}
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

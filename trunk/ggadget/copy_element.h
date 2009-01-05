@@ -22,6 +22,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup Elements
  * An element to copy the content of another element.
  *
  * It's an internal element used by DecoratedViewHost to support fake View

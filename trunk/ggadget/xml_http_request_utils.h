@@ -21,6 +21,12 @@
 
 namespace ggadget {
 
+/**
+ * @defgroup XHRUtilities XML Http Request utilities
+ * @ingroup Utilities
+ * @{
+ */
+
 bool IsValidHTTPHeaderValue(const char *s);
 
 bool IsValidHTTPToken(const char *s);
@@ -61,6 +67,8 @@ bool IsXHRBackoffRequestOK(uint64_t now, const char *request);
 /** Reports if the request is failed of successful to backoff. */
 bool XHRBackoffReportResult(uint64_t now, const char *request,
                             unsigned short status);
+/** @} */
+
 } // end of namespace ggadget
 
 #endif // GGADGET_XML_HTTP_REQUEST_UTILS_H__

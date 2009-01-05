@@ -55,6 +55,12 @@
 
 namespace ggadget {
 
+/**
+ * @defgroup ScopedPtr Scoped pointer
+ * @ingroup Utilities
+ * @{
+ */
+
 template <typename T>
 class scoped_ptr {
  private:
@@ -335,6 +341,8 @@ template<typename T, typename FP> inline
 bool operator!=(T* p, const scoped_ptr_malloc<T,FP>& b) {
   return p != b.get();
 }
+
+/** @} */
 
 }  // namespace ggadget
 

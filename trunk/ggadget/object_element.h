@@ -22,6 +22,12 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#object">
+ * object element</a>.
+ */
 class ObjectElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x5b128d3ef8da40e8, BasicElement);
@@ -47,12 +53,13 @@ class ObjectElement : public BasicElement {
    */
   BasicElement *GetObject();
 
+  /** Gets the class id of this object. */
+  const std::string& GetObjectClassId() const;
   /**
-   * Gets and sets the class id of this object.
+   * Sets the class id of this object.
    * Each class id indicates a specific kind of object, such as mediaplayer.
    * The class id of the object must be compatible with that on windows plaform.
    */
-  const std::string& GetObjectClassId() const;
   void SetObjectClassId(const std::string& classId);
 
  protected:

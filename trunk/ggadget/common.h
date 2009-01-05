@@ -27,7 +27,22 @@
 
 #include <ggadget/sysdeps.h>
 
+/**
+ * @defgroup CoreLibrary The core library
+ */
+
+/**
+ * @defgroup Utilities Utility classes and functions
+ * @ingroup CoreLibrary
+ */
+
 namespace ggadget {
+
+/**
+ * @defgroup CommonUtilities Common utilities
+ * @ingroup Utilities
+ * @{
+ */
 
 #ifdef __GNUC__
 /**
@@ -206,6 +221,8 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  * index.
  */
 const size_t kInvalidIndex = static_cast<size_t>(-1L);
+
+/** @} */
 
 } // namespace ggadget
 

@@ -24,6 +24,12 @@ namespace ggadget {
 
 class MouseEvent;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#progressbar">
+ * progressbar element</a>.
+ */
 class ProgressBarElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x2808145fd57747c0, BasicElement);
@@ -37,48 +43,59 @@ class ProgressBarElement : public BasicElement {
   virtual ~ProgressBarElement();
 
  public:
-  /** Gets and sets the file name of the image when the slider is empty. */
+  /** Gets the file name of the image when the slider is empty. */
   Variant GetEmptyImage() const;
+  /** Sets the file name of the image when the slider is empty. */
   void SetEmptyImage(const Variant &img);
 
-  /** Gets and sets the file name of the image when the slider is full. */
+  /** Gets the file name of the image when the slider is full. */
   Variant GetFullImage() const;
+  /** Sets the file name of the image when the slider is full. */
   void SetFullImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb disabled image. */
+  /** Gets the file name of the thumb disabled image. */
   Variant GetThumbDisabledImage() const;
+  /** Sets the file name of the thumb disabled image. */
   void SetThumbDisabledImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb  down image. */
+  /** Gets the file name of the thumb  down image. */
   Variant GetThumbDownImage() const;
+  /** Sets the file name of the thumb  down image. */
   void SetThumbDownImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb image. */
+  /** Gets the file name of the thumb image. */
   Variant GetThumbImage() const;
+  /** Sets the file name of the thumb image. */
   void SetThumbImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb hover image. */
+  /** Gets the file name of the thumb hover image. */
   Variant GetThumbOverImage() const;
+  /** Sets the file name of the thumb hover image. */
   void SetThumbOverImage(const Variant &img);
 
-   /** Gets and sets the scrollbar orientation (horizontal, vertical). */
+   /** Gets the scrollbar orientation (horizontal, vertical). */
   Orientation GetOrientation() const;
+   /** Sets the scrollbar orientation (horizontal, vertical). */
   void SetOrientation(Orientation o);
 
-  /** Gets and sets the max scrollbar value. */
+  /** Gets the max scrollbar value. */
   int GetMax() const;
+  /** Sets the max scrollbar value. */
   void SetMax(int value);
 
-  /** Gets and sets the min scrollbar value. */
+  /** Gets the min scrollbar value. */
   int GetMin() const;
+  /** Sets the min scrollbar value. */
   void SetMin(int value);
 
-  /** Gets and sets the scroll position of the thumb. */
+  /** Gets the scroll position of the thumb. */
   int GetValue() const;
+  /** Sets the scroll position of the thumb. */
   void SetValue(int value);
 
-  /** Gets and sets if the button should be rendered with default images. */
+  /** Gets if the button should be rendered with default images. */
   bool IsDefaultRendering() const;
+  /** Sets if the button should be rendered with default images. */
   void SetDefaultRendering(bool default_rendering);
 
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);

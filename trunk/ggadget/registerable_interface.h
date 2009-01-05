@@ -24,6 +24,7 @@ class Slot;
 class Variant;
 
 /**
+ * @ingroup ScriptableFoundation
  * Represents registerable capabilities of an object.
  */
 class RegisterableInterface {

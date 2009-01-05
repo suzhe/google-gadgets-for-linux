@@ -26,6 +26,11 @@
 namespace ggadget {
 
 /**
+ * @ingroup SignalSlot
+ * @{
+ */
+
+/**
  * A @c Slot is a calling target.
  * The real targets are implemented in subclasses.
  * The instances are immutable, because all methods are @c const.
@@ -1142,6 +1147,19 @@ NewSlot(const T *obj, R (T::*method)(_arg_type_names, PA) const, PA pa) {     \
   return new MethodSlotClosure##n<R, _arg_type_names, const T,                \
                    R (T::*)(_arg_type_names, PA) const, PA>(obj, method, pa); \
 }                                                                             \
+template <typename R, _arg_types, typename T, typename PA>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(T *obj, R (T::*method)(_arg_type_names, const PA&), const PA &pa) {   \
+  return new MethodSlotClosure##n<R, _arg_type_names, T,                      \
+                 R (T::*)(_arg_type_names, const PA&), PA>(obj, method, pa);  \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename PA>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(const T *obj, R (T::*method)(_arg_type_names, const PA&) const,       \
+        const PA &pa) {                                                       \
+  return new MethodSlotClosure##n<R, _arg_type_names, const T,                \
+            R (T::*)(_arg_type_names, const PA&) const, PA>(obj, method, pa); \
+}                                                                             \
 template <typename R, _arg_types, typename F, typename PA>                    \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewFunctorSlot(F f, PA pa) {                                                  \
@@ -1386,6 +1404,8 @@ inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
  * @see Variant::GetDefaultArgs()
  */
 Slot *NewSlotWithDefaultArgs(Slot *slot, const Variant *default_args);
+
+/** @} */
 
 } // namespace ggadget
 

@@ -34,6 +34,9 @@ class ViewElement;
 
 /**
  * Elements is used for storing and managing a set of BasicElement objects.
+ * Please refer to: <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#elements">
+ * elements object</a> in Desktop Gadgets API.
  */
 class Elements : public ScriptableHelperNativeOwnedDefault {
  public:
@@ -59,6 +62,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    */
   size_t GetCount() const;
 
+  //@{
   /**
    * Returns the element identified by the index.
    * @param child the index of the child.
@@ -67,7 +71,9 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    */
   BasicElement *GetItemByIndex(size_t child);
   const BasicElement *GetItemByIndex(size_t child) const;
+  //@}
 
+  //@{
   /**
    * Returns the element identified by the name.
    * @param child the name of the child.
@@ -77,6 +83,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    */
   BasicElement *GetItemByName(const char *child);
   const BasicElement *GetItemByName(const char *child) const;
+  //@}
 
   /**
    * Create a new element and add it to the end of the children list.

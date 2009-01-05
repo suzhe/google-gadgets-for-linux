@@ -23,7 +23,9 @@
 namespace ggadget {
 
 /**
- * Makes sure the client does not do a DDOS attack a service.
+ * @ingroup Utilities
+ * Class to record service backoff information, to make sure the client
+ * does not do a DDOS attack a service.
  * Uses modified truncated binary exponential backoff.
  * The wait unit count will be in the range
  * <code>2^(failure_count - 4) .. 2^(failure_count - 1)</code>

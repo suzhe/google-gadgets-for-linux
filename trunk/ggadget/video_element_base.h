@@ -26,6 +26,8 @@ template <typename R> class Slot0;
 class View;
 
 /**
+ * @ingroup Elements
+ * Base class for real video element implementation.
  * This class is platform-independent. Real video element should inherit
  * from this class, and implement all the pure virtual functions.
  */
@@ -57,11 +59,13 @@ class VideoElementBase : public BasicElement {
     TAG_DATE
   };
 
+  //@{
   /** Ranges of balance and volume. */
   static const int kMinBalance = -10000;
   static const int kMaxBalance = 10000;
   static const int kMinVolume = -10000;
   static const int kMaxVolume = 0;
+  //@}
 
  public:
   VideoElementBase(View *view, const char *tag_name, const char *name);
@@ -90,11 +94,12 @@ class VideoElementBase : public BasicElement {
   virtual void Stop() = 0;
 
   /**
-   * Gets/sets the currentPosition property.
+   * Gets the currentPosition property.
    * The property shows the current position within the video stream, in
    * seconds.
    */
   virtual double GetCurrentPosition() const = 0;
+  /** Sets the currentPosition property. */
   virtual void SetCurrentPosition(double position) = 0;
 
   /**
@@ -112,24 +117,27 @@ class VideoElementBase : public BasicElement {
   /** Indicates whether the video is seekable. */
   virtual bool IsSeekable() const = 0;
 
-  /**
-   * Gets/sets the address of the video resource to playback. The attribute,
-   * if present, must contain a valid URL.
-   */
+  /** Gets the address of the video resource to playback. */
   virtual std::string GetSrc() const = 0;
+  /**
+   * Sets the address of the video resource to playback.
+   * This attribute, if present, must contain a valid URL.
+   */
   virtual void SetSrc(const std::string &src) = 0;
 
-  /** Gets/sets the volume. */
+  /** Gets the volume. */
   virtual int GetVolume() const = 0;
+  /** Sets the volume. */
   virtual void SetVolume(int volume) = 0;
 
-  // Not standard APIs, but needed when hosted by object element.
-
+  //@{
+  /** Not standard APIs, but needed when hosted by object element. */
   virtual std::string GetTagInfo(TagType tag) const = 0;
   virtual int GetBalance() const = 0;
   virtual void SetBalance(int balance) = 0;
   virtual bool IsMute() const = 0;
   virtual void SetMute(bool mute) = 0;
+  //@}
 
   Connection *ConnectOnStateChangeEvent(Slot0<void> *handler);
   Connection *ConnectOnMediaChangeEvent(Slot0<void> *handler);
@@ -178,12 +186,14 @@ class VideoElementBase : public BasicElement {
    */
   void ClearImage();
 
+  //@{
   /**
    * The real video element should fire these calls when corresponding
    * events occurs.
    */
   void FireOnStateChangeEvent();
   void FireOnMediaChangeEvent();
+  //@}
 
  private:
   friend class ObjectVideoPlayer;

@@ -30,6 +30,12 @@
 namespace ggadget {
 
 /**
+ * @defgroup SystemUtilities System utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Build a path using specified separator.
  *
  * @param separator The separator to be used, or if it's NULL, the system
@@ -211,6 +217,8 @@ std::string GetUserRealName();
  * Gets the login name of the current user.
  */
 std::string GetUserLoginName();
+
+/** @} */
 
 } // namespace ggadget
 

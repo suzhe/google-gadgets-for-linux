@@ -30,6 +30,12 @@ class ScriptableInterface;
 class ScriptContextInterface;
 
 /**
+ * @defgroup XMLUtilities XML Utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Sets up properties of a Scriptable instance from a specified DOMElement.
  *
  * @param scriptable the Scriptable instance to be setup.
@@ -72,6 +78,8 @@ BasicElement *InsertElementFromDOM(Elements *elements,
  */
 std::string GetAttributeGadgetCase(const DOMElementInterface *element,
                                    const char *name);
+
+/** @} */
 
 } // namespace ggadget
 

@@ -42,6 +42,7 @@
 #endif
 
 ///  \defgroup  SmallObjectGroup Small objects
+///  \ingroup   Utilities
 ///
 ///  \defgroup  SmallObjectGroupInternal Internals
 ///  \ingroup   SmallObjectGroup

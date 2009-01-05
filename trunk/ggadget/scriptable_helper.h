@@ -58,6 +58,11 @@ ScriptableHelperImplInterface *NewScriptableHelperImpl(
 } // namespace internal
 
 /**
+ * @ingroup ScriptableFoundation
+ * @{
+ */
+
+/**
  * A @c ScriptableInterface implementation helper.
  */
 template <typename I>
@@ -415,6 +420,8 @@ class SharedScriptable : public ScriptableHelperDefault {
   }
   virtual uint64_t GetClassId() const { return ClassId; }
 };
+
+/** @} */
 
 } // namespace ggadget
 

@@ -24,6 +24,12 @@ namespace ggadget {
 
 class TextFrame;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#a">
+ * anchor element</a>.
+ */
 class AnchorElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x50ef5c291807400c, BasicElement);
@@ -36,19 +42,25 @@ class AnchorElement : public BasicElement {
 
  public:
   /**
-   * Gets and sets the mouseover text color or texture image of the element.
-   * The image is repeated if necessary, not stretched.
+   * Gets the mouseover text color or texture image of the element.
    */
   Variant GetOverColor() const;
+  /**
+   * Sets the mouseover text color or texture image of the element.
+   * The image is repeated if necessary, not stretched.
+   */
   void SetOverColor(const Variant &color);
 
-  /** Gets and sets the URL to be launched when this link is clicked. */
+  /** Gets the URL to be launched when this link is clicked. */
   std::string GetHref() const;
+  /** Sets the URL to be launched when this link is clicked. */
   void SetHref(const char *href);
 
+  //@{
   /** Gets the text frame containing the text content of this anchor. */
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
+  //@}
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

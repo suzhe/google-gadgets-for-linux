@@ -25,6 +25,12 @@ namespace ggadget {
 
 class MouseEvent;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#scrollbar">
+ * scrollbar element</a>.
+ */
 class ScrollBarElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x789974a8a14a43c9, BasicElement);
@@ -38,79 +44,97 @@ class ScrollBarElement : public BasicElement {
   virtual ~ScrollBarElement();
 
  public:
-  /** Gets and sets the file name of the background image. */
+  /** Gets the file name of the background image. */
   Variant GetBackground() const;
+  /** Sets the file name of the background image. */
   void SetBackground(const Variant &img);
 
+  /** Gets the file name of the thumb grippy image. */
+  Variant GetGrippyImage() const;
   /**
-   * Gets and sets the file name of the thumb grippy image.
+   * Sets the file name of the thumb grippy image.
    * If grippy image is set, the thumb will be displayed proportionally.
    */
-  Variant GetGrippyImage() const;
   void SetGrippyImage(const Variant &img);
 
-  /** Gets and sets the file name of the left/up button down image. */
+  /** Gets the file name of the left/up button down image. */
   Variant GetLeftDownImage() const;
+  /** Sets the file name of the left/up button down image. */
   void SetLeftDownImage(const Variant &img);
 
-  /** Gets and sets the file name of the left/up image. */
+  /** Gets the file name of the left/up image. */
   Variant GetLeftImage() const;
+  /** Sets the file name of the left/up image. */
   void SetLeftImage(const Variant &img);
 
-  /** Gets and sets the file name of the left/up hover image. */
+  /** Gets the file name of the left/up hover image. */
   Variant GetLeftOverImage() const;
+  /** Sets the file name of the left/up hover image. */
   void SetLeftOverImage(const Variant &img);
 
-  /** Gets and sets the file name of the right/down button down image. */
+  /** Gets the file name of the right/down button down image. */
   Variant GetRightDownImage() const;
+  /** Sets the file name of the right/down button down image. */
   void SetRightDownImage(const Variant &img);
 
-  /** Gets and sets the file name of the right/down image. */
+  /** Gets the file name of the right/down image. */
   Variant GetRightImage() const;
+  /** Sets the file name of the right/down image. */
   void SetRightImage(const Variant &img);
 
-  /** Gets and sets the file name of the right/down hover image. */
+  /** Gets the file name of the right/down hover image. */
   Variant GetRightOverImage() const;
+  /** Sets the file name of the right/down hover image. */
   void SetRightOverImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb button down image. */
+  /** Gets the file name of the thumb button down image. */
   Variant GetThumbDownImage() const;
+  /** Sets the file name of the thumb button down image. */
   void SetThumbDownImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb  image. */
+  /** Gets the file name of the thumb image. */
   Variant GetThumbImage() const;
+  /** Sets the file name of the thumb image. */
   void SetThumbImage(const Variant &img);
 
-  /** Gets and sets the file name of the thumb hover image. */
+  /** Gets the file name of the thumb hover image. */
   Variant GetThumbOverImage() const;
+  /** Sets the file name of the thumb hover image. */
   void SetThumbOverImage(const Variant &img);
 
-   /** Gets and sets the scrollbar orientation (horizontal, vertical). */
+   /** Gets the scrollbar orientation (horizontal, vertical). */
   Orientation GetOrientation() const;
+   /** Sets the scrollbar orientation (horizontal, vertical). */
   void SetOrientation(Orientation o);
 
-  /** Gets and sets the max scrollbar value. */
+  /** Gets the max scrollbar value. */
   int GetMax() const;
+  /** Sets the max scrollbar value. */
   void SetMax(int value);
 
-  /** Gets and sets the min scrollbar value. */
+  /** Gets the min scrollbar value. */
   int GetMin() const;
+  /** Sets the min scrollbar value. */
   void SetMin(int value);
 
-  /** Gets and sets the page step value. */
+  /** Gets the page step value. */
   int GetPageStep() const;
+  /** Sets the page step value. */
   void SetPageStep(int value);
 
-  /** Gets and sets the line step value. */
+  /** Gets the line step value. */
   int GetLineStep() const;
+  /** Sets the line step value. */
   void SetLineStep(int value);
 
-  /** Gets and sets the scroll position of the thumb. */
+  /** Gets the scroll position of the thumb. */
   int GetValue() const;
+  /** Sets the scroll position of the thumb. */
   void SetValue(int value);
 
-  /** Gets and sets if the button should be rendered with default images. */
+  /** Gets if the button should be rendered with default images. */
   bool IsDefaultRendering() const;
+  /** Sets if the button should be rendered with default images. */
   void SetDefaultRendering(bool default_rendering);
 
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);

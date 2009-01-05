@@ -32,6 +32,12 @@ class Slot4;
 #undef VERIFY_M
 #undef DLOG
 
+/**
+ * @defgroup Logger Debug logging utilities
+ * @ingroup Utilities
+ * @{
+ */
+
 /** The supported debug message output level */
 enum LogLevel {
   /** For verbose trace messages. */
@@ -160,6 +166,8 @@ Connection *ConnectContextLogListener(void *context, LogListener *listener);
  * Remove a logger context.
  */
 void RemoveLogContext(void *context);
+
+/** @} */
 
 } // namespace ggadget
 

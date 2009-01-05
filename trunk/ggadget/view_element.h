@@ -22,7 +22,8 @@
 namespace ggadget {
 
 /**
- * Internally used element used to allow a View to be a child of another View.
+ * @ingroup Elements
+ * Internally used element to allow a View to be a child of another View.
  * This element is not exposed in the API.
  */
 class ViewElement : public BasicElement {

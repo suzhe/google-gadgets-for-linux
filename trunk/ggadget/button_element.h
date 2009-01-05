@@ -25,10 +25,17 @@ namespace ggadget {
 class MouseEvent;
 class TextFrame;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#button">
+ * button element</a>.
+ */
 class ButtonElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xb6fb01fd48134377, BasicElement);
 
+  /** Enums to specify the icon's position in the button. */
   enum IconPosition {
     ICON_LEFT = 0,
     ICON_RIGHT,
@@ -43,47 +50,61 @@ class ButtonElement : public BasicElement {
   virtual void DoClassRegister();
 
  public:
-  /** Gets and sets the file name of default button image. */
+  /** Gets the file name of default button image. */
   Variant GetImage() const;
+  /** Sets the file name of default button image. */
   void SetImage(const Variant &img);
 
-  /** Gets and sets the file name of disabled button image. */
+  /** Gets the file name of disabled button image. */
   Variant GetDisabledImage() const;
+  /** Sets the file name of disabled button image. */
   void SetDisabledImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse over button image. */
+  /** Gets the file name of mouse over button image. */
   Variant GetOverImage() const;
+  /** Sets the file name of mouse over button image. */
   void SetOverImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse down button image. */
+  /** Gets the file name of mouse down button image. */
   Variant GetDownImage() const;
+  /** Sets the file name of mouse down button image. */
   void SetDownImage(const Variant &img);
 
-  /** Gets and sets the file name of icon image. */
+  /** Gets the file name of icon image. */
   Variant GetIconImage() const;
+  /** Sets the file name of icon image. */
   void SetIconImage(const Variant &img);
 
-  /** Gets and sets the file name of icon image for disabled button. */
+  /** Gets the file name of icon image for disabled button. */
   Variant GetIconDisabledImage() const;
+  /** Sets the file name of icon image for disabled button. */
   void SetIconDisabledImage(const Variant &img);
 
+  //@{
   /** Gets the text frame containing the caption of this button. */
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
+  //@}
 
   /**
-   * Gets and sets whether the image is stretched normally or stretched only
-   * the middle area.
+   * Gets whether the image is stretched normally or stretched only the
+   * middle area.
    */
   bool IsStretchMiddle() const;
+  /**
+   * Sets whether the image is stretched normally or stretched only the
+   * middle area.
+   */
   void SetStretchMiddle(bool stretch_middle);
 
-  /** Gets and sets the icon position. */
+  /** Gets the icon position. */
   IconPosition GetIconPosition() const;
+  /** Sets the icon position. */
   void SetIconPosition(IconPosition position);
 
-  /** Gets and sets if the button should be rendered with default images. */
+  /** Gets if the button should be rendered with default images. */
   bool IsDefaultRendering() const;
+  /** Sets if the button should be rendered with default images. */
   void SetDefaultRendering(bool default_rendering);
 
  public:

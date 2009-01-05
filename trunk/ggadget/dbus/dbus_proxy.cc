@@ -391,12 +391,10 @@ class DBusProxy::Impl : public SmallObject<> {
         if (proxy) {
           Arguments in_args;
           in_args.push_back(Argument(Variant(name)));
-          // It's weird that this template can't be deduced automatically.
           ResultCallback *callback =
-              NewSlot<bool, int, const Variant&, Manager, const std::string&>(
-                  this, &Manager::GetNameOwnerCallback, name);
-          proxy->CallMethod("GetNameOwner", IsAsyncSupported(),
-                            kDefaultDBusTimeout, callback, &in_args);
+              NewSlot(this, &Manager::GetNameOwnerCallback, name);
+          proxy->CallMethod("GetNameOwner", false, kDefaultDBusTimeout,
+                            callback, &in_args);
         }
       }
     }

@@ -26,6 +26,12 @@ namespace ggadget {
 class Signal;
 
 /**
+ * @defgroup SignalSlot Signal and slot related classes
+ * @ingroup ScriptableFoundation
+ * @{
+ */
+
+/**
  * The connection object between a @c Signal and a @c Slot.
  * The caller can use the connection to temporarily block the slot.
  */
@@ -497,6 +503,8 @@ DEFINE_SIGNAL(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS9, INIT_ARGS9)
 #undef ARG_TYPE_NAMES9
 #undef INIT_ARGS9
 #undef ARGS9
+
+/** @} */
 
 } // namespace ggadget
 

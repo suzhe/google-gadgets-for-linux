@@ -22,6 +22,12 @@
 namespace ggadget {
 
 /**
+ * @defgroup Locales Locale utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Gets the corresponding Windows locale identifier for a given short or
  * two-segment locale name.
  *
@@ -64,6 +70,8 @@ bool GetLocaleShortName(const char *name, std::string *short_name);
  * locale has short form, otherwise in two-segment form.
  */
 std::string GetSystemLocaleName();
+
+/** @} */
 
 } // namespace ggadget
 

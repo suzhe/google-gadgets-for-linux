@@ -22,6 +22,12 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#div">
+ * div element</a>.
+ */
 class DivElement : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0xfca426268a584176, ScrollingElement);
@@ -33,17 +39,19 @@ class DivElement : public ScrollingElement {
   virtual void DoClassRegister();
 
  public:
+  /** Background mode of the div. It's for internal usage. */
   enum BackgroundMode {
     BACKGROUND_MODE_TILE,
     BACKGROUND_MODE_STRETCH,
     BACKGROUND_MODE_STRETCH_MIDDLE,
   };
 
+  /** Gets the background color or image of the element. */
+  Variant GetBackground() const;
   /**
-   * Gets and sets the background color or image of the element. The image is
+   * Sets the background color or image of the element. The image is
    * repeated (tiled) or stretched according to the current background mode.
    */
-  Variant GetBackground() const;
   void SetBackground(const Variant &background);
 
   BackgroundMode GetBackgroundMode() const;

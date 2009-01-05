@@ -23,6 +23,12 @@ class CanvasInterface;
 class ImageInterface;
 
 /**
+ * @defgroup CanvasUtilities Canvas utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Draw the specified area in the source canvas on the destination canvas.
  * The source will be zoomed if necessary.
  */
@@ -68,6 +74,8 @@ void MapStretchMiddleCoordDestToSrc(double dest_x, double dest_y,
                                     double right_border_width,
                                     double bottom_border_height,
                                     double *src_x, double *src_y);
+
+/** @} */
 
 } // namespace ggadget
 
