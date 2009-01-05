@@ -25,6 +25,12 @@ namespace ggadget {
 class MouseEvent;
 class TextFrame;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#checkbox">
+ * checkbox element</a>.
+ */
 class CheckBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xe53dbec04fe34ea3, BasicElement);
@@ -36,56 +42,77 @@ class CheckBoxElement : public BasicElement {
   virtual void DoClassRegister();
 
  public:
-  /** Gets and sets the file name of default checkbox image. */
+  /** Gets the file name of default checkbox image. */
   Variant GetImage() const;
+  /** Sets the file name of default checkbox image. */
   void SetImage(const Variant &img);
 
-  /** Gets and sets the file name of disabled checkbox image. */
+  /** Gets the file name of disabled checkbox image. */
   Variant GetDisabledImage() const;
+  /** Sets the file name of disabled checkbox image. */
   void SetDisabledImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse over checkbox image. */
+  /** Gets the file name of mouse over checkbox image. */
   Variant GetOverImage() const;
+  /** Sets the file name of mouse over checkbox image. */
   void SetOverImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse down checkbox image. */
+  /** Gets the file name of mouse down checkbox image. */
   Variant GetDownImage() const;
+  /** Sets the file name of mouse down checkbox image. */
   void SetDownImage(const Variant &img);
 
-  /** Gets and sets the file name of default checkbox image. */
+  /** Gets the file name of default checkbox image. */
   Variant GetCheckedImage() const;
+  /** Sets the file name of default checkbox image. */
   void SetCheckedImage(const Variant &img);
 
-  /** Gets and sets the file name of disabled checked checkbox image. */
+  /** Gets the file name of disabled checked checkbox image. */
   Variant GetCheckedDisabledImage() const;
+  /** Sets the file name of disabled checked checkbox image. */
   void SetCheckedDisabledImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse over checked checkbox image. */
+  /** Gets the file name of mouse over checked checkbox image. */
   Variant GetCheckedOverImage() const;
+  /** Sets the file name of mouse over checked checkbox image. */
   void SetCheckedOverImage(const Variant &img);
 
-  /** Gets and sets the file name of mouse down checked checkbox image. */
+  /** Gets the file name of mouse down checked checkbox image. */
   Variant GetCheckedDownImage() const;
+  /** Sets the file name of mouse down checked checkbox image. */
   void SetCheckedDownImage(const Variant &img);
 
-  /** Gets and sets whether the checkbox is checked. A checked state is true. */
+  /** Gets whether the checkbox is checked. A checked state is true. */
   bool GetValue() const;
+  /** Sets whether the checkbox is checked. A checked state is true. */
   void SetValue(bool value);
 
-  /** Gets and sets whether the checkbox is on the right side. Undocumented. */
+  /** Gets whether the checkbox is on the right side. Undocumented. */
   bool IsCheckBoxOnRight() const;
+  /** Sets whether the checkbox is on the right side. Undocumented. */
   void SetCheckBoxOnRight(bool right);
 
+  //@{
   /** Gets the text frame containing the caption of this checkbox. */
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
+  //@}
 
-  /** Gets and sets if the button should be rendered with default images. */
+  /** Gets if the button should be rendered with default images. */
   bool IsDefaultRendering() const;
+  /** Sets if the button should be rendered with default images. */
   void SetDefaultRendering(bool default_rendering);
 
+  /**
+   * Gets if this element is a checkbox.
+   * @return true if it's a checkbox element, false if it's a radio button.
+   */
   bool IsCheckBox() const;
 
+  /**
+   * Connects a slot to onchange event signal, which will be emitted when the
+   * value is changed.
+   */
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  public:

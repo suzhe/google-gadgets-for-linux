@@ -24,6 +24,12 @@ namespace ggadget {
 class EditElementBase;
 class ListBoxElement;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#combobox">
+ * combobox element</a>.
+ */
 class ComboBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x848a2f5e84144915, BasicElement);
@@ -37,6 +43,7 @@ class ComboBoxElement : public BasicElement {
  public:
   virtual void MarkRedraw();
 
+  /** Type of a combobox element. */
   enum Type {
     /** The default, editable control. */
     COMBO_DROPDOWN,
@@ -44,43 +51,55 @@ class ComboBoxElement : public BasicElement {
     COMBO_DROPLIST,
   };
 
-  /** Gets and sets whether the dropdown list is visible. */
+  /** Gets if the dropdown list is visible. */
   bool IsDroplistVisible() const;
+  /** Sets if the dropdown list is visible. */
   void SetDroplistVisible(bool visible);
 
-  /**
-   * Gets and sets the maximum # of items to show before scrollbar is displayed.
-   */
+  /** Gets the maximum # of items to show before scrollbar is displayed. */
   size_t GetMaxDroplistItems() const;
+  /** Sets the maximum # of items to show before scrollbar is displayed. */
   void SetMaxDroplistItems(size_t max_droplist_items);
 
-
-  /** Gets and sets the type of this combobox. */
+  /** Gets the type of this combobox. */
   Type GetType() const;
+  /** Sets the type of this combobox. */
   void SetType(Type type);
 
-  /** Gets and sets the value of the edit area, only for dropdown mode. */
+  /** Gets the value of the edit area, only for dropdown mode. */
   std::string GetValue() const;
+  /** Sets the value of the edit area, only for dropdown mode. */
   void SetValue(const char *value);
 
-  /**
-   * Gets and sets the background color or image of the element. The image is
-   * repeated if necessary, not stretched.
-   */
+  /** Gets the background color or image of the element. */
   Variant GetBackground() const;
+  /**
+   * Sets the background color or image of the element.
+   * The image is repeated if necessary, not stretched.
+   */
   void SetBackground(const Variant &background);
 
+  //@{
+  /** Gets the element of edit area, only for dropdown mode. */
   EditElementBase *GetEdit();
   const EditElementBase *GetEdit() const;
+  //@}
+
+  //@{
+  /** Gets the element of droplist. */
   ListBoxElement *GetDroplist();
   const ListBoxElement *GetDroplist() const;
+  //@}
 
   /**
-   * Gets or sets the background texture of the item under the mouse cursor.
+   * Gets the background texture of the item under the mouse cursor.
+   */
+  Variant GetItemOverColor() const;
+  /**
+   * Sets the background texture of the item under the mouse cursor.
    * Comboboxes have no itemSelectedColor. itemOverColor is for both mouse
    * over color and item selected with the keyboard or by program.
    */
-  Variant GetItemOverColor() const;
   void SetItemOverColor(const Variant &color);
 
   virtual const Elements *GetChildren() const;

@@ -24,6 +24,10 @@ namespace ggadget {
 
 class ScrollBarElement;
 
+/**
+ * @ingroup Elements
+ * Base class of all scrollable element, such as div.
+ */
 class ScrollingElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x17107e53044c40f2, BasicElement);
@@ -39,12 +43,13 @@ class ScrollingElement : public BasicElement {
   virtual void MarkRedraw();
 
  public:
+  /** Gets the autoscroll property. */
+  bool IsAutoscroll() const;
   /**
-   * Gets and sets the autoscroll property.
+   * Sets the autoscroll property.
    * @c true if the div automatically shows scrollbars if necessary; @c false
    * if it doesn't show scrollbars. Default is @c false.
    */
-  bool IsAutoscroll() const;
   void SetAutoscroll(bool autoscroll);
 
   /** Scroll horizontally. */
@@ -52,29 +57,40 @@ class ScrollingElement : public BasicElement {
   /** Scroll vertically. */
   void ScrollY(int distance);
 
-  /** Gets and Sets the absolute position. */
+  /** Gets X absolute position. */
   int GetScrollXPosition() const;
+  /** Sets X absolute position. */
   void SetScrollXPosition(int pos);
+  /** Gets Y absolute position. */
   int GetScrollYPosition() const;
+  /** Sets Y absolute position. */
   void SetScrollYPosition(int pos);
 
-  /** Gets and sets the page step value. */
+  /** Gets X page step value. */
   int GetXPageStep() const;
+  /** Sets X page step value. */
   void SetXPageStep(int value);
 
+  /** Gets Y page step value. */
   int GetYPageStep() const;
+  /** Sets Y page step value. */
   void SetYPageStep(int value);
 
-  /** Gets and sets the line step value. */
+  /** Gets X line step value. */
   int GetXLineStep() const;
+  /** Sets X line step value. */
   void SetXLineStep(int value);
 
+  /** Gets Y line step value. */
   int GetYLineStep() const;
+  /** Sets Y line step value. */
   void SetYLineStep(int value);
 
-  /** Get pixel size of client area */
+  /** Gets pixel width of client area */
   virtual double GetClientWidth() const;
+  /** Gets pixel height of client area */
   virtual double GetClientHeight() const;
+
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element,
@@ -109,12 +125,14 @@ class ScrollingElement : public BasicElement {
    */
   Connection *ConnectOnScrolledEvent(Slot0<void> *slot);
 
+  //@{
   /**
    * Returns the vertical scrollbar element.
    * It will be @c NULL if autoScroll is @c false.
    */
   ScrollBarElement *GetScrollBar();
   const ScrollBarElement *GetScrollBar() const;
+  //@}
 
  protected:
   /**
@@ -124,7 +142,7 @@ class ScrollingElement : public BasicElement {
   void DrawScrollbar(CanvasInterface *canvas);
 
   /**
-   * Update the scrollbar's range and layout. Subclasses must call this in
+   * Updates the scrollbar's range and layout. Subclasses must call this in
    * their @c Layout() method.
    * If y_range equals to zero, then means the scroll bar should be hid.
    * @return @c true if the visibility of the scroll bar changed, and the

@@ -22,6 +22,12 @@
 namespace ggadget {
 
 /**
+ * @defgroup DigestUtilities Digest utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Generate result using Secure Hash Algorithm-1.
  * @param input input data. Can contain arbitary binary data.
  * @param[out] result the SHA-1 result (20 bytes).
@@ -60,6 +66,8 @@ bool WebSafeEncodeBase64(const std::string &input, bool add_padding,
  * Decode a Base64 string in WebSafe format.
  */
 bool WebSafeDecodeBase64(const char *input, std::string *result);
+
+/** @} */
 
 } // namespace ggadget
 

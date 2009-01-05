@@ -30,6 +30,13 @@ extern template class std::basic_string<UTF32Char>;
 }
 
 namespace ggadget {
+
+/**
+ * @defgroup UnicodeUtilities Unicode utilities
+ * @ingroup Utilities
+ * @{
+ */
+
 typedef std::basic_string<UTF16Char> UTF16String;
 typedef std::basic_string<UTF32Char> UTF32String;
 
@@ -403,6 +410,8 @@ bool ConvertUTF8ToLocaleString(const std::string &input, std::string *result);
  *     less than, equals, or is greater than @a s2.
  */
 int CompareLocaleStrings(const char *s1, const char *s2);
+
+/** @} */
 
 } // namespace ggadget
 

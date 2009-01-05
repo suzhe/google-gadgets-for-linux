@@ -22,6 +22,12 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#img">
+ * img element</a>.
+ */
 class ImgElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x95b5791e157d4373, BasicElement);
@@ -36,17 +42,19 @@ class ImgElement : public BasicElement {
   virtual bool IsPointIn(double x, double y) const;
 
  public:
+  /** Possible values of img.cropMaintainAspect property. */
   enum CropMaintainAspect {
     CROP_FALSE = 0,
     CROP_TRUE,
     CROP_PHOTO
   };
 
+  /** Gets the source of image to display. */
+  Variant GetSrc() const;
   /**
-   * Gets and sets the source of image to display.
+   * Sets the source of image to display.
    * @see ViewInterface::LoadImage()
    */
-  Variant GetSrc() const;
   void SetSrc(const Variant &src);
 
   /** Gets the original width of the image being displayed. */
@@ -55,25 +63,32 @@ class ImgElement : public BasicElement {
   /** Gets the original height of the image being displayed. */
   double GetSrcHeight() const;
 
-  /** Gets and sets the colorMultiply property of the image. */
+  /** Gets the colorMultiply property of the image. */
   std::string GetColorMultiply() const;
+  /** Sets the colorMultiply property of the image. */
   void SetColorMultiply(const char *color);
 
-  /** Gets and sets the cropMaintainAspect property of the image. */
+  /** Gets the cropMaintainAspect property of the image. */
   CropMaintainAspect GetCropMaintainAspect() const;
+  /** Sets the cropMaintainAspect property of the image. */
   void SetCropMaintainAspect(CropMaintainAspect crop);
 
   /**
-   * Gets and sets whether the image is stretched normally or stretched only
+   * Gets whether the image is stretched normally or stretched only
+   * the middle area.
+   */
+  bool IsStretchMiddle() const;
+  /**
+   * Sets whether the image is stretched normally or stretched only
    * the middle area. This property is only applicable if cropMaintainAspect
    * is @c CROP_FALSE.
    */
-  bool IsStretchMiddle() const;
   void SetStretchMiddle(bool stretch_middle);
 
   /**
    * Resizes the image to specified @a width and @a height via reduced
-   * resolution.  If the source image is larger than the display area,
+   * resolution.
+   * If the source image is larger than the display area,
    * using this method to resize the image to the output size will save
    * memory and improve rendering performance.
    */

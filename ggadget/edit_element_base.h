@@ -25,7 +25,12 @@
 namespace ggadget {
 
 /**
- * Base class for EditElement. Real EditElement implementation shall inherit
+ * @ingroup Elements
+ * Base class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#edit">
+ * edit element</a>.
+ *
+ * Real EditElement implementation shall inherit
  * this class and implement its pure virtual functions.
  *
  * All scriptable properties will be registered in EditElementBase class,
@@ -46,55 +51,66 @@ class EditElementBase : public ScrollingElement {
   virtual void Layout();
 
   /**
-   * Connects a specified slot to OnChange event signal.
+   * Connects a specified slot to onchange event signal.
    * The signal will be fired when FireOnChangeEvent() method is called by
    * derived class.
    */
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:
-  /** Gets and sets the background color or texture of the text */
+  /** Gets the background color or texture of the text */
   virtual Variant GetBackground() const = 0;
+  /** Sets the background color or texture of the text */
   virtual void SetBackground(const Variant &background) = 0;
 
-  /** Gets and sets whether the text is bold. */
+  /** Gets whether the text is bold. */
   virtual bool IsBold() const = 0;
+  /** Sets whether the text is bold. */
   virtual void SetBold(bool bold) = 0;
 
-  /** Gets and sets the text color of the text. */
+  /** Gets the text color of the text. */
   virtual std::string GetColor() const = 0;
+  /** Sets the text color of the text. */
   virtual void SetColor(const char *color) = 0;
 
-  /** Gets and sets the text font. */
+  /** Gets the text font. */
   virtual std::string GetFont() const = 0;
+  /** Sets the text font. */
   virtual void SetFont(const char *font) = 0;
 
-  /** Gets and sets whether the text is italicized. */
+  /** Gets whether the text is italicized. */
   virtual bool IsItalic() const = 0;
+  /** Sets whether the text is italicized. */
   virtual void SetItalic(bool italic) = 0;
 
+  /** Gets whether the edit can display multiple lines of text. */
+  virtual bool IsMultiline() const = 0;
   /**
-   * Gets and sets whether the edit can display multiple lines of text.
+   * Sets whether the edit can display multiple lines of text.
    * If @c false, incoming "\n"s are ignored, as are presses of the Enter key.
    */
-  virtual bool IsMultiline() const = 0;
   virtual void SetMultiline(bool multiline) = 0;
 
   /**
-   * Gets and sets the character that should be displayed each time the user
+   * Gets the character that should be displayed each time the user
+   * enters a character.
+   */
+  virtual std::string GetPasswordChar() const = 0;
+  /**
+   * Sets the character that should be displayed each time the user
    * enters a character. By default, the value is @c "\0", which means that the
    * typed character is displayed as-is.
    */
-  virtual std::string GetPasswordChar() const = 0;
   virtual void SetPasswordChar(const char *passwordChar) = 0;
 
+  /** Gets the text size in points. */
+  double GetSize() const;
   /**
-   * Gets and sets the text size in points. Setting size to -1 will reset the
+   * Sets the text size in points. Setting size to -1 will reset the
    * font size to default. The gadget host may allow the user to change the
    * default font size.
    * Subclasses should implement @c DoGetSize() and @c GetSize().
    */
-  double GetSize() const;
   void SetSize(double size);
 
   /**
@@ -103,28 +119,34 @@ class EditElementBase : public ScrollingElement {
    */
   double GetCurrentSize() const;
 
-  /** Gets and sets whether the text is struke-out. */
+  /** Gets whether the text is struke-out. */
   virtual bool IsStrikeout() const = 0;
+  /** Sets whether the text is struke-out. */
   virtual void SetStrikeout(bool strikeout) = 0;
 
-  /** Gets and sets whether the text is underlined. */
+  /** Gets whether the text is underlined. */
   virtual bool IsUnderline() const = 0;
+  /** Sets whether the text is underlined. */
   virtual void SetUnderline(bool underline) = 0;
 
-  /** Gets and sets the value of the element. */
+  /** Gets the value of the element. */
   virtual std::string GetValue() const = 0;
+  /** Sets the value of the element. */
   virtual void SetValue(const char *value) = 0;
 
-  /** Gets and sets whether to wrap the text when it's too large to display. */
+  /** Gets whether to wrap the text when it's too large to display. */
   virtual bool IsWordWrap() const = 0;
+  /** Sets whether to wrap the text when it's too large to display. */
   virtual void SetWordWrap(bool wrap) = 0;
 
-  /** Gets and sets whether the edit element is readonly */
+  /** Gets whether the edit element is readonly */
   virtual bool IsReadOnly() const = 0;
+  /** Sets whether the edit element is readonly */
   virtual void SetReadOnly(bool readonly) = 0;
 
-  /** Gets and sets detectUrls property, introduced in 5.8 */
+  /** Gets detectUrls property, introduced in 5.8 */
   virtual bool IsDetectUrls() const = 0;
+  /** Sets detectUrls property, introduced in 5.8 */
   virtual void SetDetectUrls(bool detect_urls) = 0;
 
   /** Gets the ideal bounding rect for the edit element which is large enough

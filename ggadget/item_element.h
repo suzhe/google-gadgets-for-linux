@@ -23,6 +23,12 @@ namespace ggadget {
 
 class Texture;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#item">
+ * item element</a>.
+ */
 class ItemElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x93a09b61fb8a4fda, BasicElement);
@@ -34,17 +40,20 @@ class ItemElement : public BasicElement {
   virtual void DoClassRegister();
 
  public:
-  /** Gets and sets whether this item is currently selected. */
+  /** Gets whether this item is currently selected. */
   bool IsSelected() const;
+  /** Sets whether this item is currently selected. */
   void SetSelected(bool selected);
 
-  /**
-   * Gets and sets the background color or image of the element. The image is
-   * repeated if necessary, not stretched.
-   */
+  /** Gets the background color or image of the element. */
   Variant GetBackground() const;
+  /**
+   * Sets the background color or image of the element.
+   * The image is repeated if necessary, not stretched.
+   */
   void SetBackground(const Variant &background);
 
+  /** Gets whether the mouse pointer is over this item. */
   bool IsMouseOver() const;
 
   /**
@@ -53,18 +62,19 @@ class ItemElement : public BasicElement {
    */
   void SetDrawOverlay(bool draw);
 
-  /**
-   * Sets the current index of the item in the parent.
-   */
+  /** Sets the current index of the item in the parent. */
   void SetIndex(int index);
 
+  /** Gets the text of the label contained inside this element. */
+  std::string GetLabelText() const;
   /**
-   * Gets and sets the text of the label contained inside this element.
+   * Sets the text of the label contained inside this element.
    * AddLabelWithText will create the Label, the other methods will
    * assume it exists.
    */
-  std::string GetLabelText() const;
   void SetLabelText(const char *text);
+
+  /** Adds a new label with specifid text. */
   bool AddLabelWithText(const char *text);
 
  public:

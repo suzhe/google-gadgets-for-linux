@@ -25,6 +25,7 @@ class BasicElement;
 class View;
 
 /**
+ * @ingroup Elements
  * Factory for creating an Element in the Gadget API.
  */
 class ElementFactory {
@@ -60,10 +61,6 @@ class ElementFactory {
    */
   bool RegisterElementClass(const char *tag_name,
                             ElementCreator creator);
-
-  typedef BasicElement *(*PluginElementCreator)(View *view,
-                                                const char *name,
-                                                const char *mime_type);
 
  private:
   class Impl;

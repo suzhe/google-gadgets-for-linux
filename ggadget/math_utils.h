@@ -20,6 +20,12 @@
 namespace ggadget {
 
 /**
+ * @defgroup MathUtilities Math utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Converts coordinates in a parent element's space to coordinates in a
  * child element.
  * @param parent_x X-coordinate in the parent space to convert.
@@ -274,6 +280,8 @@ template<typename T>
 T Clamp(T val, T low, T high) {
   return val > high ? high : (val < low ? low : val);
 }
+
+/** @} */
 
 } // namespace ggadget
 

@@ -18,7 +18,7 @@
 <strings>
 <GOOGLE_GADGETS>Google Gadgets</GOOGLE_GADGETS>
 <API_VERSION>(API Version: %s)</API_VERSION>
-<GGL_COPYRIGHT>Copyright &#169; 2008 Google Inc. All Rights Reserved.&#10;Licensed under the Apache License, Version 2.0:</GGL_COPYRIGHT>
+<GGL_COPYRIGHT>Copyright &#169; 2009 Google Inc. All Rights Reserved.&#10;Licensed under the Apache License, Version 2.0:</GGL_COPYRIGHT>
 <GGL_DESCRIPTION>For more information please visit our project site:</GGL_DESCRIPTION>
 
 <!-- Short absolute time format (strftime() format) like '10:24am'.

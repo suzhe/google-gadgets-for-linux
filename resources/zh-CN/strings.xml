@@ -18,7 +18,7 @@
 <strings>
 <GOOGLE_GADGETS>Google 小工具</GOOGLE_GADGETS>
 <API_VERSION>（API 版本：%s）</API_VERSION>
-<GGL_COPYRIGHT>版权所有 &#169; 2008 Google Inc. 保留所有权利。&#10;由 Apache 许可证版本 2.0 授权：</GGL_COPYRIGHT>
+<GGL_COPYRIGHT>版权所有 &#169; 2009 Google Inc. 保留所有权利。&#10;由 Apache 许可证版本 2.0 授权：</GGL_COPYRIGHT>
 <GGL_DESCRIPTION>有关详情，请访问我们的项目网站：</GGL_DESCRIPTION>
 
 <!-- Short absolute time format (strftime() format) like '10:24am'.

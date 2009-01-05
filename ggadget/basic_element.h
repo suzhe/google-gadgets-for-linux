@@ -33,6 +33,23 @@ class Rectangle;
 class View;
 class ClipRegion;
 
+/**
+ * @defgroup Elements Elements
+ * @ingroup CoreLibrary
+ * @brief Classes of all elements.
+ */
+
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#basicElement">
+ * basicElement element</a>, the base class of all other element classes.
+ *
+ * It implements common properties, methods and signals of all elements,
+ * such as x, y, width, height, focus(), onsize, etc.
+ *
+ * It's a scriptable class. All element instances are owned by native code.
+ */
 class BasicElement: public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xfd70820c5bbf11dc, ScriptableInterface);
@@ -54,6 +71,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual void DoClassRegister();
 
  public:
+
+  /** Bit flags indicate the flip direction when drawing an element. */
   enum FlipMode {
     FLIP_NONE = 0,
     FLIP_HORIZONTAL = 1,
@@ -62,33 +81,29 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   };
 
  public:
-  /** Get the type name of the current object. */
+  /** Gets the type name of this element. */
   const char *GetTagName() const;
 
-  /** Retrieves the name of the element.  */
+  /** Retrieves the name of this element.  */
   std::string GetName() const;
 
+  //@{
   /**
    * Retrieves a collection that contains the immediate children of this
    * element.
    */
   virtual const Elements *GetChildren() const;
-  /**
-   * Retrieves a collection that contains the immediate children of this
-   * element.
-   */
   virtual Elements *GetChildren();
+  //@}
 
+  //@{
   /**
    * Retrieves the parent element.
    * @return the pointer to the parent, or @c NULL if the parent is @c View.
    */
   BasicElement *GetParentElement();
-  /**
-   * Retrieves the parent element.
-   * @return the pointer to the parent, or @c NULL if the parent is @c View.
-   */
   const BasicElement *GetParentElement() const;
+  //@}
 
   /**
    * Sets the parent element.
@@ -96,6 +111,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   void SetParentElement(BasicElement *parent);
 
+  //@{
   /**
    * Gets and sets the index of the element in parent.
    * This is not used to change Z-order etc., but is only used by the parent
@@ -105,6 +121,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   size_t GetIndex() const;
   void SetIndex(size_t index);
+  //@}
 
   /**
    * Enables or disables canvas cache of this element. It can make rendering
@@ -123,6 +140,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual double GetPixelWidth() const;
   /** Sets the width in pixels. */
   void SetPixelWidth(double width);
+
   /**
    * Retrieves the height in pixels.
    * Might be overrided by derived classes to provide fake pixel height,
@@ -207,6 +225,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /** Clear the specified y value and use the default. */
   void ResetYToDefault();
 
+  //@{
   /**
    * Generic @c Variant version of above x, y, width, height, pin_x, pin_y
    * property getters and setters.
@@ -225,12 +244,14 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void SetPinX(const Variant &pin_x);
   Variant GetPinY() const;
   void SetPinY(const Variant &pin_y);
+  //@}
 
   /** Retrieves the rotation of the element, in degrees. */
   double GetRotation() const;
   /** Sets the rotation of the element, in degrees. */
   void SetRotation(double rotation);
 
+  //@{
   /**
    * Gets and sets the hit-test value for this element.
    *
@@ -244,14 +265,18 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   virtual ViewInterface::HitTest GetHitTest(double x, double y) const;
   void SetHitTest(ViewInterface::HitTest value);
+  //@}
 
+  //@{
   /**
    * Gets and sets the cursor to display when the mouse is over this
    * element.
    */
   ViewInterface::CursorType GetCursor() const;
   void SetCursor(ViewInterface::CursorType cursor);
+  //@}
 
+  //@{
   /**
    * Gets and sets whether this element is a target for drag/drop operations.
    * If it is a drop target, the ondrag* events will fire when a drag/drop
@@ -259,7 +284,9 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   bool IsDropTarget() const;
   void SetDropTarget(bool drop_target);
+  //@}
 
+  //@{
   /**
    * Gets and sets whether or not the element is enabled.
    * Disabled elements do not fire any mouse or keyboard events, but still
@@ -267,7 +294,9 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   bool IsEnabled() const;
   void SetEnabled(bool enabled);
+  //@}
 
+  //@{
   /**
    * Gets and sets the mask bitmap that defines the clipping path for this
    * element. If a pixel in the mask bitmap is black, the pixel is fully
@@ -276,21 +305,28 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   Variant GetMask() const;
   void SetMask(const Variant &mask);
+  //@}
 
+  //@{
   /** Gets and sets opacity (valid range: 0 ~ 1) of the element. */
   double GetOpacity() const;
   void SetOpacity(double opacity);
+  //@}
 
+  //@{
   /** Gets and sets whether or not the element is visible. */
   bool IsVisible() const;
   void SetVisible(bool visible);
+  //@}
 
+  //@{
   /**
    * Gets and sets the tooltip displayed when the mouse hovers over this
    * element.
    */
   std::string GetTooltip() const;
   void SetTooltip(const std::string &tooltip);
+  //@}
 
   /**
    * Shows tooltip of this basicElement immediately.
@@ -298,6 +334,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   void ShowTooltip();
 
+  //@{
   /**
    * Gets and sets the flip mode. Default flip mode is @c FLIP_NONE.
    * If flip mode is not @c FLIP_NONE, flipping occurs within the original
@@ -305,6 +342,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   FlipMode GetFlip() const;
   void SetFlip(FlipMode flip);
+  //@}
 
   /**
    * Checks whether this element is really visible considering transparency
@@ -348,10 +386,11 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual bool IsTabStop() const;
 
  public:
-  /** Get the associated View of the current element. */
+  //@{
+  /** Gets the associated View of the current element. */
   const View *GetView() const;
-  /** Get the associated View of the current element. */
   View *GetView();
+  //@}
 
   /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
   const CanvasInterface *GetMaskCanvas() const;
@@ -685,11 +724,18 @@ public: // Other overridable public methods.
                                     double pixel, double relative);
 
  public:
+  //@{
+  /**
+   * Gets and sets the designer mode. These methods are used internally by
+   * Gadget Designer.
+   */
   bool IsDesignerMode() const;
   void SetDesignerMode(bool designer_mode);
+  //@}
 
  public:
-  // Event handler connection methods.
+  //@{
+  /** Event handler connection methods. */
   Connection *ConnectOnClickEvent(Slot0<void> *handler);
   Connection *ConnectOnDblClickEvent(Slot0<void> *handler);
   Connection *ConnectOnRClickEvent(Slot0<void> *handler);
@@ -716,6 +762,7 @@ public: // Other overridable public methods.
    * children is changed.
    */
   Connection *ConnectOnContentChanged(Slot0<void> *handler);
+  //@}
 
  protected:
   /**
@@ -764,7 +811,7 @@ public: // Other overridable public methods.
   virtual EventResult HandleOtherEvent(const Event &event);
 
   /**
-   * Return the default size of the element in pixels.
+   * Returns the default size of the element in pixels.
    * The default size is used when no "width" or "height" property is specified
    * for the element.
    * The default value of default size is (0,0).
@@ -772,7 +819,7 @@ public: // Other overridable public methods.
   virtual void GetDefaultSize(double *width, double *height) const;
 
   /**
-   * Return the default position of the element in pixels.
+   * Returns the default position of the element in pixels.
    * The default position is used when no "x" or "y" property is specified
    * for the element.
    * The default value is (0,0).
@@ -785,6 +832,9 @@ public: // Other overridable public methods.
   DISALLOW_EVIL_CONSTRUCTORS(BasicElement);
 };
 
+/**
+ * @ingroup Elements
+ */
 typedef ScriptableHolder<BasicElement> ElementHolder;
 
 } // namespace ggadget

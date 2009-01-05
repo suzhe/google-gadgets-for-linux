@@ -32,6 +32,12 @@ class HostInterface;
 class Gadget;
 
 /**
+ * @defgroup HostUtilities Host utilities
+ * @ingroup Utilities
+ * @{
+ */
+
+/**
  * Setup the global file manager.
  * @param profile_dir path name of the user profile directory.
  * @return @c true if succeeds.
@@ -194,6 +200,8 @@ class HostArgumentParser {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(HostArgumentParser);
 };
+
+/** @} */
 
 } // namespace ggadget
 

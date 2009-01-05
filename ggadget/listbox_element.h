@@ -24,6 +24,12 @@ namespace ggadget {
 class ItemElement;
 class Texture;
 
+/**
+ * @ingroup Elements
+ * Class of <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#listbox">
+ * listbox element</a>.
+ */
 class ListBoxElement : public DivElement {
  public:
   DEFINE_CLASS_ID(0x7ed919e76c7e400a, DivElement);
@@ -35,23 +41,29 @@ class ListBoxElement : public DivElement {
   virtual void DoClassRegister();
 
  public:
+  /** Connects a slot to onchange event signal. */
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
+
+  /** Scrolls the listbox to show current selected item. */
   void ScrollToSelectedItem();
+
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual void Layout();
 
  public:
   /**
-   * Gets and sets the current selected index.
+   * Gets the current selected index.
    * If multiple items are selected, selectedIndex is the index of the first
    * selected item.
    * -1 means no item is selected.
    */
   int GetSelectedIndex() const;
+  /** Sets the current selected index. */
   void SetSelectedIndex(int index);
 
-  /** Gets and sets the current selected item. */
+  /** Gets the current selected item. */
   ItemElement *GetSelectedItem() const;
+  /** Sets the current selected item. */
   void SetSelectedItem(ItemElement *item);
 
   /**
@@ -72,39 +84,49 @@ class ListBoxElement : public DivElement {
   /** Unselects all items in the listbox. */
   void ClearSelection();
 
-  /** Gets and sets item width in pixels or percentage. */
+  /** Gets item width in pixels. */
   double GetItemPixelWidth() const;
+  /** Gets item width in pixels or percentage. */
   Variant GetItemWidth() const;
+  /** Sets item width in pixels or percentage. */
   void SetItemWidth(const Variant &width);
 
-  /** Gets and sets item height in pixels or percentage. */
+  /** Gets item height in pixels. */
   double GetItemPixelHeight() const;
+  /** Gets item height in pixels or percentage. */
   Variant GetItemHeight() const;
+  /** sets item height in pixels or percentage. */
   void SetItemHeight(const Variant &height);
 
-  /**
-   * Gets or sets the background texture of the item under the mouse cursor.
-   */
+  /** Gets the background texture of the item under the mouse cursor. */
   Variant GetItemOverColor() const;
+  /** Gets the background texture of the item under the mouse cursor. */
   const Texture *GetItemOverTexture() const;
+  /** Sets the background texture of the item under the mouse cursor. */
   void SetItemOverColor(const Variant &color);
 
-  /** Gets or sets the background texture of the selected item. */
+  /** Gets the background texture of the selected item. */
   Variant GetItemSelectedColor() const;
+  /** Gets the background texture of the selected item. */
   const Texture *GetItemSelectedTexture() const;
+  /** Sets the background texture of the selected item. */
   void SetItemSelectedColor(const Variant &color);
 
-  /** Gets or sets the texture of the item separator. */
+  /** Gets the texture of the item separator. */
   Variant GetItemSeparatorColor() const;
+  /** Gets the texture of the item separator. */
   const Texture *GetItemSeparatorTexture() const;
+  /** Sets the texture of the item separator. */
   void SetItemSeparatorColor(const Variant &color);
 
-  /** Gets and sets whether there are separator lines between the items. */
+  /** Gets whether there are separator lines between the items. */
   bool HasItemSeparator() const;
+  /** Sets whether there are separator lines between the items. */
   void SetItemSeparator(bool separator);
 
-  /** Gets and sets whether the user can select multiple items. */
+  /** Gets whether the user can select multiple items. */
   bool IsMultiSelect() const;
+  /** Sets whether the user can select multiple items. */
   void SetMultiSelect(bool multiselect);
 
   /**
@@ -126,12 +148,14 @@ class ListBoxElement : public DivElement {
    */
   void RemoveString(const char *str);
 
+  //@{
   /**
    * Searches for the lowest-indexed Item element that has one Label child
    * with the specified text,
    */
   ItemElement *FindItemByString(const char *str);
   const ItemElement *FindItemByString(const char *str) const;
+  //@}
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

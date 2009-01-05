@@ -29,6 +29,12 @@ class Connection;
 class RegisterableInterface;
 
 /**
+ * @defgroup ScriptableFoundation Foundation classes for scriptable objects
+ * @ingroup CoreLibrary
+ * @{
+ */
+
+/**
  * Object interface that can be called from script languages.
  * Normally an object need not to implement this interface directly, but
  * inherits from @c ScriptableHelper.
@@ -254,6 +260,8 @@ class ScriptableInterface : public SmallObject<> {
 inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;
 }
+
+/** @} */
 
 } // namespace ggadget
 

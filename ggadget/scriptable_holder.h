@@ -25,6 +25,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup ScriptableFoundation
  * Holds a @c ScriptableInterface pointer. If the held object is about to be
  * deleted, the pointer will be automatically reset to @c NULL.
  */

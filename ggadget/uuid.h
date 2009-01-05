@@ -21,6 +21,10 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Utilities
+ * Class for generating UUID.
+ */
 class UUID {
  public:
   /** Initializes a null UUID. */

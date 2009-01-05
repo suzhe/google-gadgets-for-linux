@@ -31,6 +31,12 @@ class Slot;
 class Connection;
 
 /**
+ * @defgroup Variants Variant related classes
+ * @ingroup ScriptableFoundation
+ * @{
+ */
+
+/**
  * Used as a wrapper to a string indicating this string contains a JSON
  * expression.  For json, see http://www.json.org.
  */
@@ -787,6 +793,8 @@ class ResultVariant {
 
 #undef SPECIALIZE_VARIANT_TYPE
 #undef SPECIALIZE_VARIANT_VALUE
+
+/** @} */
 
 } // namespace ggadget
 
