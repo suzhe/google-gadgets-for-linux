@@ -24,6 +24,13 @@ namespace ggadget {
 template<typename R, typename P> class Slot1;
 
 /**
+ * @defgroup Messages Messages
+ * @ingroup CoreLibrary
+ * Class and utilities to support localizable messages.
+ * @{
+ */
+
+/**
  * A class to manage localized messages. It's a global singleton class.
  *
  * All strings managed by this class must use UTF-8 encoding.
@@ -104,6 +111,8 @@ class Messages {
   (::ggadget::Messages::get()->GetMessageForLocale((id),(locale)))
 #define GM_(id)  (GMS_(id).c_str())
 #define GML_(id,locale)  (GMSL_(id,locale).c_str())
+
+/** @} */
 
 } // namespace ggadget
 

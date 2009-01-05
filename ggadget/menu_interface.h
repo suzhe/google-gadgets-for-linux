@@ -23,6 +23,10 @@ namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
 
+/**
+ * @ingroup Interfaces
+ * Interface class for abstracting menu related operations.
+ */
 class MenuInterface {
  protected:
   virtual ~MenuInterface() { }

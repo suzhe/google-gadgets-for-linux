@@ -23,6 +23,11 @@ namespace ggadget {
 
 class ImageInterface;
 
+/**
+ * @ingroup ScriptableObjects
+ *
+ * Scriptable decorator for ImageInterface.
+ */
 class ScriptableImage : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x18d1431907cd4b1e, ScriptableInterface)

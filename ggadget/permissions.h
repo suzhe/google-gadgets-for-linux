@@ -22,6 +22,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup Gadget
+ *
  * A class to hold access control informations of a gadget.
  *
  * There are multiple permissions that can be applied to a gadget.

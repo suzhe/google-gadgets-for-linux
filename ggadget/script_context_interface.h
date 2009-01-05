@@ -27,6 +27,8 @@ template <typename R, typename P1> class Slot1;
 template <typename R, typename P1, typename P2> class Slot2;
 
 /**
+ * @ingroup Interfaces
+ * @ingroup ScriptRuntime
  * The context of script compilation and execution.
  * All script related compilation and execution must occur in a
  * @c ScriptContext instance.

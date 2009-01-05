@@ -26,8 +26,10 @@ namespace ggadget {
 class ClipRegion;
 
 /**
+ * @ingroup Interfaces
  * This class is the interface abstracting all of ggadget's drawing
- * functionality. It is designed to be independent from the rendering
+ * functionality.
+ * It is designed to be independent from the rendering
  * library used to realize this functionality. The user assumes that the object
  * is ready to use on creation. This means that all the prerequisites for the
  * graphics environment has been set up. In most cases, this includes an
@@ -325,6 +327,7 @@ class CanvasInterface : public SmallObject<> {
 };
 
 /**
+ * @relates CanvasInterface
  * Handy function to destroy a canvas.
  */
 inline void DestroyCanvas(CanvasInterface *canvas) {

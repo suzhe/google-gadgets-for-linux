@@ -27,6 +27,8 @@ namespace framework {
 class FileSystemInterface;
 
 /**
+ * @ingroup ScriptableObjects
+ *
  * Scriptable counterpart of FileSystemInterface.
  *
  * Please note that ScriptableFileSystem is not NativeOwned, because it's

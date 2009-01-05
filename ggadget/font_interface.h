@@ -21,6 +21,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup Interfaces
  * Class representing a font as understood by the graphics interface.
  * It is created by an associated GraphicsInterface object.
  * Call @c Destroy() to free this object once it is no longer needed.

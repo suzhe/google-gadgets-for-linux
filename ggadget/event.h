@@ -24,6 +24,13 @@
 
 namespace ggadget {
 
+/**
+ * @defgroup Event Event
+ * @ingroup View
+ * Event related classes.
+ * @{
+ */
+
 /** Used to indicate the result of an event handler. */
 enum EventResult {
   /** The event is not handled in the handler. */
@@ -431,6 +438,8 @@ class ContextMenuEvent : public Event {
  private:
   ScriptableMenu *menu_;
 };
+
+/** @} */
 
 } // namespace ggadget
 

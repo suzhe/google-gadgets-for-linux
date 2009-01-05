@@ -29,12 +29,14 @@ class Connection;
 class RegisterableInterface;
 
 /**
- * @defgroup ScriptableFoundation Foundation classes for scriptable objects
+ * @defgroup ScriptableFoundation Scriptable Foundations
  * @ingroup CoreLibrary
+ * Foundation classes to implement scriptable objects.
  * @{
  */
 
 /**
+ * @ingroup Interfaces
  * Object interface that can be called from script languages.
  * Normally an object need not to implement this interface directly, but
  * inherits from @c ScriptableHelper.

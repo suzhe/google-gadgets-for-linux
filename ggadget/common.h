@@ -32,8 +32,15 @@
  */
 
 /**
- * @defgroup Utilities Utility classes and functions
+ * @defgroup Utilities Utilities
  * @ingroup CoreLibrary
+ * Utility classes and functions.
+ */
+
+/**
+ * @defgroup Interfaces Interfaces
+ * @ingroup CoreLibrary
+ * Interface classes.
  */
 
 namespace ggadget {

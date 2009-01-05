@@ -24,6 +24,15 @@
 namespace ggadget {
 
 /**
+ * @defgroup ScriptableObjects Scriptable objects
+ * @ingroup CoreLibrary
+ *
+ * Objects that can be accessed from JavaScript.
+ */
+
+/**
+ * @ingroup ScriptableObjects
+ *
  * This class is used to reflect a const native array to script.
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.

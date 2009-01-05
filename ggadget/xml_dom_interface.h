@@ -29,6 +29,12 @@ class DOMDocumentInterface;
 class DOMElementInterface;
 class XMLParserInterface;
 
+/**
+ * @defgroup XMLDOMInterfaces XML DOM Interfaces
+ * @ingroup Interfaces
+ * @{
+ */
+
 /* TODO: DOM2
 const char kXMLPrefix[] = "xml";
 const char kXMLNamespaceURI[] = "http://www.w3.org/XML/1998/namespace";
@@ -492,6 +498,8 @@ class DOMDocumentInterface : public DOMNodeInterface {
   */
 };
 CLASS_ID_IMPL(DOMDocumentInterface, DOMNodeInterface)
+
+/** @} */
 
 } // namespace ggadget
 

@@ -27,8 +27,10 @@ namespace ggadget {
 struct Color;
 
 /**
+ * @ingroup Interfaces
  * This class is the interface for creating objects used in ggadget's
- * graphics rendering. It's implementation should come bundled with a
+ * graphics rendering.
+ * It's implementation should come bundled with a
  * corresponding implementation of CanvasInterface. The gadget view obtains
  * an instance of this class from its HostInterface. Unlike the HostInterface,
  * the host can decide, depending on requirements,

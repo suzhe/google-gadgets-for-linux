@@ -24,6 +24,11 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Options
+ *
+ * In memory implementation of OptionsInterface.
+ */
 class MemoryOptions : public OptionsInterface {
  public:
   /** Constructs a @c MemoryOptions instance without size limit. */

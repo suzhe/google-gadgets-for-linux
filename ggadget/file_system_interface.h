@@ -34,6 +34,12 @@ class FolderInterface;
 class TextStreamInterface;
 class BinaryStreamInterface;
 
+/**
+ * @defgroup FileSystemInterfaces FileSystem Interfaces
+ * @ingroup FrameworkInterfaces
+ * @{
+ */
+
 enum IOMode {
   IO_MODE_READING = 1,
   IO_MODE_WRITING = 2,
@@ -373,6 +379,8 @@ class BinaryStreamInterface : public SmallObject<> {
   /** Close the stream. */
   virtual void Close() = 0;
 };
+
+/** @} */
 
 } // namespace framework
 

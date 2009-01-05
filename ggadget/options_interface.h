@@ -26,6 +26,18 @@ namespace ggadget {
 class Connection;
 template <typename R, typename P1> class Slot1;
 
+/**
+ * @defgroup Options Options
+ * @ingroup CoreLibrary
+ * Options related classes.
+ * @{
+ */
+
+/**
+ * @ingroup Interfaces
+ *
+ * Interface class for storing options.
+ */
 class OptionsInterface {
  public:
   virtual ~OptionsInterface() { }
@@ -144,6 +156,7 @@ class OptionsInterface {
 };
 
 /**
+ * @relates OptionsInterface
  * The function to create an @c OptionsInterface instance.
  * @param name distinct name of the instance.
  * @return the created @c OptionsInterface instance, or @c NULL on failure.
@@ -152,18 +165,21 @@ class OptionsInterface {
 typedef OptionsInterface *(*OptionsFactory)(const char *name);
 
 /**
+ * @relates OptionsInterface
  * Sets an OptionsFactory as the global options factory. An Options extension
  * module can call this function in its @c Initailize() function.
  */
 bool SetOptionsFactory(OptionsFactory options_factory);
 
 /**
+ * @relates OptionsInterface
  * Creates an @c OptionsInterface instance. Invocations will be delegated to
  * the global @c OptionsFactory.
  */
 OptionsInterface *CreateOptions(const char *name);
 
 /**
+ * @relates OptionsInterface
  * Set the global options instance which is used to store global config data.
  * Normally not the Options extension modoule but the host should call
  * this function.
@@ -171,9 +187,12 @@ OptionsInterface *CreateOptions(const char *name);
 bool SetGlobalOptions(OptionsInterface *global_options);
 
 /**
+ * @relates OptionsInterface
  * Gets the global options instance previously set by @c SetGlobalOptions().
  */
 OptionsInterface *GetGlobalOptions();
+
+/** @} */
 
 } // namespace ggadget
 

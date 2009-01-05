@@ -40,6 +40,13 @@ class XMLHttpRequestInterface;
 class Permissions;
 
 /**
+ * @defgroup Gadget Gadget
+ * @ingroup CoreLibrary
+ * Gadget related classes.
+ */
+
+/**
+ * @ingroup Gadget
  * A class to hold a gadget instance.
  */
 class Gadget {

@@ -31,6 +31,9 @@ class ViewHostInterface;
 class Gadget;
 
 /**
+ * @ingroup Interfaces
+ * @ingroup View
+ *
  * Interface for representing a View in the Gadget API.
  */
 class ViewInterface {

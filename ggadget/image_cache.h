@@ -24,6 +24,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup Utilities
+ *
  * A class to manipulate shared images.
  *
  * When loading two images with the same tag, they will be treated as identical

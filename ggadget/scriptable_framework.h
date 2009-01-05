@@ -39,6 +39,11 @@ class ScreenInterface;
 class UserInterface;
 
 /**
+ * @ingroup ScriptableObjects
+ * @{
+ */
+
+/**
  * Scriptable counterpart of AudioInterface.
  *
  * Please note that ScriptableAudio is not NativeOwned, because it's bound to
@@ -267,6 +272,8 @@ class ScriptableGraphics : public ScriptableHelperDefault {
   class Impl;
   Impl *impl_;
 };
+
+/** @} */
 
 } // namespace framework
 } // namespace ggadget

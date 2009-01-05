@@ -25,6 +25,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ViewDecorator
+ *
  * DecoratedViewHost shows a view with the appropiate decorations.
  * It uses a special view derived from @c ViewDecoratorBase to hold the child
  * view and draw the decorations.

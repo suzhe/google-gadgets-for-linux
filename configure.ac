@@ -1076,6 +1076,7 @@ AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
 AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
+AM_CONDITIONAL([GGL_CROSS_COMPILING], [test x$cross_compiling = xyes])
 
 
 if test x$ZIP = x; then
@@ -1231,6 +1232,7 @@ Build options:
   Build static libs             $enable_static
   Enable debug                  $enable_debug
   Host type                     $ggl_host_type
+  Cross Compiling               $cross_compiling
   OEM brand                     $ggl_oem_brand
 
  Libraries:

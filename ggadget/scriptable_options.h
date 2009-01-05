@@ -23,6 +23,11 @@ namespace ggadget {
 
 class OptionsInterface;
 
+/**
+ * @ingroup ScriptableObjects
+ *
+ * Scriptable decorator for OptionsInterface.
+ */
 class ScriptableOptions : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)

@@ -24,6 +24,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup FileManager
  * Handles files in a real directory.
  */
 class DirFileManager : public FileManagerInterface {

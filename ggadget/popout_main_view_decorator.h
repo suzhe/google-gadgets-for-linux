@@ -21,6 +21,11 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup ViewDecorator
+ *
+ * Decorator for popout main view.
+ */
 class PopOutMainViewDecorator : public FramedViewDecoratorBase {
  public:
   PopOutMainViewDecorator(ViewHostInterface *host);

@@ -74,7 +74,8 @@ std::string BuildFilePathV(const char *element, va_list ap);
 bool SplitFilePath(const char *path, std::string *dir, std::string *filename);
 
 /**
- * Normalize a file path:
+ * Normalize a file path.
+ *
  * - Remove redundant dir separators.
  * - Replace '\' with '/' on non-Windows platforms.
  * - Remove all "." and ".." components.

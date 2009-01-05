@@ -29,7 +29,9 @@ class FileManagerInterface;
 class Elements;
 
 /**
- * A scriptable wrapper for class View.
+ * @ingroup View
+ *
+ * A scriptable wrapper for View class.
  */
 class ScriptableView : public ScriptableHelperNativeOwnedDefault {
  public:

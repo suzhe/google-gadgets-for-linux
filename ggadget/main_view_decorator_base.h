@@ -22,6 +22,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ViewDecorator
+ *
  * Base class for main view decorators.
  *
  * A decorator for main view may inherit this class to get common behavior for

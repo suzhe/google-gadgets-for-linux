@@ -25,6 +25,7 @@ class Variant;
 
 /**
  * @ingroup ScriptableFoundation
+ * @ingroup Interfaces
  * Represents registerable capabilities of an object.
  */
 class RegisterableInterface {

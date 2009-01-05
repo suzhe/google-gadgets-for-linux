@@ -25,6 +25,8 @@ namespace ggadget {
 class View;
 
 /**
+ * @ingroup View
+ *
  * This class wraps a view into the old @c GoogleDesktopDisplayWindow interface
  * for old style options dialog. This class is only for scripting.
  */

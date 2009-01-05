@@ -28,6 +28,11 @@ class Texture;
 class BasicElement;
 class View;
 
+/**
+ * @ingroup Utilities
+ *
+ * A helper class to handle text drawing.
+ */
 class TextFrame : public SmallObject<> {
  public:
   TextFrame(BasicElement *owner, View *view);

@@ -22,6 +22,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ViewDecorator
+ *
  * A view decorator class suitable for display a main view in sidebar.
  */
 class DockedMainViewDecorator : public MainViewDecoratorBase {

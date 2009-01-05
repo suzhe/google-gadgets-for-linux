@@ -25,8 +25,12 @@ namespace ggadget {
 template <typename R, typename P1> class Slot1;
 
 /**
- * Interface for providing host services to views.. Each view contains a
- * pointer to a @c ViewHostInterface object which is dedicated to the view.
+ * @ingroup Interfaces
+ * @ingroup View
+ *
+ * Interface for providing host services to views.
+ * Each view contains a pointer to a @c ViewHostInterface object which is
+ * dedicated to the view.
  * The @c ViewHostInterface implementation should depend on the host.
  * The services provided by @c ViewHostInterface are bi-directional.
  * The view calls methods in the @c ViewHostInterface, and the host callback

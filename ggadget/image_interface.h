@@ -26,8 +26,9 @@ namespace ggadget {
 class CanvasInterface;
 
 /**
+ * @ingroup Interfaces
  * This class is the interface abstracting an image object, which might be
- * implemented by system dependent technic.
+ * implemented by system dependent technology.
  */
 class ImageInterface : public SmallObject<> {
  protected:

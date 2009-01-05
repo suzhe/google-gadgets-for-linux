@@ -26,6 +26,12 @@ namespace ggadget {
 
 class BasicElement;
 
+/**
+ * @ingroup Event
+ * @{
+ */
+
+//@{
 /** Event names */
 const char kOnCancelEvent[]        = "oncancel";
 const char kOnClickEvent[]         = "onclick";
@@ -64,8 +70,10 @@ const char kOnContextMenuEvent[]   = "oncontextmenu";
 const char kOnStateChangeEvent[]   = "onstatechange";
 const char kOnMediaChangeEvent[]   = "onmediachange";
 const char kOnThemeChangedEvent[]  = "onthemechanged";
+//@}
 
 /**
+ * @ingroup ScriptableObjects
  * Scriptable decorator for @c Event.
  */
 class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
@@ -115,6 +123,8 @@ class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableEvent);
 };
+
+/** @} */
 
 } // namespace ggadget
 

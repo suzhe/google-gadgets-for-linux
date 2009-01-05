@@ -27,7 +27,14 @@ class ScriptableArray;
 class ScriptableImage;
 
 /**
+ * @defgroup ContentAreaElement contentarea
  * @ingroup Elements
+ * Classes related to contentarea element.
+ */
+
+/**
+ * @ingroup ContentAreaElement
+ *
  * Class of <a href=
  * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#contentarea">
  * contentarea element</a>.
