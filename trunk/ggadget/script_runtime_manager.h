@@ -26,6 +26,13 @@
 namespace ggadget {
 
 /**
+ * @defgroup ScriptRuntime Script runtime
+ * @ingroup CoreLibrary
+ * Script runtime related classes
+ * @{
+ */
+
+/**
  * Manager to manage multiple script runtime objects.
  */
 class ScriptRuntimeManager {
@@ -79,6 +86,8 @@ class ScriptRuntimeManager {
 
   DISALLOW_EVIL_CONSTRUCTORS(ScriptRuntimeManager);
 };
+
+/** @} */
 
 } // namespace ggadget
 

@@ -24,6 +24,11 @@ namespace ggadget {
 class MenuInterface;
 class Gadget;
 
+/**
+ * @ingroup ScriptableObjects
+ *
+ * Scriptable decorator for MenuInterface.
+ */
 class ScriptableMenu : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x95432249155845d6, ScriptableInterface)

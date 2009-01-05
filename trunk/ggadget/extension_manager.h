@@ -30,6 +30,13 @@ class ScriptRuntimeManager;
 class Module;
 class Gadget;
 
+/**
+ * @defgroup Extension Extension
+ * @ingroup CoreLibrary
+ * Extension related classes.
+ * @{
+ */
+
 static const char kElementExtensionSymbolName[] = "RegisterElementExtension";
 static const char kScriptExtensionSymbolName[] = "RegisterScriptExtension";
 static const char kFrameworkExtensionSymbolName[] =
@@ -398,6 +405,8 @@ class ExtensionManager {
 
   DISALLOW_EVIL_CONSTRUCTORS(ExtensionManager);
 };
+
+/** @} */
 
 } // namespace ggadget
 

@@ -26,6 +26,8 @@ template <typename R, typename P1> class Slot1;
 class Connection;
 
 /**
+ * @ingroup Interfaces
+ * @ingroup ScriptRuntime
  * The script engine runtime.
  * Normally there is one @c ScriptRuntimeInterface instance in a process
  * for each script engine.

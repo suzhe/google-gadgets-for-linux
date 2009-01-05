@@ -29,6 +29,12 @@ class Slot;
 namespace framework {
 
 /**
+ * @defgroup FrameworkInterfaces Framework interfaces
+ * @ingroup Interfaces
+ * @{
+ */
+
+/**
  * These modes are for framework.BrowseForFile() and framework.BrowseForFiles().
  * There is no C++ interface for the methods. The script methods are registered
  * in framework extension modules.
@@ -458,6 +464,8 @@ class UserInterface {
   virtual void SetIdlePeriod(time_t period) = 0;
   virtual time_t GetIdlePeriod() const = 0;
 };
+
+/** @} */
 
 } // namespace framework
 } // namespace ggadget

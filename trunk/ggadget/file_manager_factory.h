@@ -23,6 +23,13 @@
 namespace ggadget {
 
 /**
+ * @defgroup FileManager FileManager
+ * @ingroup CoreLibrary
+ * FileManager related classes.
+ * @{
+ */
+
+/**
  * Creates a FileManager instance using a proper FileManager implementation.
  * It can only create a FileManager instance against an existent base path.
  *
@@ -57,6 +64,8 @@ bool SetGlobalFileManager(FileManagerInterface *manager);
  * The caller shall not delete the returned FileManager instance.
  */
 FileManagerInterface *GetGlobalFileManager();
+
+/** @} */
 
 } // namespace ggadget
 

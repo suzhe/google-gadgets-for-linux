@@ -43,6 +43,12 @@ class Rectangle;
 class MenuInterface;
 
 /**
+ * @defgroup View View
+ * @ingroup CoreLibrary
+ */
+
+/**
+ * @ingroup View
  * The default View implementation.
  */
 class View : public ViewInterface {

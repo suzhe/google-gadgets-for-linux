@@ -26,7 +26,7 @@ namespace ggadget {
 class Signal;
 
 /**
- * @defgroup SignalSlot Signal and slot related classes
+ * @defgroup SignalSlot Signal and Slot
  * @ingroup ScriptableFoundation
  * @{
  */

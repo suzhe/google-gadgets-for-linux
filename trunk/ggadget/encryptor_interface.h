@@ -21,6 +21,10 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Interfaces
+ * Interface class for real encryptor implementations.
+ */
 class EncryptorInterface {
  public:
   /**
@@ -47,12 +51,14 @@ class EncryptorInterface {
 };
 
 /**
+ * @relates EncryptorInterface
  * Sets the global EncryptorInterface instance. An Encryptor extension module
  * can call this function in its @c Initailize() function.
  */
 bool SetEncryptor(EncryptorInterface *encryptor);
 
 /**
+ * @relates EncryptorInterface
  * Gets the global EncryptorInterface instance. Different from other global
  * instances, this instance has a default one if no SetEncryptor() is called.
  */

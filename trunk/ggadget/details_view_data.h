@@ -26,6 +26,7 @@ namespace ggadget {
 class ScriptableOptions;
 
 /**
+ * @ingroup View
  * DetailsViewData data structure. It has no built-in logic.
  * This class will be registered into gadget's script context as "DetailsView"
  * class.

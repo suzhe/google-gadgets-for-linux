@@ -27,7 +27,10 @@ template <typename R, typename P1> class Slot1;
 
 namespace framework {
 
-/** Used for playing back audio files. */
+/**
+ * @ingroup FrameworkInterfaces
+ * Class for playing back audio files.
+ */
 class AudioclipInterface : public SmallObject<> {
  protected:
   virtual ~AudioclipInterface() {}

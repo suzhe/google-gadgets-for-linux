@@ -30,6 +30,12 @@ class DOMDocumentInterface;
 class XMLParserInterface;
 
 /**
+ * @defgroup XHRInterfaces XML Http Request Interfaces
+ * @ingroup Interfaces
+ * @{
+ */
+
+/**
  * References:
  *   - http://www.w3.org/TR/XMLHttpRequest/
  *   - http://msdn.microsoft.com/library/default.asp?url=/library/en-us/xmlsdk/html/xmobjxmlhttprequest.asp
@@ -193,6 +199,7 @@ class XMLHttpRequestFactoryInterface {
 };
 
 /**
+ * @relates XMLHttpRequestFactoryInterface
  * Sets an @c XMLHttpRequestFactory as the global XMLHttpRequest factory.
  * An XMLHttpRequest extension module can call this function in its
  * @c Initailize() function.
@@ -200,9 +207,12 @@ class XMLHttpRequestFactoryInterface {
 bool SetXMLHttpRequestFactory(XMLHttpRequestFactoryInterface *factory);
 
 /**
+ * @relates XMLHttpRequestFactoryInterface
  * Gets the global XMLHttpRequest factory.
  */
 XMLHttpRequestFactoryInterface *GetXMLHttpRequestFactory();
+
+/** @} */
 
 } // namespace ggadget
 

@@ -31,6 +31,7 @@ class ScriptableInterface;
 class Signal;
 
 /**
+ * @ingroup Interfaces
  * Interface for providing host services to the gadgets.
  * All gadgets may share one HostInterface instance.
  * The @c HostInterface implementation should depend on the host.

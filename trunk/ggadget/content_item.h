@@ -33,6 +33,13 @@ class ScriptableCanvas;
 class ScriptableImage;
 class View;
 
+/**
+ * @ingroup ContentAreaElement
+ *
+ * Class to implement <a href=
+ * "http://code.google.com/apis/desktop/docs/gadget-contentitem_apiref.html">
+ * ContentItem Object</a>
+ */
 class ContentItem : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x062fc66bb03640ca, ScriptableInterface);
@@ -258,7 +265,11 @@ class ContentItem : public ScriptableHelperDefault {
   Impl *impl_;
 };
 
-/** The graphics interface used to draw content items. */
+/**
+ * @ingroup ContentAreaElement
+ *
+ * The graphics interface used to draw content items.
+ */
 class ScriptableCanvas : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xa4f94b8abd754d7d, ScriptableInterface);

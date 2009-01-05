@@ -23,6 +23,10 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup Utilities
+ * Class for hosts to keep only one running instance.
+ */
 class RunOnce {
  public:
   /**

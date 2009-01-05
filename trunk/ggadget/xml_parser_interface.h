@@ -23,6 +23,15 @@ namespace ggadget {
 
 class DOMDocumentInterface;
 
+/**
+ * @defgroup XMLParserInterface XML Parser Interface
+ * @ingroup Interfaces
+ * @{
+ */
+
+/**
+ * Interface class for real XML parser implementation.
+ */
 class XMLParserInterface {
  public:
   /**
@@ -163,19 +172,23 @@ class XMLParserInterface {
 };
 
 /**
- * Sets the global XMLParserInterface instance.  An XMLParser extension module
- * can call this function in its @c Initialize() function.
+ * @relates XMLParserInterface
+ * Sets the global XMLParserInterface instance.
+ * An XMLParser extension module can call this function in its @c Initialize()
+ * function.
  */
 bool SetXMLParser(XMLParserInterface *xml_parser);
 
 /**
+ * @relates XMLParserInterface
  * Gets the XMLParserInterface instance.
- *
  * The returned instance is a singleton provided by an XMLParser
  * extension module, which is loaded into the global ExtensionManager in
  * advanced.
  */
 XMLParserInterface *GetXMLParser();
+
+/** @} */
 
 } // namespace ggadget
 

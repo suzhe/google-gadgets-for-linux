@@ -33,6 +33,8 @@ class View;
 class ViewElement;
 
 /**
+ * @ingroup Elements
+ *
  * Elements is used for storing and managing a set of BasicElement objects.
  * Please refer to: <a href=
  * "http://code.google.com/apis/desktop/docs/gadget_apiref.html#elements">

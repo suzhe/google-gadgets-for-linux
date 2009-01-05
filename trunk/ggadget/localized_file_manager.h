@@ -24,6 +24,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup FileManager
  * A wrapper FileManager that supports localized files.
  *
  * It dispatches all requests to a real FileManager implementation, but does

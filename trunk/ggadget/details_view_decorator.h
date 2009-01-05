@@ -21,6 +21,11 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup ViewDecorator
+ *
+ * Decorator for details view.
+ */
 class DetailsViewDecorator : public FramedViewDecoratorBase {
  public:
   DetailsViewDecorator(ViewHostInterface *host);

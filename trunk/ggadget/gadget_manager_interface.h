@@ -28,6 +28,8 @@ class Connection;
 template <typename R, typename P1> class Slot1;
 
 /**
+ * @ingroup Interfaces
+ * @ingroup Gadget
  * Manages instances of gadgets.
  */
 class GadgetManagerInterface {
@@ -129,12 +131,17 @@ class GadgetManagerInterface {
 };
 
 /**
- * Sets the global GadgetManagerInterface instance.  A GadgetManager extension
- * module can call this function in its @c Initialize() function.
+ * @ingroup Gadget
+ * @relates GadgetManagerInterface
+ * Sets the global GadgetManagerInterface instance.
+ * A GadgetManager extension module can call this function in its
+ * @c Initialize() function.
  */
 bool SetGadgetManager(GadgetManagerInterface *gadget_parser);
 
 /**
+ * @ingroup Gadget
+ * @relates GadgetManagerInterface
  * Gets the GadgetManagerInterface instance.
  *
  * The returned instance is a singleton provided by a GadgetManager

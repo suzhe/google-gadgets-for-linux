@@ -25,6 +25,8 @@ namespace ggadget {
 template <typename R, typename P1> class Slot1;
 
 /**
+ * @ingroup Interfaces
+ * @ingroup FileManager
  * Handles all file resources and file access used by a gadget.
  */
 class FileManagerInterface {

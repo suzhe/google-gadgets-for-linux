@@ -23,6 +23,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ScriptableObjects
+ *
  * This class is used to reflect a dynamic native slot to script.
  */
 class ScriptableFunction : public ScriptableHelperDefault {

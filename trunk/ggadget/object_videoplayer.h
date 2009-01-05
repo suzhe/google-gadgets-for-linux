@@ -24,6 +24,8 @@ namespace ggadget {
 class View;
 
 /**
+ * @ingroup Elements
+ *
  * This class is a wrapper of video element, but provides more functionalities
  * than it, such as playlist, because it behaves like the wmplayer object (an
  * ActiveX object under Windows).

@@ -23,6 +23,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ScriptableObjects
+ *
  * This class is used to reflect an enumerator to script.
  * @param E the native enumerator.
  * @param ClassId the class id of this scriptable enumerator.

@@ -26,6 +26,7 @@ template <typename R, typename P1, typename P2, typename P3, typename P4>
     class Slot4;
 
 /**
+ * @ingroup Utilities
  * A class to represent a clip region, which consists of a set of rectangles.`
  *
  * A fuzzy ratio can be specified, so that two rectangles overlaping with

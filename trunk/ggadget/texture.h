@@ -27,6 +27,11 @@ namespace ggadget {
 
 class FontInterface;
 
+/**
+ * @ingroup Utilities
+ *
+ * A helper class to handle color or image texture.
+ */
 class Texture : public SmallObject<> {
  public:
   /**

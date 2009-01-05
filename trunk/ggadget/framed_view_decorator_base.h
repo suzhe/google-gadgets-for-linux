@@ -21,6 +21,11 @@
 
 namespace ggadget {
 
+/**
+ * @ingroup ViewDecorator
+ *
+ * Base class for all framed view decorator.
+ */
 class FramedViewDecoratorBase : public ViewDecoratorBase {
  public:
   FramedViewDecoratorBase(ViewHostInterface *host, const char *option_prefix);

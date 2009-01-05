@@ -24,6 +24,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup FileManager
  * A wrapper FileManager which can manage multiple FileManager instance and dispatch commands
  * to the appropriate FileManager according to file path prefix.
  */

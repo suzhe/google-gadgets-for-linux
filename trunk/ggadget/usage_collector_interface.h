@@ -22,6 +22,7 @@ namespace ggadget {
 class OptionsInterface;
 
 /**
+ * @ingroup Interfaces
  * The interface used to collect usage data.
  */
 class UsageCollectorInterface {

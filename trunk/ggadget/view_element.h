@@ -23,6 +23,9 @@ namespace ggadget {
 
 /**
  * @ingroup Elements
+ * @ingroup View
+ * @ingroup ViewDecorator
+ *
  * Internally used element to allow a View to be a child of another View.
  * This element is not exposed in the API.
  */

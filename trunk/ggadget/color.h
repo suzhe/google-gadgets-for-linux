@@ -24,6 +24,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup Utilities
  * Struct for holding color information.
  * Currently, there is no support for the alpha channel.
  */

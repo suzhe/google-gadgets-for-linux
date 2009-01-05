@@ -23,6 +23,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup Extension
+ *
  * This class is used to load a dynamic module into the main process.
  * A dynamic module can provide additional components to extend the core
  * functionalities of libggadget.

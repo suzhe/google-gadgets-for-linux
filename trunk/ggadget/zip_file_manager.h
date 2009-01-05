@@ -24,6 +24,7 @@
 namespace ggadget {
 
 /**
+ * @ingroup FileManager
  * Handles files in a zip archive file.
  */
 class ZipFileManager : public FileManagerInterface {

@@ -28,7 +28,14 @@ namespace ggadget {
 class HostInterface;
 class ViewElement;
 
-/*
+/**
+ * @defgroup SideBar SideBar
+ * @ingroup CoreLibrary
+ */
+
+/**
+ * @ingroup SideBar
+ *
  * Object that represent the side bar.
  * SideBar is a container of view element, each view element is combined with a
  * ViewHost.

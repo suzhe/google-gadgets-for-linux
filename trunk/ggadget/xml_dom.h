@@ -24,6 +24,8 @@ namespace ggadget {
 class XMLParserInterface;
 
 /**
+ * @ingroup XMLDOMInterfaces
+ *
  * Create a new document. In most cases, you should create
  * DOMDocumentInterface instances with the global XML parser, which is
  * provided by some extension module.

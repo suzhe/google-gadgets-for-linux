@@ -24,6 +24,12 @@ namespace ggadget {
 class MainLoopInterface;
 
 /**
+ * @defgroup MainLoopInterface Main loop interfaces
+ * @ingroup Interfaces
+ * @{
+ */
+
+/**
  * This object is used by main loop to callback application
  * when there is any incoming event.
  *
@@ -238,7 +244,10 @@ class MainLoopInterface {
   virtual void WakeUp() = 0;
 };
 
+/** @} */
+
 /**
+ * @relates MainLoopInterface
  * Sets a main loop instance as the global main loop, which can be used by any
  * components.
  *
@@ -248,6 +257,7 @@ class MainLoopInterface {
 bool SetGlobalMainLoop(MainLoopInterface *main_loop);
 
 /**
+ * @relates MainLoopInterface
  * Gets the global main loop instance set by calling SetGlobalMainLoop()
  * previously.
  */

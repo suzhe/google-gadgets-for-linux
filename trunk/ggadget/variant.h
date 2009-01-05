@@ -31,7 +31,7 @@ class Slot;
 class Connection;
 
 /**
- * @defgroup Variants Variant related classes
+ * @defgroup Variant Variant
  * @ingroup ScriptableFoundation
  * @{
  */

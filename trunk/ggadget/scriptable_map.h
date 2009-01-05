@@ -25,8 +25,10 @@
 namespace ggadget {
 
 /**
- * This class is used to reflect a const native map to script. The life of
- * the native map must be longer than the life of this object.
+ * @ingroup ScriptableObjects
+ *
+ * This class is used to reflect a const native map to script.
+ * The life of the native map must be longer than the life of this object.
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.
  */

@@ -23,6 +23,8 @@
 namespace ggadget {
 
 /**
+ * @ingroup ScriptableObjects
+ *
  * This class is used to transfer native binary data opaquely through
  * script code. It doesn't expose any property or method to script.
  */

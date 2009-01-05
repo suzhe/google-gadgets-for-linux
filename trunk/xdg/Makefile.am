@@ -28,6 +28,13 @@ noinst_SCRIPTS=intl-desktop-file.sh
 
 .PHONY: intl-desktop-file.sh
 
+if GGL_CROSS_COMPILING
+intl-desktop-file.sh: intl-desktop-file
+	@echo '#!/bin/sh' > $@; \
+	 echo 'echo intl-desktop-file can not work in cross-compiling mode.' >> $@; \
+	 echo 'cp $$@' >> $@; \
+	 chmod 0755 $@
+else
 intl-desktop-file.sh: intl-desktop-file
 	@echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
@@ -39,6 +46,7 @@ intl-desktop-file.sh: intl-desktop-file
 	 echo 'export GGL_MODULE_PATH' >> $@; \
 	 echo '$(abs_builddir)/intl-desktop-file $$@' >> $@; \
 	 chmod 0755 $@
+endif
 
 # To make sure our mime type has higher priority.
 xml_files = 00-google-gadgets.xml

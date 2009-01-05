@@ -26,6 +26,13 @@
 namespace ggadget {
 
 /**
+ * @defgroup ViewDecorator View decorator
+ * @ingroup CoreLibrary
+ */
+
+/**
+ * @ingroup ViewDecorator
+ *
  * Base class for all kinds of view decorators.
  * A view decorator is a special kind of view, which contains a child view and
  * some additional elements to decorate the child view, such as a resize
