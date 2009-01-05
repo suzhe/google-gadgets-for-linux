@@ -400,10 +400,6 @@ class SideBarGtkHost::Impl {
                                     static_cast<int>(SIDEBAR_POSITION_RIGHT)),
                             priority);
     }
-
-    menu->AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0, 0,
-                  NewSlot(this, &Impl::ChangeHotKeyMenuHandler), priority);
-
     {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"),
                                           priority);
@@ -421,6 +417,9 @@ class SideBarGtkHost::Impl {
                    MenuInterface::MENU_ITEM_ICON_ZOOM_OUT,
                    NewSlot(this, &Impl::FontSizeMenuHandler, -1), priority);
     }
+    menu->AddItem(GM_("MENU_ITEM_CHANGE_HOTKEY"), 0, 0,
+                  NewSlot(this, &Impl::ChangeHotKeyMenuHandler), priority);
+
     menu->AddItem(NULL, 0, 0, NULL, priority);
     if (AddFloatingGadgetToMenu(menu, priority)) {
       menu->AddItem(NULL, 0, 0, NULL, priority);

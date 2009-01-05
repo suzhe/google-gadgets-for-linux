@@ -183,7 +183,7 @@ static void ExtractArgumentsValue() {
     g_arguments.script_runtime =
         ggadget::VariantValue<std::string>()(arg_value);
   if (g_arguments.script_runtime == "qt" ||
-      g_arguments.script_runtime == "qt-script_runtime") {
+      g_arguments.script_runtime == "qt-script-runtime") {
     kGlobalExtensions[0] = "qt-script-runtime";
   } else {
     kGlobalExtensions[0] = "smjs-script-runtime";

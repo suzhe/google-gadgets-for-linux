@@ -131,6 +131,9 @@ class Elements::Impl : public SmallObject<> {
         return false;
       if (IsChild(element) && element->GetIndex() + 1 == before->GetIndex())
         return true;
+    } else {
+      if (IsChild(element) && element->GetIndex() == children_.size())
+        return true;
     }
     if (element->GetView() != view_)
       return false;

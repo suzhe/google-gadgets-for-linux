@@ -274,14 +274,14 @@ class SingleViewHost::Impl {
     GtkRequisition req;
     gtk_widget_set_size_request(widget_, width, height);
     gtk_widget_size_request(window_, &req);
+    gtk_widget_set_size_request(widget_, -1, -1);
 
-    if (gtk_window_get_resizable(GTK_WINDOW(window_))) {
-      gtk_widget_set_size_request(widget_, -1, -1);
+    // If the window is resizable, resize the window directly.
+    // Otherwise do nothing. Because gtk_widget_set_size_request() will queue a
+    // resize request, which will adjust the window size according to view's
+    // size. See WidgetSizeRequestHandler().
+    if (gtk_window_get_resizable(GTK_WINDOW(window_)))
       gtk_window_resize(GTK_WINDOW(window_), req.width, req.height);
-    } else {
-      // The window is not resizable, set the size request instead.
-      gtk_widget_set_size_request(window_, req.width, req.height);
-    }
 
     // If the window is not mapped yet, then save the window size as initial
     // size.
@@ -913,25 +913,28 @@ class SingleViewHost::Impl {
                                       GtkRequisition *requisition,
                                       gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
-      // Don't allow user to shrink options dialog.
-      double zoom = impl->view_->GetGraphics()->GetZoom();
-      double default_width, default_height;
-      impl->view_->GetDefaultSize(&default_width, &default_height);
-      requisition->width = static_cast<int>(ceil(default_width * zoom));
-      requisition->height = static_cast<int>(ceil(default_height * zoom));
-    } else if (impl->resizable_mode_ == ViewInterface::RESIZABLE_FALSE) {
-      double zoom = impl->view_->GetGraphics()->GetZoom();
+    double zoom = impl->view_->GetGraphics()->GetZoom();
+    if (impl->resizable_mode_ == ViewInterface::RESIZABLE_FALSE) {
       double width = impl->view_->GetWidth() * zoom;
       double height = impl->view_->GetHeight() * zoom;
       requisition->width = static_cast<int>(ceil(width));
       requisition->height = static_cast<int>(ceil(height));
+    } else if (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      double width, height;
+      // Don't allow user to shrink options dialog.
+      impl->view_->GetDefaultSize(&width, &height);
+      requisition->width = static_cast<int>(ceil(width * zoom));
+      requisition->height = static_cast<int>(ceil(height * zoom));
     } else {
       // To make sure that user can resize the toplevel window freely.
       requisition->width = 1;
       requisition->height = 1;
     }
-    DLOG("Size request(%d, %d)", requisition->width, requisition->height);
+    DLOG("%s window size request(%d, %d)",
+         (impl->type_ == ViewHostInterface::VIEW_HOST_OPTIONS ? "Options" :
+          (impl->type_ == ViewHostInterface::VIEW_HOST_MAIN ? "Main" :
+           "Details")),
+         requisition->width, requisition->height);
   }
 
   static void FixedSizeAllocateHandler(GtkWidget *widget,

@@ -15,7 +15,7 @@
   limitations under the License.
 -->
 
-<view width="250" height="100" resizable="true" onopen="view_onopen()"
+<view width="250" height="100" resizable="false" onopen="view_onopen()"
   onsize="view_onsize()">
   <script>
 <!--

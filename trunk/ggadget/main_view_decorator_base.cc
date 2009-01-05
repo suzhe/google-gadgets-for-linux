@@ -444,6 +444,8 @@ void MainViewDecoratorBase::SetButtonBoxVisible(bool visible) {
     if (elm && elm->IsVisible()) {
       // Only show button box when there is at least one visible button.
       impl_->buttons_div_->SetVisible(visible);
+      // Bring the button box to front.
+      InsertDecoratorElement(impl_->buttons_div_, false);
       return;
     }
   }
