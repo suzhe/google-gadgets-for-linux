@@ -21,18 +21,25 @@
 #include <cstdlib>
 #include <cstring>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/permissions.h>
 #include <ggadget/system_utils.h>
+
+#ifdef GGL_ENABLE_XDGMIME
 #include <third_party/xdgmime/xdgmime.h>
+#endif
 
 namespace ggadget {
 namespace xdg {
+
+static const char kUnknownMimeType[] = "application/octet-stream";
 
 enum WmType {
   WM_UNKNOWN,
@@ -183,7 +190,7 @@ std::string GetFileMimeType(const char *file) {
     { NULL, NULL }
   };
 
-  std::string mime(XDG_MIME_TYPE_UNKNOWN);
+  std::string mime(kUnknownMimeType);
   if (file && *file) {
     struct stat statbuf;
     if (stat(file, &statbuf) == 0) {
@@ -200,16 +207,22 @@ std::string GetFileMimeType(const char *file) {
         }
       }
 
-      if (mime == XDG_MIME_TYPE_UNKNOWN)
+#ifdef GGL_ENABLE_XDGMIME
+      if (mime == kUnknownMimeType)
         mime = xdg_mime_get_mime_type_for_file(file, &statbuf);
+#endif
     }
   }
   return mime;
 }
 
 std::string GetMimeTypeXDGIcon(const char *mimetype) {
+#ifdef GGL_ENABLE_XDGMIME
   const char *icon = xdg_mime_get_icon(mimetype);
   return icon ? std::string(icon) : "";
+#else
+  return "";
+#endif
 }
 
 void GetXDGDataDirs(std::vector<std::string> *dirs) {

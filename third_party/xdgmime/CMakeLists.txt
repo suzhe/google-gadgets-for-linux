@@ -14,20 +14,21 @@
 # limitations under the License.
 #
 
-ADD_DEFINITIONS(
-  -DXDG_PREFIX=_ggl_xdg
-)
+IF(GGL_ENABLE_XDGMIME)
+  ADD_DEFINITIONS(
+    -DXDG_PREFIX=_ggl_xdg
+  )
 
-SET(SRCS
-  xdgmime.c
-  xdgmimealias.c
-  xdgmimecache.c
-  xdgmimeglob.c
-  xdgmimeicon.c
-  xdgmimeint.c
-  xdgmimemagic.c
-  xdgmimeparent.c
-)
+  SET(SRCS
+    xdgmime.c
+    xdgmimealias.c
+    xdgmimecache.c
+    xdgmimeglob.c
+    xdgmimeicon.c
+    xdgmimeint.c
+    xdgmimemagic.c
+    xdgmimeparent.c
+  )
 
-ADD_LIBRARY(xdgmime ${SRCS})
-
+  ADD_LIBRARY(xdgmime ${SRCS})
+ENDIF(GGL_ENABLE_XDGMIME)
