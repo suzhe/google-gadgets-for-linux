@@ -270,9 +270,6 @@ JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  if (JSScriptContext::UnrefJSObjectClass(cx, obj))
-    return;
-
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
@@ -291,6 +288,8 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
       (*it)->Finalize();
     delete wrapper;
   }
+
+  JSScriptContext::UnrefJSObjectClass(cx, obj);
 }
 
 uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {

@@ -93,10 +93,8 @@ class JSScriptContext : public ScriptContextInterface {
   /**
    * When a JSObject is to be finalized, unref its class structure if the
    * class is a registered native class.
-   * Returns true if the class is deleted because its reference count reaches
-   * zero.
    */
-  static bool UnrefJSObjectClass(JSContext *cx, JSObject *object);
+  static void UnrefJSObjectClass(JSContext *cx, JSObject *object);
 
   JSContext *context() const { return context_; }
 
