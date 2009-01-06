@@ -26,11 +26,6 @@
 #include "signals.h"
 #include "string_utils.h"
 
-#ifdef _DEBUG
-#define LOG_WITH_TIMESTAMP
-#define LOG_WITH_FILE_LINE
-#endif
-
 namespace ggadget {
 
 typedef Signal4<std::string, LogLevel, const char *, int,
