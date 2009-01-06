@@ -54,7 +54,6 @@ SET(SRCS
   scriptable_event.cc
   scriptable_file_system.cc
   scriptable_framework.cc
-  scriptable_function.cc
   scriptable_helper.cc
   scriptable_image.cc
   scriptable_menu.cc
