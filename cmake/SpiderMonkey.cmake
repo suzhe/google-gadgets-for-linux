@@ -42,6 +42,21 @@ MACRO(TRY_RUN_SMJS _test_program _definitions _link_flags)
   # MESSAGE("'${TRY_RUN_SMJS_COMPILE_RESULT}' '${TRY_RUN_SMJS_RESULT}'" '${TRY_RUN_SMJS_OUTPUT}')
 ENDMACRO(TRY_RUN_SMJS _test_program _definitions _link_flags)
 
+SET(SMJS_LIST
+  mozilla-js
+  xulrunner-js
+  firefox2-js
+  firefox-js
+  )
+FOREACH(js ${SMJS_LIST})
+  IF(NOT SMJS_FOUND)
+    GET_CONFIG(${js} 0 SMJS SMJS_FOUND)
+    IF(SMJS_FOUND)
+      SET(SMJS_NAME ${LIBSMJS})
+    ENDIF(SMJS_FOUND)
+  ENDIF(NOT SMJS_FOUND)
+ENDFOREACH(js ${SMJS_LIST})
+
 IF(SMJS_FOUND)
   IF(UNIX)
     SET(SMJS_DEFINITIONS "${SMJS_DEFINITIONS} -DXP_UNIX")
@@ -60,7 +75,7 @@ IF(SMJS_FOUND)
       "${SMJS_DEFINITIONS} -DMIN_SMJS_VERSION=160"
       "${CMAKE_EXE_LINKER_FLAGS} ${SMJS_LINKER_FLAGS}")
     IF(NOT TRY_COMPILE_SMJS_RESULT)
-      SET(SMJS_FOUND 1)
+      SET(SMJS_FOUND 0)
       MESSAGE("Failed to try run SpiderMonkey, the library version may be too low.")
     ENDIF(NOT TRY_COMPILE_SMJS_RESULT)
   ENDIF(TRY_COMPILE_SMJS_RESULT)

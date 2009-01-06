@@ -404,25 +404,10 @@ IF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
 
 ENDIF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
 
+# If xpglue fail, try legacy standalone smjs library.
 IF(NOT SMJS_FOUND)
-  SET(SMJS_LIST
-    mozilla-js
-    xulrunner-js
-    firefox2-js
-    firefox-js
-  )
-  FOREACH(js ${SMJS_LIST})
-    IF(NOT SMJS_FOUND)
-      GET_CONFIG(${js} 0 SMJS SMJS_FOUND)
-      IF(SMJS_FOUND)
-        SET(SMJS_NAME ${LIBSMJS})
-      ENDIF(SMJS_FOUND)
-    ENDIF(NOT SMJS_FOUND)
-  ENDFOREACH(js ${SMJS_LIST})
+  INCLUDE(SpiderMonkey)
 ENDIF(NOT SMJS_FOUND)
-
-# Do more test with spidermonkey
-INCLUDE(SpiderMonkey)
 
 # Hell, some distributions' package of smjs is broken. We have to fix it here
 IF(SMJS_FOUND)
