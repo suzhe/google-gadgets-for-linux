@@ -109,12 +109,12 @@ class HostObjectWrapper;
 typedef std::map<size_t, HostObjectWrapper *> HostObjectMap;
 
 struct BrowserInfo {
-  BrowserInfo() : embed(NULL), browser_id(0), loaded(false) { }
+  BrowserInfo() : embed(NULL), browser_id(0), check_load_timer(0) { }
   GtkMozEmbed *embed;
   size_t browser_id;
   BrowserObjectMap browser_objects;
   HostObjectMap host_objects;
-  bool loaded;
+  int check_load_timer;
 };
 
 static size_t g_browser_object_seq = 0;
@@ -714,18 +714,22 @@ static void OnNetStop(GtkMozEmbed *embed, gpointer data) {
   size_t browser_id = reinterpret_cast<size_t>(data);
   SendLog("**** OnNetStop browser=%zu", browser_id);
   BrowserMap::iterator it = g_browsers.find(browser_id);
-  if (it != g_browsers.end())
-    it->second.loaded = true;
+  if (it != g_browsers.end() && it->second.check_load_timer) {
+    g_source_remove(it->second.check_load_timer);
+    it->second.check_load_timer = 0;
+  }
 }
 
 static gboolean CheckContentLoaded(gpointer data) {
   size_t browser_id = reinterpret_cast<size_t>(data);
   BrowserMap::iterator it = g_browsers.find(browser_id);
-  if (it != g_browsers.end() && !it->second.loaded) {
+  if (it != g_browsers.end() && it->second.check_load_timer) {
+    it->second.check_load_timer = 0;
     // It's weird that sometimes gtk_moz_embed_load_url from local file may
     // cause the browser-child enter a state that no more url can be loaded.
     // FIXME: better solution than restarting the child.
-    ForceQuit("Load url from data/local file blocked");
+    ForceQuit(ggadget::StringPrintf(
+        "Load url from data/local file blocked: %zu", browser_id).c_str());
   }
   return FALSE;
 }
@@ -825,13 +829,18 @@ static void SetContent(int param_count, const char **params, size_t id) {
     url = std::string(kDataURLPrefix) + params[2] + ";base64," + data;
   }
   SendLog("Content URL: %.80s...", url.c_str());
-  g_browsers[id].loaded = false;
+  if (g_browsers[id].check_load_timer) {
+    g_source_remove(g_browsers[id].check_load_timer);
+    g_browsers[id].check_load_timer = 0;
+  }
   // Normally data: and file: urls should be loaded immediately, but weirdly
   // sometimes it fails (not related to removing the file). Schedule a timer
   // to check the failure. The timer is required because OnProgress isn't
   // called synchronously.
-  if (!ggadget::TrimString(content).empty())
-    g_timeout_add(2000, CheckContentLoaded, reinterpret_cast<gpointer>(id));
+  if (!ggadget::TrimString(content).empty()) {
+    g_browsers[id].check_load_timer =
+        g_timeout_add(2000, CheckContentLoaded, reinterpret_cast<gpointer>(id));
+  }
   gtk_moz_embed_load_url(embed, url.c_str());
 
   // The load should finish immediately, so it's safe to delete the file now.

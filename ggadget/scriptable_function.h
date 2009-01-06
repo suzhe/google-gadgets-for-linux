@@ -37,16 +37,16 @@ class ScriptableFunction : public ScriptableHelperDefault {
    * This class will take the ownership of the slot.
    * @param slot dynamic slot, must be created with operator new.
    */
-  ScriptableFunction(Slot *slot);
+  ScriptableFunction(Slot *slot) {
+    RegisterMethod("", slot);
+  }
 
  protected:
-  virtual ~ScriptableFunction();
-  virtual void DoRegister();
+  virtual ~ScriptableFunction() {
+  }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableFunction);
-  class Impl;
-  Impl *impl_;
 };
 
 } // namespace ggadget
