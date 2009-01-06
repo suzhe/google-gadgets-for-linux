@@ -68,6 +68,7 @@
 #include <nsIScriptNameSpaceManager.h>
 #include <nsIURI.h>
 #include <nsIWebProgress.h>
+#include <nsIWebProgressListener.h>
 #include <nsIXPConnect.h>
 #include <nsIXPCScriptable.h>
 #include <nsServiceManagerUtils.h>
@@ -720,6 +721,15 @@ static void OnNetStop(GtkMozEmbed *embed, gpointer data) {
   }
 }
 
+static void OnNetState(GtkMozEmbed *embed, gint state, guint, gpointer data) {
+  static const gint kStateMask = nsIWebProgressListener::STATE_STOP |
+                                 nsIWebProgressListener::STATE_IS_REQUEST;
+  if ((state & kStateMask) == kStateMask) {
+    // The current document itself has been loaded.
+    OnNetStop(embed, data);
+  }
+}
+
 static gboolean CheckContentLoaded(gpointer data) {
   size_t browser_id = reinterpret_cast<size_t>(data);
   BrowserMap::iterator it = g_browsers.find(browser_id);
@@ -765,7 +775,15 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   browser_info->embed = embed;
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
   g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
+
+  // net_stop is not enough by itself, because if the loaded document contains
+  // other sub contents or documents, net_stop is only called after all
+  // sub contents/documents are loaded.
+  // net_state can capture the event that this document itself has finished
+  // loading.
   g_signal_connect(embed, "net_stop", G_CALLBACK(OnNetStop),
+                   reinterpret_cast<gpointer>(id));
+  g_signal_connect(embed, "net_state", G_CALLBACK(OnNetState),
                    reinterpret_cast<gpointer>(id));
   gtk_widget_show_all(window);
 }
