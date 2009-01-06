@@ -41,8 +41,12 @@ libggadget_xdg@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_xdg@GGL_EPOCH@_la_LIBADD = \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+if GGL_ENABLE_XDGMIME
+libggadget_xdg@GGL_EPOCH@_la_LIBADD += \
 			  $(top_builddir)/third_party/xdgmime/libxdgmime.la
+endif
 
 libggadget_xdg@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \

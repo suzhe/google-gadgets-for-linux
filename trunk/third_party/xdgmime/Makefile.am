@@ -16,6 +16,8 @@
 
 EXTRA_DIST = CMakeLists.txt
 
+if GGL_ENABLE_XDGMIME
+
 AM_CPPFLAGS = $(PREDEFINED_MACROS) -DXDG_PREFIX=_ggl_xdg
 AM_CFLAGS = $(DEFAULT_COMPILE_FLAGS)
 
@@ -45,3 +47,5 @@ noinst_PROGRAMS = test-mime
 
 test_mime_SOURCES = test-mime.c
 test_mime_LDADD = libxdgmime.la
+
+endif

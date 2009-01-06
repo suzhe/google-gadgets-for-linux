@@ -46,6 +46,7 @@ typedef struct _XdgMimeCache XdgMimeCache;
 #define _xdg_mime_cache_get_icon                      XDG_RESERVED_ENTRY(cache_get_icon)
 #define _xdg_mime_cache_get_generic_icon              XDG_RESERVED_ENTRY(cache_get_generic_icon)
 #define _xdg_mime_cache_glob_dump                     XDG_RESERVED_ENTRY(cache_glob_dump)
+#define _caches                                       XDG_RESERVED_ENTRY(caches)
 #endif
 
 extern XdgMimeCache **_caches;

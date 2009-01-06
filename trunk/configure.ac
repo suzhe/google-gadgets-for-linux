@@ -314,6 +314,12 @@ AC_ARG_ENABLE([xdg-icon-resource],
 	      [enable_xdg_icon_resource=$enableval],
 	      [enable_xdg_icon_resource=yes])
 
+AC_ARG_ENABLE([xdgmime],
+	      AC_HELP_STRING([--disable-xdgmime],
+			     [disable built-in xdgmime support]),
+	      [enable_xdgmime=$enableval],
+	      [enable_xdgmime=yes])
+
 if test x$build_libggadget_gtk != xyes; then
   build_gtk_host=no
 fi
@@ -1126,8 +1132,13 @@ if test x$has_pthread = xyes; then
   PTHREAD_LIBS="-lpthread"
   AC_SUBST(PTHREAD_LIBS)
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_PTHREAD=1"
-  AC_SUBST(PREDEFINED_MACROS)
 fi
+
+#xdgmime
+if test x$enable_xdgmime = xyes; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_ENABLE_XDGMIME"
+fi
+AM_CONDITIONAL([GGL_ENABLE_XDGMIME], [test x$enable_xdgmime = xyes])
 
 # Clear the default CFLAGS and CXXFLAGS
 CFLAGS=$ggl_save_CFLAGS
@@ -1236,7 +1247,6 @@ Build options:
   OEM brand                     $ggl_oem_brand
 
  Libraries:
-  GTK SVG Support               $has_librsvg
   Build libggadget-gtk          $build_libggadget_gtk
   Build libggadget-qt           $build_libggadget_qt
   Build libggadget-dbus         $build_libggadget_dbus
@@ -1258,6 +1268,12 @@ Build options:
   Build curl-xml-http-request   $build_curl_xml_http_request
   Build qt-xml-http-request     $build_qt_xml_http_request
   Build libxml2-xml-parser      $build_libxml2_xml_parser
+
+ Other features:
+  GTK SVG Support               $has_librsvg
+  NetworkManager support        $has_network_manager
+  Startup notification support  $has_startup_notification
+  Built-in xdgmime support      $enable_xdgmime
 
  Hosts:
   Build gtk host                $build_gtk_host
