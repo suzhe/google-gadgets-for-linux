@@ -26,6 +26,19 @@
 namespace ggadget {
 namespace qt {
 
+/**
+ * @defgroup QtLibrary libggadget-qt - the Qt based GUI implementation
+ * @ingroup SharedLibraries
+ *
+ * This shared library contains implementations for all GUI related interfaces
+ * based on Qt, as well as necessary utilities for a Qt based host application.
+ */
+
+/**
+ * @ingroup QtLibrary
+ * This class implements the GraphicsInterface using Qt library.
+ * It is responsible for creating CanvasInterface objects for ggadget.
+ */
 class QtGraphics : public GraphicsInterface {
  public:
   /**

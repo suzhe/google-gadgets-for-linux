@@ -32,6 +32,11 @@ class Gadget;
 namespace gtk {
 
 /**
+ * @ingroup GtkLibrary
+ * @{
+ */
+
+/**
  * Displays a message box containing the message string.
  *
  * @param title tile of the alert window.
@@ -185,6 +190,8 @@ int GetCurrentDesktopOfScreen(GdkScreen *screen);
 
 /** Gets current time in milliseconds. */
 uint64_t GetCurrentTime();
+
+/** @} */
 
 } // namespace gtk
 } // namespace ggadget

@@ -45,6 +45,7 @@ class MenuInterface;
 /**
  * @defgroup View View
  * @ingroup CoreLibrary
+ * The default implementation of ViewInterface.
  */
 
 /**

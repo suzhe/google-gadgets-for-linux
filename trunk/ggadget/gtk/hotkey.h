@@ -26,6 +26,11 @@
 namespace ggadget {
 namespace gtk {
 
+/**
+ * @ingroup GtkLibrary
+ * @{
+ */
+
 /** A class to grab a specified hotkey. */
 class HotKeyGrabber {
  public:
@@ -113,6 +118,8 @@ class HotKeyDialog {
   class Impl;
   Impl *impl_;
 };
+
+/** @} */
 
 } // namespace gtk
 } // namespace ggadget

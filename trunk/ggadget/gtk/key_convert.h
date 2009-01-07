@@ -23,6 +23,11 @@ namespace ggadget {
 namespace gtk {
 
 /**
+ * @ingroup GtkLibrary
+ * @{
+ */
+
+/**
  * Convert a GDK keyval to a key code accepted by @c ggadget::KeyboardEvent
  * whose type is @c ggadget::Event::EVENT_KEY_DOWN or
  * @c ggadget::Event::EVENT_KEY_UP).
@@ -40,6 +45,8 @@ int ConvertGdkModifierToModifier(guint state);
  * Event classes.
  */
 int ConvertGdkModifierToButton(guint state);
+
+/** @} */
 
 } // namespace gtk
 } // namespace ggadget

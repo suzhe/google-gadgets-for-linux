@@ -22,7 +22,15 @@
 namespace ggadget {
 namespace js {
 
+/**
+ * @defgroup JSLibrary libggadget-js - the shared javascript utilities
+ * @ingroup SharedLibraries
+ * @{
+ */
+
 bool ConvertJSONToJavaScript(const char *json, std::string *script);
+
+/** @} */
 
 } // namespace js
 } // namespace ggadget

@@ -26,6 +26,10 @@
 namespace ggadget {
 namespace qt {
 
+/**
+ * @ingroup QtLibrary
+ * A class to draw a view onto a QWidget.
+ */
 class QtViewWidget : public QWidget {
   Q_OBJECT
  public:

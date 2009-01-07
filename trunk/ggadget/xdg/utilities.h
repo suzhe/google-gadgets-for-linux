@@ -25,6 +25,11 @@ class Permissions;
 
 namespace xdg {
 
+/**
+ * @ingroup XDGLibrary
+ * @{
+ */
+
 const char kDirectoryMimeType[] = "inode/directory";
 
 /**
@@ -53,6 +58,8 @@ void GetXDGDataDirs(std::vector<std::string> *dirs);
  * @return path to the icon file, or empty string if can't find the icon.
  */
 std::string FindIconFileInXDGDataDirs(const char *icon);
+
+/** @} */
 
 } // namespace xdg
 } // namespace ggadget

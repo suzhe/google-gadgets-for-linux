@@ -21,8 +21,15 @@
 namespace ggadget {
 namespace js {
 
+/**
+ * @ingroup JSLibrary
+ * @{
+ */
+
 std::string MassageJScript(const char *input, bool debug,
                            const char *filename, int lineno);
+
+/** @} */
 
 } // namespace js
 } // namespace ggadget

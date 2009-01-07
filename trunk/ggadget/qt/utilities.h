@@ -29,6 +29,11 @@ class Gadget;
 class MainLoopInterface;
 namespace qt {
 
+/**
+ * @ingroup QtLibrary
+ * @{
+ */
+
 Qt::CursorShape GetQtCursorShape(int type);
 
 int GetMouseButtons(const Qt::MouseButtons buttons);
@@ -82,6 +87,8 @@ bool InitGGL(
  */
 bool ConfirmGadget(GadgetManagerInterface *gadget_manager,
                    int gadget_id);
+
+/** @} */
 
 } // namespace qt
 } // namespace ggadget

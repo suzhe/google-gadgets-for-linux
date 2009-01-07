@@ -23,6 +23,7 @@ namespace ggadget {
 namespace gtk {
 
 /**
+ * @ingroup GtkLibrary
  * A simple class to show a tooltip at a specified screen and position.
  */
 class Tooltip {

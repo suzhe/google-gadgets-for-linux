@@ -21,8 +21,11 @@
 namespace ggadget {
 namespace gtk {
 
-// gtk::MainLoop is a wrapper around gtk's main loop functions to realize
-// MainLoopInterface interface.
+/**
+ * @ingroup GtkLibrary
+ * It's is a wrapper around gtk's main loop functions to implement
+ * MainLoopInterface interface.
+ */
 class MainLoop : public MainLoopInterface {
  public:
   MainLoop();

@@ -31,6 +31,7 @@ class ViewElement;
 /**
  * @defgroup SideBar SideBar
  * @ingroup CoreLibrary
+ * Platform-independent helper class for sidebar host.
  */
 
 /**

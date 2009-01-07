@@ -1,3 +1,13 @@
+* 0.10.5 - Jan 7th 2009
+  o Following reported issues have been fixed: 257, 258, 260, 261, 262, 263
+  o Some nasty bugs in libggadget, libggadget-gtk and qt host have been fixed.
+  o An about dialog has been added for both gtk and qt hosts.
+  o Gadgets' about dialog has been reimplemented with platform independent
+    code.
+  o A Doxyfile has been included in source package, which can be used for
+    generating API reference manual with doxygen command. graphviz is needed.
+  o API reference manual has been improved dramatically.
+
 * 0.10.4 - Dec 16th 2008
   o Following reported issues have been fixed: 242, 246, 245, 253, 239, 249,
     250, 243, 234, 254, 255

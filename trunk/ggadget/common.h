@@ -28,7 +28,17 @@
 #include <ggadget/sysdeps.h>
 
 /**
- * @defgroup CoreLibrary The core library
+ * @defgroup SharedLibraries Shared libraries
+ * Shared libraries that host applications and third party applications can
+ * use.
+ */
+
+/**
+ * @defgroup CoreLibrary libggadget - the core library
+ * @ingroup SharedLibraries
+ *
+ * The core library includes all platform-independent interfaces, classes and
+ * utilities to support Google Desktop Gadgets API.
  */
 
 /**

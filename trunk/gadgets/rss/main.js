@@ -43,7 +43,7 @@ if (url != "unset") {
   // Gadget added by GadgetManager
   url = NormalizeURL(url);
  } else {
-  // Always add the default URL if: 
+  // Always add the default URL if:
   // user added gadget & no feeds are present in feeds list
   url = strings.GADGET_DEFAULTURL;
 }
@@ -58,7 +58,7 @@ options.putValue(kPrefsOption, false);
 contents.contentFlags = gddContentFlagHaveDetails;
 
 plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
-plugin.about_text = strings.GADGET_NAME + "\n\n" 
+plugin.about_text = strings.GADGET_NAME + "\n\n"
   + strings.GADGET_COPYRIGHT + "\n\n" + strings.GADGET_DESC;
 
 var g_refresh_timer = 0;
@@ -84,12 +84,17 @@ function Refresh() {
 
     UpdateCaption(strings.GADGET_LOADING);
 
+    if (g_refresh_timer != 0)
+      view.clearTimeout(g_refresh_timer);
+
     // Load in parallel.
     g_feeds_loading = g_feeds.length;
     for (var i = 0; i < g_feeds.length; i++) {
       var feed = g_feeds[i];
       LoadDocument(feed);
     }
+
+    g_refresh_timer = view.setTimeout(Refresh, g_refresh_interval);
   }
 }
 
@@ -149,8 +154,6 @@ function ParseDocument(xml_request, feed) {
 
   gadget.debug.trace("finished parsing");
   DisplayFeedItems();
-  if (g_refresh_timer == 0)
-    g_refresh_timer = view.setInterval(Refresh, g_refresh_interval);
 }
 
 function BuildAtomDoc(xml, feed) {
@@ -455,8 +458,6 @@ function FeedListUpdated() {
     UpdateCaption(null);
     contents.removeAllContentItems();
     contents.maxContentItems = g_max_items * g_feeds.length;
-    view.clearInterval(g_refresh_timer);
-    g_refresh_timer = 0;
     Refresh();
   }
 }

@@ -28,6 +28,7 @@ namespace ggadget {
 namespace gtk {
 
 /**
+ * @ingroup GtkLibrary
  * An implementation of @c MenuInterface for gtk based host.
  */
 class MenuBuilder : public ggadget::MenuInterface {
