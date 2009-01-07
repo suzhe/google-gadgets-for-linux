@@ -30,8 +30,20 @@ DECLARE_VARIANT_PTR_TYPE(Variant);
 
 namespace dbus {
 
+/**
+ * @defgroup DBusLibrary libggadget-dbus - the DBus Proxy
+ * @ingroup SharedLibraries
+ *
+ * This shared library contains DBusProxy class, which is for accessing remote
+ * DBus objects in C++ code.
+ * @{
+ */
+
 static const int kDefaultDBusTimeout = 1000;  // 1 second.
 
+/**
+ * Message types corresponding to DBus types.
+ */
 enum MessageType {
   MESSAGE_TYPE_INVALID = 0,
   MESSAGE_TYPE_BYTE,
@@ -52,11 +64,20 @@ enum MessageType {
   MESSAGE_TYPE_DICT
 };
 
-/** A class to wrap a remote DBus object. */
+/**
+ * A class to wrap a remote DBus object.
+ *
+ * This class is used for C++ code to access remote DBus objects.
+ * It supports accessing properties, methods and signals of remote DBus
+ * objects.
+ * Exporting local C++ object to DBus is not supported.
+ */
 class DBusProxy : public SmallObject<> {
  public:
-  // Access typs of a property.
-  // They can be used as bitmask.
+  /**
+   * Access typs of a property.
+   * They can be used as bitmask.
+   */
   enum PropertyAccess {
     PROP_UNKNOWN = 0,
     PROP_READ = 1,
@@ -324,6 +345,8 @@ class DBusProxy : public SmallObject<> {
 
   DISALLOW_EVIL_CONSTRUCTORS(DBusProxy);
 };
+
+/** @} */
 
 }  // namespace dbus
 }  // namespace ggadget

@@ -28,6 +28,7 @@ class ViewInterface;
 namespace gtk {
 
 /**
+ * @ingroup GtkLibrary
  * A class to bind a View with a GtkWidget.
  *
  * The specified View will be drawn on the specified GtkWidget, and all events

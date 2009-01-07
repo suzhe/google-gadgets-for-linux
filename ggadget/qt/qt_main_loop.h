@@ -8,7 +8,15 @@ namespace ggadget {
 namespace qt {
 
 class WatchNode;
-// QtMainLoop is a qt4 implementation of MainLoopInterface interface.
+
+/**
+ * @ingroup QtLibrary
+ * @{
+ */
+
+/**
+ * QtMainLoop is an implementation of MainLoopInterface based on Qt.
+ */
 class QtMainLoop : public MainLoopInterface {
  public:
   QtMainLoop();
@@ -35,6 +43,7 @@ class QtMainLoop : public MainLoopInterface {
   DISALLOW_EVIL_CONSTRUCTORS(QtMainLoop);
 };
 
+/** A helper class used by QtMainLoop */
 class WatchNode : public QObject {
   Q_OBJECT
  public:
@@ -58,6 +67,8 @@ class WatchNode : public QObject {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(WatchNode);
 };
+
+/** @} */
 
 } // namespace qt
 } // namespace ggadget

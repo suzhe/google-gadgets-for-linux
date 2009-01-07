@@ -29,6 +29,10 @@
 namespace ggadget {
 namespace qt {
 
+/**
+ * @ingroup QtLibrary
+ * An implementation of @c ViewHostInterface based on Qt.
+ */
 class QtViewHost : public ViewHostInterface {
  public:
   enum Flag {

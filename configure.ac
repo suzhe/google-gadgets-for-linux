@@ -51,11 +51,13 @@ GGL_MAJOR_VERSION=0
 GGL_MINOR_VERSION=10
 GGL_MICRO_VERSION=5
 
-GGL_VERSION=\"$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION\"
+GGL_VERSION_UNQUOTED="$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION"
+GGL_VERSION="\"$GGL_VERSION_UNQUOTED\""
 
 AC_SUBST(GGL_MAJOR_VERSION)
 AC_SUBST(GGL_MINOR_VERSION)
 AC_SUBST(GGL_MICRO_VERSION)
+AC_SUBST(GGL_VERSION_UNQUOTED)
 AC_SUBST(GGL_VERSION)
 
 
@@ -83,20 +85,24 @@ AC_SUBST(LIBGGADGET_VERSION)
 # Define a string for the earliest version that this release has
 # binary compatibility with. This is used for module locations.
 #
-LIBGGADGET_BINARY_VERSION=\"1.0.0\"
+LIBGGADGET_BINARY_VERSION_UNQUOTED="1.0.0"
+LIBGGADGET_BINARY_VERSION="\"$LIBGGADGET_BINARY_VERSION_UNQUOTED\""
+AC_SUBST(LIBGGADGET_BINARY_VERSION_UNQUOTED)
 AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-GGL_VERSION_TIMESTAMP=\"081216-000000\"
+GGL_VERSION_TIMESTAMP="\"090107-000000\""
 AC_SUBST(GGL_VERSION_TIMESTAMP)
 
 # Define the version of Google Desktop Gadget API that this release supports.
 GGL_API_MAJOR_VERSION=5
 GGL_API_MINOR_VERSION=8
-GGL_API_VERSION=\"$GGL_API_MAJOR_VERSION.$GGL_API_MINOR_VERSION.0.0\"
+GGL_API_VERSION_UNQUOTED="$GGL_API_MAJOR_VERSION.$GGL_API_MINOR_VERSION.0.0"
+GGL_API_VERSION="\"$GGL_API_VERSION_UNQUOTED\""
 AC_SUBST(GGL_API_MAJOR_VERSION)
 AC_SUBST(GGL_API_MINOR_VERSION)
+AC_SUBST(GGL_API_VERSION_UNQUOTED)
 AC_SUBST(GGL_API_VERSION)
 
 # Define a string for the earliest version that this release cannot
@@ -398,30 +404,30 @@ case $host_os in
     ggl_host_type=windows
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
     SMJS_CFLAGS="-DXP_WIN"
-    GGL_PLATFORM_SHORT=\"win\"
-    GGL_PLATFORM=\"windows\"
+    GGL_PLATFORM_SHORT="\"win\""
+    GGL_PLATFORM="\"windows\""
     ;;
   *darwin* )
     ggl_host_type=macosx
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
     SMJS_CFLAGS="-DXP_UNIX"
-    GGL_PLATFORM_SHORT=\"mac\"
-    GGL_PLATFORM=\"mac\"
+    GGL_PLATFORM_SHORT="\"mac\""
+    GGL_PLATFORM="\"mac\""
     ;;
   *linux* )
     ggl_host_type=linux
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
     SMJS_CFLAGS="-DXP_UNIX"
     build_linux_system_framework=yes
-    GGL_PLATFORM_SHORT=\"linux\"
-    GGL_PLATFORM=\"linux\"
+    GGL_PLATFORM_SHORT="\"linux\""
+    GGL_PLATFORM="\"linux\""
     ;;
   *solaris* )
     ggl_host_type=solaris
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
     SMJS_CFLAGS="-DXP_UNIX"
-    GGL_PLATFORM_SHORT=\"solaris\"
-    GGL_PLATFORM=\"solaris\"
+    GGL_PLATFORM_SHORT="\"solaris\""
+    GGL_PLATFORM="\"solaris\""
     ;;
   * )
     ggl_host_type=unknown

@@ -25,7 +25,17 @@ namespace ggadget {
 namespace gtk {
 
 /**
- * This class realizes the GraphicsInterface using the Cairo graphics library.
+ * @defgroup GtkLibrary libggadget-gtk - the Gtk based GUI implementation
+ * @ingroup SharedLibraries
+ *
+ * This shared library contains implementations for all GUI related interfaces
+ * based on Gtk, as well as necessary utilities for a Gtk based host
+ * application.
+ */
+
+/**
+ * @ingroup GtkLibrary
+ * This class implements the GraphicsInterface using the Cairo graphics library.
  * It is responsible for creating CanvasInterface objects for ggadget.
  */
 class CairoGraphics : public GraphicsInterface {

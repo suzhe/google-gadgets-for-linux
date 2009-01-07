@@ -28,6 +28,7 @@ namespace ggadget {
 /**
  * @defgroup ViewDecorator View decorator
  * @ingroup CoreLibrary
+ * Helper classes to draw view decorations, such as borders, buttons, etc.
  */
 
 /**

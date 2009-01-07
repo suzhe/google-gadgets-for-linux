@@ -30,7 +30,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  gadgets \
 	  hosts
 
-EXTRA_DIST = autotools cmake CMakeLists.txt
+EXTRA_DIST = autotools cmake CMakeLists.txt Doxyfile
 
 dist-hook:
 	rm -rf `find $(distdir) -name '.svn'`

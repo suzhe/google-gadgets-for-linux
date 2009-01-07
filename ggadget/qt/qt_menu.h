@@ -28,7 +28,8 @@ namespace ggadget {
 namespace qt {
 
 /**
- * An implementation of @c MenuInterface for the simple gadget host.
+ * @ingroup QtLibrary
+ * An implementation of @c MenuInterface based on Qt.
  */
 class QtMenu : public ggadget::MenuInterface {
  public:

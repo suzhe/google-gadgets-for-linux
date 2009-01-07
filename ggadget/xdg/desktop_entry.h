@@ -23,6 +23,15 @@
 namespace ggadget {
 namespace xdg {
 
+/**
+ * @defgroup XDGLibrary libggadget-xdg - Utilities to support freedesktop specs.
+ * @ingroup SharedLibraries
+ *
+ * This shared library contains some utilities to support freedesktop specs,
+ * such as Desktop Entry spec, etc.
+ * @{
+ */
+
 const char kDesktopEntryFileExtension[] = ".desktop";
 const char kDesktopEntryMimeType[] = "application/x-desktop";
 
@@ -137,6 +146,8 @@ class DesktopEntry {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(DesktopEntry);
 };
+
+/** @} */
 
 } // namespace xdg
 } // namespace ggadget

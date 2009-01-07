@@ -35,7 +35,17 @@ template <typename R, typename P1> class Slot1;
 namespace npapi {
 
 /**
- * Represents a plugin instance.
+ * @defgroup NPAPILibrary libggadget-npapi - the NPAPI wrapper
+ * @ingroup SharedLibraries
+ *
+ * This shared library contains a wrapper for NPAPI plugins, so that C++ and
+ * javascript code can access them easily. The most important usage is to
+ * support adobe flash plugin.
+ */
+
+/**
+ * @ingroup NPAPILibrary
+ * Represents a npapi plugin instance.
  */
 class Plugin : public SmallObject<> {
  public:

@@ -28,7 +28,8 @@ namespace ggadget {
 namespace gtk {
 
 /**
- * An implementation of @c ViewHostInterface for simple gtk host.
+ * @ingroup GtkLibrary
+ * An implementation of @c ViewHostInterface based on Gtk.
  *
  * This host can only show one View in single GtkWindow.
  *
