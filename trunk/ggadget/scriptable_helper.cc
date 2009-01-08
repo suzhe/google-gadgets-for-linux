@@ -153,10 +153,10 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   // Stores information of all properties of this object.
   PropertyInfoMap property_info_;
   // Stores class-based property information for all classes.
-  static ClassInfoMap all_class_info_;
+  static ClassInfoMap *all_class_info_;
   // If a class has no class-based property_info, let class_property_info_
   // point to this map to save duplicated blank maps.
-  static PropertyInfoMap blank_property_info_;
+  static PropertyInfoMap *blank_property_info_;
   PropertyInfoMap *class_property_info_;
 
 #ifdef _DEBUG
@@ -205,9 +205,14 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   ScriptableInterface *pending_exception_;
 };
 
-ScriptableHelperImpl::ClassInfoMap ScriptableHelperImpl::all_class_info_;
+// Class information shall be truely static and shouldn't be destroyed when
+// exiting.
+ScriptableHelperImpl::ClassInfoMap *ScriptableHelperImpl::all_class_info_ =
+  new ScriptableHelperImpl::ClassInfoMap;
 ScriptableHelperImpl::PropertyInfoMap
-    ScriptableHelperImpl::blank_property_info_;
+  *ScriptableHelperImpl::blank_property_info_ =
+    new ScriptableHelperImpl::PropertyInfoMap;
+
 #ifdef _DEBUG
 ScriptableHelperImpl::ClassStat ScriptableHelperImpl::class_stat_;
 #endif
@@ -251,15 +256,15 @@ ScriptableHelperImpl::~ScriptableHelperImpl() {
 void ScriptableHelperImpl::EnsureRegistered() {
   if (!class_property_info_) {
     uint64_t class_id = owner_->GetScriptable()->GetClassId();
-    ClassInfoMap::iterator it = all_class_info_.find(class_id);
-    if (it == all_class_info_.end()) {
+    ClassInfoMap::iterator it = all_class_info_->find(class_id);
+    if (it == all_class_info_->end()) {
       registering_class_ = true;
       owner_->DoClassRegister();
       registering_class_ = false;
-      it = all_class_info_.find(class_id);
-      if (it == all_class_info_.end()) {
+      it = all_class_info_->find(class_id);
+      if (it == all_class_info_->end()) {
         // This class's DoClassRegister() did nothing.
-        class_property_info_ = &blank_property_info_;
+        class_property_info_ = blank_property_info_;
       } else {
         class_property_info_ = &it->second;
       }
@@ -297,8 +302,9 @@ void ScriptableHelperImpl::AddPropertyInfo(const char *name, PropertyType type,
                                            const Variant &prototype,
                                            Slot *getter, Slot *setter) {
   uint64_t class_id = owner_->GetScriptable()->GetClassId();
-  PropertyInfo *info = registering_class_ ? &all_class_info_[class_id][name] :
-                       &property_info_[name];
+  PropertyInfo *info =
+      registering_class_ ? &(*all_class_info_)[class_id][name] :
+      &property_info_[name];
   if (info->type != PROPERTY_NOT_EXIST) {
     // A previously registered property is overriden.
     DestroyPropertyInfo(info);

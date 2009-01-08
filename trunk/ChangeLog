@@ -7,6 +7,7 @@
   o A Doxyfile has been included in source package, which can be used for
     generating API reference manual with doxygen command. graphviz is needed.
   o API reference manual has been improved dramatically.
+  o Fully static build has been supported (only with configure/make).
 
 * 0.10.4 - Dec 16th 2008
   o Following reported issues have been fixed: 242, 246, 245, 253, 239, 249,

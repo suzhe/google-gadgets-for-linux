@@ -25,7 +25,7 @@ intl_desktop_file_CXXFLAGS= $(DEFAULT_COMPILE_FLAGS)
 intl_desktop_file_LDADD= $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 if GGL_DISABLE_SHARED
-intl_desktop_file_LDFLAGS = \
+intl_desktop_file_LDADD += \
 	-dlpreopen $(top_builddir)/extensions/libxml2_xml_parser/libxml2-xml-parser.la
 endif
 
