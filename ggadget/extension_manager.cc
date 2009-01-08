@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <cstdlib>
 #include "logger.h"
 #include "module.h"
 #include "common.h"
@@ -135,8 +136,9 @@ class ExtensionManager::Impl : public SmallObject<> {
   }
 
   ~Impl() {
-    for (ExtensionVector::iterator it = extensions_.begin();
-         it != extensions_.end(); ++it) {
+    // Destroy extensions in reverse order.
+    for (ExtensionVector::reverse_iterator it = extensions_.rbegin();
+         it != extensions_.rend(); ++it) {
       delete it->second;
     }
   }
@@ -248,20 +250,23 @@ class ExtensionManager::Impl : public SmallObject<> {
   }
 
   void SetReadonly() {
-    if (!readonly_) {
-      // Make all loaded extensions resident.
-      for (ExtensionVector::iterator it = extensions_.begin();
-           it != extensions_.end(); ++it) {
-        it->second->MakeResident();
-      }
-      readonly_ = true;
-    }
+    // Don't make extensions resident, so that they can be unloaded when exit.
+    readonly_ = true;
   }
 
  public:
+  static void ExitHandler() {
+    if (global_manager_) {
+      DLOG("Destroy global extension manager.");
+      delete global_manager_;
+      global_manager_ = NULL;
+    }
+  }
+
   static bool SetGlobalExtensionManager(ExtensionManager *manager) {
     if (!global_manager_ && manager) {
       global_manager_ = manager;
+      atexit(ExitHandler);
       return true;
     }
     return false;

@@ -959,7 +959,11 @@ class DBusProxy::Impl : public SmallObject<> {
       DLOG("New system dbus proxy: %s|%s|%s",
            name.c_str(), path.c_str(), interface.c_str());
 #endif
-      Impl *impl = system_bus_.NewImpl(name, path, interface);
+      if (!system_bus_) {
+        system_bus_ = new Manager(DBUS_BUS_SYSTEM);
+      }
+
+      Impl *impl = system_bus_->NewImpl(name, path, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
         proxy->impl_ = impl;
@@ -979,7 +983,11 @@ class DBusProxy::Impl : public SmallObject<> {
       DLOG("New session dbus proxy: %s|%s|%s",
            name.c_str(), path.c_str(), interface.c_str());
 #endif
-      Impl *impl = session_bus_.NewImpl(name, path, interface);
+      if (!session_bus_) {
+        session_bus_ = new Manager(DBUS_BUS_SESSION);
+      }
+
+      Impl *impl = session_bus_->NewImpl(name, path, interface);
       if (impl) {
         DBusProxy *proxy = new DBusProxy();
         proxy->impl_ = impl;
@@ -1540,12 +1548,12 @@ class DBusProxy::Impl : public SmallObject<> {
       on_signal_emit_signal_;
 
  private:
-  static Manager system_bus_;
-  static Manager session_bus_;
+  static Manager *system_bus_;
+  static Manager *session_bus_;
 };
 
-DBusProxy::Impl::Manager DBusProxy::Impl::system_bus_(DBUS_BUS_SYSTEM);
-DBusProxy::Impl::Manager DBusProxy::Impl::session_bus_(DBUS_BUS_SESSION);
+DBusProxy::Impl::Manager *DBusProxy::Impl::system_bus_ = NULL;
+DBusProxy::Impl::Manager *DBusProxy::Impl::session_bus_ = NULL;
 
 DBusProxy::DBusProxy() : impl_(NULL) {
 }

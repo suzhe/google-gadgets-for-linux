@@ -299,6 +299,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
+#ifdef GGL_DISABLE_SHARED
+        LOG("Loading external module is not supported by "
+            "statically linked host.");
+#else
         if (permissions_.IsRequired(Permissions::ALL_ACCESS) &&
             permissions_.IsGranted(Permissions::ALL_ACCESS)) {
           // Only trusted gadget can load local extensions.
@@ -309,6 +313,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         } else {
           LOG("Local extension module is forbidden for untrusted gadgets.");
         }
+#endif
       } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
         if (i->second == "no") {
           main_view_->view()->Alert(

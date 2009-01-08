@@ -827,7 +827,7 @@ class XMLParser : public XMLParserInterface {
   }
 };
 
-static XMLParser g_xml_parser;
+static XMLParser *g_xml_parser = NULL;
 
 } // namespace libxml2
 } // namespace ggadget
@@ -854,10 +854,14 @@ extern "C" {
       }
     }
 
-    return ggadget::SetXMLParser(&ggadget::libxml2::g_xml_parser);
+    if (!ggadget::libxml2::g_xml_parser)
+      ggadget::libxml2::g_xml_parser = new ggadget::libxml2::XMLParser;
+
+    return ggadget::SetXMLParser(ggadget::libxml2::g_xml_parser);
   }
 
   void Finalize() {
     LOGI("Finalize libxml2_xml_parser extension.");
+    delete ggadget::libxml2::g_xml_parser;
   }
 }

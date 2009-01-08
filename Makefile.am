@@ -32,5 +32,8 @@ SUBDIRS = $(LIBLTDL_DIR) \
 
 EXTRA_DIST = autotools cmake CMakeLists.txt Doxyfile
 
+libtool: $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status --recheck
+
 dist-hook:
 	rm -rf `find $(distdir) -name '.svn'`

@@ -26,7 +26,7 @@
 namespace ggadget {
 namespace {
 
-static const std::string kOptionsFilePrefix("profile://options/");
+static const char kOptionsFilePrefix[] = "profile://options/";
 // Options will be automatically flushed to disk every 2 ~ 3 minutes.
 static const int kAutoFlushInterval = 120000;
 // This variant is to prevent multiple options flush in the same step.
@@ -68,7 +68,7 @@ class DefaultOptions : public MemoryOptions {
         parser_(GetXMLParser()),
         encryptor_(GetEncryptor()),
         name_(name),
-        location_(kOptionsFilePrefix + name + ".xml"),
+        location_(std::string(kOptionsFilePrefix) + name + ".xml"),
         changed_(false),
         ref_count_(0),
         timer_(0) {
@@ -257,7 +257,7 @@ class DefaultOptions : public MemoryOptions {
   void WriteItemCommon(const char *name, const Variant &value,
                        bool internal, bool encrypted) {
     out_data_ += " <item name=\"";
-    out_data_ += parser_->EncodeXMLString(EscapeValue(name).c_str()),
+    out_data_ += parser_->EncodeXMLString(EscapeValue(name).c_str());
     out_data_ += "\" type=\"";
     out_data_ += GetValueType(value);
     out_data_ += "\"";
@@ -331,17 +331,18 @@ class DefaultOptions : public MemoryOptions {
     file_manager_->RemoveFile(location_.c_str());
     file_manager_ = NULL;
     // Delete it from the map to prevent it from being further used.
-    options_map_.erase(name_);
+    options_map_->erase(name_);
   }
 
   // Singleton management.
   typedef std::map<std::string, DefaultOptions *> OptionsMap;
   static DefaultOptions *GetOptions(const char *name, size_t size_limit) {
+    ASSERT(name && *name);
     DefaultOptions *options;
-    OptionsMap::const_iterator it = options_map_.find(name);
-    if (it == options_map_.end()) {
+    OptionsMap::const_iterator it = options_map_->find(name);
+    if (it == options_map_->end()) {
       options = new DefaultOptions(name, size_limit);
-      options_map_[name] = options;
+      (*options_map_)[name] = options;
     } else {
       options = it->second;
     }
@@ -349,10 +350,12 @@ class DefaultOptions : public MemoryOptions {
   }
 
   static void FinalizeAllOptions() {
-    for (OptionsMap::const_iterator it = options_map_.begin();
-         it != options_map_.end(); ++it)
+    for (OptionsMap::iterator it = options_map_->begin();
+         it != options_map_->end(); ++it) {
+      DLOG("Finalize option: %s", it->first.c_str());
       delete it->second;
-    options_map_.clear();
+    }
+    options_map_->clear();
   }
 
   void Ref() {
@@ -363,7 +366,7 @@ class DefaultOptions : public MemoryOptions {
     ASSERT(ref_count_ > 0);
     ref_count_--;
     if (ref_count_ == 0) {
-      options_map_.erase(name_);
+      options_map_->erase(name_);
       delete this;
     }
   }
@@ -379,10 +382,10 @@ class DefaultOptions : public MemoryOptions {
   int ref_count_;
   int timer_;
 
-  static OptionsMap options_map_;
+  static OptionsMap *options_map_;
 };
 
-DefaultOptions::OptionsMap DefaultOptions::options_map_;
+DefaultOptions::OptionsMap *DefaultOptions::options_map_ = NULL;
 
 class OptionsDelegator : public OptionsInterface {
  public:
@@ -460,6 +463,13 @@ extern "C" {
   bool Initialize() {
     LOGI("Initialize default_options extension.");
 
+    // options_map_ must be created by new, otherwise it might be destroyed
+    // before calling module's Finalize().
+    if (!ggadget::DefaultOptions::options_map_) {
+      ggadget::DefaultOptions::options_map_ =
+          new ggadget::DefaultOptions::OptionsMap;
+    }
+
     // The default options file has much bigger size limit than normal options.
     if (!ggadget::g_global_options) {
       ggadget::g_global_options = new ggadget::OptionsDelegator(
@@ -475,5 +485,6 @@ extern "C" {
     LOGI("Finalize default_options extension.");
     delete ggadget::g_global_options;
     ggadget::DefaultOptions::FinalizeAllOptions();
+    delete ggadget::DefaultOptions::options_map_;
   }
 }
