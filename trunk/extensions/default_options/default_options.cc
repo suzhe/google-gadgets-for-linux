@@ -448,9 +448,7 @@ OptionsInterface *DefaultOptionsFactory(const char *name) {
       DefaultOptions::GetOptions(name, kDefaultOptionsSizeLimit));
 }
 
-// The default options file has much bigger size limit than normal options.
-static OptionsDelegator g_global_options(
-    DefaultOptions::GetOptions("global-options", kGlobalOptionsSizeLimit));
+static OptionsDelegator *g_global_options = NULL;
 
 } // anonymous namespace
 } // namespace ggadget
@@ -461,12 +459,21 @@ static OptionsDelegator g_global_options(
 extern "C" {
   bool Initialize() {
     LOGI("Initialize default_options extension.");
+
+    // The default options file has much bigger size limit than normal options.
+    if (!ggadget::g_global_options) {
+      ggadget::g_global_options = new ggadget::OptionsDelegator(
+          ggadget::DefaultOptions::GetOptions(
+              "global-options", ggadget::kGlobalOptionsSizeLimit));
+    }
+
     return ggadget::SetOptionsFactory(&ggadget::DefaultOptionsFactory) &&
-           ggadget::SetGlobalOptions(&ggadget::g_global_options);
+           ggadget::SetGlobalOptions(ggadget::g_global_options);
   }
 
   void Finalize() {
     LOGI("Finalize default_options extension.");
+    delete ggadget::g_global_options;
     ggadget::DefaultOptions::FinalizeAllOptions();
   }
 }

@@ -42,6 +42,51 @@ ggl_qt_LDADD		= $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
+# For static build mode, all necessary modules must be linked into binary
+# directly.
+if GGL_DISABLE_SHARED
+ggl_qt_LDFLAGS = \
+	-dlpreopen $(top_builddir)/extensions/analytics_usage_collector/analytics-usage-collector.la \
+	-dlpreopen $(top_builddir)/extensions/default_framework/default-framework.la \
+	-dlpreopen $(top_builddir)/extensions/default_options/default-options.la \
+	-dlpreopen $(top_builddir)/extensions/google_gadget_manager/google-gadget-manager.la \
+	-dlpreopen $(top_builddir)/extensions/qt_edit_element/qt-edit-element.la \
+	-dlpreopen $(top_builddir)/extensions/qt_system_framework/qt-system-framework.la
+
+if GGL_BUILD_LIBXML2_XML_PARSER
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/libxml2_xml_parser/libxml2-xml-parser.la
+endif
+if GGL_BUILD_QT_XML_HTTP_REQUEST
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/qt_xml_http_request/qt-xml-http-request.la
+endif
+if GGL_BUILD_SMJS_SCRIPT_RUNTIME
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/smjs_script_runtime/smjs-script-runtime.la
+endif
+if GGL_BUILD_LIBGGADGET_DBUS
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/dbus_script_class/dbus-script-class.la
+endif
+if GGL_BUILD_GST_AUDIO_FRAMEWORK
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gst_audio_framework/gst-audio-framework.la
+endif
+if GGL_BUILD_GST_VIDEO_ELEMENT
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gst_video_element/gst-video-element.la
+endif
+if GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/qtwebkit_browser_element/qtwebkit-browser-element.la
+endif
+if GGL_HOST_LINUX
+ggl_qt_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/linux_system_framework/linux-system-framework.la
+endif
+endif
+
 BUILT_SOURCES		= $(MOC_FILES)
 qt_host_internal.moc:qt_host_internal.h
 	$(MOC) $< -o $@

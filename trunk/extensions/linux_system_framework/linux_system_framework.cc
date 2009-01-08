@@ -53,30 +53,30 @@ namespace framework {
 // To avoid naming conflicts.
 namespace linux_system{
 
-static Runtime g_runtime_;
-static Memory g_memory_;
-static Process g_process_;
-static FileSystem g_filesystem_;
-static Perfmon g_perfmon_;
+static Runtime *g_runtime_ = NULL;
+static Memory *g_memory_ = NULL;
+static Process *g_process_ = NULL;
+static FileSystem *g_filesystem_ = NULL;
+static Perfmon *g_perfmon_ = NULL;
 
-static ScriptableRuntime g_script_runtime_(&g_runtime_);
-static ScriptableMemory g_script_memory_(&g_memory_);
-static ScriptableProcess g_script_process_(&g_process_);
+static ScriptableRuntime *g_script_runtime_ = NULL;
+static ScriptableMemory *g_script_memory_ = NULL;
+static ScriptableProcess *g_script_process_ = NULL;
 
 #ifdef HAVE_DBUS_LIBRARY
-static Machine g_machine_;
-static Power g_power_;
-static User g_user_;
+static Machine *g_machine_ = NULL;
+static Power *g_power_ = NULL;
+static User *g_user_ = NULL;
 
-static ScriptableBios g_script_bios_(&g_machine_);
-static ScriptableMachine g_script_machine_(&g_machine_);
-static ScriptablePower g_script_power_(&g_power_);
-static ScriptableProcessor g_script_processor_(&g_machine_);
-static ScriptableUser g_script_user_(&g_user_);
+static ScriptableBios *g_script_bios_ = NULL;
+static ScriptableMachine *g_script_machine_ = NULL;
+static ScriptablePower *g_script_power_ = NULL;
+static ScriptableProcessor *g_script_processor_ = NULL;
+static ScriptableUser *g_script_user_ = NULL;
 
 #ifdef HAVE_NETWORK_MANAGER
-static Network g_network_;
-static ScriptableNetwork g_script_network_(&g_network_);
+static Network *g_network_ = NULL;
+static ScriptableNetwork *g_script_network_ = NULL;
 #endif
 #endif
 
@@ -91,11 +91,65 @@ using namespace ggadget::framework::linux_system;
 extern "C" {
   bool Initialize() {
     LOGI("Initialize linux_system_framework extension.");
+
+    g_runtime_ = new Runtime;
+    g_memory_ = new Memory;
+    g_process_ = new Process;
+    g_filesystem_ = new FileSystem;
+    g_perfmon_ = new Perfmon;
+
+    g_script_runtime_ = new ScriptableRuntime(g_runtime_);
+    g_script_memory_ = new ScriptableMemory(g_memory_);
+    g_script_process_ = new ScriptableProcess(g_process_);
+
+#ifdef HAVE_DBUS_LIBRARY
+    g_machine_ = new Machine;
+    g_power_ = new Power;
+    g_user_ = new User;
+
+    g_script_bios_ = new ScriptableBios(g_machine_);
+    g_script_machine_ = new ScriptableMachine(g_machine_);
+    g_script_power_ = new ScriptablePower(g_power_);
+    g_script_processor_ = new ScriptableProcessor(g_machine_);
+    g_script_user_ = new ScriptableUser(g_user_);
+
+#ifdef HAVE_NETWORK_MANAGER
+    g_network_ = new Network;
+    g_script_network_ = new ScriptableNetwork(g_network_);
+#endif
+#endif
     return true;
   }
 
   void Finalize() {
     LOGI("Finalize linux_system_framework extension.");
+
+    delete g_script_runtime_;
+    delete g_script_memory_;
+    delete g_script_process_;
+
+    delete g_runtime_;
+    delete g_memory_;
+    delete g_process_;
+    delete g_filesystem_;
+    delete g_perfmon_;
+
+#ifdef HAVE_DBUS_LIBRARY
+    delete g_script_bios_;
+    delete g_script_machine_;
+    delete g_script_power_;
+    delete g_script_processor_;
+    delete g_script_user_;
+
+    delete g_machine_;
+    delete g_power_;
+    delete g_user_;
+
+#ifdef HAVE_NETWORK_MANAGER
+    delete g_script_network_;
+    delete g_network_;
+#endif
+#endif
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
@@ -141,7 +195,7 @@ extern "C" {
     if (permissions->IsRequiredAndGranted(Permissions::FILE_READ) ||
         permissions->IsRequiredAndGranted(Permissions::FILE_WRITE)) {
       ScriptableFileSystem *script_filesystem =
-          new ScriptableFileSystem(&g_filesystem_, gadget);
+          new ScriptableFileSystem(g_filesystem_, gadget);
       reg_system->RegisterVariantConstant("filesystem",
                                           Variant(script_filesystem));
     }
@@ -154,33 +208,33 @@ extern "C" {
 
     // FIXME: Should runtime be restricted by <devicestatus/> ?
     reg_framework->RegisterVariantConstant("runtime",
-                                           Variant(&g_script_runtime_));
+                                           Variant(g_script_runtime_));
     reg_system->RegisterVariantConstant("memory",
-                                        Variant(&g_script_memory_));
+                                        Variant(g_script_memory_));
     reg_system->RegisterVariantConstant("process",
-                                        Variant(&g_script_process_));
+                                        Variant(g_script_process_));
 
     // ScriptablePerfmon is per gadget, so create a new instance here.
     ScriptablePerfmon *script_perfmon =
-        new ScriptablePerfmon(&g_perfmon_, gadget);
+        new ScriptablePerfmon(g_perfmon_, gadget);
 
     reg_system->RegisterVariantConstant("perfmon", Variant(script_perfmon));
 
 #ifdef HAVE_DBUS_LIBRARY
     reg_system->RegisterVariantConstant("bios",
-                                        Variant(&g_script_bios_));
+                                        Variant(g_script_bios_));
     reg_system->RegisterVariantConstant("machine",
-                                        Variant(&g_script_machine_));
+                                        Variant(g_script_machine_));
 #ifdef HAVE_NETWORK_MANAGER
     reg_system->RegisterVariantConstant("network",
-                                        Variant(&g_script_network_));
+                                        Variant(g_script_network_));
 #endif
     reg_system->RegisterVariantConstant("power",
-                                        Variant(&g_script_power_));
+                                        Variant(g_script_power_));
     reg_system->RegisterVariantConstant("processor",
-                                        Variant(&g_script_processor_));
+                                        Variant(g_script_processor_));
     reg_system->RegisterVariantConstant("user",
-                                        Variant(&g_script_user_));
+                                        Variant(g_script_user_));
 #endif
     return true;
   }
