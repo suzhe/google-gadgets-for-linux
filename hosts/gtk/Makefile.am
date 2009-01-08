@@ -44,6 +44,55 @@ ggl_gtk_LDADD	= $(GTK2_LIBS) \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
+# For static build mode, all necessary modules must be linked into binary
+# directly.
+if GGL_DISABLE_SHARED
+ggl_gtk_LDFLAGS = \
+	-dlpreopen $(top_builddir)/extensions/analytics_usage_collector/analytics-usage-collector.la \
+	-dlpreopen $(top_builddir)/extensions/default_framework/default-framework.la \
+	-dlpreopen $(top_builddir)/extensions/default_options/default-options.la \
+	-dlpreopen $(top_builddir)/extensions/google_gadget_manager/google-gadget-manager.la \
+	-dlpreopen $(top_builddir)/extensions/gtk_edit_element/gtk-edit-element.la \
+	-dlpreopen $(top_builddir)/extensions/gtk_system_framework/gtk-system-framework.la
+
+if GGL_BUILD_CURL_XML_HTTP_REQUEST
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/curl_xml_http_request/curl-xml-http-request.la
+endif
+if GGL_BUILD_LIBXML2_XML_PARSER
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/libxml2_xml_parser/libxml2-xml-parser.la
+endif
+if GGL_BUILD_SMJS_SCRIPT_RUNTIME
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/smjs_script_runtime/smjs-script-runtime.la
+endif
+if GGL_BUILD_LIBGGADGET_DBUS
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/dbus_script_class/dbus-script-class.la
+endif
+if GGL_BUILD_GST_AUDIO_FRAMEWORK
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gst_audio_framework/gst-audio-framework.la
+endif
+if GGL_BUILD_GST_VIDEO_ELEMENT
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gst_video_element/gst-video-element.la
+endif
+if GGL_BUILD_GTK_FLASH_ELEMENT
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gtk_flash_element/gtk-flash-element.la
+endif
+if GGL_BUILD_GTKMOZ_BROWSER_ELEMENT
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-element.la
+endif
+if GGL_HOST_LINUX
+ggl_gtk_LDFLAGS += \
+	-dlpreopen $(top_builddir)/extensions/linux_system_framework/linux-system-framework.la
+endif
+endif
+
 all-local:
 	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child .
 	[ ! -f $(top_builddir)/resources/resources.gg ] || cp $(top_builddir)/resources/resources.gg .

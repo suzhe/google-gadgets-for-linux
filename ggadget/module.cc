@@ -32,6 +32,14 @@
 // #define DEBUG_MODULES
 #endif
 
+#ifdef GGL_DISABLE_SHARED
+extern "C" {
+  static void _InitializePreloadModules() {
+    LTDL_SET_PRELOADED_SYMBOLS();
+  }
+}
+#endif
+
 namespace ggadget {
 
 static const char *kModulePathEnv = "GGL_MODULE_PATH";
@@ -47,6 +55,9 @@ class Module::Impl : public SmallObject<> {
 
     // Only initialize ltdl once and don't exit it anymore.
     if (!ltdl_initialized_) {
+#ifdef GGL_DISABLE_SHARED
+      _InitializePreloadModules();
+#endif
       if (lt_dlinit() != 0)
         LOG("Failed to initialize the module system: %s", lt_dlerror());
       else
@@ -85,6 +96,13 @@ class Module::Impl : public SmallObject<> {
         DLOG("Failed to load module %s: %s", name, err);
 #endif
     } else {
+      // If shared library is disabled, then all modules shall already be
+      // linked into the binary.
+#if GGL_DISABLE_SHARED
+      new_handle = lt_dlopen(module_name.c_str());
+      if (!new_handle)
+        new_handle = lt_dlopen((module_name + ".a").c_str());
+#else
       // name is a relative path, search in module paths.
       for (StringVector::iterator it = paths.begin();
            it != paths.end(); ++it) {
@@ -97,6 +115,7 @@ class Module::Impl : public SmallObject<> {
           DLOG("Failed to load module %s: %s", name, err);
 #endif
       }
+#endif
     }
 
     if (!new_handle) {

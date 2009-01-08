@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Designer doesn't work in static build mode.
+if !GGL_DISABLE_SHARED
+
 SUBDIRS = . blank_gadget gadget
 
 INCLUDES		= -I$(top_builddir) \
@@ -63,4 +66,6 @@ uninstall-hook:
 	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \
 	fi
 endif
+endif
+
 endif

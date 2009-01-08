@@ -233,7 +233,6 @@ class UsageCollectorFactory : public UsageCollectorFactoryInterface {
 
 #define Initialize analytics_usage_collector_LTX_Initialize
 #define Finalize analytics_usage_collector_LTX_Finalize
-#define CreateUsageCollector analytics_usage_collector_LTX_CreateUsageCollector
 
 static ggadget::UsageCollectorFactory g_factory;
 

@@ -1089,7 +1089,11 @@ AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
 AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
 AM_CONDITIONAL([GGL_CROSS_COMPILING], [test x$cross_compiling = xyes])
+AM_CONDITIONAL([GGL_DISABLE_SHARED], [test x$enable_shared != xyes])
 
+if test x$enable_shared != xyes; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_DISABLE_SHARED"
+fi
 
 if test x$ZIP = x; then
   AC_MSG_WARN([Can't generate resource file bundle without zip command.])
