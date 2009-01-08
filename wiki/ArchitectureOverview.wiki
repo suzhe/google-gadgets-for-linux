@@ -1,5 +1,5 @@
 #labels Phase-Design,Featured
-=Architecture overview of Google Gadgets for Linux=
+=Architecture Overview of Google Gadgets for Linux=
 
 =Objective=
 
@@ -49,11 +49,11 @@ We're also releasing a full-featured sidebar resembling that of Windows. This si
 
 The sidebar will reuse some host components from the simple host in addition to a custom `HostInterface`. In order to realize the sidebar UI, several components in the gadget library are dedicated to render the sidebar. This includes the sidebar object itself, with it's own `HostInterface`, that displays multiple views and handles their layout. The `Sidebar` class itself also inherits from `View`, and wraps decorated views inside using the same paradigm.
 
-===Standalone host===
+===Standalone Host===
 
 _TBD_
 
-===Plasma host===
+===Plasma Host===
 
 _TBD_
 
@@ -71,7 +71,7 @@ The `Gadget` object is a wrapper that integrates the major objects used to manag
 
 The `Gadget` object is exposed to the host. The host is responsible for communications between the various `HostInterface` and `ViewHostInterface` that are linked to each gadget and its views.
 
-==FileManagerInterface==
+==!FileManagerInterface==
 
 The file manager, as its name implies, is responsible for loading and holding all file resources in the gadget. We not only support reading files from zip archives where gadgets are usually stored, but also support reading the files from a directory for ease of testing.
 
@@ -95,7 +95,7 @@ The Gadget API specification specifies a file path lookup rule based on the curr
 
 This lookup is done via a separate file manager: the `LocaleFileManager`. Each lookup by the other file managers is directed to this file manager to resolve the locale-based filenames. The `LocaleFileManager` then calls the actual file manager with a a series of resolved filenames until a match is found. Internally, since Windows locale identifiers are not available under Linux, a static array of locale to locale identifier mappings retrieved from MSDN is used as a replacement.
 
-==View and BasicElement==
+==View and !BasicElement==
 
 A `Gadget` object contains several views implementing `ViewInterface`. Currently there's only one public `View` class that all three types of views (main, options, details) in the API instantiate. Internally, there are also some subclasses of `View` used to realize the sidebar and decorated view functionality. The views contain a list of child elements that are either specified in the view's XML file or inserted dynamically at runtime. These child elements all subclasses of the abstract `BasicElement` class. The class hierarchy here mirrors that of the Gadget API, starting with a root `BasicElement` class, with subclasses like `DivElement`, `EditElement`, `LabelElement`, etc. Most of these subclasses are implemented according to the API and are not particularly noteworthy so they will not be individually described here. The `BasicElement` class shares several features in common with the `View` class, so both of them utilize a `Elements` class to provide overlapping functionality. This includes basic code for event handling, and element container functionality.
 
@@ -152,9 +152,9 @@ In order to make the Gadget Library extensible at runtime, a modular extension m
   This function will be called, possibly multiple times, for multiple gadgets. In this function, the extension module can register any additional Element classes into the specified `ElementFactory` instance or JavaScript classes/objects into the specified `ScriptContextInterface` instance.
   A module will only be treated as a valid extension module if it provides this function.
 
-An `ExtensionManager` class is in charge of loading/unloading/enumerating extension modules. A method `bool RegisterLoadedExtensions(ElementFactory *, ScriptContextInterface *)` is provided publicly, which will call RegisterExtension() method for each loaded extension modules.
+An `ExtensionManager` class is in charge of loading/unloading/enumerating extension modules. A method `bool RegisterLoadedExtensions(ElementFactory *, ScriptContextInterface *)` is provided publicly, which will call `RegisterExtension()` method for each loaded extension modules.
 
-A global `ExtensionManager` instance is created and initialized by the host before running any gadget.  This global instance is set by calling public static method `ExtensionManager::SetGlobalExtensionManager()` and retrieving it is done by calling `ExtensionManager::GetGlobalExtensionManager()` afterwards. Once an ExtensionManager instance is set as the global one, the extension modules loaded by it cannot be unloaded anymore, and no new extension modules can be loaded afterwards.
+A global `ExtensionManager` instance is created and initialized by the host before running any gadget.  This global instance is set by calling public static method `ExtensionManager::SetGlobalExtensionManager()` and retrieving it is done by calling `ExtensionManager::GetGlobalExtensionManager()` afterwards. Once an `ExtensionManager` instance is set as the global one, the extension modules loaded by it cannot be unloaded anymore, and no new extension modules can be loaded afterwards.
 
 In addition to the global `ExtensionManager` instance, each gadget can have its own `ExtensionManager` instance to load extensions local to that gadget. When loading a gadget, the `Gadget` class first calls the global `ExtensionManager` instance to register all global extension modules into its local `ElementFactory` instance and `ScriptContextInterface` instance, then loads all extension objects provided by the gadget into its own `ExtensionManager` instance and register them.
 
@@ -197,7 +197,7 @@ Unlike other signal/slot implementations such as boost library, one important fe
   * Providing base types of `Signal` and `Slot` to allow passing universal `Signal *` and `Slot *` in some interfaces, and allow generic invoking (see `Signal::Emit()` and `Slot::Call()`). For example, they allow method/property dispatching in a script engine adapter;
   * Providing runtime type information in base `Signal` and `Slot` types, such as `GetReturnType()`, `GetParamTypes()`, `GetArgCount()` etc. to allow runtime parameter type conversion and checking.
 
-===ScriptableHelper===
+===!ScriptableHelper===
 
 In order to ease the coding of `ScriptableInterface` implementations, we provide a `ScriptableHelper` class. A `ScriptableInterface` implementation can hold a `ScriptableHelper` instance as its member, and delegates all `ScriptableInterface` invocations to the helper. `ScriptableHelper` provides methods like `RegisterProperty()`, `RegisterConstant()`, `RegisterMethod()`, `SetInheritFrom()` to let the implementation to set up the scriptable object in its `DoRegister()`, `DoClassRegister()` methods or even the constructor.
 
@@ -213,7 +213,7 @@ With the help of `ScriptableHelper`, a `ScriptableInterface` implementation can 
     Example: `element.onclick = function() {...}` or `element.onclick = " function body "`;
   * *Constants*: The value of a constant never changes during the life of the belonging scriptable object. Constants are registered with `RegisterConstant()` and `RegisterConstants()`.
     Example: `gddIdOK`, `gddIdCancel`;
-  * *Dynamic properties*: The existence of dynamic properties are determined at runtime. The implementation register the dynamic property handler with *RegisterDynamicPropertyHandler()*.
+  * *Dynamic properties*: The existence of dynamic properties are determined at runtime. The implementation register the dynamic property handler with `RegisterDynamicPropertyHandler()`.
     Example: the script can access elements by their name with `view.name`.
 
 `ScriptableHelper` also provides a `SetInheritsFrom()` method to let multiple `ScriptableInterface` instances (may or may not the same class) share a common base set of properties.
