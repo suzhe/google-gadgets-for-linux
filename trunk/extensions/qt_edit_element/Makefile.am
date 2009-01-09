@@ -15,7 +15,7 @@
 
 EXTRA_DIST = CMakeLists.txt
 
-if GGL_BUILD_LIBGGADGET_QT
+if GGL_BUILD_QT_EDIT_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

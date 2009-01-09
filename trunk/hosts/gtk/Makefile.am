@@ -126,7 +126,7 @@ ggl-gtk.desktop : ggl-gtk.desktop.in
 EXTRA_DIST = $(desktop_in_files) CMakeLists.txt
 CLEANFILES = $(desktop_DATA)
 
-if ENABLE_UPDATE_DESKTOP_DATABASE
+if GGL_ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
 	@if test -z "$(DESTDIR)"; then \
 	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \

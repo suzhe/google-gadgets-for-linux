@@ -175,6 +175,14 @@ ProcessInfoInterface *Process::GetForeground() {
   return pid == -1 ? NULL : GetInfo(pid);
 }
 
+#else // ifdef HAVE_X11
+
+ProcessInfoInterface *Process::GetForeground() {
+  return NULL;
+}
+
+#endif // HAVE_X11
+
 ProcessInfoInterface *Process::GetInfo(int pid) {
   std::string cmdline;
   if (ReadCmdPath(pid, &cmdline)) {
@@ -183,13 +191,6 @@ ProcessInfoInterface *Process::GetInfo(int pid) {
   return NULL;
 }
 
-#else // ifdef HAVE_X11
-
-ProcessInfoInterface *Process::GetForeground() {
-  return NULL;
-}
-
-#endif // HAVE_X11
 
 // ---------------------------Utility Functions-------------------------------//
 

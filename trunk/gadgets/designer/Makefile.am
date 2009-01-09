@@ -55,7 +55,7 @@ ggl-designer.desktop : ggl-designer.desktop.in
 
 CLEANFILES = $(desktop_DATA)
 
-if ENABLE_UPDATE_DESKTOP_DATABASE
+if GGL_ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
 	@if test -z "$(DESTDIR)"; then \
 	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \

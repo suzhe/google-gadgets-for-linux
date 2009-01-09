@@ -21,8 +21,8 @@
 #  Version
 #  Bug report address
 AC_INIT([google-gadgets-for-linux],
-	[0.10.5],
-	[google-gadgets-for-linux-dev@googlegroups.com])
+        [0.10.5],
+        [google-gadgets-for-linux-dev@googlegroups.com])
 
 # Requires autoconf version >= 2.50
 AC_PREREQ([2.50])
@@ -121,221 +121,275 @@ AC_CANONICAL_HOST
 ###########################################################
 ##                      Config options.                  ##
 ###########################################################
+
+# Host conditions.
 build_gtk_host=yes
 build_qt_host=yes
+
+# Library conditions.
 build_libggadget_dbus=yes
 build_libggadget_gtk=yes
 build_libggadget_npapi=yes
 build_libggadget_qt=yes
-build_gtkmoz_browser_element=yes
-build_qtwebkit_browser_element=yes
+
+# Extension conditions.
+# analytics_usage_collector will always be built.
+build_curl_xml_http_request=yes
+build_dbus_script_class=yes
+# default_framework will always be built.
+# default_options will always be built.
+# google_gadget_manager will always be built.
 build_gst_audio_framework=yes
 build_gst_video_element=yes
-build_qt_system_framework=yes
+build_gtk_edit_element=yes
 build_gtk_flash_element=yes
 build_gtk_system_framework=yes
-build_qt_script_runtime=yes
-build_smjs_script_runtime=yes
-build_curl_xml_http_request=yes
-build_qt_xml_http_request=yes
+build_gtkmoz_browser_element=yes
 build_libxml2_xml_parser=yes
-# OS Specific conditions.
+# linux_system_framework will only be enabled for Linux system.
 build_linux_system_framework=no
+build_qt_edit_element=yes
+build_qt_script_runtime=yes
+build_qt_system_framework=yes
+build_qt_xml_http_request=yes
+build_qtwebkit_browser_element=yes
+build_smjs_script_runtime=yes
 
+#================ compile options ==============
 AC_ARG_ENABLE([debug],
-	      AS_HELP_STRING([--enable-debug],[enable debug]),
-	      [enable_debug=$enableval],
-	      [enable_debug=no])
+              AS_HELP_STRING([--enable-debug], [enable debug]),
+              [enable_debug=$enableval],
+              [enable_debug=no])
 
 AC_ARG_ENABLE([werror],
-	      AS_HELP_STRING([--disable-werror],
-			     [Don't make all compile warnings into errors.]),
-	      [use_werror=$withval],
-	      [use_werror=yes])
+              AS_HELP_STRING([--disable-werror],
+                             [Don't make all compile warnings into errors.]),
+              [use_werror=$withval],
+              [use_werror=yes])
 
+AC_ARG_ENABLE([stack-protector],
+              AS_HELP_STRING([--disable-stack-protector],
+                             [Disable stack protector.]),
+              [enable_stack_protector=$enableval],
+              [enable_stack_protector=yes])
+
+#================ with options =================
 AC_ARG_WITH([oem-brand],
-	    AC_HELP_STRING([--with-oem-brand=code],
-	    [Specify the OEM brand code.]),
-	    [ggl_oem_brand=$withval],
-	    [ggl_oem_brand=""])
+            AC_HELP_STRING([--with-oem-brand=code],
+                           [Specify the OEM brand code.]),
+            [ggl_oem_brand=$withval],
+            [ggl_oem_brand=""])
 
 AC_ARG_WITH([memcheck-command],
-	    AS_HELP_STRING([--with-memcheck-command=CMD],
-		[Specify a memory check command for running unit tests.]),
-	    [memcheck_command=$withval],
-	    [memcheck_command=""])
+            AS_HELP_STRING([--with-memcheck-command=CMD],
+                [Specify a memory check command for running unit tests.]),
+            [memcheck_command=$withval],
+            [memcheck_command=""])
 
 AC_ARG_WITH([gst-audio-sink],
-	    AS_HELP_STRING([--with-gst-audio-sink=audiosink],
-		[Use a specified audiosink instead of autoaudiosink.]),
-	    [default_gst_audio_sink=$withval],
-	    [default_gst_audio_sink="autoaudiosink"])
+            AS_HELP_STRING([--with-gst-audio-sink=audiosink],
+                [Use a specified audiosink instead of autoaudiosink.]),
+            [default_gst_audio_sink=$withval],
+            [default_gst_audio_sink="autoaudiosink"])
 
 AC_ARG_WITH([browser-plugins-dir],
-	    AS_HELP_STRING([--with-browser-plugins-dir=plugins directory],
-		[Specifiy directory of browser plugins. But when the program is
-		 running, the environment variable BROWSER_PLUGINS_DIR has
-		 higher priority if it's set. ]),
-	    [default_browser_plugins_dir=$withval],
-	    [default_browser_plugins_dir="$libdir/firefox/plugins"])
+            AS_HELP_STRING([--with-browser-plugins-dir=plugins directory],
+                [Specifiy directory of browser plugins. But when the program is
+                 running, the environment variable BROWSER_PLUGINS_DIR has
+                 higher priority if it's set. ]),
+            [default_browser_plugins_dir=$withval],
+            [default_browser_plugins_dir="$libdir/firefox/plugins"])
 
 AC_ARG_WITH([gtkmozembed],
-	    AC_HELP_STRING([--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
-		[Selects with gecko engine to build against, it affects the
-		 search rule of spidermonkey library (libmozjs) as well.]),
-	    [with_gtkmozembed=$withval],
-	    [with_gtkmozembed=auto])
+            AC_HELP_STRING(
+                [--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
+                [Selects with gecko engine to build against, it affects the
+                 search rule of spidermonkey library (libmozjs) as well.]),
+            [with_gtkmozembed=$withval],
+            [with_gtkmozembed=auto])
 
 AC_ARG_WITH([mozjs-libname],
-	    AC_HELP_STRING([--with-mozjs-libname=libmozjs.so],
-		[Specify the file name of spidermonkey library to be
-		 dynamically loaded. It only takes effect when using a
-		 xulrunner library which supports XPCOM_GLUE.]),
-	    [with_mozjs_libname=$withval],
-	    [with_mozjs_libname=libmozjs.so])
+            AC_HELP_STRING([--with-mozjs-libname=libmozjs.so],
+                [Specify the file name of spidermonkey library to be
+                 dynamically loaded. It only takes effect when using a
+                 xulrunner library which supports XPCOM_GLUE.]),
+            [with_mozjs_libname=$withval],
+            [with_mozjs_libname=libmozjs.so])
 
+#=================== host options =================
 AC_ARG_ENABLE([gtk-host],
-	      AS_HELP_STRING([--disable-gtk-host],
-			     [don't build gtk host]),
-	      [build_gtk_host=$enableval],
-	      [build_gtk_host=yes])
+              AS_HELP_STRING([--disable-gtk-host],
+                             [don't build gtk host]),
+              [build_gtk_host=$enableval],
+              [build_gtk_host=yes])
 
 AC_ARG_ENABLE([qt-host],
-	      AS_HELP_STRING([--disable-qt-host],
-			     [don't build qt host]),
-	      [build_qt_host=$enableval],
-	      [build_qt_host=yes])
+              AS_HELP_STRING([--disable-qt-host],
+                             [don't build qt host]),
+              [build_qt_host=$enableval],
+              [build_qt_host=yes])
 
+#================== library options ===============
 AC_ARG_ENABLE([libggadget-dbus],
-	      AS_HELP_STRING([--disable-libggadget-dbus],
-			     [don't build libggadget-dbus]),
-	      [build_libggadget_dbus=$enableval],
-	      [build_libggadget_dbus=yes])
+              AS_HELP_STRING([--disable-libggadget-dbus],
+                             [don't build libggadget-dbus]),
+              [build_libggadget_dbus=$enableval],
+              [build_libggadget_dbus=yes])
 
 AC_ARG_ENABLE([libggadget-gtk],
-	      AS_HELP_STRING([--disable-libggadget-gtk],
-			     [don't build libggadget-gtk]),
-	      [build_libggadget_gtk=$enableval],
-	      [build_libggadget_gtk=yes])
+              AS_HELP_STRING([--disable-libggadget-gtk],
+                             [don't build libggadget-gtk]),
+              [build_libggadget_gtk=$enableval],
+              [build_libggadget_gtk=yes])
 
 AC_ARG_ENABLE([libggadget-npapi],
-	      AS_HELP_STRING([--disable-libggadget-npapi],
-			     [don't build libggadget-npapi]),
-	      [build_libggadget_npapi=$enableval],
-	      [build_libggadget_npapi=yes])
+              AS_HELP_STRING([--disable-libggadget-npapi],
+                             [don't build libggadget-npapi]),
+              [build_libggadget_npapi=$enableval],
+              [build_libggadget_npapi=yes])
 
 AC_ARG_ENABLE([libggadget-qt],
-	      AS_HELP_STRING([--disable-libggadget-qt],
-			     [don't build libggadget-qt]),
-	      [build_libggadget_qt=$enableval],
-	      [build_libggadget_qt=yes])
+              AS_HELP_STRING([--disable-libggadget-qt],
+                             [don't build libggadget-qt]),
+              [build_libggadget_qt=$enableval],
+              [build_libggadget_qt=yes])
 
-AC_ARG_ENABLE([gtkmoz-browser-element],
-	      AS_HELP_STRING([--disable-gtkmoz-browser-element],
-			     [don't build gtkmoz-browser-element]),
-	      [build_gtkmoz_browser_element=$enableval],
-	      [build_gtkmoz_browser_element=yes])
+#================== extension options ==============
+AC_ARG_ENABLE([curl-xml-http-request],
+              AS_HELP_STRING([--disable-curl-xml-http-request],
+                             [don't build curl-xml-http-request]),
+              [build_curl_xml_http_request=$enableval],
+              [build_curl_xml_http_request=yes])
+
+AC_ARG_ENABLE([dbus-script-class],
+              AS_HELP_STRING([--disable-dbus-script-class],
+                             [don't build dbus-script-class]),
+              [build_dbus_script_class=$enableval],
+              [build_dbus_script_class=yes])
 
 AC_ARG_ENABLE([gst-audio-framework],
-	      AS_HELP_STRING([--disable-gst-audio-framework],
-			     [don't build gst-audio-framework]),
-	      [build_gst_audio_framework=$enableval],
-	      [build_gst_audio_framework=yes])
+              AS_HELP_STRING([--disable-gst-audio-framework],
+                             [don't build gst-audio-framework]),
+              [build_gst_audio_framework=$enableval],
+              [build_gst_audio_framework=yes])
 
 AC_ARG_ENABLE([gst-video-element],
-	      AS_HELP_STRING([--disable-gst-video-element],
-			     [don't build gst-video-element]),
-	      [build_gst_video_element=$enableval],
-	      [build_gst_video_element=yes])
+              AS_HELP_STRING([--disable-gst-video-element],
+                             [don't build gst-video-element]),
+              [build_gst_video_element=$enableval],
+              [build_gst_video_element=yes])
+
+AC_ARG_ENABLE([gtk-edit-element],
+              AS_HELP_STRING([--disable-gtk-edit-element],
+                             [don't build gtk-edit-element]),
+              [build_gtk_edit_element=$enableval],
+              [build_gtk_edit_element=yes])
 
 AC_ARG_ENABLE([gtk-flash-element],
-	      AS_HELP_STRING([--disable-gtk-flash-element],
-			     [don't build gtk-flash-element]),
-	      [build_gtk_flash_element=$enableval],
-	      [build_gtk_flash_element=yes])
-
-AC_ARG_ENABLE([qt-system-framework],
-	      AS_HELP_STRING([--disable-qt-system-framework],
-			     [don't build qt-system-framework]),
-	      [build_qt_system_framework=$enableval],
-	      [build_qt_system_framework=yes])
-
-AC_ARG_ENABLE([qtwebkit-browser-element],
-	      AS_HELP_STRING([--disable-qtwebkit-browser-element],
-			     [don't build qtwebkit-browser-element]),
-	      [build_qtwebkit_browser_element=$enableval],
-	      [build_qtwebkit_browser_element=yes])
+              AS_HELP_STRING([--disable-gtk-flash-element],
+                             [don't build gtk-flash-element]),
+              [build_gtk_flash_element=$enableval],
+              [build_gtk_flash_element=yes])
 
 AC_ARG_ENABLE([gtk-system-framework],
-	      AS_HELP_STRING([--disable-gtk-system-framework],
-			     [don't build gtk-system-framework]),
-	      [build_gtk_system_framework=$enableval],
-	      [build_gtk_system_framework=yes])
+              AS_HELP_STRING([--disable-gtk-system-framework],
+                             [don't build gtk-system-framework]),
+              [build_gtk_system_framework=$enableval],
+              [build_gtk_system_framework=yes])
 
-AC_ARG_ENABLE([smjs-script-runtime],
-	      AS_HELP_STRING([--disable-smjs-script-runtime],
-			     [don't build smjs-script-runtime]),
-	      [build_smjs_script_runtime=$enableval],
-	      [build_smjs_script_runtime=yes])
-
-AC_ARG_ENABLE([qt-script-runtime],
-	      AS_HELP_STRING([--disable-qt-script-runtime],
-			     [don't build qt-script-runtime]),
-	      [build_qt_script_runtime=$enableval],
-	      [build_qt_script_runtime=yes])
-
-AC_ARG_ENABLE([curl-xml-http-request],
-	      AS_HELP_STRING([--disable-curl-xml-http-request],
-			     [don't build curl-xml-http-request]),
-	      [build_curl_xml_http_request=$enableval],
-	      [build_curl_xml_http_request=yes])
-
-AC_ARG_ENABLE([qt-xml-http-request],
-	      AS_HELP_STRING([--disable-qt-xml-http-request],
-			     [don't build qt-xml-http-request]),
-	      [build_qt_xml_http_request=$enableval],
-	      [build_qt_xml_http_request=yes])
+AC_ARG_ENABLE([gtkmoz-browser-element],
+              AS_HELP_STRING([--disable-gtkmoz-browser-element],
+                             [don't build gtkmoz-browser-element]),
+              [build_gtkmoz_browser_element=$enableval],
+              [build_gtkmoz_browser_element=yes])
 
 AC_ARG_ENABLE([libxml2-xml-parser],
-	      AS_HELP_STRING([--disable-libxml2-xml-parser],
-			     [don't build libxml2-xml-parser]),
-	      [build_libxml2_xml_parser=$enableval],
-	      [build_libxml2_xml_parser=yes])
+              AS_HELP_STRING([--disable-libxml2-xml-parser],
+                             [don't build libxml2-xml-parser]),
+              [build_libxml2_xml_parser=$enableval],
+              [build_libxml2_xml_parser=yes])
 
+AC_ARG_ENABLE([qt-edit-framework],
+              AS_HELP_STRING([--disable-qt-edit-framework],
+                             [don't build qt-edit-framework]),
+              [build_qt_edit_framework=$enableval],
+              [build_qt_edit_framework=yes])
+
+AC_ARG_ENABLE([qt-script-runtime],
+              AS_HELP_STRING([--disable-qt-script-runtime],
+                             [don't build qt-script-runtime]),
+              [build_qt_script_runtime=$enableval],
+              [build_qt_script_runtime=yes])
+
+AC_ARG_ENABLE([qt-system-framework],
+              AS_HELP_STRING([--disable-qt-system-framework],
+                             [don't build qt-system-framework]),
+              [build_qt_system_framework=$enableval],
+              [build_qt_system_framework=yes])
+
+AC_ARG_ENABLE([qt-xml-http-request],
+              AS_HELP_STRING([--disable-qt-xml-http-request],
+                             [don't build qt-xml-http-request]),
+              [build_qt_xml_http_request=$enableval],
+              [build_qt_xml_http_request=yes])
+
+AC_ARG_ENABLE([qtwebkit-browser-element],
+              AS_HELP_STRING([--disable-qtwebkit-browser-element],
+                             [don't build qtwebkit-browser-element]),
+              [build_qtwebkit_browser_element=$enableval],
+              [build_qtwebkit_browser_element=yes])
+
+AC_ARG_ENABLE([smjs-script-runtime],
+              AS_HELP_STRING([--disable-smjs-script-runtime],
+                             [don't build smjs-script-runtime]),
+              [build_smjs_script_runtime=$enableval],
+              [build_smjs_script_runtime=yes])
+
+#================ other options =======================
 AC_ARG_ENABLE([update-mime-database],
-	      AC_HELP_STRING([--disable-update-mime-database],
-			     [don't run update-mime-database after install]),
-	      [enable_update_mime_database=$enableval],
-	      [enable_update_mime_database=yes])
+              AC_HELP_STRING([--disable-update-mime-database],
+                             [don't run update-mime-database after install]),
+              [enable_update_mime_database=$enableval],
+              [enable_update_mime_database=yes])
 
 AC_ARG_ENABLE([update-desktop-database],
-	      AC_HELP_STRING([--disable-update-desktop-database],
-			     [don't run update-desktop-database after install]),
-	      [enable_update_desktop_database=$enableval],
-	      [enable_update_desktop_database=yes])
+              AC_HELP_STRING([--disable-update-desktop-database],
+                             [don't run update-desktop-database after install]),
+              [enable_update_desktop_database=$enableval],
+              [enable_update_desktop_database=yes])
 
 AC_ARG_ENABLE([xdg-icon-resource],
-	      AC_HELP_STRING([--disable-xdg-icon-resource],
-			     [don't run xdg-icon-resource after install]),
-	      [enable_xdg_icon_resource=$enableval],
-	      [enable_xdg_icon_resource=yes])
+              AC_HELP_STRING([--disable-xdg-icon-resource],
+                             [don't run xdg-icon-resource after install]),
+              [enable_xdg_icon_resource=$enableval],
+              [enable_xdg_icon_resource=yes])
 
 AC_ARG_ENABLE([xdgmime],
-	      AC_HELP_STRING([--disable-xdgmime],
-			     [disable built-in xdgmime support]),
-	      [enable_xdgmime=$enableval],
-	      [enable_xdgmime=yes])
+              AC_HELP_STRING([--disable-xdgmime],
+                             [disable built-in xdgmime support]),
+              [enable_xdgmime=$enableval],
+              [enable_xdgmime=yes])
+
+# correct option dependencies.
+if test x$build_libggadget_dbus != xyes; then
+  build_dbus_script_class=no
+fi
 
 if test x$build_libggadget_gtk != xyes; then
   build_gtk_host=no
+  build_gtk_edit_element=no
+  build_gtk_flash_element=no
+  build_gtk_system_framework=no
+  build_gtkmoz_browser_element=no
 fi
 
 if test x$build_libggadget_qt != xyes; then
   build_qt_host=no
-  build_qtwebkit_browser_element=no
-  build_qt_xml_http_request=no
-  build_qt_system_framework=no
+  build_qt_edit_element=no
   build_qt_script_runtime=no
+  build_qt_system_framework=no
+  build_qt_xml_http_request=no
+  build_qtwebkit_browser_element=no
 fi
 
 if test x$build_libggadget_npapi != xyes; then
@@ -362,7 +416,10 @@ AC_SUBST(GGL_RESOURCE_DIR)
 ###########################################################
 
 # Check -fstack-protector and -fstack-protector-all
-GGL_CHECK_STACK_PROTECTOR([has_stack_protector=yes], [has_stack_protector=no])
+has_stack_protector=no
+if test x$enable_stack_protector = xyes; then
+  GGL_CHECK_STACK_PROTECTOR([has_stack_protector=yes], [has_stack_protector=no])
+fi
 
 if test x$enable_debug = xyes; then
   DEFAULT_COMPILE_FLAGS="-g -O0 -Wall"
@@ -385,12 +442,12 @@ fi
 
 # Enable stdc const macros by default, like INT64_C etc.
 PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
-		   -D$DEBUG_MACROS \
-		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
-		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
-		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
-		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
-		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
+                   -D$DEBUG_MACROS \
+                   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
+                   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
+                   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
+                   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
+                   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
 
 # Check OEM brand code.
 if test x$ggl_oem_brand != x; then
@@ -403,29 +460,25 @@ case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
-    SMJS_CFLAGS="-DXP_WIN"
     GGL_PLATFORM_SHORT="\"win\""
     GGL_PLATFORM="\"windows\""
     ;;
   *darwin* )
     ggl_host_type=macosx
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
-    SMJS_CFLAGS="-DXP_UNIX"
     GGL_PLATFORM_SHORT="\"mac\""
     GGL_PLATFORM="\"mac\""
     ;;
   *linux* )
     ggl_host_type=linux
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
-    SMJS_CFLAGS="-DXP_UNIX"
-    build_linux_system_framework=yes
     GGL_PLATFORM_SHORT="\"linux\""
     GGL_PLATFORM="\"linux\""
+    build_linux_system_framework=yes
     ;;
   *solaris* )
     ggl_host_type=solaris
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
-    SMJS_CFLAGS="-DXP_UNIX"
     GGL_PLATFORM_SHORT="\"solaris\""
     GGL_PLATFORM="\"solaris\""
     ;;
@@ -434,7 +487,6 @@ case $host_os in
     ;;
 esac
 
-AC_SUBST(SMJS_CFLAGS)
 AC_SUBST(GGL_PLATFORM_SHORT)
 AC_SUBST(GGL_PLATFORM)
 
@@ -532,10 +584,18 @@ AC_C_BIGENDIAN(
 # Check zlib
 has_zlib=no
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
+if test x$has_zlib != xyes; then
+  AC_MSG_ERROR([zlib is not available, but it's mandatory.])
+fi
 
 # Check pthread lib
 has_pthread=no
 AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
+if test x$has_pthread = xyes; then
+  PTHREAD_LIBS="-lpthread"
+  AC_SUBST(PTHREAD_LIBS)
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_PTHREAD=1"
+fi
 
 # Check Xlib
 has_xlib=no
@@ -558,136 +618,221 @@ has_qt4=no
 has_qtnetwork=no
 has_qtwebkit=no
 has_qtscript=no
-if test x$ggl_host_type = xlinux; then
-  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3],
-		    [has_qt4=yes
-		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
-		    [has_qt4=no])
-  PKG_CHECK_MODULES(QT4NETWORK, [QtCore >= 4.3 QtNetwork >= 4.3],
-		    [has_qtnetwork=yes],
-		    [has_qtnetwork=no])
-  PKG_CHECK_MODULES(QT4WEBKIT, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit],
-		    [has_qtwebkit=yes],
-		    [has_qtwebkit=no])
-  PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.4 QtScript >= 4.4],
-		    [has_qtscript=yes],
-		    [has_qtscript=no])
-elif test x$ggl_host_type = xmacosx; then
-  # There is no pkgconfig for Qt on MacOSX, just do header check.
-  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtNetwork/QtNetwork],
-		   [has_qt4=yes], [has_qt4=no])
-  AC_CHECK_HEADERS([QtNetwork/QtNetwork],
-		   [has_qtnetwork=yes], [has_qtnetwork=no])
-  AC_CHECK_HEADERS([QtWebKit/QtWebKit],
-		   [has_qtwebkit=yes], [has_qtwebkit=no])
-  # FIXME: Version should be checked. Only 4.4 and above are supported
-  AC_CHECK_HEADERS([QtScript/QtScript],
-		   [has_qtscript=yes], [has_qtscript=no])
-  if test x$has_qt4 = xyes; then
-    QT4_LIBS="-framework QtGui \
-              -framework Carbon -framework AppKit -framework QtCore \
-              -framework QtNetwork \
-              -framework ApplicationServices -lz -lm"
-    AC_PATH_PROG([MOC], [moc])
+if test x$build_libggadget_qt = xyes; then
+  if test x$ggl_host_type = xlinux; then
+    PKG_CHECK_MODULES(QT4, [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3],
+                      [has_qt4=yes
+                       MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
+                      [has_qt4=no])
+    PKG_CHECK_MODULES(QT4NETWORK, [QtCore >= 4.3 QtNetwork >= 4.3],
+                      [has_qtnetwork=yes],
+                      [has_qtnetwork=no])
+    PKG_CHECK_MODULES(QT4WEBKIT,
+                      [QtGui >= 4.3 QtCore >= 4.3 QtNetwork >= 4.3 QtWebKit],
+                      [has_qtwebkit=yes],
+                      [has_qtwebkit=no])
+    PKG_CHECK_MODULES(QT4SCRIPT, [QtCore >= 4.4 QtScript >= 4.4],
+                      [has_qtscript=yes],
+                      [has_qtscript=no])
+  elif test x$ggl_host_type = xmacosx; then
+    # There is no pkgconfig for Qt on MacOSX, just do header check.
+    AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtNetwork/QtNetwork],
+                     [has_qt4=yes], [has_qt4=no])
+    AC_CHECK_HEADERS([QtNetwork/QtNetwork],
+                     [has_qtnetwork=yes], [has_qtnetwork=no])
+    AC_CHECK_HEADERS([QtWebKit/QtWebKit],
+                     [has_qtwebkit=yes], [has_qtwebkit=no])
+    # FIXME: Version should be checked. Only 4.4 and above are supported
+    AC_CHECK_HEADERS([QtScript/QtScript],
+                     [has_qtscript=yes], [has_qtscript=no])
+    if test x$has_qt4 = xyes; then
+      QT4_LIBS="-framework QtGui \
+                -framework Carbon -framework AppKit -framework QtCore \
+                -framework QtNetwork \
+                -framework ApplicationServices -lz -lm"
+      AC_PATH_PROG([MOC], [moc])
+    fi
+    if test x$has_qtnetwork = xyes; then
+      QT4NETWORK_LIBS="-framework QtCore -framework QtNetwork -lz -lm"
+    fi
+    if test x$has_qtwebkit = xyes; then
+      QT4WEBKIT_LIBS="-framework QtGui -framework Carbon -framework AppKit \
+                      -framework QtCore -framework QtNetwork \
+                      -framework QtWebKit -lz -lm"
+    fi
+    if test x$has_qtscript = xyes; then
+      QT4SCRIPT_LIBS="-framework QtCore -framework QtScript -lz -lm"
+    fi
+  else
+    AC_MSG_WARN([Qt support is not available for $ggl_host_type])
   fi
-  if test x$has_qtnetwork = xyes; then
-    QT4NETWORK_LIBS="-framework QtCore -framework QtNetwork -lz -lm"
-  fi
-  if test x$has_qtwebkit = xyes; then
-    QT4WEBKIT_LIBS="-framework QtGui -framework Carbon -framework AppKit \
-                    -framework QtCore -framework QtNetwork \
-                    -framework QtWebKit -lz -lm"
-  fi
-  if test x$has_qtscript = xyes; then
-    QT4SCRIPT_LIBS="-framework QtCore -framework QtScript -lz -lm"
-  fi
-else
-  AC_MSG_WARN([Qt support is not available for $ggl_host_type])
-fi
 
-AC_SUBST(MOC)
+  # MOC is mandatory to build qt related code.
+  AC_SUBST(MOC)
+  if test "x$MOC" = "x"; then
+    AC_MSG_WARN([Can not find moc command, which is mandatory for Qt support.])
+    has_qt4=no
+    has_qtnetwork=no
+    has_qtwebkit=no
+    has_qtscript=no
+  fi
 
-# MOC is mandatory to build qt related code.
-if test "x$MOC" = "x"; then
-  AC_MSG_WARN([Can not find moc command, which is mandatory for Qt support])
-  has_qt4=no
-  has_qtnetwork=no
-  has_qtwebkit=no
-  has_qtscript=no
+  if test x$has_qt4 != xyes; then
+    AC_MSG_WARN([Qt >= 4.3 is required by libggadget-qt.])
+    build_libggadget_qt=no
+    build_qt_host=no
+    build_qt_edit_element=no
+    build_qt_script_runtime=no
+    build_qt_system_framework=no
+    build_qt_xml_http_request=no
+    build_qtwebkit_browser_element=no
+  fi
+
+  if test x$has_qtnetwork != xyes -a x$build_qt_xml_http_request = xyes; then
+    AC_MSG_WARN([QtNetwork >= 4.3 is required by qt-xml-http-request.])
+    build_qt_xml_http_request=no
+  fi
+
+  if test x$has_qtwebkit != xyes -a x$build_qtwebkit_browser_element = xyes; then
+    AC_MSG_WARN([QtWebkit >= 4.4 is required by qtwebkit-browser-element.])
+    build_qtwebkit_browser_element=no
+  fi
+
+  if test x$has_qtscript != xyes -a x$build_qt_script_runtime = xyes; then
+    AC_MSG_WARN([QtScript >= 4.4 is required by qt-script-runtime.])
+    build_qt_script_runtime=no
+  fi
 fi
 
 # Check gtk2 related libraries.
 has_gtk2=no
-PKG_CHECK_MODULES(GTK2,
-		  [cairo >= 1.0.0
-		   pango  >= 1.10.0
-		   gtk+-2.0 >= 2.8.0
-		   gdk-2.0 >= 2.8.0
-		   gthread-2.0 >= 2.8.0
-		   fontconfig >= 2.0.0],
-		   [has_gtk2=yes], [has_gtk2=no])
+if test x$build_libggadget_gtk = xyes; then
+  PKG_CHECK_MODULES(GTK2,
+                    [cairo >= 1.0.0
+                     pango  >= 1.10.0
+                     gtk+-2.0 >= 2.8.0
+                     gdk-2.0 >= 2.8.0
+                     gthread-2.0 >= 2.8.0
+                     fontconfig >= 2.0.0],
+                     [has_gtk2=yes], [has_gtk2=no])
+
+  if test x$has_gtk2 != xyes; then
+    AC_MSG_WARN([Gtk+ >= 2.8.0 is required by libggadget-gtk.])
+    build_libggadget_gtk=no
+    build_gtk_host=no
+    build_gtk_edit_element=no
+    build_gtk_flash_element=no
+    build_gtk_system_framework=no
+    build_gtkmoz_browser_element=no
+  else
+    gtk2_target=`$PKG_CONFIG --variable=target gtk+-2.0`
+  fi
+fi
 
 # Check gstreamer-0.10 related libraries.
 has_gstreamer=no
 has_gstreamer_video=no
-PKG_CHECK_MODULES(GSTREAMER,
-		  [gstreamer-0.10 >= 0.10.0
-		   gstreamer-base-0.10 >= 0.10.0
-		   gstreamer-plugins-base-0.10 >= 0.10.0],
-		  [has_gstreamer=yes], [has_gstreamer=no])
-if test x$has_gstreamer = xyes; then
-  CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
-  CXXFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
-  AC_CHECK_HEADERS([gst/video/gstvideosink.h], [has_gstreamer_video=yes], [has_gstreamer_video=no])
-  if test x$has_gstreamer_video = xyes; then
-    GSTVIDEOSINK_LIBRARIES="-lgstvideo-0.10"
-    AC_SUBST(GSTVIDEOSINK_LIBRARIES)
+if test x$build_gst_audio_framework = xyes -o \
+        x$build_gst_video_element = xyes; then
+  PKG_CHECK_MODULES(GSTREAMER,
+                    [gstreamer-0.10 >= 0.10.0
+                     gstreamer-base-0.10 >= 0.10.0
+                     gstreamer-plugins-base-0.10 >= 0.10.0],
+                    [has_gstreamer=yes], [has_gstreamer=no])
+  if test x$has_gstreamer = xyes; then
+    CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
+    CXXFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
+    AC_CHECK_HEADERS([gst/video/gstvideosink.h],
+                     [has_gstreamer_video=yes], [has_gstreamer_video=no])
+    if test x$has_gstreamer_video = xyes; then
+      GSTVIDEOSINK_LIBRARIES="-lgstvideo-0.10"
+      AC_SUBST(GSTVIDEOSINK_LIBRARIES)
+    fi
+    CFLAGS=$ggl_save_CFLAGS
+    CXXFLAGS=$ggl_save_CXXFLAGS
   fi
-  CFLAGS=$ggl_save_CFLAGS
-  CXXFLAGS=$ggl_save_CXXFLAGS
+
+  if test x$has_gstreamer != xyes; then
+    AC_MSG_WARN([gstreamer >= 0.10.0 is required by gst-audio-framework and gst-video-element.])
+    build_gst_audio_framework=no
+    build_gst_video_element=no
+  else
+    if test x$has_gstreamer_video != xyes -a \
+            x$build_gst_video_element = xyes; then
+      AC_MSG_WARN([gstvideo >= 0.10.0 is required by gst-video-element.])
+      build_gst_video_element=no
+    fi
+  fi
 fi
 
 # Check libcurl.
 has_libcurl=no
-LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
-if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; then
-  AC_MSG_WARN([Libcurl may not useable because it doesn't support SSL or HTTPS])
+if test x$build_curl_xml_http_request = xyes; then
+  LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
+
+  if test x$libcurl_feature_SSL != xyes -o \
+          x$libcurl_protocol_HTTPS != xyes; then
+    AC_MSG_WARN([Libcurl without support SSL or HTTPS may not usable.])
+  fi
+
+  if test x$has_libcurl != xyes; then
+    AC_MSG_WARN([libcurl >= 7.15.0 is required by curl-xml-http-request.])
+    build_curl_xml_http_request=no
+  fi
 fi
 
 # Check libxml2.
 has_libxml2=no
-AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
+if test x$build_libxml2_xml_parser = xyes; then
+  AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
+
+  if test x$has_libxml2 != xyes; then
+    AC_MSG_WARN([libxml2 >= 2.4.0 is required by libxml2-xml-parser.])
+    build_libxml2_xml_parser=no
+  fi
+fi
 
 # Check D-Bus library
 has_dbus=no
-PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes],
-		  [PKG_CHECK_MODULES(DBUS, [dbus-1 >= 0.60], [has_dbus=old],
-				     [has_dbus=no])])
+if test x$build_libggadget_dbus = xyes; then
+  PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.2], [has_dbus=yes],
+                    [PKG_CHECK_MODULES(DBUS, [dbus-1 >= 0.60],
+                                       [has_dbus=old], [has_dbus=no])])
 
-if test x$has_dbus != xno; then
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_LIBRARY"
-  if test x$has_dbus = xold; then
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DDBUS_API_SUBJECT_TO_CHANGE=1"
+  if test x$has_dbus != xno; then
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_LIBRARY"
+    if test x$has_dbus = xold; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DDBUS_API_SUBJECT_TO_CHANGE=1"
+    fi
+    CFLAGS="$DBUS_CFLAGS"
+    LDFLAGS="$DBUS_LIBS"
+    AC_CHECK_FUNC(dbus_watch_get_unix_fd, [has_dbus_watch_get_unix_fd=yes])
+    if test x$has_dbus_watch_get_unix_fd = xyes; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_WATCH_GET_UNIX_FD"
+    fi
+    CFLAGS=$ggl_save_CFLAGS
+    LDFLAGS=$ggl_save_LDFLAGS
+  else
+    AC_MSG_WARN([DBus >= 0.60 is required by libggadget-dbus.])
+    build_libggadget_dbus=no
+    build_dbus_script_class=no
   fi
-  CFLAGS="$DBUS_CFLAGS"
-  LDFLAGS="$DBUS_LIBS"
-  AC_CHECK_FUNC(dbus_watch_get_unix_fd,
-		[PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_WATCH_GET_UNIX_FD"])
-  CFLAGS=$ggl_save_CFLAGS
-  LDFLAGS=$ggl_save_LDFLAGS
 fi
 
 # Check librsvg
 has_librsvg=no
-PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0], [has_librsvg=yes], [has_librsvg=no])
-if test x$has_librsvg = xyes; then
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_RSVG_LIBRARY"
+if test x$build_libggadget_gtk = xyes; then
+  PKG_CHECK_MODULES(RSVG, [librsvg-2.0 >= 2.14.0],
+                    [has_librsvg=yes], [has_librsvg=no])
+  if test x$has_librsvg = xyes; then
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_RSVG_LIBRARY"
+  fi
 fi
 
 # Check startup-notification library
 has_startup_notification=no
 PKG_CHECK_MODULES(STARTUP_NOTIFICATION, [libstartup-notification-1.0 >= 0.8],
-		  [has_startup_notification=yes], [has_startup_notification=no])
+                  [has_startup_notification=yes], [has_startup_notification=no])
 if test x$has_startup_notification = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_STARTUP_NOTIFICATION"
 fi
@@ -695,10 +840,10 @@ fi
 # Check NetworkManager
 has_network_manager=no
 PKG_CHECK_MODULES(NETWORK_MANAGER,
-		  [NetworkManager >= 0.7], [has_network_manager=yes],
-		  [PKG_CHECK_MODULES(NETWORK_MANAGER,
-		   [NetworkManager >= 0.6], [has_network_manager=old],
-		   [has_network_manager=no])])
+                  [NetworkManager >= 0.7], [has_network_manager=yes],
+                  [PKG_CHECK_MODULES(NETWORK_MANAGER,
+                   [NetworkManager >= 0.6], [has_network_manager=old],
+                   [has_network_manager=no])])
 
 if test x$has_network_manager != xno; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_NETWORK_MANAGER"
@@ -707,7 +852,7 @@ if test x$has_network_manager != xno; then
   fi
 else
   AC_MSG_WARN([Development package of NetworkManager is not installed,]
-	      [network and wireless support of framework.system won't be built.])
+              [network/wireless support of framework.system won't be built.])
 fi
 
 # Check gtkmozembed
@@ -720,94 +865,187 @@ fi
 #
 # Add more rules here if your distribution doesn't support above rules.
 has_gtkmozembed=no
+has_libmozjs=no
+if test x$build_smjs_script_runtime = xyes -o \
+        x$build_gtkmoz_browser_element = xyes; then
+  gtkmozembed_list=""
+  if test x$with_gtkmozembed = xauto; then
+    gtkmozembed_list="libxul-embedding-unstable \
+                      libxul-embedding \
+                      xulrunner-gtkmozembed \
+                      firefox2-gtkmozembed \
+                      firefox-gtkmozembed \
+                      microb-engine"
+  else
+    case $with_gtkmozembed in
+      libxul)
+        gtkmozembed_list="libxul-embedding-unstable libxu-embedding"
+        ;;
+      xulrunner)
+        gtkmozembed_list="xulrunner-gtkmozembed"
+        ;;
+      firefox2)
+        gtkmozembed_list="firefox2-gtkmozembed"
+        ;;
+      firefox)
+        gtkmozembed_list="firefox-gtkmozembed"
+        ;;
+      microb)
+        gtkmozembed_list="microb-engine"
+        ;;
+      *)
+        AC_MSG_ERROR([--with-gtkmozembed, invalid value])
+        ;;
+    esac
+  fi
 
-if test x$with_gtkmozembed = xauto; then
-PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
-		   [has_gtkmozembed=libxul-embedding-unstable],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
-		       [has_gtkmozembed=libxul-embedding],
-      [PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
-			[has_gtkmozembed=xulrunner-gtkmozembed],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
-			  [has_gtkmozembed=firefox2-gtkmozembed],
-	  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
-			    [has_gtkmozembed=firefox-gtkmozembed],
-	    [PKG_CHECK_MODULES(GTKMOZEMBED, [microb-engine],
-			      [has_gtkmozembed=microb-engine],
-	      [has_gtkmozembed=no])])])])])])
-else
-  case $with_gtkmozembed in
-    libxul)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding-unstable],
-			[has_gtkmozembed=libxul-embedding-unstable],
-	[PKG_CHECK_MODULES(GTKMOZEMBED, [libxul-embedding],
-			  [has_gtkmozembed=libxul-embedding],
-	  [has_gtkmozembed=no])])
+  for gtkmozembed in $gtkmozembed_list; do
+    PKG_CHECK_MODULES(GTKMOZEMBED, [$gtkmozembed],
+                      [has_gtkmozembed=$gtkmozembed], [has_gtkmozembed=no])
+    if test x$has_gtkmozembed != xno; then
+      break
+    fi
+  done
+
+  # Check spidermonkey
+  # If gtkmozembed is available, then use bundled libmozjs.so.
+  # If libmozjs is not available, then set has_gtkmozembed to false as well,
+  # because gtkmoz-browser-child needs libmozjs.
+  libmozjs_list=""
+  case $has_gtkmozembed in
+    libxul-embedding-unstable | libxul-embedding)
+      libmozjs_list="mozilla-js"
       ;;
-    xulrunner)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed],
-                        [has_gtkmozembed=xulrunner-gtkmozembed],
-        [has_gtkmozembed=no])
+    xulrunner-gtkmozembed)
+      libmozjs_list="xulrunner-js"
       ;;
     firefox2)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed],
-                        [has_gtkmozembed=firefox2-gtkmozembed],
-        [has_gtkmozembed=no])
+      libmozjs_list="firefox2-js"
       ;;
     firefox)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed],
-                        [has_gtkmozembed=firefox-gtkmozembed],
-        [has_gtkmozembed=no])
+      libmozjs_list="firefox-js"
       ;;
-    microb)
-      PKG_CHECK_MODULES(GTKMOZEMBED, [microb-engine],
-                        [has_gtkmozembed=microb-engine],
-        [has_gtkmozembed=no])
+    microb-engine)
+      libmozjs_list="microb-engine-js"
       ;;
     *)
-      AC_MSG_ERROR([--with-gtkmozembed, invalid value])
+      libmozjs_list="mozilla-js xulrunner-js firefox2-js \
+                    firefox-js microb-engine-js"
+      ;;
   esac
-fi
 
-# Check spidermonkey
-# If gtkmozembed is available, then use bundled libmozjs.so.
-# If libmozjs is not available, then set has_gtkmozembed to false as well,
-# because gtkmoz-browser-child needs libmozjs.
-has_libmozjs=no
-case $has_gtkmozembed in
-  libxul-embedding-unstable | libxul-embedding)
-    PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
-		      [has_libmozjs=mozilla-js],
-		      [has_gtkmozembed=no]) ;;
-  xulrunner-gtkmozembed)
-    PKG_CHECK_MODULES(LIBMOZJS, [xulrunner-js],
-		      [has_libmozjs=xulrunner-js],
-		      [has_gtkmozembed=no]) ;;
-  firefox2)
-    PKG_CHECK_MODULES(LIBMOZJS, [firefox2-js],
-		      [has_libmozjs=firefox2-js],
-		      [has_gtkmozembed=no]) ;;
-  firefox)
-    PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
-		      [has_libmozjs=firefox-js],
-		      [has_gtkmozembed=no]) ;;
-  microb-engine)
-    PKG_CHECK_MODULES(LIBMOZJS, [microb-engine-js],
-		      [has_libmozjs=microb-engine-js],
-		      [has_gtkmozembed=no]) ;;
-  *)
-    PKG_CHECK_MODULES(LIBMOZJS, [mozilla-js],
-		      [has_libmozjs=mozilla-js],
-      [PKG_CHECK_MODULES(LIBMOZJS, [xulrunner-js],
-			[has_libmozjs=xulrunner-js],
-	[PKG_CHECK_MODULES(LIBMOZJS, [firefox2-js],
-			  [has_libmozjs=firefox2-js],
-	  [PKG_CHECK_MODULES(LIBMOZJS, [firefox-js],
-			    [has_libmozjs=firefox-js],
-	    [PKG_CHECK_MODULES(LIBMOZJS, [microb-engine-js],
-			      [has_libmozjs=microb-engine-js],
-	      [has_gtkmozembed=no])])])])]) ;;
-esac
+  for libmozjs in $libmozjs_list; do
+    PKG_CHECK_MODULES(LIBMOZJS, [$libmozjs],
+                      [has_libmozjs=$libmozjs], [has_libmozjs=no])
+    if test x$has_libmozjs != xno; then
+      break
+    fi
+  done
+
+  if test x$has_gtkmozembed != xno; then
+    # Add additional include dirs for mozilla 1.8 and pre 1.9
+    EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/content"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/widget"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/gtkembedmoz"
+    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpcom"
+    GTKMOZEMBED_LDFLAGS=""
+    MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
+    if test "x$MOZILLA_FIVE_HOME" = "x"; then
+    # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+    # It usually occurs on some pre xulrunner 1.9 versions.
+    # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+    # FIXME: Following method might not work on systems other than Linux.
+      MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+      # Try to find out the correct xulrunner path.
+      if test -e "$MOZILLA_FIVE_HOME/libxpcom.so"; then
+        XPCOM_PATH=`readlink -f $MOZILLA_FIVE_HOME/libxpcom.so`
+        MOZILLA_FIVE_HOME=`dirname $XPCOM_PATH`
+      fi
+    fi
+    if test "x$MOZILLA_FIVE_HOME" != "x" -a -d "$MOZILLA_FIVE_HOME"; then
+      GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
+      GTKMOZEMBED_LDFLAGS="$GTKMOZEMBED_LDFLAGS -R$MOZILLA_FIVE_HOME"
+    fi
+
+    AC_SUBST(GTKMOZEMBED_LDFLAGS)
+  fi
+
+  if test x$has_libmozjs != xno; then
+    # Add additional include dirs
+    LIBMOZJS_INCDIR=`$PKG_CONFIG --variable=includedir $has_libmozjs`
+    if (echo $LIBMOZJS_CFLAGS | grep '/stable') > /dev/null 2>&1; then
+      if test -f $LIBMOZJS_INCDIR/unstable/jsapi.h; then
+        LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -I$LIBMOZJS_INCDIR/unstable"
+      fi
+    fi
+
+    # Find out the real path of libmozjs.so
+    LIBMOZJS_LIBDIR=`$PKG_CONFIG --variable=libdir $has_libmozjs`
+    if test "x$LIBMOZJS_LIBDIR" = "x"; then
+    # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+    # It usually occurs on some pre xulrunner 1.9 versions.
+    # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+    # FIXME: Following method might not work on systems other than Linux.
+      LIBMOZJS_LIBDIR=`echo $LIBMOZJS_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+      # Try to find out the correct xulrunner path.
+      if test -e "$LIBMOZJS_LIBDIR/libmozjs.so"; then
+        LIBMOZJS_PATH=`readlink -f $LIBMOZJS_LIBDIR/libmozjs.so`
+        LIBMOZJS_LIBDIR=`dirname $LIBMOZJS_PATH`
+      fi
+    fi
+
+    # GGL_CHECK_LIBMOZJS requires LIBMOZJS_LIBDIR
+    GGL_CHECK_LIBMOZJS([170], [], [has_libmozjs=no])
+    if test x$has_libmozjs != xno; then
+      # If gtkmozembed is available and uses xpcomglue, then use xpcomglue for
+      # libmozjs as well.
+      if (echo $GTKMOZEMBED_CFLAGS | grep XPCOM_GLUE) > /dev/null 2>&1; then
+        AC_MSG_NOTICE([Uses xulrunner's xpcomglue to load libmozjs.])
+        LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS $GTKMOZEMBED_CFLAGS"
+        # Use libs of gtkmozembed instead of libmozjs's own library here to
+        # avoid direct linking to libmozjs. As xpcomglue is used, the only
+        # library shall be a static xpcomglue lib.
+        # No more library dependency will be introduced.
+        LIBMOZJS_LIBS="$GTKMOZEMBED_LIBS"
+      else
+        # If there is no xpcomglue support, then gtkmoz_browser_element needs
+        # link to libmozjs explicitly.
+        GTKMOZEMBED_LIBS="$GTKMOZEMBED_LIBS $LIBMOZJS_LIBS"
+      fi
+      if test x$with_mozjs_libname != x; then
+        LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DGGL_MOZJS_LIBNAME=\\\"$with_mozjs_libname\\\""
+      fi
+      if test "x$LIBMOZJS_LIBDIR" != "x" -a \
+              "x$LIBMOZJS_LIBDIR" != "$libdir"; then
+        LIBMOZJS_LDFLAGS="-R$LIBMOZJS_LIBDIR"
+        AC_SUBST(LIBMOZJS_LDFLAGS)
+      fi
+    fi
+  fi
+
+  if test x$has_libmozjs = xno; then
+    has_gtkmozembed=no
+    if test x$build_smjs_script_runtime = xyes; then
+      AC_MSG_WARN([libmozjs >= 1.7 is required by smjs-script-runtime.])
+      build_smjs_script_runtime=no
+    fi
+  else
+    AC_MSG_NOTICE([Uses libmozjs from $has_libmozjs])
+  fi
+
+  if test x$has_gtkmozembed = xno; then
+    if test $build_gtkmoz_browser_element = xyes; then
+      AC_MSG_WARN([gtkmozembed is required by gtkmoz-browser-element.])
+      build_gtkmoz_browser_element=no
+    fi
+  else
+    AC_MSG_NOTICE([Uses gtkmozembed from $has_gtkmozembed])
+  fi
+fi
 
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
@@ -824,272 +1062,22 @@ AC_PATH_PROG(UPDATE_MIME_DATABASE, update-mime-database, no)
 if test x$UPDATE_MIME_DATABASE = xno; then
   enable_update_mime_database=no
 fi
-AM_CONDITIONAL(ENABLE_UPDATE_MIME_DATABASE, test x$enable_update_mime_database = xyes)
 
 # Check update-desktop-database
 AC_PATH_PROG(UPDATE_DESKTOP_DATABASE, update-desktop-database, no)
 if test x$UPDATE_DESKTOP_DATABASE = xno; then
   enable_update_desktop_database=no
 fi
-AM_CONDITIONAL(ENABLE_UPDATE_DESKTOP_DATABASE, test x$enable_update_desktop_database = xyes)
 
 # Check xdg-icon-resource
 AC_PATH_PROG(XDG_ICON_RESOURCE, xdg-icon-resource, no)
 if test x$XDG_ICON_RESOURCE = xno; then
   enable_xdg_icon_resource=no
 fi
-AM_CONDITIONAL(ENABLE_XDG_ICON_RESOURCE, test x$enable_xdg_icon_resource = xyes)
 
 ###########################################################
 ##                  Process Config options.              ##
 ###########################################################
-
-if test x$has_zlib != xyes; then
-  AC_MSG_ERROR([Library zlib is not available.])
-fi
-
-if test x$has_libxml2 != xyes -a x$build_libxml2_xml_parser = xyes; then
-  AC_MSG_WARN([Library xml2 is not available, libxml2-xml-parser extension won't be built.])
-  build_libxml2_xml_parser=no
-fi
-
-if test x$has_libcurl != xyes; then
-  if test x$build_curl_xml_http_request = xyes; then
-    AC_MSG_WARN([Library curl is not available, curl-xml-http-request extension won't be built.])
-    build_curl_xml_http_request=no
-  fi
-fi
-
-if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
-  AC_MSG_WARN([Library gstreamer(>=0.10.0) is not available, gst-audio-framework extension will not be built.])
-  build_gst_audio_framework=no
-fi
-
-if test x$build_gst_video_element = xyes; then
-  build_gst_video_element=no
-  if test x$has_gstreamer = xyes -a x$has_gstreamer_video = xyes; then
-    build_gst_video_element=yes
-  else
-    AC_MSG_WARN([Library gstreamer(>=0.10.0) is not available, gst-video-element extension will not be built.])
-  fi
-fi
-
-if test x$has_gtk2 != xyes; then
-  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and gtk host won't be built.])
-  build_gtk_host=no
-  build_gtk_system_framework=no
-  build_libggadget_gtk=no
-  build_gtk_flash_element=no
-else
-  gtk2_target=`$PKG_CONFIG --variable=target gtk+-2.0`
-fi
-
-if test x$has_qt4 != xyes; then
-  AC_MSG_WARN([Library qt-4.3 or above is not available, qt port won't be built])
-  build_qt_host=no
-  build_libggadget_qt=no
-  build_qt_system_framework=no
-  build_qt_xml_http_request=no
-  build_qt_script_runtime=no
-  build_qtwebkit_browser_element=no
-fi
-
-if test x$has_qtwebkit != xyes -a x$build_qtwebkit_browser_element = xyes; then
-  AC_MSG_WARN([Library qtwebkit or qt-4.4 and above is needed to build qtwebkit_browser_element])
-  build_qtwebkit_browser_element=no
-fi
-
-if test x$has_qtscript != xyes -a x$build_qt_script_runtime = xyes; then
-  AC_MSG_WARN([Library qt-4.4 and above is needed to build qt_script_runtime])
-  build_qt_script_runtime=no
-fi
-
-# has_dbus might also be equal to old
-if test x$has_dbus = xno -a x$build_libggadget_dbus = xyes; then
-  AC_MSG_WARN([Library D-Bus is not available, libggadget-dbus won't be built.])
-  build_libggadget_dbus=no
-fi
-
-if test x$has_gtkmozembed = xno; then
-  if test x$build_gtkmoz_browser_element = xyes; then
-    AC_MSG_WARN([Library GtkMozEmbed is not available,]
-		[gtkmoz-browser-element extension won't be built.])
-    build_gtkmoz_browser_element=no
-  fi
-else
-  # Add additional include dirs for mozilla 1.8 and pre 1.9
-  EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/content"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/widget"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/gtkembedmoz"
-  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpcom"
-  GTKMOZEMBED_LDFLAGS=""
-  MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
-  if test "x$MOZILLA_FIVE_HOME" = "x"; then
-  # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
-  # It usually occurs on some pre xulrunner 1.9 versions.
-  # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
-  # FIXME: Following method might not work on systems other than Linux.
-    MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
-    # Try to find out the correct xulrunner path.
-    if test -e "$MOZILLA_FIVE_HOME/libxpcom.so"; then
-      XPCOM_PATH=`readlink -f $MOZILLA_FIVE_HOME/libxpcom.so`
-      MOZILLA_FIVE_HOME=`dirname $XPCOM_PATH`
-    fi
-  fi
-  if test "x$MOZILLA_FIVE_HOME" != "x" -a -d "$MOZILLA_FIVE_HOME"; then
-    GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
-    GTKMOZEMBED_LDFLAGS="$GTKMOZEMBED_LDFLAGS -R$MOZILLA_FIVE_HOME"
-  fi
-
-  AC_SUBST(GTKMOZEMBED_LDFLAGS)
-fi
-
-if test x$has_libmozjs != xno; then
-  # Add additional include dirs
-  LIBMOZJS_INCDIR=`$PKG_CONFIG --variable=includedir $has_libmozjs`
-  if (echo $LIBMOZJS_CFLAGS | grep '/stable') > /dev/null 2>&1; then
-    if test -f $LIBMOZJS_INCDIR/unstable/jsapi.h; then
-      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -I$LIBMOZJS_INCDIR/unstable"
-    fi
-  fi
-
-  # Find out the real path of libmozjs.so
-  LIBMOZJS_LIBDIR=`$PKG_CONFIG --variable=libdir $has_libmozjs`
-  if test "x$LIBMOZJS_LIBDIR" = "x"; then
-  # Some distributions doesn't have libdir, so try to extract libdir from LIBS.
-  # It usually occurs on some pre xulrunner 1.9 versions.
-  # @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
-  # FIXME: Following method might not work on systems other than Linux.
-    LIBMOZJS_LIBDIR=`echo $LIBMOZJS_LIBS | $SED -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
-    # Try to find out the correct xulrunner path.
-    if test -e "$LIBMOZJS_LIBDIR/libmozjs.so"; then
-      LIBMOZJS_PATH=`readlink -f $LIBMOZJS_LIBDIR/libmozjs.so`
-      LIBMOZJS_LIBDIR=`dirname $LIBMOZJS_PATH`
-    fi
-  fi
-
-  # GGL_CHECK_LIBMOZJS requires LIBMOZJS_LIBDIR
-  GGL_CHECK_LIBMOZJS([170], [], [has_libmozjs=no])
-  if test x$has_libmozjs != xno; then
-    # If gtkmozembed is available and uses xpcomglue, then use xpcomglue for
-    # libmozjs as well.
-    if (echo $GTKMOZEMBED_CFLAGS | grep XPCOM_GLUE) > /dev/null 2>&1; then
-      AC_MSG_NOTICE([Use xulrunner's xpcomglue to load libmozjs.])
-      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS $GTKMOZEMBED_CFLAGS"
-      # Use libs of gtkmozembed instead of libmozjs's own library here to avoid
-      # direct linking to libmozjs.
-      # As xpcomglue is used, the only library shall be a static xpcomglue lib.
-      # No more library dependency will be introduced.
-      LIBMOZJS_LIBS="$GTKMOZEMBED_LIBS"
-    else
-      # If there is no xpcomglue support, then gtkmoz_browser_element needs
-      # link to libmozjs explicitly.
-      GTKMOZEMBED_LIBS="$GTKMOZEMBED_LIBS $LIBMOZJS_LIBS"
-    fi
-    if test x$with_mozjs_libname != x; then
-      LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DGGL_MOZJS_LIBNAME=\\\"$with_mozjs_libname\\\""
-    fi
-    if test "x$LIBMOZJS_LIBDIR" != "x" -a "x$LIBMOZJS_LIBDIR" != "$libdir"; then
-      LIBMOZJS_LDFLAGS="-R$LIBMOZJS_LIBDIR"
-      AC_SUBST(LIBMOZJS_LDFLAGS)
-    fi
-  fi
-fi
-
-if test x$has_libmozjs = xno -a x$build_smjs_script_runtime = xyes; then
-  AC_MSG_WARN([Library SpiderMonkey is not available,]
-	      [smjs-script-runtime extension won't be built.])
-  build_smjs_script_runtime=no
-fi
-
-AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_GTK],
-  [test x$build_libggadget_gtk = xyes])
-
-AM_CONDITIONAL(
-  [GTK2_TARGET_X11],
-  [test x$gtk2_target = xx11])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_QT],
-  [test x$build_libggadget_qt = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_QT_HOST],
-  [test x$build_qt_host = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_DBUS],
-  [test x$build_libggadget_dbus = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
-  [test x$build_gtkmoz_browser_element = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GST_AUDIO_FRAMEWORK],
-  [test x$build_gst_audio_framework = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GST_VIDEO_ELEMENT],
-  [test x$build_gst_video_element = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GTK_FLASH_ELEMENT],
-  [test x$build_gtk_flash_element = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
-  [test x$build_gtk_system_framework = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT],
-  [test x$build_qtwebkit_browser_element = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_QT_SYSTEM_FRAMEWORK],
-  [test x$build_qt_system_framework = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_QT_XML_HTTP_REQUEST],
-  [test x$build_qt_xml_http_request = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
-  [test x$build_smjs_script_runtime = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_QT_SCRIPT_RUNTIME],
-  [test x$build_qt_script_runtime = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_CURL_XML_HTTP_REQUEST],
-  [test x$build_curl_xml_http_request = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_LIBXML2_XML_PARSER],
-  [test x$build_libxml2_xml_parser = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_GTK_HOST],
-  [test x$build_gtk_host = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_NPAPI],
-  [test x$build_libggadget_npapi = xyes])
-
-
-AM_CONDITIONAL([GGL_HAVE_XLIB], [test x$has_xlib = xyes])
-AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
-AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
-AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
-AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
-AM_CONDITIONAL([GGL_CROSS_COMPILING], [test x$cross_compiling = xyes])
-AM_CONDITIONAL([GGL_DISABLE_SHARED], [test x$enable_shared != xyes])
 
 if test x$enable_shared != xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_DISABLE_SHARED"
@@ -1110,8 +1098,8 @@ if test x$build_gtk_host = xyes; then
   if test x$build_curl_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
           x$build_smjs_script_runtime != xyes; then
-    AC_MSG_WARN([curl, libxml2 or spidermonkey are missing, which are required for gtk host.])
-    build_gtk_host=no;
+    AC_MSG_WARN([curl, libxml2 or libmozjs are missing, gtk host won't work.])
+    build_gtk_host=no
   fi
 fi
 
@@ -1120,8 +1108,8 @@ if test x$build_qt_host = xyes; then
           x$build_libxml2_xml_parser != xyes -o \
           '(' x$build_smjs_script_runtime != xyes -a \
           x$build_qt_script_runtime != xyes ')'; then
-    AC_MSG_WARN([qt4, libxml2 or js runtime are missing, which are required for qt host.])
-    build_qt_host=no;
+    AC_MSG_WARN([qt4, libxml2 or js runtime are missing, qt host won't work.])
+    build_qt_host=no
   fi
 fi
 
@@ -1137,18 +1125,123 @@ if test x$default_browser_plugins_dir != x; then
                      -DGGL_DEFAULT_BROWSER_PLUGINS_DIR=\\\"$default_browser_plugins_dir\\\""
 fi
 
-#pthread lib
-if test x$has_pthread = xyes; then
-  PTHREAD_LIBS="-lpthread"
-  AC_SUBST(PTHREAD_LIBS)
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_PTHREAD=1"
-fi
-
 #xdgmime
 if test x$enable_xdgmime = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_ENABLE_XDGMIME"
 fi
-AM_CONDITIONAL([GGL_ENABLE_XDGMIME], [test x$enable_xdgmime = xyes])
+
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTK_HOST],
+  [test x$build_gtk_host = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_HOST],
+  [test x$build_qt_host = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_DBUS],
+  [test x$build_libggadget_dbus = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_GTK],
+  [test x$build_libggadget_gtk = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_NPAPI],
+  [test x$build_libggadget_npapi = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_QT],
+  [test x$build_libggadget_qt = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_CURL_XML_HTTP_REQUEST],
+  [test x$build_curl_xml_http_request = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_DBUS_SCRIPT_CLASS],
+  [test x$build_dbus_script_class = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GST_AUDIO_FRAMEWORK],
+  [test x$build_gst_audio_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GST_VIDEO_ELEMENT],
+  [test x$build_gst_video_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTK_EDIT_ELEMENT],
+  [test x$build_gtk_edit_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTK_FLASH_ELEMENT],
+  [test x$build_gtk_flash_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
+  [test x$build_gtk_system_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
+  [test x$build_gtkmoz_browser_element = xyes])
+
+AM_CONDITIONAL(
+  [GTK2_TARGET_X11],
+  [test x$gtk2_target = xx11])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBXML2_XML_PARSER],
+  [test x$build_libxml2_xml_parser = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_EDIT_ELEMENT],
+  [test x$build_qt_edit_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_SCRIPT_RUNTIME],
+  [test x$build_qt_script_runtime = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_SYSTEM_FRAMEWORK],
+  [test x$build_qt_system_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_XML_HTTP_REQUEST],
+  [test x$build_qt_xml_http_request = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT],
+  [test x$build_qtwebkit_browser_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
+  [test x$build_smjs_script_runtime = xyes])
+
+AM_CONDITIONAL(
+  [GGL_ENABLE_UPDATE_MIME_DATABASE],
+  [test x$enable_update_mime_database = xyes])
+
+AM_CONDITIONAL(
+  [GGL_ENABLE_UPDATE_DESKTOP_DATABASE],
+  [test x$enable_update_desktop_database = xyes])
+
+AM_CONDITIONAL(
+  [GGL_ENABLE_XDG_ICON_RESOURCE],
+  [test x$enable_xdg_icon_resource = xyes])
+
+AM_CONDITIONAL(
+  [GGL_ENABLE_XDGMIME],
+  [test x$enable_xdgmime = xyes])
+
+AM_CONDITIONAL([GGL_HAVE_XLIB], [test x$has_xlib = xyes])
+AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
+AM_CONDITIONAL([GGL_HAVE_GTK2], [test x$has_gtk2 = xyes])
+AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_librsvg = xyes])
+AM_CONDITIONAL([GGL_HAVE_NETWORK_MANAGER], [test x$has_network_manager != xno])
+AM_CONDITIONAL([GGL_CROSS_COMPILING], [test x$cross_compiling = xyes])
+AM_CONDITIONAL([GGL_DISABLE_SHARED], [test x$enable_shared != xyes])
 
 # Clear the default CFLAGS and CXXFLAGS
 CFLAGS=$ggl_save_CFLAGS
@@ -1171,77 +1264,77 @@ AC_CONFIG_HEADERS([config.h])
 
 # Specifies configurable files.
 AC_CONFIG_FILES([Makefile
-		 extensions/Makefile
-		 extensions/analytics_usage_collector/Makefile
-		 extensions/curl_xml_http_request/Makefile
-		 extensions/dbus_script_class/Makefile
-		 extensions/default_framework/Makefile
-		 extensions/default_options/Makefile
-		 extensions/default_options/tests/Makefile
-		 extensions/google_gadget_manager/Makefile
-		 extensions/google_gadget_manager/tests/Makefile
-		 extensions/gst_audio_framework/Makefile
-		 extensions/gst_video_element/Makefile
-		 extensions/gtk_edit_element/Makefile
-		 extensions/gtk_system_framework/Makefile
-		 extensions/gtkmoz_browser_element/Makefile
-		 extensions/libxml2_xml_parser/Makefile
-		 extensions/linux_system_framework/Makefile
-		 extensions/linux_system_framework/tests/Makefile
-		 extensions/gtk_flash_element/Makefile
-		 extensions/qt_edit_element/Makefile
-		 extensions/qt_script_runtime/Makefile
-		 extensions/qt_script_runtime/tests/Makefile
-		 extensions/qt_system_framework/Makefile
-		 extensions/qt_xml_http_request/Makefile
-		 extensions/qtwebkit_browser_element/Makefile
-		 extensions/smjs_script_runtime/Makefile
-		 extensions/smjs_script_runtime/tests/Makefile
-		 gadgets/Makefile
-		 gadgets/analog_clock/Makefile
-		 gadgets/designer/Makefile
-		 gadgets/designer/gadget/Makefile
-		 gadgets/designer/blank_gadget/Makefile
-		 gadgets/digital_alarm_clock/Makefile
-		 gadgets/igoogle/Makefile
-		 gadgets/photos/Makefile
-		 gadgets/rss/Makefile
-		 gadgets/gadget_browser/Makefile
-		 ggadget/Makefile
-		 ggadget/libggadget-1.0.pc
-		 ggadget/sysdeps.h
-		 ggadget/tests/Makefile
-		 ggadget/tests/test_modules/Makefile
-		 ggadget/dbus/Makefile
-		 ggadget/dbus/tests/Makefile
-		 ggadget/dbus/libggadget-dbus-1.0.pc
-		 ggadget/npapi/Makefile
-		 ggadget/npapi/tests/Makefile
-		 ggadget/npapi/libggadget-npapi-1.0.pc
-		 ggadget/gtk/Makefile
-		 ggadget/gtk/tests/Makefile
-		 ggadget/gtk/libggadget-gtk-1.0.pc
-		 ggadget/js/Makefile
-		 ggadget/js/tests/Makefile
-		 ggadget/js/libggadget-js-1.0.pc
-		 ggadget/qt/Makefile
-		 ggadget/qt/tests/Makefile
-		 ggadget/qt/libggadget-qt-1.0.pc
-		 ggadget/xdg/Makefile
-		 ggadget/xdg/tests/Makefile
-		 ggadget/xdg/libggadget-xdg-1.0.pc
-		 hosts/Makefile
-		 hosts/gtk/Makefile
-		 hosts/qt/Makefile
-		 resources/Makefile
-		 third_party/Makefile
-		 third_party/codesighs/Makefile
-		 third_party/editline/Makefile
-		 third_party/unzip/Makefile
-		 third_party/xdgmime/Makefile
-		 unittest/Makefile
-		 xdg/Makefile
-		 ])
+                 extensions/Makefile
+                 extensions/analytics_usage_collector/Makefile
+                 extensions/curl_xml_http_request/Makefile
+                 extensions/dbus_script_class/Makefile
+                 extensions/default_framework/Makefile
+                 extensions/default_options/Makefile
+                 extensions/default_options/tests/Makefile
+                 extensions/google_gadget_manager/Makefile
+                 extensions/google_gadget_manager/tests/Makefile
+                 extensions/gst_audio_framework/Makefile
+                 extensions/gst_video_element/Makefile
+                 extensions/gtk_edit_element/Makefile
+                 extensions/gtk_system_framework/Makefile
+                 extensions/gtkmoz_browser_element/Makefile
+                 extensions/libxml2_xml_parser/Makefile
+                 extensions/linux_system_framework/Makefile
+                 extensions/linux_system_framework/tests/Makefile
+                 extensions/gtk_flash_element/Makefile
+                 extensions/qt_edit_element/Makefile
+                 extensions/qt_script_runtime/Makefile
+                 extensions/qt_script_runtime/tests/Makefile
+                 extensions/qt_system_framework/Makefile
+                 extensions/qt_xml_http_request/Makefile
+                 extensions/qtwebkit_browser_element/Makefile
+                 extensions/smjs_script_runtime/Makefile
+                 extensions/smjs_script_runtime/tests/Makefile
+                 gadgets/Makefile
+                 gadgets/analog_clock/Makefile
+                 gadgets/designer/Makefile
+                 gadgets/designer/gadget/Makefile
+                 gadgets/designer/blank_gadget/Makefile
+                 gadgets/digital_alarm_clock/Makefile
+                 gadgets/igoogle/Makefile
+                 gadgets/photos/Makefile
+                 gadgets/rss/Makefile
+                 gadgets/gadget_browser/Makefile
+                 ggadget/Makefile
+                 ggadget/libggadget-1.0.pc
+                 ggadget/sysdeps.h
+                 ggadget/tests/Makefile
+                 ggadget/tests/test_modules/Makefile
+                 ggadget/dbus/Makefile
+                 ggadget/dbus/tests/Makefile
+                 ggadget/dbus/libggadget-dbus-1.0.pc
+                 ggadget/npapi/Makefile
+                 ggadget/npapi/tests/Makefile
+                 ggadget/npapi/libggadget-npapi-1.0.pc
+                 ggadget/gtk/Makefile
+                 ggadget/gtk/tests/Makefile
+                 ggadget/gtk/libggadget-gtk-1.0.pc
+                 ggadget/js/Makefile
+                 ggadget/js/tests/Makefile
+                 ggadget/js/libggadget-js-1.0.pc
+                 ggadget/qt/Makefile
+                 ggadget/qt/tests/Makefile
+                 ggadget/qt/libggadget-qt-1.0.pc
+                 ggadget/xdg/Makefile
+                 ggadget/xdg/tests/Makefile
+                 ggadget/xdg/libggadget-xdg-1.0.pc
+                 hosts/Makefile
+                 hosts/gtk/Makefile
+                 hosts/qt/Makefile
+                 resources/Makefile
+                 third_party/Makefile
+                 third_party/codesighs/Makefile
+                 third_party/editline/Makefile
+                 third_party/unzip/Makefile
+                 third_party/xdgmime/Makefile
+                 unittest/Makefile
+                 xdg/Makefile
+                 ])
 AC_OUTPUT
 
 AC_MSG_RESULT([
@@ -1257,33 +1350,37 @@ Build options:
   OEM brand                     $ggl_oem_brand
 
  Libraries:
-  Build libggadget-gtk          $build_libggadget_gtk
-  Build libggadget-qt           $build_libggadget_qt
   Build libggadget-dbus         $build_libggadget_dbus
+  Build libggadget-gtk          $build_libggadget_gtk
   Build libggadget-npapi        $build_libggadget_npapi
+  Build libggadget-qt           $build_libggadget_qt
 
  Extensions:
-  Build dbus-script-class       $build_libggadget_dbus
-  Build gtk-edit-element        $build_libggadget_gtk
-  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
-  Build qtwebkit-browser        $build_qtwebkit_browser_element
+  Build curl-xml-http-request   $build_curl_xml_http_request
+  Build dbus-script-class       $build_dbus_script_class
   Build gst-audio-framework     $build_gst_audio_framework
   Build gst-video-element       $build_gst_video_element
-  Build gtk-system-framework    $build_gtk_system_framework
+  Build gtk-edit-element        $build_gtk_edit_element
   Build gtk-flash-element       $build_gtk_flash_element
-  Build qt-system-framework     $build_qt_system_framework
-  Build linux-system-framework  $build_linux_system_framework
-  Build smjs-script-runtime     $build_smjs_script_runtime
-  Build qt-script-runtime       $build_qt_script_runtime
-  Build curl-xml-http-request   $build_curl_xml_http_request
-  Build qt-xml-http-request     $build_qt_xml_http_request
+  Build gtk-system-framework    $build_gtk_system_framework
+  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
   Build libxml2-xml-parser      $build_libxml2_xml_parser
+  Build linux-system-framework  $build_linux_system_framework
+  Build qt-edit-element         $build_qt_edit_element
+  Build qt-script-runtime       $build_qt_script_runtime
+  Build qt-system-framework     $build_qt_system_framework
+  Build qt-xml-http-request     $build_qt_xml_http_request
+  Build qtwebkit-browser        $build_qtwebkit_browser_element
+  Build smjs-script-runtime     $build_smjs_script_runtime
 
  Other features:
   GTK SVG Support               $has_librsvg
   NetworkManager support        $has_network_manager
   Startup notification support  $has_startup_notification
   Built-in xdgmime support      $enable_xdgmime
+  Browser plugins directory     $default_browser_plugins_dir
+  Default gstreamer audio sink  $default_gst_audio_sink
+  Memory check command          $memcheck_command
 
  Hosts:
   Build gtk host                $build_gtk_host
@@ -1292,5 +1389,5 @@ Build options:
 
 if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then
   AC_MSG_WARN([Neither gtk host nor qt host will be built !!!]
-	      [Nothing can be used to run Google Gadgets for Linux.])
+              [Nothing can be used to run Google Gadgets for Linux.])
 fi
