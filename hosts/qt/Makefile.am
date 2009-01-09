@@ -124,7 +124,7 @@ ggl-qt.desktop : ggl-qt.desktop.in
 
 EXTRA_DIST = $(desktop_in_files) CMakeLists.txt
 
-if ENABLE_UPDATE_DESKTOP_DATABASE
+if GGL_ENABLE_UPDATE_DESKTOP_DATABASE
 install-data-hook:
 	@if test -z "$(DESTDIR)"; then \
 	  $(UPDATE_DESKTOP_DATABASE) "$(DESTDIR)$(desktopdir)"; \

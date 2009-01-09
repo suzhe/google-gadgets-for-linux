@@ -67,7 +67,7 @@ ICONS = 32x32.png \
 
 EXTRA_DIST = $(xml_files) $(ICONS) CMakeLists.txt
 
-if ENABLE_XDG_ICON_RESOURCE
+if GGL_ENABLE_XDG_ICON_RESOURCE
 update-icon-cache:
 	@if test -z "$(DESTDIR)"; then \
 		echo "Updating icon cache."; \
@@ -104,7 +104,7 @@ install-data-local: install-icons update-icon-cache
 
 uninstall-local: uninstall-icons update-icon-cache
 
-if ENABLE_UPDATE_MIME_DATABASE
+if GGL_ENABLE_UPDATE_MIME_DATABASE
 install-data-hook:
 	@if test -z "$(DESTDIR)"; then \
 	  $(UPDATE_MIME_DATABASE) "$(DESTDIR)$(datadir)/mime"; \

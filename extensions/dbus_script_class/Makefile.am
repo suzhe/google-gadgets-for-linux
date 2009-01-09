@@ -15,7 +15,7 @@
 
 EXTRA_DIST = CMakeLists.txt
 
-if GGL_BUILD_LIBGGADGET_DBUS
+if GGL_BUILD_DBUS_SCRIPT_CLASS
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

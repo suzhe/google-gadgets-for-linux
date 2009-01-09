@@ -22,7 +22,7 @@
 # Commom part
 #############################################################################
 Name:           google-gadgets
-Version:        0.10.4
+Version:        0.10.5
 Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
@@ -587,6 +587,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
+* Thu Jan 08 2009 James Su <james.su@gmail.com>
+- Updates to version 0.10.5
+
 * Tue Dec 16 2008 James Su <james.su@gmail.com>
 - Updates to version 0.10.4
 
