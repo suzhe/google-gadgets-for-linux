@@ -98,7 +98,7 @@ class ZipFileManager::Impl : public SmallObject<> {
     memset(&stat_value, 0, sizeof(stat_value));
     if (::stat(path.c_str(), &stat_value) == 0) {
       if (!S_ISREG(stat_value.st_mode)) {
-        LOG("Not a regular file: %s", path.c_str());
+        DLOG("Not a regular file: %s", path.c_str());
         return false;
       }
 

@@ -16,5 +16,5 @@
 
 ADD_DEFINITIONS(-DMODULE_NAME=fake-module -DMODULE_NAME_UNDERSCORE=fake_module)
 ADD_MODULE(fake-module ${SRCS})
-TARGET_LINK_LIBRARIES(fake-module)
+TARGET_LINK_LIBRARIES(fake-module gtest ggadget${GGL_EPOCH})
 OUTPUT_TEST_MODULE(fake-module)

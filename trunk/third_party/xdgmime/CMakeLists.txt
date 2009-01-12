@@ -30,5 +30,5 @@ IF(GGL_ENABLE_XDGMIME)
     xdgmimeparent.c
   )
 
-  ADD_LIBRARY(xdgmime ${SRCS})
+  ADD_LIBRARY(xdgmime STATIC ${SRCS})
 ENDIF(GGL_ENABLE_XDGMIME)
