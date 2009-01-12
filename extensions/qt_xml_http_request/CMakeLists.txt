@@ -25,8 +25,10 @@ QT4_AUTOMOC(qt_xml_http_request.cc)
 
 ADD_MODULE(qt-xml-http-request qt_xml_http_request.cc)
 TARGET_LINK_LIBRARIES(qt-xml-http-request
+  ggadget${GGL_EPOCH}
   ${QT_LIBRARIES}
-  ggadget${GGL_EPOCH})
+  ${QT_QTNETWORK_LIBRARIES}
+)
 OUTPUT_MODULE(qt-xml-http-request)
 
 ENDIF(GGL_BUILD_LIBGGADGET_QT)

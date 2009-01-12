@@ -31,4 +31,4 @@ SET(SRCS
   sysunix.c
 )
 
-ADD_LIBRARY(editline ${SRCS})
+ADD_LIBRARY(editline STATIC ${SRCS})

@@ -48,7 +48,10 @@ APPLY_CONFIG(GTKMOZEMBED)
 SET(LIB_SRCS browser_element.cc)
 
 ADD_MODULE(gtkmoz-browser-element ${LIB_SRCS})
-TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget${GGL_EPOCH} ${GTK_LIBRARIES})
+TARGET_LINK_LIBRARIES(gtkmoz-browser-element
+  ggadget${GGL_EPOCH}
+  ${GTK2_LIBRARIES}
+)
 OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS
