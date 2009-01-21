@@ -45,6 +45,12 @@ In order to run it in background mode, just use -bg option, such as:
 
 For best results, we recommend a recent system with software and hardware support for alpha-blended windows. Specifically, X Windows with the XComposite extension installed and a version of GTK+ greater or equal to 2.10 are preferred. Otherwise, the gadgets will show up on an opaque background that doesn't convey the same glitz that a newer system would.
 
+== Install from binary package ==
+
+If you don't want to install from the source package, you can choose to download and install a pre-built binary package, though it might be a little older than the latest source package.
+
+The binary packages are provided by opensource community, please check BinaryPackages page to see if there is a binary package for your system.
+
 == Contributing to the Project ==
 
 Finally, if you're interested in actively contributing the project, you might be interesting in setting up a SVK infrastructure on your machine. This makes it easier to do some things like code reviews. We have a [SVKQuickStart Wiki page] to help you with that.
