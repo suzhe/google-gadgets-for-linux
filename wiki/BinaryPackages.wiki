@@ -40,12 +40,7 @@ You can find google-gadgets in contrib repository of Mandriva >= 2008.1. You may
 A simple 'urpmi google-gadgets' command will get it installed. Choose the host you want, the gtk or the qt one. 
 
 == Fedora ==
-Yum repositories:
- * Fedora 10: http://download.opensuse.org/repositories/home:/suzhe/Fedora_10/
- * Fedora 9: http://download.opensuse.org/repositories/home:/suzhe/Fedora_9/
- * Fedora 8: http://download.opensuse.org/repositories/home:/suzhe/Fedora_8/
-
-Add the repository for your system, and install either google-gadgets-gtk or google-gadgets-qt package as you want.
+Google Gadgets for Linux is now in Fedora's official repository. If you are using Fedora 9 or above, you can just use yum to install it. Use command `yum install google-gadgets-gtk` to install Gtk version, or `yum install google-gadgets-qt` for Qt version. You must be root to run this command.
 
 == Slackware ==
 You can get binary package for Slackware 12.1 from:
