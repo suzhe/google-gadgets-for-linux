@@ -32,7 +32,9 @@ Or this site, which provides binary packages for both Ubuntu 8.04 and 8.10:
  * http://www.getdeb.net/app/Google+Gadgets
 
 == Debian sid ==
-We are woking on the binary package for Debian, stay tuned.
+Google Gadgets is already in Debian sid. You can install either google-gadgets-gtk or google-gadgets-qt as you wish.
+
+See [http://packages.debian.org/sid/google-gadgets-gtk google-gadgets-gtk] or [http://packages.debian.org/sid/google-gadgets-qt google-gadgets-qt] for package details.
 
 == Mandriva ==
 You can find google-gadgets in contrib repository of Mandriva >= 2008.1. You may want to enable backports repository if you want to get the latest version of google-gadgets.
