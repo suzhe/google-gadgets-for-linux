@@ -1,0 +1,17 @@
+#summary This page describes the Desktop Gadgets API that supported by Google Gadgets for Linux
+
+_This page is still under construction_
+
+= Introduction =
+
+Google Gadgets for Linux supports most part of [http://code.google.com/apis/desktop/docs/gadget_apiref.html Google Desktop Gadgets API] that originally defined by Google Desktop for Windows product, but there are some exceptions. This page lists all APIs that are not or partially supported by Google Gadgets for Linux, as well as some new APIs that are only available in GGL.
+
+
+= Unsupported APIs =
+APIs listed in this section are not supported by current version of GGL. Gadgets relying on these APIs won't work correctly on GGL.
+
+= Partially supported APIs =
+APIs listed in this section are partially supported by current version of GGL. Gadgets relying on these APIs may work on GGL with limited functionalities.
+
+= New APIs =
+APIs listed in this section are only supported by GGL. Gadgets relying on these APIs won't work on Google Desktop for Windows or Google Gadgets for Mac.
