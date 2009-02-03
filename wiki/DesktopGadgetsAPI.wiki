@@ -11,7 +11,7 @@ Google Gadgets for Linux supports most part of [http://code.google.com/apis/desk
 = Unsupported APIs =
 APIs listed in this section are not supported by current version of GGL. Gadgets relying on these APIs won't work correctly on GGL.
 
-== [http://code.google.com/apis/desktop/docs/searchapi.html Search APIs] ==
+== Search APIs ==
 All APIs in [http://code.google.com/apis/desktop/docs/searchapi.html Search APIs] category are not supported by GGL. Including:
  * [http://code.google.com/apis/desktop/docs/actionsapi.html Action API]
  * [http://code.google.com/apis/desktop/docs/eventapi.html Event API]
@@ -19,7 +19,7 @@ All APIs in [http://code.google.com/apis/desktop/docs/searchapi.html Search APIs
  * [http://code.google.com/apis/desktop/docs/releasenotes-v55.html#s5 Personalization API]
  * [http://code.google.com/apis/desktop/docs/queryapi.html Query API]
 
-== [http://code.google.com/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] ==
+== googleTalk ==
 [http://code.google.com/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] related APIs are not supported by GGL.
 
 == VBScript and JScript ==
