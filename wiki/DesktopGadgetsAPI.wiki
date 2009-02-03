@@ -10,8 +10,40 @@ Google Gadgets for Linux supports most part of [http://code.google.com/apis/desk
 = Unsupported APIs =
 APIs listed in this section are not supported by current version of GGL. Gadgets relying on these APIs won't work correctly on GGL.
 
+== [http://code.google.com/intl/zh-CN/apis/desktop/docs/searchapi.html Search APIs] ==
+All APIs in [http://code.google.com/intl/zh-CN/apis/desktop/docs/searchapi.html Search APIs] category are not supported by GGL. Including:
+ * [http://code.google.com/intl/zh-CN/apis/desktop/docs/actionsapi.html Action API]
+ * [http://code.google.com/intl/zh-CN/apis/desktop/docs/eventapi.html Event API]
+ * [http://code.google.com/intl/zh-CN/apis/desktop/docs/indexapi.html Index API]
+ * [http://code.google.com/intl/zh-CN/apis/desktop/docs/releasenotes-v55.html#s5 Personalization API]
+ * [http://code.google.com/intl/zh-CN/apis/desktop/docs/queryapi.html Query API]
+
+== [http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] ==
+[http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] related APIs are not supported by GGL.
+
+== VBScript and JScript ==
+GGL only supports standard JavaScript code, though a preprocessor is used to translate some JScript grammars into standard JavaScript. For example:
+ * Things like options.item(a) = b; will be translated into options.putValue(a, b);
+ * if (a) {...}; else {...} will be translated into if (a) {...} else {...}
+
+Though VBScript is not supported, VBArray and Enumerator used by Desktop Gadgets APIs are supported through some wrapper code.
+
+== ActiveX ==
+GGL obviously doesn't support loading ActiveX objects. However, in order to support some popular gadgets, GGL emulates some commonly used ActiveX objects and methods, such as:
+ * Shell.Application, open and ShellExecute methods are emulated.
+ * WScript.Shell, Run method is emulated.
+ * Microsoft.XMLHttp
+ * Microsoft.XMLDOM
+ * Scripting.FileSystemObject
+
 = Partially supported APIs =
 APIs listed in this section are partially supported by current version of GGL. Gadgets relying on these APIs may work on GGL with limited functionalities.
+
+== [http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget_apiref.html#object object element] ==
+GGL emulates wmplayer and flash activex object with limited functionalities. Gadgets can use object element to load a video or a flash, but it may not have the same behavior than Google Desktop for Windows.
+Please refer to [http://code.google.com/intl/zh-CN/apis/desktop/docs/releasenotes-v58.html#flash this article] for how to load a flash movie.
+Note: flash support is supported by gtk host (ggl-gtk).
+
 
 = New APIs =
 APIs listed in this section are only supported by GGL. Gadgets relying on these APIs won't work on Google Desktop for Windows or Google Gadgets for Mac.
