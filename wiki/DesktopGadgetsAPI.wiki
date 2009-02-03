@@ -131,7 +131,7 @@ Besides properties, methods and signals exported by remote DBus object, DBusSess
  Sets the value of a specified property of remote object. Returns _true_ when succeeds, otherwise returns _false_.
 
  * *Object $getChild(String _child_path_, String _interface_);*
- Gets a child object of remote object. _child_path_ must be a relative path in object's *children* list. Returns the child object if it's available, otherwise returns _null_.
+ Gets a child object of remote object. _child_path_ must be a relative path in object's *$children* list. Returns the child object if it's available, otherwise returns _null_.
 
  * *Object $getInterface(String _interface_);*
- Gets another interface supported by remote object. _interface_ must be in object's *interface* list.
+ Gets another interface supported by remote object. _interface_ must be in object's *$interface* list.
