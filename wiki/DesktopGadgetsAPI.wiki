@@ -2,27 +2,28 @@
 
 _This page is still under construction_
 
+<wiki:toc max_depth="1" />
+
 = Introduction =
 
 Google Gadgets for Linux supports most part of [http://code.google.com/apis/desktop/docs/gadget_apiref.html Google Desktop Gadgets API] that originally defined by Google Desktop for Windows product, but there are some exceptions. This page lists all APIs that are not or partially supported by Google Gadgets for Linux, as well as some new APIs that are only available in GGL.
 
-
 = Unsupported APIs =
 APIs listed in this section are not supported by current version of GGL. Gadgets relying on these APIs won't work correctly on GGL.
 
-== [http://code.google.com/intl/zh-CN/apis/desktop/docs/searchapi.html Search APIs] ==
-All APIs in [http://code.google.com/intl/zh-CN/apis/desktop/docs/searchapi.html Search APIs] category are not supported by GGL. Including:
- * [http://code.google.com/intl/zh-CN/apis/desktop/docs/actionsapi.html Action API]
- * [http://code.google.com/intl/zh-CN/apis/desktop/docs/eventapi.html Event API]
- * [http://code.google.com/intl/zh-CN/apis/desktop/docs/indexapi.html Index API]
- * [http://code.google.com/intl/zh-CN/apis/desktop/docs/releasenotes-v55.html#s5 Personalization API]
- * [http://code.google.com/intl/zh-CN/apis/desktop/docs/queryapi.html Query API]
+== [http://code.google.com/apis/desktop/docs/searchapi.html Search APIs] ==
+All APIs in [http://code.google.com/apis/desktop/docs/searchapi.html Search APIs] category are not supported by GGL. Including:
+ * [http://code.google.com/apis/desktop/docs/actionsapi.html Action API]
+ * [http://code.google.com/apis/desktop/docs/eventapi.html Event API]
+ * [http://code.google.com/apis/desktop/docs/indexapi.html Index API]
+ * [http://code.google.com/apis/desktop/docs/releasenotes-v55.html#s5 Personalization API]
+ * [http://code.google.com/apis/desktop/docs/queryapi.html Query API]
 
-== [http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] ==
-[http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] related APIs are not supported by GGL.
+== [http://code.google.com/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] ==
+[http://code.google.com/apis/desktop/docs/gadget-googletalk_apiref.html googleTalk] related APIs are not supported by GGL.
 
 == VBScript and JScript ==
-GGL only supports standard JavaScript code, though a preprocessor is used to translate some JScript grammars into standard JavaScript. For example:
+GGL only supports standard !JavaScript code, though a preprocessor is used to translate some JScript grammars into standard !JavaScript. For example:
  * Things like options.item(a) = b; will be translated into options.putValue(a, b);
  * if (a) {...}; else {...} will be translated into if (a) {...} else {...}
 
@@ -30,20 +31,107 @@ Though VBScript is not supported, VBArray and Enumerator used by Desktop Gadgets
 
 == ActiveX ==
 GGL obviously doesn't support loading ActiveX objects. However, in order to support some popular gadgets, GGL emulates some commonly used ActiveX objects and methods, such as:
- * Shell.Application, open and ShellExecute methods are emulated.
+ * Shell.Application, open and !ShellExecute methods are emulated.
  * WScript.Shell, Run method is emulated.
  * Microsoft.XMLHttp
  * Microsoft.XMLDOM
- * Scripting.FileSystemObject
+ * Scripting.!FileSystemObject
 
 = Partially supported APIs =
 APIs listed in this section are partially supported by current version of GGL. Gadgets relying on these APIs may work on GGL with limited functionalities.
 
-== [http://code.google.com/intl/zh-CN/apis/desktop/docs/gadget_apiref.html#object object element] ==
+== [http://code.google.com/apis/desktop/docs/gadget_apiref.html#object object element] ==
 GGL emulates wmplayer and flash activex object with limited functionalities. Gadgets can use object element to load a video or a flash, but it may not have the same behavior than Google Desktop for Windows.
-Please refer to [http://code.google.com/intl/zh-CN/apis/desktop/docs/releasenotes-v58.html#flash this article] for how to load a flash movie.
-Note: flash support is supported by gtk host (ggl-gtk).
+Please refer to [http://code.google.com/apis/desktop/docs/releasenotes-v58.html#flash this article] for how to load a flash movie.
+Note: currently, flash is only supported by gtk host (ggl-gtk).
 
+== [http://code.google.com/apis/desktop/docs/gadget_apiref.html#framework.system.perfmon framework.system.perfmon] ==
+Perfmon is a Windows native feature, which is not available on Linux. GGL only emulates one perfmon value: `"\\Processor(_Total)\\% Processor Time"`, so that gadgets for monitoring CPU usage can run on GGL.
+
+== framework.system.filesystem ==
+It's an object that provides access to the Windows standard Scripting.!FileSystemObject object. GGL emulates this object with very limited functionalities. For example:
+ * Most disk drive related apis just return nothing.
+ * Type() method of file and folder objects return mime type instead of filename suffix.
+ * Uses '/' as dir separator, instead of '\'.
 
 = New APIs =
 APIs listed in this section are only supported by GGL. Gadgets relying on these APIs won't work on Google Desktop for Windows or Google Gadgets for Mac.
+
+== `img.stretchMiddle` ==
+It's a new boolean property of img element, which controls how the image will be stretched when source size is different than element size. If it's true then only middle area of the image will be stretched, which is suitable for drawing resizable background. Default value is false.
+
+== Percentage value for basicElement.pinX and pinY ==
+Besides pixel based basicElement.pinX and pinY, GGL also supports percentage value for pinX and pinY. For example, if pinX = 100% then means pinX is always equal to the width of this element.
+
+== basicElement.flip ==
+It's a new string enum property of basicElement, which controls if the element will be flipped or not. Possible values are "none", "horizontal", "vertical", "both". Default value is "none".
+
+== Access remote DBus objects ==
+GGL provides two new classes for accessing remote DBus objects: DBusSessionObject and DBusSystemObject. The first one is for objects on session bus, another one is for objects on system bus. They have the same prototype:
+{{{
+  DBusSessionObject(String name, String path, String interface);
+  DBusSystemObject(String name, String path, String interface);
+}}}
+
+For example, to access HAL device manager in a gadget, you can:
+{{{
+  var hal = new DBusSystemObject("org.freedesktop.Hal", "/org/freedesktop/Hal/Manager", "org.freedesktop.Hal.Manager");
+}}}
+
+Then `hal` can be used as if it's the remote Hal device manager object. All properties, methods and signals exported by remote DBus object through [http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-introspectable Introspectable interface] can be accessed directly. For example, following code finds out paths to available network devices, and prints out the first one:
+{{{
+  var net_cards = hal.FindDeviceByCapability("net");
+  alert(net_cards[0]);
+}}}
+
+Following code connects a callback function to `hal`'s DeviceAdded signal:
+{{{
+  function OnDeviceAdded(udi) {
+    alert("Device added: " + udi);
+  };
+  hal.DeviceAdded = OnDeviceAdded;
+}}}
+
+Besides properties, methods and signals exported by remote DBus object, DBusSessionObject and DBusSystemObject also provide following special properties and methods:
+
+=== Special properties ===
+|| *Property name* || *Description*                                      || *Type* || *Access*   ||
+|| `$name`         || Service name of remote object                      || String || Read only  ||
+|| `$path`         || Object path of remote object                       || String || Read only  ||
+|| `$interface`    || Current interface of remote object                 || String || Read only  ||
+|| `$timeout`      || Timeout for calling remote object, in milliseconds || Number || Read/Write ||
+|| `$methods`      || A list of exported methods                         || Array  || Read only  ||
+|| `$signals`      || A list of exported signals                         || Array  || Read only  ||
+|| `$properties`   || A list of exported properties                      || Array  || Read only  ||
+|| `$children`     || A list of children objects (relative names)        || Array  || Read only  ||
+|| `$interfaces`   || A list of supported interfaces of remote object    || Array  || Read only  ||
+
+<br>
+
+=== Special methods ===
+ * *Number $callMethod(String _name_, Boolean _sync_, Number _timeout_, Function _callback_, ...);*
+ Calls a specified method of remote object. This methods requires following parameters:
+  # *name* Name of the method to be called.
+  # *sync* If it's true then the call will be performed synchronously, otherwise this method will return immediately without waiting for the finish of remote call.
+  # *timeout* Timeout of this call, in milliseconds.
+  # *callback* A function will be called for each return value. The prototype of this function shall be: *Boolean callback(Number _id_, Variable _value_);*. The callback shall return _true_ if it wants to keep receiving the next return value, otherwise _false_ shall be returned. The first parameter _id_ is the index of the return value, starting from 0. The second parameter is the value. When error occurs, the callback will be called with _id_ = -1 and an error message as the _value_.
+  # All additional parameters will be passed to remote method.
+ This method returns a sequence number which can be used for canceling an asynchronous call afterwards.
+
+ * *Boolean $cancelMethodCall(Number _call_id_);*
+ Cancels an asynchronous method call. _call_id_ is the sequence number returned by *$callMethod* method. Returns _true_ when succeeds, otherwise returns _false_.
+
+ * *Boolean $isMethodCallPending(Number _call_id_);*
+ Checks if a specified asynchronous method call is still pending. _call_id_ is the sequence number returned by *$callMethod* method. Returns _true_ if the method call is still pending, otherwise returns _false_.
+
+ * *Variable $getProperty(String _name_);*
+ Gets the value of a specified property of remote object. Returns _null_, if the property is not available.
+
+ * *Boolean $setProperty(String _name_, Variable _value_);*
+ Sets the value of a specified property of remote object. Returns _true_ when succeeds, otherwise returns _false_.
+
+ * *Object $getChild(String _child_path_, String _interface_);*
+ Gets a child object of remote object. _child_path_ must be a relative path in object's *children* list. Returns the child object if it's available, otherwise returns _null_.
+
+ * *Object $getInterface(String _interface_);*
+ Gets another interface supported by remote object. _interface_ must be in object's *interface* list.
