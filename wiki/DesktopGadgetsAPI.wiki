@@ -2,7 +2,7 @@
 
 _This page is still under construction_
 
-<wiki:toc max_depth="1" />
+<wiki:toc max_depth="2" />
 
 = Introduction =
 
@@ -40,12 +40,12 @@ GGL obviously doesn't support loading ActiveX objects. However, in order to supp
 = Partially supported APIs =
 APIs listed in this section are partially supported by current version of GGL. Gadgets relying on these APIs may work on GGL with limited functionalities.
 
-== [http://code.google.com/apis/desktop/docs/gadget_apiref.html#object object element] ==
-GGL emulates wmplayer and flash activex object with limited functionalities. Gadgets can use object element to load a video or a flash, but it may not have the same behavior than Google Desktop for Windows.
+== object element ==
+GGL emulates wmplayer and flash activex object with limited functionalities. Gadgets can use [http://code.google.com/apis/desktop/docs/gadget_apiref.html#object object element] to load a video or a flash, but it may not have the same behavior than Google Desktop for Windows.
 Please refer to [http://code.google.com/apis/desktop/docs/releasenotes-v58.html#flash this article] for how to load a flash movie.
 Note: currently, flash is only supported by gtk host (ggl-gtk).
 
-== [http://code.google.com/apis/desktop/docs/gadget_apiref.html#framework.system.perfmon framework.system.perfmon] ==
+== framework.system.perfmon ==
 Perfmon is a Windows native feature, which is not available on Linux. GGL only emulates one perfmon value: `"\\Processor(_Total)\\% Processor Time"`, so that gadgets for monitoring CPU usage can run on GGL.
 
 == framework.system.filesystem ==
@@ -57,7 +57,7 @@ It's an object that provides access to the Windows standard Scripting.!FileSyste
 = New APIs =
 APIs listed in this section are only supported by GGL. Gadgets relying on these APIs won't work on Google Desktop for Windows or Google Gadgets for Mac.
 
-== `img.stretchMiddle` ==
+== img.stretchMiddle ==
 It's a new boolean property of img element, which controls how the image will be stretched when source size is different than element size. If it's true then only middle area of the image will be stretched, which is suitable for drawing resizable background. Default value is false.
 
 == Percentage value for basicElement.pinX and pinY ==
