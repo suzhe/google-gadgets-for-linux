@@ -46,7 +46,7 @@ class QtViewWidget : public QWidget {
   ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
-  void SkipTaskBar();
+  void SetWMPropertiesForMainView();
   void AdjustToViewSize();
   void SetKeepAbove(bool above);
   void SetView(ViewInterface *view);

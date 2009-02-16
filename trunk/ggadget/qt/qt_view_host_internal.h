@@ -141,8 +141,8 @@ class QtViewHost::Impl : public QObject {
 
     if (widget_) {
       // we just move existing widget_ to the front
-      widget_->hide();
       widget_->show();
+      widget_->raise();
       return true;
     }
 
@@ -250,9 +250,10 @@ class QtViewHost::Impl : public QObject {
   void SetVisibility(bool flag) {
     if (!window_) return;
     if (flag) {
-      widget_->hide();
       widget_->show();
-      widget_->SkipTaskBar();
+      widget_->raise();
+      // Only main view get here.
+      widget_->SetWMPropertiesForMainView();
       LoadWindowStates();
     } else {
       SaveWindowStates();

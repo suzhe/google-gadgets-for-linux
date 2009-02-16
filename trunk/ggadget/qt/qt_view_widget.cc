@@ -60,7 +60,8 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
   AdjustToViewSize();
   if (!flags.testFlag(QtViewWidget::FLAG_WM_DECORATED)) {
     setWindowFlags(Qt::FramelessWindowHint);
-    SkipTaskBar();
+    // The view is a main view.
+    SetWMPropertiesForMainView();
   }
   setAttribute(Qt::WA_InputMethodEnabled);
 }
@@ -535,6 +536,7 @@ void QtViewWidget::SetKeepAbove(bool above) {
   else
     f &= ~Qt::WindowStaysOnTopHint;
   setWindowFlags(f);
+  SetWMPropertiesForMainView();
   show();
 }
 
@@ -544,15 +546,27 @@ void QtViewWidget::SetView(ViewInterface *view) {
     zoom_ = view->GetGraphics()->GetZoom();
 }
 
-void QtViewWidget::SkipTaskBar() {
 #if defined(Q_WS_X11) && defined(HAVE_X11)
+static void SetWMState(Window w, const char *property_name) {
   Display *dpy = QX11Info::display();
-  Atom net_wm_state_skip_taskbar=XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR",
-                                             False);
+  Atom property = XInternAtom(dpy, property_name, False);
   Atom net_wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
-  XChangeProperty(dpy, winId(), net_wm_state,
-                  XA_ATOM, 32, PropModeAppend,
-                  (unsigned char *)&net_wm_state_skip_taskbar, 1);
+  XChangeProperty(dpy, w, net_wm_state, XA_ATOM, 32, PropModeAppend,
+                  (unsigned char *)&property, 1);
+}
+#endif
+
+void QtViewWidget::SetWMPropertiesForMainView() {
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+  SetWMState(winId(), "_NET_WM_STATE_SKIP_TASKBAR");
+  SetWMState(winId(), "_NET_WM_STATE_SKIP_PAGER");
+
+  // Shows on all desktops
+  Display *dpy = QX11Info::display();
+  int32_t desktop = -1;
+  Atom property = XInternAtom(dpy, "_NET_WM_DESKTOP", False);
+  XChangeProperty(dpy, winId(), property, XA_CARDINAL, 32, PropModeReplace,
+                  (unsigned char *)&desktop, 1);
 #endif
 }
 
