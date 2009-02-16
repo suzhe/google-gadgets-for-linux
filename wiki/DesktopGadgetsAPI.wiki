@@ -66,6 +66,17 @@ Besides pixel based basicElement.pinX and pinY, GGL also supports percentage val
 == basicElement.flip ==
 It's a new string enum property of basicElement, which controls if the element will be flipped or not. Possible values are "none", "horizontal", "vertical", "both". Default value is "none".
 
+== new properties of button element ==
+Following new properties are supported by button element:
+ * iconImage
+  Image of button icon, which will be displayed along with button label.
+ * iconDisabledImage
+  Image of button icon for disabled state.
+ * iconPosition
+  Position to display button icon, relative to button label. Possible values are: "left", "right", "top", "bottom".
+ * defaultRendering
+  If it's true then use built-in button images. Default is false.
+
 == Access remote DBus objects ==
 GGL provides two new classes for accessing remote DBus objects: DBusSessionObject and DBusSystemObject. The first one is for objects on session bus, another one is for objects on system bus. They have the same prototype:
 {{{
