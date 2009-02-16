@@ -106,7 +106,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     view_->Draw(&canvas);
     SetInputMask(offscreen_pixmap_);
     p.drawPixmap(0, 0, *offscreen_pixmap_);
- } else {
+  } else {
     // Draw directly on widget
     QtCanvas canvas(width(), height(), &p);
     view_->Draw(&canvas);
