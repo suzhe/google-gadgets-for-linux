@@ -128,12 +128,6 @@ class UsageCollector : public UsageCollectorInterface {
                                Variant(last_use_time_));
   }
 
-  void DoReport(const char *prefix, const char *item, const char *version) {
-    ASSERT(item && version);
-    Report((prefix + EncodeURLComponent(item) + "/" +
-            EncodeURLComponent(version)).c_str());
-  }
-
   std::string account_;
   const std::string *params_;
   OptionsInterface *options_;
@@ -152,28 +146,42 @@ class PlatformUsageCollector : public PlatformUsageCollectorInterface {
         gadgets_collector_(kGadgetsUsageAccount, params, GetGlobalOptions()) {
   }
 
+  void ReportPlatform(const char *prefix) {
+    platform_collector_.Report(
+        (prefix + EncodeURLComponent(application_name_.c_str()) + "/" +
+         EncodeURLComponent(version_.c_str())
+#ifdef GGL_DIST_INFO
+         + "/" + EncodeURLComponent(GGL_DIST_INFO)
+#endif
+        ).c_str());
+  }
+
   virtual void ReportFirstUse() {
-    platform_collector_.DoReport(kPlatformFirstUsePing,
-                                 application_name_.c_str(), version_.c_str());
+    ReportPlatform(kPlatformFirstUsePing);
   }
 
   virtual void ReportUsage() {
-    platform_collector_.DoReport(kPlatformUsagePing,
-                                 application_name_.c_str(), version_.c_str());
+    ReportPlatform(kPlatformUsagePing);
+  }
+
+  void ReportGadget(const char *prefix, const char *item, const char *version) {
+    ASSERT(item && version);
+    gadgets_collector_.Report((prefix + EncodeURLComponent(item) + "/" +
+                               EncodeURLComponent(version)).c_str());
   }
 
   virtual void ReportGadgetInstall(const char *gadget_id,
                                    const char *version) {
-    gadgets_collector_.DoReport(kGadgetInstallPingPrefix, gadget_id, version);
+    ReportGadget(kGadgetInstallPingPrefix, gadget_id, version);
   }
 
   virtual void ReportGadgetUninstall(const char *gadget_id,
                                      const char *version) {
-    gadgets_collector_.DoReport(kGadgetUninstallPingPrefix, gadget_id, version);
+    ReportGadget(kGadgetUninstallPingPrefix, gadget_id, version);
   }
 
   virtual void ReportGadgetUsage(const char *gadget_id, const char *version) {
-    gadgets_collector_.DoReport(kGadgetUsagePingPrefix, gadget_id, version);
+    ReportGadget(kGadgetUsagePingPrefix, gadget_id, version);
   }
 
   std::string application_name_, version_;

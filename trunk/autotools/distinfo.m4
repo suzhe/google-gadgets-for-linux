@@ -53,11 +53,11 @@ if test x$cross_compiling = xno; then
   if test x$LSB_RELEASE != xno; then
     GGL_DIST_DESC=`$LSB_RELEASE -d -s | $SED -e 's/"//g'`
   fi
-  if test x$GGL_DIST_DESC = x; then
+  if test "x$GGL_DIST_DESC" = "x"; then
     for relfile in $DIST_RELEASE_FILES; do
       if test -f $relfile; then
         GGL_DIST_DESC=`cat $relfile | $SED -e "1p"`
-        if test x$GGL_DIST_DESC != x; then
+        if test "x$GGL_DIST_DESC" != "x"; then
           break
         fi
       fi
@@ -65,20 +65,18 @@ if test x$cross_compiling = xno; then
   fi
 fi
 
-if test x$GGL_DIST_DESC = x; then
+if test "x$GGL_DIST_DESC" = "x"; then
   GGL_DIST_DESC=$host_vendor
 fi
 
-GGL_DIST_INFO_UNQUOTED="$GGL_DIST_OS-$GGL_DIST_CPU ($GGL_DIST_DESC)"
+GGL_DIST_INFO="$GGL_DIST_OS-$GGL_DIST_CPU ($GGL_DIST_DESC)"
 
-if test x$GGL_OEM_BRAND != x; then
-  GGL_DIST_INFO_UNQUOTED="$GGL_DIST_INFO_UNQUOTED ($GGL_OEM_BRAND)"
+if test "x$GGL_OEM_BRAND" != "x"; then
+  GGL_DIST_INFO="$GGL_DIST_INFO ($GGL_OEM_BRAND)"
 else
-  GGL_DIST_INFO_UNQUOTED="$GGL_DIST_INFO_UNQUOTED (-)"
+  GGL_DIST_INFO="$GGL_DIST_INFO (-)"
 fi
 
-GGL_DIST_INFO="\"$GGL_DIST_INFO_UNQUOTED\""
-AC_SUBST(GGL_DIST_INFO_UNQUOTED)
 AC_SUBST(GGL_DIST_INFO)
 
 ]) # GGL_CHECK_DIST_INFO
