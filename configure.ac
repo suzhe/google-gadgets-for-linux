@@ -449,13 +449,6 @@ PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
                    -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
                    -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
 
-# Check OEM brand code.
-if test x$ggl_oem_brand != x; then
-  GGL_OEM_BRAND=$ggl_oem_brand
-  AC_SUBST(GGL_OEM_BRAND)
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_OEM_BRAND=\\\"$GGL_OEM_BRAND\\\""
-fi
-
 case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
@@ -489,6 +482,13 @@ esac
 
 AC_SUBST(GGL_PLATFORM_SHORT)
 AC_SUBST(GGL_PLATFORM)
+
+# Check OEM brand code.
+if test x$ggl_oem_brand != x; then
+  GGL_OEM_BRAND=$ggl_oem_brand
+  AC_SUBST(GGL_OEM_BRAND)
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_OEM_BRAND=\\\"$GGL_OEM_BRAND\\\""
+fi
 
 AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
 AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
@@ -1073,6 +1073,12 @@ fi
 AC_PATH_PROG(XDG_ICON_RESOURCE, xdg-icon-resource, no)
 if test x$XDG_ICON_RESOURCE = xno; then
   enable_xdg_icon_resource=no
+fi
+
+# Check distribution information
+GGL_CHECK_DIST_INFO
+if test x$GGL_DIST_INFO != x; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_DIST_INFO=$GGL_DIST_INFO"
 fi
 
 ###########################################################
