@@ -487,7 +487,7 @@ AC_SUBST(GGL_PLATFORM)
 if test x$ggl_oem_brand != x; then
   GGL_OEM_BRAND=$ggl_oem_brand
   AC_SUBST(GGL_OEM_BRAND)
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_OEM_BRAND=\\\"$GGL_OEM_BRAND\\\""
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \"-DGGL_OEM_BRAND=\\\"$GGL_OEM_BRAND\\\"\""
 fi
 
 AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
@@ -1053,7 +1053,7 @@ AC_CHECK_FUNC(mmap, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MMAP"])
 
 # Check flex
 AC_PROG_LEX
-if test "$LEX" != flex; then
+if test "x$LEX" != "xflex"; then
   LEX="$SHELL $abs_top_srcdir/autotools/missing flex"
 fi
 
@@ -1077,8 +1077,8 @@ fi
 
 # Check distribution information
 GGL_CHECK_DIST_INFO
-if test x$GGL_DIST_INFO != x; then
-  PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_DIST_INFO=$GGL_DIST_INFO"
+if test "x$GGL_DIST_INFO" != "x"; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \"-DGGL_DIST_INFO=\\\"$GGL_DIST_INFO\\\"\""
 fi
 
 ###########################################################

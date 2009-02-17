@@ -14,10 +14,6 @@
 # limitations under the License.
 #
 
-MACRO(REMOVE_TRAILING_NEWLINE _variable)
-  STRING(REPLACE "\n" "" ${_variable} "${${_variable}}")
-ENDMACRO(REMOVE_TRAILING_NEWLINE _variable)
-
 #! Use pkg-config to get information of a library package and update current
 #! cmake environment.
 #!
@@ -37,46 +33,45 @@ ENDMACRO(REMOVE_TRAILING_NEWLINE _variable)
 #!     parameter is not provided, an error message will shown and cmake quits.
 MACRO(PKGCONFIG_EX _package _min_version
       _inc_dirs _definitions _link_dirs _linker_flags _libraries)
-  FIND_PROGRAM(PKGCONFIG_EX_executable NAMES pkg-config PATHS /usr/local/bin)
-  EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-    ARGS ${_package} --atleast-version=${_min_version}
-    RETURN_VALUE PKGCONFIG_EX_return_value)
+  EXECUTE_PROCESS(
+    COMMAND pkg-config ${_package} --atleast-version=${_min_version}
+    RESULT_VARIABLE PKGCONFIG_EX_return_value)
   IF(${PKGCONFIG_EX_return_value} EQUAL 0)
     # Get include directories.
-    EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-      ARGS ${_package} --cflags-only-I
-      OUTPUT_VARIABLE ${_inc_dirs})
-    REMOVE_TRAILING_NEWLINE(${_inc_dirs})
+    EXECUTE_PROCESS(
+      COMMAND pkg-config ${_package} --cflags-only-I
+      OUTPUT_VARIABLE ${_inc_dirs}
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
     STRING(REGEX REPLACE "^-I" "" ${_inc_dirs} "${${_inc_dirs}}")
     STRING(REGEX REPLACE " -I" ";" ${_inc_dirs} "${${_inc_dirs}}")
 
     # Get other cflags other than -I include directories.
-    EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-      ARGS ${_package} --cflags-only-other
-      OUTPUT_VARIABLE ${_definitions})
-    REMOVE_TRAILING_NEWLINE(${_definitions})
+    EXECUTE_PROCESS(
+      COMMAND pkg-config ${_package} --cflags-only-other
+      OUTPUT_VARIABLE ${_definitions}
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     # Get library names.
-    EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-      ARGS ${_package} --libs-only-l
-      OUTPUT_VARIABLE ${_libraries})
-    REMOVE_TRAILING_NEWLINE(${_libraries})
+    EXECUTE_PROCESS(
+      COMMAND pkg-config ${_package} --libs-only-l
+      OUTPUT_VARIABLE ${_libraries}
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
     STRING(REGEX REPLACE "^-l" "" ${_libraries} "${${_libraries}}")
     STRING(REGEX REPLACE " -l" ";" ${_libraries} "${${_libraries}}")
 
     # Get -L link flags.
-    EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-      ARGS ${_package} --libs-only-L
-      OUTPUT_VARIABLE ${_link_dirs})
-    REMOVE_TRAILING_NEWLINE(${_link_dirs})
+    EXECUTE_PROCESS(
+      COMMAND pkg-config ${_package} --libs-only-L
+      OUTPUT_VARIABLE ${_link_dirs}
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
     STRING(REGEX REPLACE "^-L" "" ${_link_dirs} "${${_link_dirs}}")
     STRING(REGEX REPLACE " -L" ";" ${_link_dirs} "${${_link_dirs}}")
 
     # Get other link flags.
-    EXEC_PROGRAM(${PKGCONFIG_EX_executable}
-      ARGS ${_package} --libs-only-other
-      OUTPUT_VARIABLE ${_linker_flags})
-    REMOVE_TRAILING_NEWLINE(${_linker_flags})
+    EXECUTE_PROCESS(
+      COMMAND pkg-config ${_package} --libs-only-other
+      OUTPUT_VARIABLE ${_linker_flags}
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     IF(${ARGC} GREATER 7)
       SET(${ARGV7} 1)
@@ -123,11 +118,8 @@ MACRO(APPLY_CONFIG _prefix)
 ENDMACRO(APPLY_CONFIG _prefix)
 
 MACRO(PKG_GET_VARIABLE _package _variable _value)
-  FIND_PROGRAM(PKGCONFIG pkg-config PATHS /usr/local/bin)
-  EXECUTE_PROCESS(COMMAND ${PKGCONFIG}
-    "--variable=${_variable}"
-    "${_package}"
+  EXECUTE_PROCESS(
+    COMMAND pkg-config "--variable=${_variable}" "${_package}"
     OUTPUT_VARIABLE "${_value}"
-    )
-  REMOVE_TRAILING_NEWLINE(${_value})
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 ENDMACRO(PKG_GET_VARIABLE _package _variable _value)
