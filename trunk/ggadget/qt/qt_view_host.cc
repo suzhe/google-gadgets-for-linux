@@ -16,6 +16,7 @@
 
 #include <sys/time.h>
 
+#include <QtCore/QTimer>
 #include <QtGui/QCursor>
 #include <QtGui/QToolTip>
 #include <QtGui/QMessageBox>
@@ -103,8 +104,18 @@ void QtViewHost::QueueDraw() {
 }
 
 void QtViewHost::QueueResize() {
-  if (impl_->widget_)
+  if (impl_->widget_) {
+    QSize s = impl_->widget_->size();
     impl_->widget_->AdjustToViewSize();
+    QSize ns = impl_->widget_->size();
+    // If widget has got bigger, we set the minimizedSize for a short period to
+    // let Qt layout aware of that.
+    if (s.width() < ns.width() || s.height() < ns.height()) {
+      impl_->widget_->setMinimumSize(ns);
+      QTimer::singleShot(500, impl_->widget_,
+                         SLOT(QtViewWidget::UnsetMinimumSizeHint()));
+    }
+  }
 }
 
 void QtViewHost::EnableInputShapeMask(bool enable) {
@@ -115,8 +126,7 @@ void QtViewHost::EnableInputShapeMask(bool enable) {
 }
 
 void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
-  // TODO:
-  DLOG("SetResizable:%d", mode);
+  impl_->SetResizable(mode);
 }
 
 void QtViewHost::SetCaption(const std::string &caption) {
