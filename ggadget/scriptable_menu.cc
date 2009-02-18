@@ -42,9 +42,11 @@ class ScriptableMenu::Impl : public SmallObject<> {
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
       ASSERT(argc == 1);
-      gadget_->SetInUserInteraction(true);
+      if (gadget_)
+        gadget_->SetInUserInteraction(true);
       ResultVariant result = handler_->Call(object, argc, argv);
-      gadget_->SetInUserInteraction(false);
+      if (gadget_)
+        gadget_->SetInUserInteraction(false);
       return result;
     }
     virtual bool operator==(const Slot &another) const {
@@ -60,7 +62,6 @@ class ScriptableMenu::Impl : public SmallObject<> {
 
   Impl(ScriptableMenu *owner, Gadget *gadget, MenuInterface *menu)
       : owner_(owner), gadget_(gadget), menu_(menu) {
-    ASSERT(gadget);
     ASSERT(menu);
   }
 
