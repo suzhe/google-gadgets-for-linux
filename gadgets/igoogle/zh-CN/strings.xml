@@ -17,7 +17,7 @@
 
 <strings>
 <GADGET_NAME>iGoogle Gadget</GADGET_NAME>
-<GADGET_DESC>Run iGoogle gadgets。</GADGET_DESC>
+<GADGET_DESC>在您的桌面上运行 iGoogle 小工具。</GADGET_DESC>
 <GADGET_REQUIRED>很抱歉！在您提供所有需要的设置之前无法显示小工具。</GADGET_REQUIRED>
 <GADGET_SHOWOPTIONS>选项...</GADGET_SHOWOPTIONS>
 <GADGET_REFRESH>刷新</GADGET_REFRESH>
@@ -25,4 +25,10 @@
 <GADGET_ERROR>加载小工具时出错。</GADGET_ERROR>
 <GADGET_NOTLOADED>正在加载选项...</GADGET_NOTLOADED>
 <NO_OPTIONS>该小工具没有可配置的选项。</NO_OPTIONS>
+<GADGET_DIRECTORY_URL>http://www.google.com/ig/directory</GADGET_DIRECTORY_URL>
+<GADGET_URL_HINT>在 iGoogle 小工具目录中选一个你喜爱的小工具，将小工具的URL粘贴或拖拽到下面的输入框中。然后点击“加载小工具”按钮。
+你可以通过点击小工具描述页面上的“共享该小工具”链接来获得小工具的URL。</GADGET_URL_HINT>
+<LOAD_GADGET>加载小工具</LOAD_GADGET>
+<INVALID_URL>无效的小工具URL.</INVALID_URL>
+<GADGET_UNLOAD>卸载</GADGET_UNLOAD>
 </strings>

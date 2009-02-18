@@ -1360,14 +1360,11 @@ bool Gadget::SaveGadgetInitialPermissions(const char *options_path,
   OptionsInterface *options = CreateOptions(options_path);
   ASSERT(options);
   if (options) {
-    Variant value = options->GetInternalValue(kPermissionsOption);
-    if (value.type() != Variant::TYPE_STRING) {
-      Permissions tmp = permissions;
-      tmp.RemoveAllRequired();
-      options->PutInternalValue(kPermissionsOption, Variant(tmp.ToString()));
-      options->Flush();
-      result = true;
-    }
+    Permissions tmp = permissions;
+    tmp.RemoveAllRequired();
+    options->PutInternalValue(kPermissionsOption, Variant(tmp.ToString()));
+    options->Flush();
+    result = true;
     delete options;
   }
   return result;

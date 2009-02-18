@@ -944,6 +944,7 @@ class SingleViewHost::Impl {
     DLOG("Size allocate(%d, %d)", allocation->width, allocation->height);
     if (GTK_WIDGET_VISIBLE(impl->window_) &&
         !impl->resize_width_mode_ && !impl->resize_height_mode_ &&
+        !impl->queue_resize_timer_ &&
         allocation->width >= 1 && allocation->height >= 1 &&
         (impl->last_allocated_width_ != allocation->width ||
          impl->last_allocated_height_ != allocation->height)) {

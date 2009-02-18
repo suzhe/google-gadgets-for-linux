@@ -17,7 +17,7 @@
 
 <strings>
 <GADGET_NAME>iGoogle Gadget</GADGET_NAME>
-<GADGET_DESC>Run iGoogle gadgets.</GADGET_DESC>
+<GADGET_DESC>Run iGoogle Gadgets on your desktop.</GADGET_DESC>
 <GADGET_REQUIRED>Sorry! Gadget cannot be displayed until all required settings are provided.</GADGET_REQUIRED>
 <GADGET_SHOWOPTIONS>Options...</GADGET_SHOWOPTIONS>
 <GADGET_REFRESH>Refresh</GADGET_REFRESH>
@@ -25,4 +25,10 @@
 <GADGET_ERROR>Error loading gadget.</GADGET_ERROR>
 <GADGET_NOTLOADED>Options loading...</GADGET_NOTLOADED>
 <NO_OPTIONS>This gadget has no configurable option.</NO_OPTIONS>
+<GADGET_DIRECTORY_URL>http://www.google.com/ig/directory</GADGET_DIRECTORY_URL>
+<GADGET_URL_HINT>Find a favorite iGoogle Gadget in Gadget directory and paste (or drag) the URL into the entry box below. Then click &quot;Load Gadget&quot; button.
+You can find the URL by clicking &quot;Share this gadget&quot; link in gadget's description page.</GADGET_URL_HINT>
+<LOAD_GADGET>Load Gadget</LOAD_GADGET>
+<INVALID_URL>Invalid Gadget URL.</INVALID_URL>
+<GADGET_UNLOAD>Unload</GADGET_UNLOAD>
 </strings>

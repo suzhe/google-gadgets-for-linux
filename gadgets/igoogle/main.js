@@ -20,7 +20,7 @@ var kBrowserMarginX = 14;
 var kBrowserMarginY = 19;
 
 var g_user_pref_names = null;
-var g_user_pref_optional = null;
+var g_user_pref_required = null;
 var g_gadget_attribs = null;
 
 var kUserPrefPrefix = "up_";
@@ -37,30 +37,51 @@ var g_xml_request_gadget = null;
 var g_xml_request_options = null;
 
 /// Gadget init code.
+function ViewOnOpen() {
+  browser.external = {
+    ShowOptions: function() {
+      setTimeout(function() {
+        // Dispatch this asynchronously.
+        plugin.ShowOptionsDialog();
+      }, 0);
+    }
+  };
 
-browser.external = {
-  ShowOptions: function() {
-    setTimeout(function() {
-      // Dispatch this asynchronously.
-      plugin.ShowOptionsDialog();
-    }, 0);
-  }
-};
-
-plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
-SetUpCommonParams();
-LoadGadget();
+  plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
+  SetUpCommonParams();
+  LoadGadget();
+}
 
 /// Functions Start
 
 function OnAddCustomMenuItems(menu) {
   // Grayed if gadget hasn't been loaded yet.
-  var flags = (g_user_pref_names == null) ? gddMenuItemFlagGrayed : 0;
-  menu.AddItem(strings.GADGET_REFRESH, flags, RefreshMenuHandler);
+  var refresh_flags = (g_user_pref_names == null) ? gddMenuItemFlagGrayed : 0;
+  menu.AddItem(strings.GADGET_REFRESH, refresh_flags, RefreshMenuHandler);
+  var unload_flags = addGadgetUI.visible ? gddMenuItemFlagGrayed : 0;
+  menu.AddItem(strings.GADGET_UNLOAD, unload_flags, UnloadMenuHandler);
 }
 
 function RefreshMenuHandler(item_text) {
   RefreshGadget();
+}
+
+function UnloadMenuHandler(item_text) {
+  g_user_pref_names = null;
+  g_user_pref_required = null;
+  g_gadget_attribs = null;
+  g_download_url = null;
+  options.putValue(kDownloadURLOption, g_download_url);
+
+  view.caption = strings.GADGET_NAME;
+  plugin.about_text = strings.GADGET_DESC;
+
+  if (view.width < 200)
+    view.width = 200;
+  if (view.height < 200)
+    view.height = 200;
+
+  LoadGadget();
 }
 
 function LoadOptions() {
@@ -117,10 +138,14 @@ function RefreshGadget() {
 
 function LoadGadget() {
   if (!g_download_url) {
-    // This should never happen.
+    addGadgetUI.visible = true;
+    browser.visible = false;
     DisplayMessage(strings.GADGET_ERROR);
     return;
   }
+
+  addGadgetUI.visible = false;
+  browser.visible = true;
 
   DisplayMessage(strings.GADGET_LOADING);
 
@@ -209,8 +234,11 @@ function ViewOnSizing() {
 }
 
 function ViewOnSize() {
-  browser.width = view.width - kBrowserMarginX;
-  browser.height = view.height - kBrowserMarginY;
+  addGadgetUI.width = browser.width = view.width - kBrowserMarginX;
+  addGadgetUI.height = browser.height = view.height - kBrowserMarginY;
+  urlHint.width = urlBox.width = addGadgetUI.width - 4;
+  urlHint.height = Math.max(addGadgetUI.height - 68, 10);
+  urlEntry.width = urlBox.width - 2;
 }
 
 function ShowGadget() {
@@ -344,4 +372,44 @@ function GetGadgetURL() {
 function GetOptionsURL() {
   return g_module_url_prefix + encodeURI(g_download_url)
     + "&output=edithtml" + g_commonparams;
+}
+
+function OnDragOver() {
+  if (event.dragUrls.length != 1)
+    event.returnValue = false;
+}
+
+function OnDragDrop() {
+  urlEntry.value = event.dragUrls[0];
+  urlEntry.selectAll();
+  urlEntry.focus();
+}
+
+function OnLoadGadget() {
+  var url_patterns = [
+    /^\w+:\/\/\w+\.google\.\w+\/ig\/directory.*type=gadgets.*url=(.*.xml)/,
+    /^\w+:\/\/\w+\.google\.\w+\/ig\/adde.*moduleurl=(.*.xml)/
+  ];
+
+  var gadget_url = null;
+  var url = urlEntry.value;
+  if (url != null) {
+    for (i in url_patterns) {
+      var match_result = url.match(url_patterns[i]);
+      if (match_result != null) {
+        gadget_url = match_result[1];
+        if (!gadget_url.match(/^\w+:\/\//))
+          gadget_url = "http://" + gadget_url;
+        break;
+      }
+    }
+  }
+
+  if (gadget_url != null) {
+    g_download_url = gadget_url;
+    options.putValue(kDownloadURLOption, g_download_url);
+    LoadGadget();
+  } else {
+    alert(strings.INVALID_URL);
+  }
 }
