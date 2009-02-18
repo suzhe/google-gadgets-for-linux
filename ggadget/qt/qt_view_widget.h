@@ -46,12 +46,15 @@ class QtViewWidget : public QWidget {
   ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
-  void SetWMPropertiesForMainView();
+  /**
+   * Set properties for window that's not decorated by wm, including
+   * skip_taskbar, skip_pager, show_on_all_desktop.
+   */
+  void SetUndecoratedWMProperties();
   void AdjustToViewSize();
   void SetKeepAbove(bool above);
   void SetView(ViewInterface *view);
   virtual QSize sizeHint () const;
-  virtual QSize minimumSizeHint () const;
 
  protected:
   virtual void paintEvent(QPaintEvent *event);
@@ -96,6 +99,9 @@ class QtViewWidget : public QWidget {
  signals:
   void moved(int x, int y);
   void geometryChanged(int dleft, int dtop, int dw, int dh);
+
+ public slots:
+  void UnsetMinimumSizeHint();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(QtViewWidget);

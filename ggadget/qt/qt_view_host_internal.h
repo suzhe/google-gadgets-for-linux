@@ -42,6 +42,7 @@ class QtViewHost::Impl : public QObject {
       record_states_(flags.testFlag(QtViewHost::FLAG_RECORD_STATES)),
       input_shape_mask_(false),
       keep_above_(false),
+      resizable_mode_(ViewInterface::RESIZABLE_TRUE),
       flags_(QtViewWidget::FLAG_MOVABLE | QtViewWidget::FLAG_INPUT_MASK),
       parent_widget_(parent) {
     if (flags.testFlag(QtViewHost::FLAG_WM_DECORATED))
@@ -149,8 +150,7 @@ class QtViewHost::Impl : public QObject {
     widget_ = new QtViewWidget(view_, flags_);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       QVBoxLayout *layout = new QVBoxLayout();
-      widget_->setFixedSize(D2I(view_->GetWidth()), D2I(view_->GetHeight()));
-      layout->addWidget(widget_);
+      layout->addWidget(widget_, 1);
       ASSERT(!dialog_);
       dialog_ = new QDialog();
 
@@ -175,6 +175,7 @@ class QtViewHost::Impl : public QObject {
       dialog_->setLayout(layout);
       dialog_->setWindowTitle(caption_);
       SetGadgetWindowIcon(dialog_, view_->GetGadget());
+      ApplyResizable();
 
       if (modal) {
         dialog_->exec();
@@ -252,12 +253,34 @@ class QtViewHost::Impl : public QObject {
     if (flag) {
       widget_->show();
       widget_->raise();
-      // Only main view get here.
-      widget_->SetWMPropertiesForMainView();
+      widget_->SetUndecoratedWMProperties();
       LoadWindowStates();
     } else {
       SaveWindowStates();
       widget_->hide();
+    }
+  }
+
+  void ApplyResizable() {
+    /**
+     * Only options view has wm decoration and need to be taken care here.
+     */
+    if (!dialog_) return;
+    bool resizable = (resizable_mode_ == ViewInterface::RESIZABLE_TRUE ||
+                      resizable_mode_ == ViewInterface::RESIZABLE_KEEP_RATIO ||
+                      (resizable_mode_ == ViewInterface::RESIZABLE_ZOOM &&
+                       type_ != ViewHostInterface::VIEW_HOST_OPTIONS));
+    if (resizable)
+      dialog_->layout()->setSizeConstraint(QLayout::SetDefaultConstraint);
+    else
+      dialog_->layout()->setSizeConstraint(QLayout::SetFixedSize);
+  }
+
+  void SetResizable(ViewInterface::ResizableMode mode) {
+    if (resizable_mode_ != mode &&
+        type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      resizable_mode_ = mode;
+      ApplyResizable();
     }
   }
 
@@ -276,7 +299,12 @@ class QtViewHost::Impl : public QObject {
   bool record_states_;
   bool input_shape_mask_;
   bool keep_above_;
+  ViewInterface::ResizableMode resizable_mode_;
   QtViewWidget::Flags flags_;
+  /**
+   * If parent_widget_ is not null, view host will try to show side by side
+   * with it.
+   */
   QWidget *parent_widget_;
   QString caption_;
   QMenu context_menu_;

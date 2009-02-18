@@ -288,6 +288,8 @@ class QtHost::Impl : public QObject {
           QtViewHost::FLAG_NONE,
           view_debug_mode_,
           static_cast<QWidget*>(decorated->GetNativeWidget()));
+      QObject::connect(this, SIGNAL(show(bool)),
+                       qvh->GetQObject(), SLOT(OnShow(bool)));
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       PopOutMainViewDecorator *view_decorator =
           new PopOutMainViewDecorator(qvh);

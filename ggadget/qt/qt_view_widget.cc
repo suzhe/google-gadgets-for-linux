@@ -18,6 +18,7 @@
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopWidget>
 #include <QtGui/QPainter>
+#include <QtGui/QLayout>
 #include <QtGui/QMouseEvent>
 #include <ggadget/graphics_interface.h>
 #include <ggadget/gadget.h>
@@ -60,8 +61,7 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
   AdjustToViewSize();
   if (!flags.testFlag(QtViewWidget::FLAG_WM_DECORATED)) {
     setWindowFlags(Qt::FramelessWindowHint);
-    // The view is a main view.
-    SetWMPropertiesForMainView();
+    SetUndecoratedWMProperties();
   }
   setAttribute(Qt::WA_InputMethodEnabled);
 }
@@ -436,28 +436,37 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   }
 }
 
+/**
+ * TODO: If enable the commented code below, ggl-plasma layout will run into
+ * infinite loop.
+ */
 void QtViewWidget::resizeEvent(QResizeEvent *event) {
-
+#if 0
+  if (!view_) return;
+  QSize s = event->size();
+  DLOG("resizeEvent: %d, %d", s.width(), s.height());
+  double w = s.width();
+  double h = s.height();
+  if (view_->OnSizing(&w, &h)) {
+    view_->SetSize(w, h);
+  }
+#endif
 }
 
 void QtViewWidget::focusInEvent(QFocusEvent *event) {
+  if (!view_) return;
   SimpleEvent e(Event::EVENT_FOCUS_IN);
   view_->OnOtherEvent(e);
 }
 
 void QtViewWidget::focusOutEvent(QFocusEvent *event) {
+  if (!view_) return;
   SimpleEvent e(Event::EVENT_FOCUS_OUT);
   view_->OnOtherEvent(e);
 }
 
 QSize QtViewWidget::sizeHint() const {
-  return minimumSizeHint();
-}
-
-QSize QtViewWidget::minimumSizeHint() const {
-  if (!view_)
-    return QWidget::minimumSizeHint();
-
+  if (!view_) return QWidget::sizeHint();
   int w = D2I(view_->GetWidth() * zoom_);
   int h = D2I(view_->GetHeight() * zoom_);
   if (w == 0 || h == 0) {
@@ -466,7 +475,9 @@ QSize QtViewWidget::minimumSizeHint() const {
     w = D2I(dw * zoom_);
     h = D2I(dh * zoom_);
   }
-  return QSize(w > 0 ? w : 1, h > 0 ? h : 1);
+
+  DLOG("sizeHint: %d, %d", w, h);
+  return QSize(w, h);
 }
 
 void QtViewWidget::EnableInputShapeMask(bool enable) {
@@ -536,14 +547,18 @@ void QtViewWidget::SetKeepAbove(bool above) {
   else
     f &= ~Qt::WindowStaysOnTopHint;
   setWindowFlags(f);
-  SetWMPropertiesForMainView();
+  SetUndecoratedWMProperties();
   show();
 }
 
 void QtViewWidget::SetView(ViewInterface *view) {
-  view_ = view;
-  if (view)
-    zoom_ = view->GetGraphics()->GetZoom();
+  if (view_ != view) {
+    view_ = view;
+    if (view) {
+      zoom_ = view->GetGraphics()->GetZoom();
+      AdjustToViewSize();
+    }
+  }
 }
 
 #if defined(Q_WS_X11) && defined(HAVE_X11)
@@ -556,7 +571,7 @@ static void SetWMState(Window w, const char *property_name) {
 }
 #endif
 
-void QtViewWidget::SetWMPropertiesForMainView() {
+void QtViewWidget::SetUndecoratedWMProperties() {
 #if defined(Q_WS_X11) && defined(HAVE_X11)
   SetWMState(winId(), "_NET_WM_STATE_SKIP_TASKBAR");
   SetWMState(winId(), "_NET_WM_STATE_SKIP_PAGER");
@@ -580,6 +595,10 @@ void QtViewWidget::SetChild(QWidget *widget) {
     // this will expose parent widget so its paintEvent will be triggered.
     widget->move(0, 10);
   }
+}
+
+void QtViewWidget::UnsetMinimumSizeHint() {
+  setMinimumSize(0, 0);
 }
 
 }
