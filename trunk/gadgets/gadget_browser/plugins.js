@@ -131,13 +131,17 @@ function LoadMetadata() {
 function GetPluginTitle(plugin, language) {
   if (!plugin) return "";
   var result = plugin.titles[language];
-  return result ? result : plugin.attributes.name;
+  if (!result) result = plugin.titles["en"];
+  if (!result) result = plugin.attributes.name;
+  return result;
 }
 
 function GetPluginDescription(plugin, language) {
   if (!plugin) return "";
   var result = plugin.descriptions[language];
-  return result ? result : plugin.attributes.product_summary;
+  if (!result) result = plugin.descriptions["en"];
+  if (!result) result = plugin.attributes.product_summary;
+  return result;
 }
 
 function GetPluginOtherData(plugin) {
