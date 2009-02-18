@@ -40,6 +40,7 @@ The TODO List contains several different categories. Each item belongs to one sp
  * Browser extension based on [http://live.gnome.org/WebKitGtk WebKit gtk/cairo port]
   See the [http://code.google.com/p/google-gadgets-for-linux/issues/detail?id=132 initial implementation] written by jmalonzo.
  * Audio and Mediaplayer extensions based on KDE Phonon
+ * xml_http_request extension based on [http://live.gnome.org/LibSoup libsoup]
 
 == New host related features ==
 
