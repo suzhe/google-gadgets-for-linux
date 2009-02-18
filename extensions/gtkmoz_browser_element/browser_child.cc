@@ -593,7 +593,7 @@ class ContentPolicy : public nsIContentPolicy {
           break;
         }
       }
-      // Reject this URL no matter if the controler has opened it.
+      // Reject this URL no matter if the controller has opened it.
       *retval = REJECT_OTHER;
       return NS_OK;
     }
@@ -601,36 +601,52 @@ class ContentPolicy : public nsIContentPolicy {
     *retval = ACCEPT;
     content_location->GetScheme(url_scheme);
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
-      // If the URL is opened the first time in a blank window or frame,
-      // request_origin is NULL or "about:blank".
-      if (request_origin) {
+      if (request_origin)
         request_origin->GetSpec(origin_spec);
-        SendLog("ShouldLoad:\n"
-                " origin: %s\n"
-                "    url: %s", origin_spec.get(), url_spec.get());
 
-        // Treats urls with the same base url but different refs as equal.
-        std::string tmp_origin(origin_spec.get());
-        std::string tmp_url(url_spec.get());
-        tmp_origin = tmp_origin.substr(0, tmp_origin.find_last_of('#'));
-        tmp_url = tmp_url.substr(0, tmp_url.find_last_of('#'));
-        if (tmp_origin != tmp_url &&
-            !origin_spec.Equals(nsCString("about:blank")) &&
-            !url_scheme.Equals(nsCString("javascript"))) {
-          PRBool is_loading = PR_FALSE;
-          BrowserInfo *browser_info = FindBrowserByContentPolicyContext(
-              context, &is_loading);
-          // Allow URLs opened during page loading to be opened in place.
-          if (browser_info && !is_loading) {
-            std::string r = SendFeedback(browser_info->browser_id,
-                                         kOpenURLFeedback, url_spec.get(),
-                                         NULL);
-            // The controller should have opened the URL, so don't let the
-            // embedded browser open it.
-            if (r[0] != '0')
-              *retval = REJECT_OTHER;
-          }
+      PRBool is_loading = PR_FALSE;
+      BrowserInfo *browser_info = FindBrowserByContentPolicyContext(
+          context, &is_loading);
+      if (!browser_info)
+        return NS_OK;
+
+      SendLog("ShouldLoad: is_loading=%d\n"
+              " origin: %s\n"
+              "    url: %s", is_loading, origin_spec.get(), url_spec.get());
+
+      // If the URL is opened the first time in a blank window or frame,
+      // or the URL is dragged and dropped on the browser, request_origin
+      // is NULL or "about:blank".
+      if (!request_origin || origin_spec.Equals(nsCString("about:blank"))) {
+        if (!browser_info->check_load_timer) {
+          // Reject the request that is not initiated by the controller.
+          // It may be initiated by user drag-and-drop.
+          *retval = REJECT_OTHER;
         }
+        // Otherwise let the URL loaded in place.
+        return NS_OK;
+      }
+
+      if (url_scheme.Equals(nsCString("javascript"))) {
+        // Also let javascript URLs handled in place.
+        return NS_OK;
+      }
+
+      // Treats urls with the same base url but different refs as equal.
+      std::string tmp_origin(origin_spec.get());
+      std::string tmp_url(url_spec.get());
+      tmp_origin = tmp_origin.substr(0, tmp_origin.find_last_of('#'));
+      tmp_url = tmp_url.substr(0, tmp_url.find_last_of('#'));
+      // Allow URLs opened during page loading to be opened in place, otherwise
+      // call the kOpenURLFeedback to let the controller handle.
+      if (tmp_origin == tmp_url && !is_loading) {
+        std::string r = SendFeedback(browser_info->browser_id,
+                                     kOpenURLFeedback, url_spec.get(),
+                                     NULL);
+        // The controller should have opened the URL, so don't let the
+        // embedded browser open it.
+        if (r[0] != '0')
+          *retval = REJECT_OTHER;
       }
     }
     return NS_OK;
