@@ -549,4 +549,15 @@
     <title locale="sl">Vreme</title>
     <description locale="sl">Prikaz vremenskih informacij za izbrane kraje</description>
   </plugin-->
+  <plugin id="igoogle" category="tools" thumbnail_url="resource://igoogle_sm.jpg" rank="1"
+    language="el,en,ca,it,pt-br,cs,id,es,en-gb,ru,nl,no,zh-tw,tr,zh-cn,th,ro,pl,fr,bg,hr,de,da,hi,fi,hu,ja,ko,sv,sk,sl">
+    <title locale="en">iGoogle Gadget</title>
+    <description locale="en">Run iGoogle Gadgets on your desktop</description>
+    <title locale="en-gb">iGoogle Gadget</title>
+    <description locale="en-gb">Run iGoogle Gadgets on your desktop</description>
+    <title locale="zh-cn">iGoogle 小工具</title>
+    <description locale="zh-cn">在您的桌面上运行 iGoogle 小工具</description>
+    <title locale="zh-tw">iGoogle 小工具</title>
+    <description locale="zh-tw">在您的桌面上執行 iGoogle 小工具</description>
+  </plugin>
 </plugins>

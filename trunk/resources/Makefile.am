@@ -118,6 +118,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		analog_clock_sm.jpg \
 		digital_alarm_clock_sm.jpg \
 		email_sm.jpg \
+		igoogle_sm.jpg \
 		photos_sm.jpg \
 		rss_sm.jpg \
 		scratchpad_sm.jpg \
