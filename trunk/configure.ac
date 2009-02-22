@@ -1038,7 +1038,7 @@ if test x$build_smjs_script_runtime = xyes -o \
   fi
 
   if test x$has_gtkmozembed = xno; then
-    if test $build_gtkmoz_browser_element = xyes; then
+    if test x$build_gtkmoz_browser_element = xyes; then
       AC_MSG_WARN([gtkmozembed is required by gtkmoz-browser-element.])
       build_gtkmoz_browser_element=no
     fi
