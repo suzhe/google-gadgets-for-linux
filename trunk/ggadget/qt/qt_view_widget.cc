@@ -436,21 +436,23 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   }
 }
 
-/**
- * TODO: If enable the commented code below, ggl-plasma layout will run into
- * infinite loop.
- */
 void QtViewWidget::resizeEvent(QResizeEvent *event) {
-#if 0
-  if (!view_) return;
+  /**
+   * TODO: Only after ggl-plasma gets the layout issue fixed can we apply this
+   * procession to view host other than options.
+   */
+  if (!view_ ||
+      view_->GetViewHost()->GetType() != ViewHostInterface::VIEW_HOST_OPTIONS)
+    return;
   QSize s = event->size();
   DLOG("resizeEvent: %d, %d", s.width(), s.height());
   double w = s.width();
   double h = s.height();
+  if (w == view_->GetWidth() && h == view_->GetHeight())
+    return;
   if (view_->OnSizing(&w, &h)) {
     view_->SetSize(w, h);
   }
-#endif
 }
 
 void QtViewWidget::focusInEvent(QFocusEvent *event) {
