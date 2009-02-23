@@ -107,6 +107,11 @@ void QtViewHost::QueueResize() {
   if (impl_->widget_) {
     QSize s = impl_->widget_->size();
     impl_->widget_->AdjustToViewSize();
+
+    // Only options view needs the trick below because only QtViewWidget of
+    // options view is managed by layout within a toplevel QWidget.
+    if (!impl_->dialog_) return;
+
     QSize ns = impl_->widget_->size();
     // If widget has got bigger, we set the minimizedSize for a short period to
     // let Qt layout aware of that.

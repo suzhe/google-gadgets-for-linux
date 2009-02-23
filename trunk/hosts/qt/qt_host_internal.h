@@ -29,12 +29,15 @@ class QtHost::Impl : public QObject {
   Q_OBJECT
  public:
   struct GadgetInfo {
-    GadgetInfo() : gadget(NULL), debug_console(NULL) {}
+    GadgetInfo() : gadget(NULL), menu_item(NULL), debug_console(NULL) {}
+
     ~GadgetInfo() {
+      delete menu_item;
       delete debug_console;
       delete gadget;
     }
     Gadget *gadget;
+    QAction *menu_item;
     QWidget* debug_console;
   };
   Impl(QtHost *host, bool composite,
@@ -47,6 +50,7 @@ class QtHost::Impl : public QObject {
       debug_console_config_(debug_console_config),
       composite_(composite),
       gadgets_shown_(true),
+      gadgets_menu_separator_(NULL),
       expanded_popout_(NULL),
       expanded_original_(NULL),
       show_(true) {
@@ -75,7 +79,9 @@ class QtHost::Impl : public QObject {
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_HIDE_ALL")),
                     this, SLOT(OnHideAll()));
     menu_.addSeparator();
-    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_ABOUT")), this, SLOT(OnAbout()));
+    gadgets_menu_separator_ = menu_.addSeparator();
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_ABOUT")),
+                    this, SLOT(OnAbout()));
     menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_EXIT")),
                     qApp, SLOT(quit()));
     tray_.setContextMenu(&menu_);
@@ -169,6 +175,7 @@ class QtHost::Impl : public QObject {
       gadgets_.erase(instance_id);
       return NULL;
     }
+    InsertGadgetToMenu(info);
     return gadget;
   }
 
@@ -187,8 +194,8 @@ class QtHost::Impl : public QObject {
 
     QtViewHost *qvh = new QtViewHost(
         type, 1.0, flags, view_debug_mode_, parent);
-    QObject::connect(this, SIGNAL(show(bool)),
-                     qvh->GetQObject(), SLOT(OnShow(bool)));
+    QObject::connect(this, SIGNAL(show(bool, Gadget*)),
+                     qvh->GetQObject(), SLOT(OnShow(bool, Gadget*)));
 
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
       return qvh;
@@ -237,10 +244,25 @@ class QtHost::Impl : public QObject {
     if (it != gadgets_.end()) {
       DLOG("Close Gadget: %s",
            it->second.gadget->GetManifestInfo(kManifestName).c_str());
+      RemoveGadgetFromMenu(&it->second);
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
     }
+  }
+
+  void InsertGadgetToMenu(GadgetInfo *info) {
+    std::string name = info->gadget->GetManifestInfo(kManifestName);
+    info->menu_item = new QAction(QString::fromUtf8(name.c_str()), this);
+    QObject::connect(info->menu_item, SIGNAL(triggered()),
+                     this, SLOT(OnGadgetMenuItem()));
+    menu_.insertAction(gadgets_menu_separator_, info->menu_item);
+    gadget_menu_map_[info->menu_item] = info->gadget;
+  }
+
+  void RemoveGadgetFromMenu(GadgetInfo *info) {
+    gadget_menu_map_.remove(info->menu_item);
+    menu_.removeAction(info->menu_item);
   }
 
   void OnCloseMainViewHandler(DecoratedViewHost *decorated) {
@@ -288,8 +310,8 @@ class QtHost::Impl : public QObject {
           QtViewHost::FLAG_NONE,
           view_debug_mode_,
           static_cast<QWidget*>(decorated->GetNativeWidget()));
-      QObject::connect(this, SIGNAL(show(bool)),
-                       qvh->GetQObject(), SLOT(OnShow(bool)));
+      QObject::connect(this, SIGNAL(show(bool, Gadget*)),
+                       qvh->GetQObject(), SLOT(OnShow(bool, Gadget*)));
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       PopOutMainViewDecorator *view_decorator =
           new PopOutMainViewDecorator(qvh);
@@ -345,6 +367,8 @@ class QtHost::Impl : public QObject {
   Gadget::DebugConsoleConfig debug_console_config_;
   bool composite_;
   bool gadgets_shown_;
+  QAction *gadgets_menu_separator_;
+  QMap<QObject*, Gadget*> gadget_menu_map_; // Map from QAction to Gadget.
 
   DecoratedViewHost *expanded_popout_;
   DecoratedViewHost *expanded_original_;
@@ -360,18 +384,28 @@ class QtHost::Impl : public QObject {
 
   // QObject stuffs
  signals:
-  void show(bool);
+  void show(bool, Gadget*);
 
  public slots:
   void OnAddGadget() {
     GetGadgetManager()->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
+
+  void OnGadgetMenuItem() {
+    QAction *s = static_cast<QAction*>(sender());
+    if (s && gadget_menu_map_.contains(s)) {
+      Gadget *gadget = gadget_menu_map_[s];
+      ASSERT(gadget);
+      emit show(true, gadget);
+    }
+  }
+
   void OnShowAll() {
-    emit show(true);
+    emit show(true, NULL);
     show_ = true;
   }
   void OnHideAll() {
-    emit show(false);
+    emit show(false, NULL);
     show_ = false;
   }
 
