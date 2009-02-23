@@ -17,6 +17,9 @@
 IF(GGL_BUILD_GST_AUDIO_FRAMEWORK)
 
 APPLY_CONFIG(GSTREAMER)
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-conversion")
+
 ADD_MODULE(gst-audio-framework gst_audio_framework.cc)
 TARGET_LINK_LIBRARIES(gst-audio-framework ${GSTREAMER_LIBRARIES} ggadget${GGL_EPOCH})
 OUTPUT_MODULE(gst-audio-framework)
