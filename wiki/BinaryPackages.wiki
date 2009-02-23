@@ -7,7 +7,7 @@ This page collects the information of binary packages of this project built by c
 
 == openSUSE ==
  * openSUSE 11.1
-  google-gadgets is included in openSUSE 11.1's official repository, just find and install google-gadgets-gtk or google-gadgets-qt in YaST.
+  Google Gadgets for Linux is included in openSUSE 11.1's official repository, just find and install google-gadgets-gtk or google-gadgets-qt in YaST.
   You can find unofficial packages at either of following YaST repositories:
    * http://download.opensuse.org/repositories/home:/suzhe/openSUSE_11.1/
    * http://download.opensuse.org/repositories/home:/hfiguiere/openSUSE_11.1/
@@ -30,6 +30,8 @@ You can find binary package for xUbuntu 8.04 at:
 
 Or this site, which provides binary packages for both Ubuntu 8.04 and 8.10:
  * http://www.getdeb.net/app/Google+Gadgets
+
+Google Gadgets for Linux has been officially included in Ubuntu jaunty, you can install either google-gadgets-gtk or google-gadgets-qt by your favorite package management application (like apt-get).
 
 == Debian sid ==
 Google Gadgets is already in Debian sid. You can install either google-gadgets-gtk or google-gadgets-qt as you wish.
