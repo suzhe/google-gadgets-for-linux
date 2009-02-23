@@ -333,8 +333,9 @@ class QtViewHost::Impl : public QObject {
     }
   }
 
-  void OnShow(bool flag) {
-    SetVisibility(flag);
+  void OnShow(bool flag, Gadget *gadget) {
+    if (!gadget || gadget == view_->GetGadget())
+      SetVisibility(flag);
   }
 };
 
