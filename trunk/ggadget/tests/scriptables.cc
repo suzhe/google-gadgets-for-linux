@@ -188,6 +188,7 @@ void ExtScriptable::DoRegister() {
                      NewSlot(&inner_, &Inner::GetComplexSignalData), NULL);
     RegisterMethod("FireComplexSignal",
                    NewSlot(&inner_, &Inner::FireComplexSignal));
+    RegisterMethod("", NewSlot(this, &ExtScriptable::ObjectMethod));
   }
 
   // The following are always object-based.
@@ -229,6 +230,7 @@ void ExtScriptable::DoClassRegister() {
                      NewSlot(&Inner::GetComplexSignalData, GetInner), NULL);
     RegisterMethod("FireComplexSignal",
                    NewSlot(&Inner::FireComplexSignal, GetInner));
+    RegisterMethod("", NewSlot(&ExtScriptable::ObjectMethod));
   }
 }
 
