@@ -226,6 +226,12 @@ TEST("Test scriptables", function() {
   ASSERT(NULL(scriptable2.ObjectMethod(scriptable)));
 });
 
+TEST("Test default method", function() {
+  // The default method is registered as ObjectMethod().
+  ASSERT(NULL(scriptable2(null)));
+  ASSERT(EQ(scriptable2, scriptable2(scriptable2)));
+});
+
 TEST("Test dynamic allocated objects", function() {
   var a = scriptable2.NewObject(true);
   var a_deleted = false;
