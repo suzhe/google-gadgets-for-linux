@@ -39,6 +39,7 @@ AC_CONFIG_MACRO_DIR([autotools])
 # So that the value set by AC_PROG_CC and AC_PROG_CXX won't be used,
 # even if they are empty.
 ggl_save_CFLAGS=$CFLAGS
+ggl_save_CPPFLAGS=$CPPFLAGS
 ggl_save_CXXFLAGS=$CXXFLAGS
 ggl_save_LDFLAGS=$LDFLAGS
 
@@ -740,16 +741,14 @@ if test x$build_gst_audio_framework = xyes -o \
                      gstreamer-plugins-base-0.10 >= 0.10.0],
                     [has_gstreamer=yes], [has_gstreamer=no])
   if test x$has_gstreamer = xyes; then
-    CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
-    CXXFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $GSTREAMER_CFLAGS"
     AC_CHECK_HEADERS([gst/video/gstvideosink.h],
                      [has_gstreamer_video=yes], [has_gstreamer_video=no])
     if test x$has_gstreamer_video = xyes; then
       GSTVIDEOSINK_LIBRARIES="-lgstvideo-0.10"
       AC_SUBST(GSTVIDEOSINK_LIBRARIES)
     fi
-    CFLAGS=$ggl_save_CFLAGS
-    CXXFLAGS=$ggl_save_CXXFLAGS
+    CPPFLAGS=$ggl_save_CPPFLAGS
   fi
 
   if test x$has_gstreamer != xyes; then
@@ -804,13 +803,11 @@ if test x$build_libggadget_dbus = xyes; then
     if test x$has_dbus = xold; then
       PREDEFINED_MACROS="$PREDEFINED_MACROS -DDBUS_API_SUBJECT_TO_CHANGE=1"
     fi
-    CFLAGS="$DBUS_CFLAGS"
     LDFLAGS="$DBUS_LIBS"
     AC_CHECK_FUNC(dbus_watch_get_unix_fd, [has_dbus_watch_get_unix_fd=yes])
     if test x$has_dbus_watch_get_unix_fd = xyes; then
       PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_DBUS_WATCH_GET_UNIX_FD"
     fi
-    CFLAGS=$ggl_save_CFLAGS
     LDFLAGS=$ggl_save_LDFLAGS
   else
     AC_MSG_WARN([DBus >= 0.60 is required by libggadget-dbus.])
@@ -1251,6 +1248,7 @@ AM_CONDITIONAL([GGL_DISABLE_SHARED], [test x$enable_shared != xyes])
 
 # Clear the default CFLAGS and CXXFLAGS
 CFLAGS=$ggl_save_CFLAGS
+CPPFLAGS=$ggl_save_CPPFLAGS
 CXXFLAGS=$ggl_save_CXXFLAGS
 LDFLAGS=$ggl_save_LDFLAGS
 
