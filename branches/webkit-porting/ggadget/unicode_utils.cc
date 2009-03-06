@@ -42,8 +42,8 @@
 #include <cstdlib>
 #include "unicode_utils.h"
 namespace std {
-template class std::basic_string<UTF16Char>;
-template class std::basic_string<UTF32Char>;
+template class std::basic_string<ggadget::UTF16Char>;
+template class std::basic_string<ggadget::UTF32Char>;
 }
 
 namespace ggadget {

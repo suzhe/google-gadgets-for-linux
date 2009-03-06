@@ -34,4 +34,5 @@ SUBDIRS = dbus_script_class \
 	  libxml2_xml_parser \
 	  default_options \
 	  google_gadget_manager \
-	  analytics_usage_collector
+	  analytics_usage_collector \
+	  webkit_script_runtime

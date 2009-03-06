@@ -155,6 +155,7 @@ build_qt_system_framework=yes
 build_qt_xml_http_request=yes
 build_qtwebkit_browser_element=yes
 build_smjs_script_runtime=yes
+build_webkit_script_runtime=yes
 
 #================ compile options ==============
 AC_ARG_ENABLE([debug],
@@ -345,6 +346,12 @@ AC_ARG_ENABLE([smjs-script-runtime],
                              [don't build smjs-script-runtime]),
               [build_smjs_script_runtime=$enableval],
               [build_smjs_script_runtime=yes])
+
+AC_ARG_ENABLE([webkit-script-runtime],
+              AS_HELP_STRING([--disable-webkit-script-runtime],
+                             [don't build webkit-script-runtime]),
+              [build_webkit_script_runtime=$enableval],
+              [build_webkit_script_runtime=yes])
 
 #================ other options =======================
 AC_ARG_ENABLE([update-mime-database],
@@ -1044,6 +1051,50 @@ if test x$build_smjs_script_runtime = xyes -o \
   fi
 fi
 
+# Check WebKit/JavaScriptCore
+has_javascriptcore=no
+if test x$build_webkit_script_runtime = xyes; then
+  if test x$ggl_host_type = xlinux -o \
+          x$ggl_host_type = xsolaris; then
+    PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.1],
+                      [has_javascriptcore=yes],
+                      [has_javascriptcore=no])
+    if test x$has_javascriptcore = xyes; then
+      CPPFLAGS="$CPPFLAGS $JAVA_SCRIPT_CORE_CFLAGS"
+      AC_CHECK_HEADERS([JavaScriptCore/JavaScript.h],
+                       [has_JavaScript_h=yes],
+                       [has_JavaScript_h=no])
+      AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
+                       [has_JavaScriptCore_h=yes],
+                       [has_JavaScriptCore_h=no])
+      CPPFLAGS="$ggl_save_CPPFLAGS"
+      if test x$has_JavaScript_h = xyes; then
+        PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_H"
+      fi
+      if test x$has_JavaScriptCore_h = xyes; then
+        PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
+      fi
+    fi
+  elif test x$ggl_host_type = xmacosx; then
+    # Use system built-in JavaScriptCore.framework
+    # No gtk webkit support on mac yet.
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
+                     [has_javascriptcore=yes],
+                     [has_javascriptcore=no])
+    if test x$has_javascriptcore = xyes; then
+      JAVA_SCRIPT_CORE_LIBS="-framework JavaScriptCore"
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
+    fi
+  else
+    AC_MSG_WARN([JavaScriptCore support is not available for $ggl_host_type])
+  fi
+
+  if test x$has_javascriptcore != xyes; then
+    AC_MSG_WARN([WebKit/JavaScriptCore is required by webkit-script-runtime.])
+    build_webkit_script_runtime=no;
+  fi
+fi
+
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
 AC_CHECK_FUNC(mmap, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MMAP"])
@@ -1223,6 +1274,10 @@ AM_CONDITIONAL(
   [test x$build_smjs_script_runtime = xyes])
 
 AM_CONDITIONAL(
+  [GGL_BUILD_WEBKIT_SCRIPT_RUNTIME],
+  [test x$build_webkit_script_runtime = xyes])
+
+AM_CONDITIONAL(
   [GGL_ENABLE_UPDATE_MIME_DATABASE],
   [test x$enable_update_mime_database = xyes])
 
@@ -1294,6 +1349,8 @@ AC_CONFIG_FILES([Makefile
                  extensions/qtwebkit_browser_element/Makefile
                  extensions/smjs_script_runtime/Makefile
                  extensions/smjs_script_runtime/tests/Makefile
+                 extensions/webkit_script_runtime/Makefile
+                 extensions/webkit_script_runtime/tests/Makefile
                  gadgets/Makefile
                  gadgets/analog_clock/Makefile
                  gadgets/designer/Makefile
@@ -1376,6 +1433,7 @@ Build options:
   Build qt-xml-http-request     $build_qt_xml_http_request
   Build qtwebkit-browser        $build_qtwebkit_browser_element
   Build smjs-script-runtime     $build_smjs_script_runtime
+  Build webkit-script-runtime   $build_webkit_script_runtime
 
  Other features:
   GTK SVG Support               $has_librsvg

@@ -68,7 +68,8 @@ static const char *kGlobalExtensions[] = {
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
-  "smjs-script-runtime",
+//  "smjs-script-runtime",
+  "webkit-script-runtime",
   "curl-xml-http-request",
   "analytics-usage-collector",
   "google-gadget-manager",

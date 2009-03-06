@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#include "ggadget/tests/scriptables.h"
 #include "../js_script_context.h"
+#include "ggadget/script_context_interface.h"
+#include "ggadget/tests/scriptables.h"
 
 using namespace ggadget;
-using namespace ggadget::smjs;
 
 class GlobalObject : public ScriptableHelperNativeOwnedDefault {
  public:
@@ -34,6 +34,9 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
     RegisterConstant("s1", &test_scriptable1);
     RegisterProperty("s2", NewSlot(this, &GlobalObject::GetS2), NULL);
     RegisterMethod("globalMethod", NewSlot(this, &GlobalObject::GlobalMethod));
+    RegisterProperty("varProperty",
+                     NewSlot(this, &GlobalObject::GetVariantProperty),
+                     NewSlot(this, &GlobalObject::SetVariantProperty));
   }
   virtual bool IsStrict() const { return false; }
 
@@ -46,8 +49,17 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
 
   std::string GlobalMethod() { return "hello world"; }
 
+  Variant GetVariantProperty() const {
+    return variant_property.v();
+  }
+
+  void SetVariantProperty(const Variant &value) {
+    variant_property = ResultVariant(value);
+  }
+
   BaseScriptable test_scriptable1;
   ExtScriptable test_scriptable2;
+  ResultVariant variant_property;
 };
 
 static GlobalObject *global;
@@ -57,15 +69,15 @@ static ScriptableInterface *NullCtor() {
 }
 
 // Called by the initialization code in js_shell.cc.
-JSBool InitCustomObjects(JSScriptContext *context) {
+bool InitCustomObjects(ScriptContextInterface *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
   context->RegisterClass("TestScriptable",
                          NewSlot(global, &GlobalObject::ConstructScriptable));
   context->RegisterClass("TestNullCtor", NewSlot(NullCtor));
-  return JS_TRUE;
+  return true;
 }
 
-void DestroyCustomObjects(JSScriptContext *context) {
+void DestroyCustomObjects(ScriptContextInterface *context) {
   delete global;
 }
