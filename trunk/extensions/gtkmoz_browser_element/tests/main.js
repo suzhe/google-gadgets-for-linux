@@ -41,12 +41,16 @@ var HTML = "<html><head>" +
   "  window.external.display(func1(window.external.prop3.prop2) + '\\n' +" +
   "                          func1(window.external.prop2));" +
   "}" +
+  "function Test5() {" +
+  "  window.external.prop2.resizeBy(10, 10);" +
+  "}" +
   "</script>" +
   "<body>Click an Item<p>" +
   "<a href=\"\" onclick=\"Test1(); return false;\">Test1</a><br>" +
   "<a href=\"\" onclick=\"Test2(); return false;\">Test2</a><br>" +
   "<a href=\"\" onclick=\"Test3(); return false;\">Test3</a><br>" +
   "<a href=\"\" onclick=\"Test4(); return false;\">Test4</a><br>" +
+  "<a href=\"\" onclick=\"Test5(); return false;\">Test5</a><br>" +
   "</body>" +
   "</html>";
 

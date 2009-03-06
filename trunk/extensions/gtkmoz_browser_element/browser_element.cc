@@ -564,6 +564,43 @@ class BrowserElementImpl {
     Slot *to_string_;
   };
 
+  // Wraps a host method into a ScriptableInterface object, while doesn't
+  // take the ownership of the method slot.
+  class HostSlotWrapper : public ScriptableHelperDefault {
+   public:
+    DEFINE_CLASS_ID(0xc12afe14b57d4e0b, ScriptableInterface);
+    HostSlotWrapper(ScriptableInterface *parent, const std::string &name)
+        : parent_(parent), name_(name) {
+    }
+
+    virtual PropertyType GetPropertyInfo(const char *name,
+                                         Variant *prototype) {
+      if (!*name) {
+        if (prototype)
+          *prototype = Variant(GetSlot());
+        return PROPERTY_METHOD;
+      }
+      return PROPERTY_NOT_EXIST;
+    }
+
+    virtual ResultVariant GetProperty(const char *name) {
+      return ResultVariant(!*name ? Variant(GetSlot()) : Variant());
+    }
+
+    Slot *GetSlot() {
+      ScriptableInterface *parent_obj = parent_.Get();
+      if (parent_obj) {
+        ResultVariant method = parent_obj->GetProperty(name_.c_str());
+        if (method.v().type() == Variant::TYPE_SLOT)
+          return VariantValue<Slot *>()(method.v());
+      }
+      return NULL;
+    }
+
+    ScriptableHolder<ScriptableInterface> parent_;
+    std::string name_;
+  };
+
   BrowserElementImpl(BrowserElement *owner)
       : owner_(owner),
         object_seq_(0),
@@ -783,6 +820,8 @@ class BrowserElementImpl {
         return StringPrintf("hobj %zu", AddHostObject(obj));
       }
       case Variant::TYPE_SLOT: {
+        // Note: this case is not for the result of GetProperty() of a host
+        // object which is specially handled in GetHostObjectProperty().
         Slot *slot = VariantValue<Slot *>()(value);
         if (!slot) return kNullStr;
         ScriptableFunction *obj = new ScriptableFunction(slot);
@@ -920,9 +959,19 @@ class BrowserElementImpl {
     if (!object)
       return StringPrintf("exception: host object %s not found", object_id_str);
     std::string property_name;
+    ResultVariant result;
     if (DecodeJavaScriptString(property, &property_name))
-      return EncodeValue(object->GetProperty(property_name.c_str()).v());
-    return EncodeValue(object->GetPropertyByIndex(atoi(property)).v());
+      result = object->GetProperty(property_name.c_str());
+    else
+      result = object->GetPropertyByIndex(atoi(property));
+
+    if (result.v().type() == Variant::TYPE_SLOT) {
+      // Specially handle Slot property, don't wrap it into a
+      // ScriptableFunction because it is owned by the object.
+      return EncodeValue(Variant(new HostSlotWrapper(object, property_name)));
+    } else {
+      return EncodeValue(result.v());
+    }
   }
 
   std::string SetHostObjectProperty(const char *object_id_str,
