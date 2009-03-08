@@ -41,43 +41,6 @@ TEST(JSScriptRuntime, JSScriptRuntime) {
   delete runtime;
 }
 
-static const char *kTestStrings[] = {
-  "apple",
-  "apple",
-  "application",
-  "baby",
-  "c++",
-  "body",
-  "gadget",
-  "gadgets",
-  "linux",
-  "internationalization",
-  NULL
-};
-
-TEST(JSScriptRuntime, ConvertJSStringToUTF8Cached) {
-  JSScriptRuntime *runtime = new JSScriptRuntime();
-
-  JSStringRef js_strings[10];
-  for (size_t i = 0; i < 10; ++i)
-    js_strings[i] = JSStringCreateWithUTF8CString(kTestStrings[i]);
-
-  const std::string* std_strings[10];
-  for (size_t i = 0; i < 10; ++i) {
-    std_strings[i] = &runtime->ConvertJSStringToUTF8Cached(js_strings[i]);
-    ASSERT_STREQ(kTestStrings[i], std_strings[i]->c_str());
-  }
-
-  for (size_t i = 0; i < 10; ++i) {
-    ASSERT_EQ(std_strings[i],
-              &runtime->ConvertJSStringToUTF8Cached(js_strings[i]));
-  }
-
-  ASSERT_EQ(std_strings[0], std_strings[1]);
-
-  delete runtime;
-}
-
 int main(int argc, char **argv) {
   setlocale(LC_ALL, "");
   testing::ParseGTestFlags(&argc, argv);
