@@ -48,12 +48,6 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
    */
   JSClassRef GetClassRef(const JSClassDefinition *definition);
 
-  /**
-   * Converts a JSStringRef to UTF8 string and caches the result so that it
-   * won't be converted again.
-   */
-  const std::string& ConvertJSStringToUTF8Cached(JSStringRef js_string);
-
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
 

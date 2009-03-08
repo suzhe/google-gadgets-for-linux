@@ -108,6 +108,10 @@ class JSScriptContext::Impl : public SmallObject<> {
         object_(object),
         call_self_slot_(NULL),
         ref_count_(0) {
+#ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
+      DLOG("JSScriptableWrapper(ctx=%p, this=%p, jsobj=%p)",
+           impl_, this, object_);
+#endif
       ASSERT(object_);
       // Count the current JavaScript reference.
       Ref();
@@ -120,10 +124,6 @@ class JSScriptContext::Impl : public SmallObject<> {
       // Record this wrapper, so that it can be detached when the context is
       // being destroyed.
       impl_->js_scriptable_wrappers_.insert(this);
-#ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper(ctx=%p, this=%p, jsobj=%p)",
-           impl_, this, object_);
-#endif
     }
 
     // It'll be called when JSObject is garbage collected.
@@ -154,8 +154,9 @@ class JSScriptContext::Impl : public SmallObject<> {
       // Emit the ondelete signal, as early as possible.
       on_reference_change_signal_(0, 0);
       ASSERT(ref_count_ == 0);
-      delete call_self_slot_;
-      RemoveAllSlots();
+      // DetachJS() must already be called.
+      ASSERT(call_self_slot_ == NULL);
+      ASSERT(method_slots_.size() == 0);
     }
 
    public:
@@ -180,19 +181,21 @@ class JSScriptContext::Impl : public SmallObject<> {
       DLOG("JSScriptableWrapper::Unref(ctx=%p, this=%p, jsobj=%p, "
            "ref=%d, trans=%d)", impl_, this, object_, ref_count_, transient);
 #endif
-      ASSERT(ref_count_ > 0);
-      if (object_ && ref_count_ == 2) {
-        // The last native reference is about to be released, unprotect
-        // JavaScript object to allow it being garbage collected.
-        JSValueUnprotect(context(), object_);
-      }
-#ifdef DEBUG_FORCE_GC
-      impl_->CollectGarbage();
-#endif
       on_reference_change_signal_(ref_count_, -1);
       ref_count_--;
-      if (!transient && ref_count_ == 0)
+      ASSERT(ref_count_ >= 0);
+
+      if (object_ && ref_count_ == 1) {
+        // The last native reference has been released, unprotect
+        // JavaScript object to allow it being garbage collected.
+        JSValueUnprotect(context(), object_);
+#ifdef DEBUG_FORCE_GC
+        // It might cause Unref() being called recursively.
+        impl_->CollectGarbage();
+#endif
+      } else if (!transient && ref_count_ == 0) {
         delete this;
+      }
     }
 
     virtual int GetRefCount() const {
@@ -215,11 +218,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     virtual PropertyType GetPropertyInfo(const char *name, Variant *prototype) {
       PropertyType result = ScriptableInterface::PROPERTY_NOT_EXIST;
       if (object_) {
-        if ((!name || !*name) && call_self_slot_) {
-          if (prototype)
-            *prototype = Variant(call_self_slot_);
-          result = ScriptableInterface::PROPERTY_METHOD;
-        } else if (name && *name) {
+        if (name && *name) {
           JSStringRef js_name = JSStringCreateWithUTF8CString(name);
           if (JSObjectHasProperty(context(), object_, js_name)) {
             // Always return PROPERTY_DYNAMIC for existing properties,
@@ -230,6 +229,10 @@ class JSScriptContext::Impl : public SmallObject<> {
               *prototype = Variant(Variant::TYPE_VARIANT);
           }
           JSStringRelease(js_name);
+        } else if (call_self_slot_) {
+          if (prototype)
+            *prototype = Variant(call_self_slot_);
+          result = ScriptableInterface::PROPERTY_METHOD;
         }
       }
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
@@ -246,15 +249,17 @@ class JSScriptContext::Impl : public SmallObject<> {
 #endif
       Variant result;
       if (object_) {
-        if ((!name || !*name) && call_self_slot_) {
-          result = Variant(call_self_slot_);
-        } else if (name && *name) {
+        if (name && *name) {
           JSValueRef js_val = NULL;
+          // function object will be returned as slot.
+          // See ConvertPropertyToNative() below.
           if (impl_->GetJSObjectProperty(object_, name, &js_val) &&
               !ConvertPropertyToNative(js_val, &result)) {
             DLOG("Failed to convert JS property %s value(%s) to native.",
                  name, PrintJSValue(impl_->owner_, js_val).c_str());
           }
+        } else if (call_self_slot_) {
+          result = Variant(call_self_slot_);
         }
       }
       return ResultVariant(result);
@@ -355,7 +360,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         size_t count = JSPropertyNameArrayGetCount(name_array);
         for (size_t i = 0; i < count; ++i) {
           JSStringRef name = JSPropertyNameArrayGetNameAtIndex(name_array, i);
-          std::string name_str = impl_->ConvertJSStringToUTF8Cached(name);
+          std::string name_str = ConvertJSStringToUTF8(name);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
           DLOG("  Enumerate: %s", name_str.c_str());
 #endif
@@ -385,7 +390,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         size_t count = JSPropertyNameArrayGetCount(name_array);
         for (size_t i = 0; i < count; ++i) {
           JSStringRef name = JSPropertyNameArrayGetNameAtIndex(name_array, i);
-          std::string name_str = impl_->ConvertJSStringToUTF8Cached(name);
+          std::string name_str = ConvertJSStringToUTF8(name);
           int index;
           // Only enumerate properties with positive numeric index.
           if (!IsIndexProperty(name_str, &index))
@@ -455,7 +460,7 @@ class JSScriptContext::Impl : public SmallObject<> {
       MethodSlotMap::iterator it = method_slots_.begin();
       for (; it != method_slots_.end(); ++it) {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-        DLOG("JSScriptableWrapper::DeleteMethodSlot(this=%p, slot=%p)",
+        DLOG("  DeleteMethodSlot(this=%p, slot=%p)",
              this, it->second);
 #endif
         delete static_cast<Slot *>(it->second);
@@ -640,7 +645,8 @@ class JSScriptContext::Impl : public SmallObject<> {
             // Normal GC triggering doesn't work well if only little JS code is
             // executed but many native objects are referenced by dead JS
             // objects. Call MaybeGC to ensure GC is not starved.
-            impl_->CollectGarbage();
+            // FIXME: it'll cause serious performance problem.
+            // impl_->CollectGarbage();
             return result;
           }
         } else {
@@ -818,12 +824,13 @@ class JSScriptContext::Impl : public SmallObject<> {
     DLOG("JSScriptContext::Compile(this=%p, script=%s, file=%s, line=%d)",
          this, script, filename, lineno);
 #endif
-    ASSERT(script && *script);
-    JSValueRef exception = NULL;
-    JSObjectRef js_function =
-        CompileFunction(owner_, script, filename, lineno, &exception);
-    if (js_function && CheckJSException(exception))
-      return WrapJSObjectIntoSlot(NULL, NULL, js_function);
+    if (script && *script) {
+      JSValueRef exception = NULL;
+      JSObjectRef js_function =
+          CompileFunction(owner_, script, filename, lineno, &exception);
+      if (js_function && CheckJSException(exception))
+        return WrapJSObjectIntoSlot(NULL, NULL, js_function);
+    }
     return NULL;
   }
 
@@ -1189,10 +1196,6 @@ class JSScriptContext::Impl : public SmallObject<> {
     JSClassRelease(function_class);
   }
 
-  const std::string& ConvertJSStringToUTF8Cached(JSStringRef js_string) {
-    return runtime_->ConvertJSStringToUTF8Cached(js_string);
-  }
-
  private:
   // Attachs a given Scriptable object to a JSObjectRef object.
   // The JSObjectRef object must be an instance of ScriptableJSWrapper class.
@@ -1301,8 +1304,6 @@ class JSScriptContext::Impl : public SmallObject<> {
 
   void OnScriptableReferenceChange(int ref_count, int change, void *data) {
     JSObjectRef object = static_cast<JSObjectRef>(data);
-    ScriptableJSWrapper *wrapper = GetScriptableJSWrapper(object);
-    ASSERT(wrapper);
     if (change == 0) {
       // The Scriptable object is being destroyed, it must be detached from the
       // wrapper.
@@ -1321,6 +1322,8 @@ class JSScriptContext::Impl : public SmallObject<> {
         // The Scriptable object is about to be floating again, so unprotect
         // the wrapper object to make it garbage collectable.
 #ifdef DEBUG_JS_VERBOSE
+        ScriptableJSWrapper *wrapper = GetScriptableJSWrapper(object);
+        ASSERT(wrapper);
         DLOG("Unprotect Object: ctx=%p  obj=%p  scriptable=%p",
              context_, object, wrapper->scriptable);
 #endif
@@ -1548,7 +1551,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = impl->ConvertJSStringToUTF8Cached(property_name);
+    std::string utf8_name = ConvertJSStringToUTF8(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1602,7 +1605,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = impl->ConvertJSStringToUTF8Cached(property_name);
+    std::string utf8_name = ConvertJSStringToUTF8(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1684,7 +1687,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = impl->ConvertJSStringToUTF8Cached(property_name);
+    std::string utf8_name = ConvertJSStringToUTF8(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1712,7 +1715,8 @@ class JSScriptContext::Impl : public SmallObject<> {
     int index = 0;
     bool is_index = false;
     Variant prototype;
-    ScriptableInterface::PropertyType prop_type;
+    ScriptableInterface::PropertyType prop_type =
+        ScriptableInterface::PROPERTY_NOT_EXIST;
 
     // Try index property first.
     if (IsIndexProperty(utf8_name, &index)) {

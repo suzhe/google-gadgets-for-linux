@@ -34,9 +34,6 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
     RegisterConstant("s1", &test_scriptable1);
     RegisterProperty("s2", NewSlot(this, &GlobalObject::GetS2), NULL);
     RegisterMethod("globalMethod", NewSlot(this, &GlobalObject::GlobalMethod));
-    RegisterProperty("varProperty",
-                     NewSlot(this, &GlobalObject::GetVariantProperty),
-                     NewSlot(this, &GlobalObject::SetVariantProperty));
   }
   virtual bool IsStrict() const { return false; }
 
@@ -49,17 +46,8 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
 
   std::string GlobalMethod() { return "hello world"; }
 
-  Variant GetVariantProperty() const {
-    return variant_property.v();
-  }
-
-  void SetVariantProperty(const Variant &value) {
-    variant_property = ResultVariant(value);
-  }
-
   BaseScriptable test_scriptable1;
   ExtScriptable test_scriptable2;
-  ResultVariant variant_property;
 };
 
 static GlobalObject *global;
