@@ -416,6 +416,7 @@ class JSScriptContext::Impl : public SmallObject<> {
    public:
     JSObjectRef object() const { return object_; }
     JSContextRef context() const { return impl_->context_; }
+    Impl *impl() const { return impl_; }
 
     void MethodRemoved(JSFunctionSlot *slot, JSObjectRef js_function) {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
@@ -518,7 +519,6 @@ class JSScriptContext::Impl : public SmallObject<> {
         } else {
           JSValueProtect(context(), function_);
         }
-
       }
       // Record this slot, so that it can be detached when the context is
       // being destroyed.
@@ -841,21 +841,17 @@ class JSScriptContext::Impl : public SmallObject<> {
     DLOG("JSScriptContext::SetGlobalObject(this=%p, global=%p, js_global=%p)",
          this, global, global_object);
 #endif
-    JSStringRef date_class_name = JSStringCreateWithUTF8CString("Date");
-    JSObjectRef date_class = JSValueToObject(
-        context_,
-        JSObjectGetProperty(context_, global_object, date_class_name, NULL),
-        NULL);
-    ASSERT(date_class && JSObjectIsConstructor(context_, date_class));
+    // Add some adapters for JScript.
+    // JScript programs call Date.getVarDate() to convert a JavaScript Date to
+    // a COM VARDATE. We just use Date's where VARDATE's are expected by JScript
+    // programs.
     JSObjectRef date_prototype = JSValueToObject(
-        context_,
-        JSObjectGetPrototype(context_, date_class),
-        NULL);
+        context_, JSObjectGetPrototype(context_, date_class_obj_), NULL);
     ASSERT(date_prototype);
     RegisterObjectMethod(date_prototype, "getVarDate", ReturnSelfFunc);
 
+    // For Windows compatibility.
     RegisterObjectMethod(NULL, "CollectGarbage", CollectGarbageFunc);
-    JSStringRelease(date_class_name);
 
     // There is still no way to support "name overriding", so binding native
     // global object directly to javascript object will break some gadgets that
@@ -1069,7 +1065,7 @@ class JSScriptContext::Impl : public SmallObject<> {
   bool IsWrapperOfJSObject(ScriptableInterface *scriptable) {
     return scriptable &&
         scriptable->IsInstanceOf(JSScriptableWrapper::CLASS_ID) &&
-        js_scriptable_wrappers_.count(scriptable) != 0;
+        down_cast<JSScriptableWrapper *>(scriptable)->impl() == this;
   }
 
   bool CheckJSException(JSValueRef exception) {
