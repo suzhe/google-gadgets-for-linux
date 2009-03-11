@@ -47,6 +47,9 @@ extern "C" {
         g_webkit_script_runtime_ = new JSScriptRuntime();
 
       manager->RegisterScriptRuntime("js", g_webkit_script_runtime_);
+
+      // Special handle for gtkwebkit_browser_element.
+      manager->RegisterScriptRuntime("webkitjs", g_webkit_script_runtime_);
       return true;
     }
     return false;

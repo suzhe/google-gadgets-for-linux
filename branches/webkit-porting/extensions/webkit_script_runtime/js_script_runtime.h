@@ -25,6 +25,8 @@
 namespace ggadget {
 namespace webkit {
 
+class JSScriptContext;
+
 /**
  * @c ScriptRuntime implementation for WebKit JavaScriptCore engine.
  */
@@ -47,6 +49,11 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
    * @return associated JSClassRef object.
    */
   JSClassRef GetClassRef(const JSClassDefinition *definition);
+
+  /**
+   * Wraps an existing JSContextRef into a JSScriptContext object.
+   */
+  JSScriptContext *WrapExistingContext(JSContextRef js_context);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);

@@ -718,10 +718,11 @@ class JSScriptContext::Impl : public SmallObject<> {
   };
 
  public:
-  Impl(JSScriptContext *owner, JSScriptRuntime *runtime)
+  Impl(JSScriptContext *owner, JSScriptRuntime *runtime,
+       JSContextRef js_context)
     : owner_(owner),
       runtime_(runtime),
-      context_(NULL),
+      context_(js_context),
       scriptable_js_wrapper_class_(NULL),
       scriptable_method_caller_class_(NULL),
       js_object_tracker_class_(NULL),
@@ -749,7 +750,11 @@ class JSScriptContext::Impl : public SmallObject<> {
         JSStringCreateWithUTF8CString(kJSObjectTrackerReferenceName);
     ASSERT(js_object_tracker_reference_name_);
 
-    context_ = JSGlobalContextCreate(NULL);
+    if (!context_)
+      context_ = JSGlobalContextCreate(NULL);
+    else
+      JSGlobalContextRetain(const_cast<JSGlobalContextRef>(context_));
+
     // Native global object will be attached to the default javascript global
     // oblect as its prototype, so no need to use special class here.
     // See SetGlobalObject() below for details.
@@ -2147,8 +2152,8 @@ JSScriptContext::Impl::kClassConstructorClassDefinition = {
   NULL,                         // convertToType
 };
 
-JSScriptContext::JSScriptContext(JSScriptRuntime *runtime)
-  : impl_(new Impl(this, runtime)) {
+JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContextRef js_context)
+  : impl_(new Impl(this, runtime, js_context)) {
 }
 
 JSScriptContext::~JSScriptContext() {

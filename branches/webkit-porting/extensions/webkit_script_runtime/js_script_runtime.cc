@@ -53,7 +53,7 @@ JSScriptRuntime::~JSScriptRuntime() {
 }
 
 ScriptContextInterface *JSScriptRuntime::CreateContext() {
-  return new JSScriptContext(this);
+  return new JSScriptContext(this, NULL);
 }
 
 JSClassRef JSScriptRuntime::GetClassRef(const JSClassDefinition *definition) {
@@ -73,6 +73,11 @@ JSClassRef JSScriptRuntime::GetClassRef(const JSClassDefinition *definition) {
   impl_->classes.push_back(std::make_pair(definition, class_ref));
 
   return class_ref;
+}
+
+JSScriptContext *JSScriptRuntime::WrapExistingContext(JSContextRef js_context) {
+  ASSERT(js_context);
+  return new JSScriptContext(this, js_context);
 }
 
 } // namespace webkit

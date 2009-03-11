@@ -28,7 +28,7 @@ noinst_HEADERS = \
 				js_script_runtime.h \
 				json.h
 
-noinst_LTLIBRARIES = libggadget-webkitjs.la
+lib_LTLIBRARIES = libggadget-webkitjs.la
 
 libggadget_webkitjs_la_SOURCES = \
 				converter.cc \

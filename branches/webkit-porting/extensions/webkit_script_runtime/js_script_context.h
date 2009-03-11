@@ -33,7 +33,13 @@ class JSScriptRuntime;
  */
 class JSScriptContext : public ScriptContextInterface {
  public:
-  JSScriptContext(JSScriptRuntime *runtime);
+  /**
+   * Creates a new JSScriptContext object.
+   *
+   * If specified js_context is not NULL, then just wrap it. Otherwise, a new
+   * JSContextRef will be created.
+   */
+  JSScriptContext(JSScriptRuntime *runtime, JSContextRef js_context);
   virtual ~JSScriptContext();
 
   /** @see ScriptContextInterface::Destroy() */
