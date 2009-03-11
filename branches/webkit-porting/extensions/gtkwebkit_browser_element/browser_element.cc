@@ -285,7 +285,7 @@ class BrowserElement::Impl {
   static WebKitNavigationResponse WebViewNavigationRequestedCallback(
       WebKitWebView *web_view, WebKitWebFrame *web_frame,
       WebKitNetworkRequest *request, Impl *impl) {
-    DLOG("WebViewNavigationRequestedCallback(Impl=%p, web_view=%p, uri=%p)",
+    DLOG("WebViewNavigationRequestedCallback(Impl=%p, web_view=%p, uri=%s)",
          impl, web_view, webkit_network_request_get_uri(request));
 
     // TODO

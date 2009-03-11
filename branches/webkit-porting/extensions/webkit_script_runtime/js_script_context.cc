@@ -19,6 +19,8 @@
 #include <map>
 #include <set>
 #include <cstdlib>
+#include <sys/types.h>
+#include <signal.h>
 #include <ggadget/logger.h>
 #include <ggadget/unicode_utils.h>
 #include <ggadget/slot.h>
@@ -61,8 +63,9 @@ class JSScriptContext::Impl : public SmallObject<> {
   // A class to hold necessary information to call a method of a Scriptable.
   class ScriptableMethodCaller : public SmallObject<> {
    public:
-    ScriptableMethodCaller(const std::string &name, Slot *slot)
-      : method_name(name), function_slot(slot) { }
+    ScriptableMethodCaller(Impl *a_impl, const std::string &name, Slot *slot)
+      : impl(a_impl), method_name(name), function_slot(slot) { }
+    Impl *impl;
     std::string method_name;
     Slot *function_slot;
   };
@@ -593,8 +596,8 @@ class JSScriptContext::Impl : public SmallObject<> {
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p, func=%p)",
-           impl_, this, function_);
+      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p, scriptable=%p, func=%p)",
+           impl_, this, object, function_);
 #endif
       Variant return_value(GetReturnType());
       if (!function_) {
@@ -659,8 +662,8 @@ class JSScriptContext::Impl : public SmallObject<> {
       }
 
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p) result=%s",
-           impl_, this, return_value.Print().c_str());
+      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p, this_obj=%p) result=%s",
+           impl_, this, this_object, return_value.Print().c_str());
 #endif
       return ResultVariant(return_value);
     }
@@ -861,6 +864,11 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     // For Windows compatibility.
     RegisterObjectMethod(NULL, "CollectGarbage", CollectGarbageFunc);
+
+#ifdef DEBUG
+    // For debug purpose.
+    RegisterObjectMethod(NULL, "Interrupt", InterruptFunc);
+#endif
 
     // There is still no way to support "name overriding", so binding native
     // global object directly to javascript object will break some gadgets that
@@ -1455,7 +1463,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
   JSObjectRef CreateScriptableMethodCaller(const std::string &name,
                                            Slot *slot) {
-    ScriptableMethodCaller *data = new ScriptableMethodCaller(name, slot);
+    ScriptableMethodCaller *data = new ScriptableMethodCaller(this, name, slot);
     JSObjectRef caller = JSObjectMake(
         context_, scriptable_method_caller_class_, data);
     return caller;
@@ -1773,7 +1781,13 @@ class JSScriptContext::Impl : public SmallObject<> {
         return true;
       }
       */
-      return scriptable->IsStrict();
+
+      // JSScriptableWrapper can handle property set even if the property is not
+      // exist.
+      if (scriptable->IsInstanceOf(JSScriptableWrapper::CLASS_ID))
+        prototype = Variant(Variant::TYPE_VARIANT);
+      else
+        return scriptable->IsStrict();
     }
 
     Variant native_value;
@@ -1952,17 +1966,28 @@ class JSScriptContext::Impl : public SmallObject<> {
                                  NULL);
       wrapper = GetScriptableJSWrapper(this_obj);
     }
-    ASSERT(wrapper);
 
-    Impl *impl = wrapper->impl;
-    ScriptableInterface *scriptable = wrapper->scriptable;
+    Impl *impl = data->impl;
+    ScriptableInterface *scriptable = NULL;
+
+    // Allows this_obj to be null..
+    if (wrapper) {
+      Impl *impl = wrapper->impl;
+      scriptable = wrapper->scriptable;
+      ASSERT(impl == data->impl);
+    }
+
+#ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
+    DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p, method=%s)",
+         ctx, this_obj, scriptable, data->method_name.c_str());
+#endif
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
 
-    if (!scriptable) {
+    if (wrapper && !scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p method=%s) "
+      DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p, method=%s) "
            " detached", ctx, this_obj, scriptable, data->method_name.c_str());
 #endif
       RaiseJSException(impl->owner_, exception,
@@ -1971,15 +1996,11 @@ class JSScriptContext::Impl : public SmallObject<> {
       return NULL;
     }
 
-#ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p method=%s)",
-         ctx, this_obj, scriptable, data->method_name.c_str());
-#endif
-
     // If function slot is not retrieved yet, try get it first.
     if (!data->function_slot) {
       Variant prototype;
-      if (scriptable->GetPropertyInfo(data->method_name.c_str(), &prototype) ==
+      if (scriptable &&
+          scriptable->GetPropertyInfo(data->method_name.c_str(), &prototype) ==
           ScriptableInterface::PROPERTY_METHOD) {
         data->function_slot = VariantValue<Slot *>()(prototype);
       }
@@ -2033,6 +2054,17 @@ class JSScriptContext::Impl : public SmallObject<> {
     JSGarbageCollect(ctx);
     return JSValueMakeUndefined(ctx);
   }
+
+#ifdef DEBUG
+  static JSValueRef InterruptFunc(JSContextRef ctx, JSObjectRef function,
+                                  JSObjectRef this_object,
+                                  size_t argument_count,
+                                  const JSValueRef arguments[],
+                                  JSValueRef* exception) {
+    kill(0, SIGINT);
+    return JSValueMakeUndefined(ctx);
+  }
+#endif
 
  private:
   JSScriptContext *owner_;

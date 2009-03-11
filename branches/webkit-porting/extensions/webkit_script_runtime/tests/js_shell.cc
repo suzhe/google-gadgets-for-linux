@@ -265,14 +265,6 @@ static JSValueRef JSONDecodeFunc(JSContextRef ctx, JSObjectRef function,
   return Assert(ctx, function, this_object, 1, &error, exception);
 }
 
-static JSValueRef Interrupt(JSContextRef ctx, JSObjectRef function,
-                            JSObjectRef this_object, size_t argument_count,
-                            const JSValueRef arguments[],
-                            JSValueRef* exception) {
-  kill(0, SIGINT);
-  return JSValueMakeUndefined(ctx);
-}
-
 struct GlobalFunction {
   const char *name;
   JSObjectCallAsFunctionCallback callback;
@@ -288,7 +280,6 @@ static GlobalFunction kGlobalFunctions[] = {
   { "jsonEncode", JSONEncodeFunc },
   { "jsonDecode", JSONDecodeFunc },
   { "ASSERT", Assert },
-  { "interrupt", Interrupt },
   { NULL, NULL }
 };
 
