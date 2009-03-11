@@ -434,7 +434,11 @@ class JSScriptContext::Impl : public SmallObject<> {
     bool ConvertPropertyToNative(JSValueRef js_val, Variant *native_val) {
       if (JSValueIsObject(context(), js_val)) {
         JSObjectRef js_obj = JSValueToObject(context(), js_val, NULL);
-        if (JSObjectIsFunction(context(), js_obj)) {
+        ScriptableInterface *scriptable = impl_->UnwrapScriptable(js_obj);
+        if (scriptable) {
+          *native_val = Variant(scriptable);
+          return true;
+        } else if (JSObjectIsFunction(context(), js_obj)) {
           Slot *slot = NULL;
           MethodSlotMap::iterator it = method_slots_.find(js_obj);
           if (it != method_slots_.end()) {
