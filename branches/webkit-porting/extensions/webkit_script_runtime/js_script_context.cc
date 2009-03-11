@@ -1072,7 +1072,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (exception) {
       std::string msg;
       JSONEncode(owner_, exception, &msg);
-      DLOG("JSException: %s", msg.c_str());
+      LOGE("JSException: %s", msg.c_str());
       return false;
     }
     return true;
@@ -1751,6 +1751,10 @@ class JSScriptContext::Impl : public SmallObject<> {
       DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
            "not exist", ctx, object, scriptable, utf8_name.c_str());
 #endif
+      // FIXME: Throwing exception here will break dom unittest.
+      // Because dom exception itself is a stricted scriptable object, and when
+      // throwing dom exception, javascript engine will try to set "sourceURL"
+      // and "lineno" properties to it and will cause another exception.
       /*
       if (scriptable->IsStrict()) {
         RaiseJSException(
@@ -1804,16 +1808,23 @@ class JSScriptContext::Impl : public SmallObject<> {
     return result || scriptable->IsStrict();
   }
 
+  struct EnumerateScriptablePropertiesData {
+    Impl *impl;
+    ScriptableInterface *scriptable;
+    JSPropertyNameAccumulatorRef property_names;
+  };
+
   static bool AddPropertyNameSlot(const char *name,
                                   ScriptableInterface::PropertyType prop_type,
                                   const Variant &value,
                                   void *data) {
-    JSPropertyNameAccumulatorRef accumulator =
-        static_cast<JSPropertyNameAccumulatorRef>(data);
+    EnumerateScriptablePropertiesData *enum_data =
+        static_cast<EnumerateScriptablePropertiesData *>(data);
     JSStringRef js_name = JSStringCreateWithUTF8CString(name);
-    JSPropertyNameAccumulatorAddName(accumulator, js_name);
+    JSPropertyNameAccumulatorAddName(enum_data->property_names, js_name);
     JSStringRelease(js_name);
-    return true;
+    return enum_data->impl->CheckScriptableException(enum_data->scriptable,
+                                                     NULL);
   }
 
   static void GetPropertyNamesCallback(
@@ -1826,8 +1837,13 @@ class JSScriptContext::Impl : public SmallObject<> {
     // Save current context for other functions.
     JSContextScope(wrapper->impl, ctx);
 
+    EnumerateScriptablePropertiesData data;
+    data.impl = wrapper->impl;
+    data.scriptable = wrapper->scriptable;
+    data.property_names = property_names;
+
     wrapper->scriptable->EnumerateProperties(
-        NewSlot(AddPropertyNameSlot, static_cast<void *>(property_names)));
+        NewSlot(AddPropertyNameSlot, static_cast<void *>(&data)));
   }
 
   static JSValueRef CallAsFunctionCallback(JSContextRef ctx,
