@@ -623,16 +623,16 @@ class BrowserElementImpl {
             NewSlot(this, &BrowserElementImpl::OnViewDockUndock))),
         undock_connection_(owner->GetView()->ConnectOnUndockEvent(
             NewSlot(this, &BrowserElementImpl::OnViewDockUndock))) {
+  }
+
+  ~BrowserElementImpl() {
+    Deactivate();
     minimized_connection_->Disconnect();
     restored_connection_->Disconnect();
     popout_connection_->Disconnect();
     popin_connection_->Disconnect();
     dock_connection_->Disconnect();
     undock_connection_->Disconnect();
-  }
-
-  ~BrowserElementImpl() {
-    Deactivate();
   }
 
   void Deactivate() {
