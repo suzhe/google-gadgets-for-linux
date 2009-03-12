@@ -1972,7 +1972,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     // Allows this_obj to be null..
     if (wrapper) {
-      Impl *impl = wrapper->impl;
+      impl = wrapper->impl;
       scriptable = wrapper->scriptable;
       ASSERT(impl == data->impl);
     }

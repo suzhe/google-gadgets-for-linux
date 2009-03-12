@@ -1169,20 +1169,29 @@ fi
 
 # Check mandatory dependencies
 if test x$build_gtk_host = xyes; then
+  has_gtk_script_engine=no
+  if test x$build_smjs_script_runtime = xyes -o \
+          x$build_webkit_script_runtime = xyes; then
+    has_gtk_script_engine=yes
+  fi
   if test x$build_curl_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
-          x$build_smjs_script_runtime != xyes; then
-    AC_MSG_WARN([curl, libxml2 or libmozjs are missing, gtk host won't work.])
+          x$has_gtk_script_engine != xyes; then
+    AC_MSG_WARN([gtk host won't work because of missing dependencies])
     build_gtk_host=no
   fi
 fi
 
 if test x$build_qt_host = xyes; then
+  has_qt_script_engine=no
+  if test x$build_smjs_script_runtime = xyes -o \
+          x$build_qt_script_runtime = xyes; then
+    has_qt_script_engine=yes
+  fi
   if test x$build_qt_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
-          '(' x$build_smjs_script_runtime != xyes -a \
-          x$build_qt_script_runtime != xyes ')'; then
-    AC_MSG_WARN([qt4, libxml2 or js runtime are missing, qt host won't work.])
+          x$has_qt_script_engine != xyes; then
+    AC_MSG_WARN([qt host won't work because of missing dependencies.])
     build_qt_host=no
   fi
 fi
@@ -1204,6 +1213,16 @@ if test x$enable_xdgmime = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_ENABLE_XDGMIME"
 fi
 
+GGL_GTK_HTML_SCRIPT_ENGINE=xulrunner
+if test x$build_smjs_script_runtime = xyes -a \
+        x$build_gtkmoz_browser_element = xyes; then
+  GGL_GTK_HTML_SCRIPT_ENGINE=xulrunner
+elif test x$build_webkit_script_runtime = xyes -a \
+          x$build_gtkwebkit_browser_element = xyes; then
+  GGL_GTK_HTML_SCRIPT_ENGINE=webkit
+fi
+
+PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_HTML_SCRIPT_ENGINE=\\\"$GGL_GTK_HTML_SCRIPT_ENGINE\\\""
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_HOST],
