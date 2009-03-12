@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <string>
+#include <cstring>
 #include <gtk/gtk.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/gadget.h>
@@ -144,20 +145,11 @@ class BrowserElement::Impl {
 
       web_view_ = GTK_WIDGET(webkit_web_view_new());
       ASSERT(web_view_);
+
       g_signal_connect(G_OBJECT(web_view_), "destroy",
                        G_CALLBACK(WebViewDestroyed), this);
       g_signal_connect(G_OBJECT(web_view_), "console-message",
                        G_CALLBACK(WebViewConsoleMessage), this);
-      g_signal_connect(G_OBJECT(web_view_), "create-web-view",
-                       G_CALLBACK(WebViewCreateWebView), this);
-      g_signal_connect(G_OBJECT(web_view_), "web-view-ready",
-                       G_CALLBACK(WebViewWebViewReady), this);
-      g_signal_connect(G_OBJECT(web_view_), "navigation-requested",
-                       G_CALLBACK(WebViewNavigationRequested), this);
-      g_signal_connect(G_OBJECT(web_view_),
-                       "navigation-policy-decision-requested",
-                       G_CALLBACK(WebViewNavigationPolicyDecisionRequested),
-                       this);
       g_signal_connect(G_OBJECT(web_view_), "load-started",
                        G_CALLBACK(WebViewLoadStarted), this);
       g_signal_connect(G_OBJECT(web_view_), "load-committed",
@@ -166,7 +158,28 @@ class BrowserElement::Impl {
                        G_CALLBACK(WebViewLoadProgressChanged), this);
       g_signal_connect(G_OBJECT(web_view_), "load-finished",
                        G_CALLBACK(WebViewLoadFinished), this);
+      g_signal_connect(G_OBJECT(web_view_), "hovering-over-link",
+                       G_CALLBACK(WebViewHoveringOverLink), this);
 
+#if WEBKIT_CHECK_VERSION(1,0,3)
+      WebKitWebWindowFeatures *features =
+          webkit_web_view_get_window_features(WEBKIT_WEB_VIEW(web_view_));
+      ASSERT(features);
+      g_signal_connect(G_OBJECT(features), "notify::width",
+                       G_CALLBACK(WebViewWindowWidthNotify), this);
+      g_signal_connect(G_OBJECT(features), "notify::height",
+                       G_CALLBACK(WebViewWindowHeightNotify), this);
+
+      g_signal_connect(G_OBJECT(web_view_), "create-web-view",
+                       G_CALLBACK(WebViewCreateWebView), this);
+      g_signal_connect(G_OBJECT(web_view_),
+                       "navigation-policy-decision-requested",
+                       G_CALLBACK(WebViewNavigationPolicyDecisionRequested),
+                       this);
+#else
+      g_signal_connect(G_OBJECT(web_view_), "navigation-requested",
+                       G_CALLBACK(WebViewNavigationRequested), this);
+#endif
 
       GetWidgetExtents(&x_, &y_, &width_, &height_);
 
@@ -282,6 +295,35 @@ class BrowserElement::Impl {
     Layout();
   }
 
+  bool OpenURL(const char *url) {
+    Gadget *gadget = owner_->GetView()->GetGadget();
+    bool result = false;
+    if (gadget) {
+      // Let the gadget allow this OpenURL gracefully.
+      bool old_interaction = gadget->SetInUserInteraction(true);
+      result = gadget->OpenURL(url);
+      gadget->SetInUserInteraction(old_interaction);
+    }
+    return result;
+  }
+
+  bool HandleNavigationRequest(const char *old_uri, const char *new_uri) {
+    bool result = false;
+    size_t new_len = strlen(new_uri);
+    size_t old_len = strlen(old_uri);
+    const char *new_end = strrchr(new_uri, '#');
+    if (new_end)
+      new_len = new_end - new_uri;
+    const char *old_end = strrchr(old_uri, '#');
+    if (old_end)
+      old_len = old_end - old_uri;
+    // Treats urls with the same base url but different refs as equal.
+    if (new_len != old_len || strncmp(new_uri, old_uri, new_len) != 0) {
+      result = OpenURL(new_uri);
+    }
+    return result;
+  }
+
   static void WebViewDestroyed(GtkWidget *widget, Impl *impl) {
     DLOG("WebViewDestroyed(Impl=%p, web_view=%p)", impl, widget);
 
@@ -298,42 +340,6 @@ class BrowserElement::Impl {
     ScopedLogContext(impl->owner_->GetView()->GetGadget());
     LOGI("WebViewConsoleMessage(%s:%d): %s", source_id, line, message);
     return TRUE;
-  }
-
-  static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
-                                             WebKitWebFrame *web_frame,
-                                             Impl *impl) {
-    DLOG("WebViewCreateWebView(Impl=%p, web_view=%p, web_frame=%p)",
-         impl, web_view, web_frame);
-
-    return NULL;
-  }
-
-  static bool WebViewWebViewReady(WebKitWebView *web_view, Impl *impl) {
-    DLOG("WebViewWebViewReady(Impl=%p, web_view=%p)", impl, web_view);
-    return false;
-  }
-
-  static WebKitNavigationResponse WebViewNavigationPolicyDecisionRequested(
-      WebKitWebView *web_view, WebKitWebFrame *web_frame,
-      WebKitNetworkRequest *request, Impl *impl) {
-    DLOG("WebViewNavigationPolicyDecisionRequested"
-         "(Impl=%p, web_view=%p, web_frame=%p, uri=%s)",
-         impl, web_view, web_frame, webkit_network_request_get_uri(request));
-
-    // TODO
-    return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
-  }
-
-  static WebKitNavigationResponse WebViewNavigationRequested(
-      WebKitWebView *web_view, WebKitWebFrame *web_frame,
-      WebKitNetworkRequest *request, Impl *impl) {
-    DLOG("WebViewNavigationRequested(Impl=%p, web_view=%p, "
-         "web_frame=%p, uri=%s)",
-         impl, web_view, web_frame, webkit_network_request_get_uri(request));
-
-    // TODO
-    return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
   }
 
   static void WebViewLoadStarted(WebKitWebView *web_view,
@@ -364,8 +370,101 @@ class BrowserElement::Impl {
          impl, web_view, web_frame);
   }
 
+  static void WebViewHoveringOverLink(WebKitWebView *web_view,
+                                      const char *title,
+                                      const char *uri,
+                                      Impl *impl) {
+    DLOG("WebViewHoveringOverLink(Impl=%p, web_view=%p, title=%s, uri=%s)",
+         impl, web_view, title, uri);
+
+    impl->hovering_over_uri_ = uri ? uri : "";
+  }
+
+#if WEBKIT_CHECK_VERSION(1,0,3)
+  static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
+                                             WebKitWebFrame *web_frame,
+                                             Impl *impl) {
+    DLOG("WebViewCreateWebView(Impl=%p, web_view=%p, web_frame=%p)",
+         impl, web_view, web_frame);
+
+    // FIXME: is it necessary to create a hidden new webview and handle
+    // navigation policy of the new webview?
+    if (IsValidURL(impl->hovering_over_uri_.c_str()))
+      impl->OpenURL(impl->hovering_over_uri_.c_str());
+
+    return NULL;
+  }
+
+  static gboolean WebViewNavigationPolicyDecisionRequested(
+      WebKitWebView *web_view, WebKitWebFrame *web_frame,
+      WebKitNetworkRequest *request, WebKitWebNavigationAction *action,
+      WebKitWebPolicyDecision *decision, Impl *impl) {
+    const char *new_uri =
+        webkit_network_request_get_uri(request);
+    const char *original_uri =
+        webkit_web_navigation_action_get_original_uri(action);
+    WebKitWebNavigationReason reason =
+        webkit_web_navigation_action_get_reason(action);
+
+    DLOG("WebViewNavigationPolicyDecisionRequested"
+         "(Impl=%p, web_view=%p, web_frame=%p):\n"
+         "  New URI: %s\n"
+         "  Reason: %d\n"
+         "  Original URI: %s\n"
+         "  Button: %d\n"
+         "  Modifier: %d",
+         impl, web_view, web_frame, new_uri, reason, original_uri,
+         webkit_web_navigation_action_get_button(action),
+         webkit_web_navigation_action_get_modifier_state(action));
+
+    gboolean result = FALSE;
+    if (reason == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
+      result = impl->HandleNavigationRequest(original_uri, new_uri);
+      if (result)
+        webkit_web_policy_decision_ignore(decision);
+    }
+    return result;
+  }
+
+  static void WebViewWindowWidthNotify(WebKitWebWindowFeatures *features,
+                                       GParamSpec *param,
+                                       Impl *impl) {
+    gint width = 0;
+    g_object_get(features, "width", &width, NULL);
+    DLOG("WebViewWindowWidthNotify(Impl=%p, width=%d)", impl, width);
+  }
+
+  static void WebViewWindowHeightNotify(WebKitWebWindowFeatures *features,
+                                        GParamSpec *param,
+                                        Impl *impl) {
+    gint height = 0;
+    g_object_get(features, "height", &height, NULL);
+    DLOG("WebViewWindowHeightNotify(Impl=%p, width=%d)", impl, height);
+  }
+#else
+  static WebKitNavigationResponse WebViewNavigationRequested(
+      WebKitWebView *web_view, WebKitWebFrame *web_frame,
+      WebKitNetworkRequest *request, Impl *impl) {
+    const char *new_uri = webkit_network_request_get_uri(request);
+    DLOG("WebViewNavigationRequested(Impl=%p, web_view=%p, "
+         "web_frame=%p, uri=%s)",
+         impl, web_view, web_frame, webkit_network_request_get_uri(request));
+
+    if (strcmp(impl->hovering_over_uri_.c_str(), new_uri) == 0 &&
+        impl->HandleNavigationRequest(impl->loaded_uri_.c_str(), new_uri)) {
+      return WEBKIT_NAVIGATION_RESPONSE_IGNORE;
+    }
+
+    impl->loaded_uri_ = new_uri ? new_uri : "";
+    return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
+  }
+#endif
+
   std::string content_type_;
   std::string content_;
+  std::string hovering_over_uri_;
+  std::string loaded_uri_;
+
   BrowserElement *owner_;
   GtkWidget *web_view_;
 
@@ -384,6 +483,7 @@ class BrowserElement::Impl {
 
   bool popped_out_;
   bool minimized_;
+
   gint x_;
   gint y_;
   gint width_;
