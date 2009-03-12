@@ -145,11 +145,28 @@ class BrowserElement::Impl {
       web_view_ = GTK_WIDGET(webkit_web_view_new());
       ASSERT(web_view_);
       g_signal_connect(G_OBJECT(web_view_), "destroy",
-                       G_CALLBACK(WebViewDestroyedCallback), this);
+                       G_CALLBACK(WebViewDestroyed), this);
       g_signal_connect(G_OBJECT(web_view_), "console-message",
-                       G_CALLBACK(WebViewConsoleMessageCallback), this);
+                       G_CALLBACK(WebViewConsoleMessage), this);
+      g_signal_connect(G_OBJECT(web_view_), "create-web-view",
+                       G_CALLBACK(WebViewCreateWebView), this);
+      g_signal_connect(G_OBJECT(web_view_), "web-view-ready",
+                       G_CALLBACK(WebViewWebViewReady), this);
       g_signal_connect(G_OBJECT(web_view_), "navigation-requested",
-                       G_CALLBACK(WebViewNavigationRequestedCallback), this);
+                       G_CALLBACK(WebViewNavigationRequested), this);
+      g_signal_connect(G_OBJECT(web_view_),
+                       "navigation-policy-decision-requested",
+                       G_CALLBACK(WebViewNavigationPolicyDecisionRequested),
+                       this);
+      g_signal_connect(G_OBJECT(web_view_), "load-started",
+                       G_CALLBACK(WebViewLoadStarted), this);
+      g_signal_connect(G_OBJECT(web_view_), "load-committed",
+                       G_CALLBACK(WebViewLoadCommitted), this);
+      g_signal_connect(G_OBJECT(web_view_), "load-progress-changed",
+                       G_CALLBACK(WebViewLoadProgressChanged), this);
+      g_signal_connect(G_OBJECT(web_view_), "load-finished",
+                       G_CALLBACK(WebViewLoadFinished), this);
+
 
       GetWidgetExtents(&x_, &y_, &width_, &height_);
 
@@ -216,6 +233,7 @@ class BrowserElement::Impl {
   }
 
   void SetContent(const std::string &content) {
+    DLOG("SetContent:\n%s", content.c_str());
     content_ = content;
     if (GTK_IS_WIDGET(web_view_)) {
       webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(web_view_),
@@ -224,6 +242,8 @@ class BrowserElement::Impl {
   }
 
   void SetExternalObject(ScriptableInterface *object) {
+    DLOG("SetExternalObject(%p, CLSID=%ju)",
+         object, object ? object->GetClassId() : 0);
     external_object_.Reset(object);
 #ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
     if (browser_context_)
@@ -262,8 +282,8 @@ class BrowserElement::Impl {
     Layout();
   }
 
-  static void WebViewDestroyedCallback(GtkWidget *widget, Impl *impl) {
-    DLOG("WebViewDestroyedCallback(Impl=%p, web_view=%p)", impl, widget);
+  static void WebViewDestroyed(GtkWidget *widget, Impl *impl) {
+    DLOG("WebViewDestroyed(Impl=%p, web_view=%p)", impl, widget);
 
     impl->web_view_ = NULL;
 #ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
@@ -272,24 +292,76 @@ class BrowserElement::Impl {
 #endif
   }
 
-  static gboolean WebViewConsoleMessageCallback(WebKitWebView *web_view,
-                                                gchar *message,
-                                                gint line,
-                                                gchar *source_id,
-                                                Impl *impl) {
+  static gboolean WebViewConsoleMessage(WebKitWebView *web_view,
+                                        gchar *message, gint line,
+                                        gchar *source_id, Impl *impl) {
     ScopedLogContext(impl->owner_->GetView()->GetGadget());
-    LOGI("BrowserElement (%s:%d): %s", source_id, line, message);
+    LOGI("WebViewConsoleMessage(%s:%d): %s", source_id, line, message);
     return TRUE;
   }
 
-  static WebKitNavigationResponse WebViewNavigationRequestedCallback(
+  static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
+                                             WebKitWebFrame *web_frame,
+                                             Impl *impl) {
+    DLOG("WebViewCreateWebView(Impl=%p, web_view=%p, web_frame=%p)",
+         impl, web_view, web_frame);
+
+    return NULL;
+  }
+
+  static bool WebViewWebViewReady(WebKitWebView *web_view, Impl *impl) {
+    DLOG("WebViewWebViewReady(Impl=%p, web_view=%p)", impl, web_view);
+    return false;
+  }
+
+  static WebKitNavigationResponse WebViewNavigationPolicyDecisionRequested(
       WebKitWebView *web_view, WebKitWebFrame *web_frame,
       WebKitNetworkRequest *request, Impl *impl) {
-    DLOG("WebViewNavigationRequestedCallback(Impl=%p, web_view=%p, uri=%s)",
-         impl, web_view, webkit_network_request_get_uri(request));
+    DLOG("WebViewNavigationPolicyDecisionRequested"
+         "(Impl=%p, web_view=%p, web_frame=%p, uri=%s)",
+         impl, web_view, web_frame, webkit_network_request_get_uri(request));
 
     // TODO
     return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
+  }
+
+  static WebKitNavigationResponse WebViewNavigationRequested(
+      WebKitWebView *web_view, WebKitWebFrame *web_frame,
+      WebKitNetworkRequest *request, Impl *impl) {
+    DLOG("WebViewNavigationRequested(Impl=%p, web_view=%p, "
+         "web_frame=%p, uri=%s)",
+         impl, web_view, web_frame, webkit_network_request_get_uri(request));
+
+    // TODO
+    return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
+  }
+
+  static void WebViewLoadStarted(WebKitWebView *web_view,
+                                 WebKitWebFrame *web_frame,
+                                 Impl *impl) {
+    DLOG("WebViewLoadStarted(Impl=%p, web_view=%p, web_frame=%p)",
+         impl, web_view, web_frame);
+  }
+
+  static void WebViewLoadCommitted(WebKitWebView *web_view,
+                                   WebKitWebFrame *web_frame,
+                                   Impl *impl) {
+    DLOG("WebViewLoadCommitted(Impl=%p, web_view=%p, web_frame=%p)",
+         impl, web_view, web_frame);
+  }
+
+  static void WebViewLoadProgressChanged(WebKitWebView *web_view,
+                                         gint progress,
+                                         Impl *impl) {
+    DLOG("WebViewLoadProgressChanged(Impl=%p, web_view=%p, progress=%d)",
+         impl, web_view, progress);
+  }
+
+  static void WebViewLoadFinished(WebKitWebView *web_view,
+                                  WebKitWebFrame *web_frame,
+                                  Impl *impl) {
+    DLOG("WebViewLoadFinished(Impl=%p, web_view=%p, web_frame=%p)",
+         impl, web_view, web_frame);
   }
 
   std::string content_type_;
