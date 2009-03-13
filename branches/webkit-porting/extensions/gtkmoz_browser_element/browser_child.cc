@@ -639,7 +639,7 @@ class ContentPolicy : public nsIContentPolicy {
       tmp_url = tmp_url.substr(0, tmp_url.find_last_of('#'));
       // Allow URLs opened during page loading to be opened in place, otherwise
       // call the kOpenURLFeedback to let the controller handle.
-      if (tmp_origin == tmp_url && !is_loading) {
+      if (tmp_origin != tmp_url && !is_loading) {
         std::string r = SendFeedback(browser_info->browser_id,
                                      kOpenURLFeedback, url_spec.get(),
                                      NULL);

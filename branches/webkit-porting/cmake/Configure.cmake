@@ -201,6 +201,7 @@ SET(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT 1)
 SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 1)
 SET(GGL_BUILD_GST_VIDEO_ELEMENT 1)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 1)
+SET(GGL_BUILD_WEBKIT_SCRIPT_RUNTIME 1)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 1)
 SET(GGL_BUILD_LIBXML2_XML_PARSER 1)
 SET(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK 1)
@@ -458,6 +459,29 @@ IF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
   MESSAGE("Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.")
 ENDIF(NOT SMJS_FOUND AND GGL_BUILD_SMJS_SCRIPT_RUNTIME)
 
+# Check WebKit/JavaScriptCore
+GET_CONFIG(webkit-1.0 1.0.1 JAVA_SCRIPT_CORE JAVA_SCRIPT_CORE_FOUND)
+IF(JAVA_SCRIPT_CORE_FOUND)
+#  SET(CMAKE_REQUIRED_INCLUDES ${JAVA_SCRIPT_CORE_INCLUDE_DIR})
+#  MESSAGE("${JAVA_SCRIPT_CORE_INCLUDE_DIR}")
+#  CHECK_INCLUDE_FILE(JavaScriptCore/JavaScript.h HAVE_JAVA_SCRIPT_H)
+#  IF(HAVE_JAVA_SCRIPT_H)
+    SET(JAVA_SCRIPT_CORE_DEFINITIONS
+      "${JAVA_SCRIPT_CORE_DEFINITIONS} -DHAVE_JAVA_SCRIPT_H")
+#  ENDIF(HAVE_JAVA_SCRIPT_H)
+#  CHECK_INCLUDE_FILE(JavaScriptCore/JavaScriptCore.h HAVE_JAVA_SCRIPT_CORE_H)
+#  IF(HAVE_JAVA_SCRIPT_CORE_H)
+#    SET(JAVA_SCRIPT_CORE_DEFINITIONS
+#      "${JAVA_SCRIPT_CORE_DEFINITIONS} -DHAVE_JAVA_SCRIPT_CORE_H")
+#  ENDIF(HAVE_JAVA_SCRIPT_CORE_H)
+#  MESSAGE("${JAVA_SCRIPT_CORE_DEFINITIONS}")
+ENDIF(JAVA_SCRIPT_CORE_FOUND)
+
+IF(NOT JAVA_SCRIPT_CORE_FOUND AND GGL_BUILD_WEBKIT_SCRIPT_RUNTIME)
+  SET(GGL_BUILD_WEBKIT_SCRIPT_RUNTIME 0)
+  MESSAGE("Library JavaScriptCore is not available, webkit-script-runtime extension won't be built.")
+ENDIF(NOT JAVA_SCRIPT_CORE_FOUND AND GGL_BUILD_WEBKIT_SCRIPT_RUNTIME)
+
 MESSAGE("
 Build options:
   Version                          ${GGL_VERSION}
@@ -471,21 +495,22 @@ Build options:
   Build libggadget-dbus            ${GGL_BUILD_LIBGGADGET_DBUS}
 
  Extensions:
+  Build curl-xml-http-request      ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
   Build dbus-script-class          ${GGL_BUILD_LIBGGADGET_DBUS}
-  Build gtkmoz-browser-element     ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
   Build gst-audio-framework        ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
   Build gst-video-element          ${GGL_BUILD_GST_VIDEO_ELEMENT}
-  Build linux-system-framework     ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
-  Build smjs-script-runtime        ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
-  Build curl-xml-http-request      ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
+  Build gtkmoz-browser-element     ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
   Build libxml2-xml-parser         ${GGL_BUILD_LIBXML2_XML_PARSER}
+  Build linux-system-framework     ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
   Build gtk-edit-element           ${GGL_BUILD_LIBGGADGET_GTK}
   Build gtk-system-framework       ${GGL_BUILD_LIBGGADGET_GTK}
   Build qt-edit-element            ${GGL_BUILD_LIBGGADGET_QT}
-  Build qtwebkit-browser-element   ${GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT}
-  Build qt-xml-http-request        ${GGL_BUILD_LIBGGADGET_QT}
   Build qt-script-runtime          ${GGL_BUILD_QT_SCRIPT_RUNTIME}
   Build qt-system-framework        ${GGL_BUILD_LIBGGADGET_QT}
+  Build qt-xml-http-request        ${GGL_BUILD_LIBGGADGET_QT}
+  Build qtwebkit-browser-element   ${GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT}
+  Build smjs-script-runtime        ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
+  Build webkit-script-runtime      ${GGL_BUILD_WEBKIT_SCRIPT_RUNTIME}
 
  Hosts:
   Build gtk host                   ${GGL_BUILD_GTK_HOST}

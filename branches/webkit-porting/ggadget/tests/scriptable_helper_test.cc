@@ -243,7 +243,7 @@ static void CheckExtPropertyInfo(bool register_class) {
       Variant(Variant::TYPE_STRING) },
     { "VariantProperty", ScriptableInterface::PROPERTY_NORMAL,
       Variant(Variant::TYPE_VARIANT) },
-    
+
     // The following are defined in ExtScriptable itself.
     { "ObjectMethod", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &ExtScriptable::ObjectMethod)) },
@@ -360,6 +360,7 @@ class NameChecker {
       : scriptable_(scriptable), names_(names) { }
   bool Check(const char *name, ScriptableInterface::PropertyType type,
              const Variant &value) const {
+    LOG("Expect name: %s", name);
     EXPECT_EQ(scriptable_->GetProperty(name).v(), value);
     EXPECT_EQ(scriptable_->GetPropertyInfo(name, NULL), type);
     EXPECT_EQ(1U, names_->erase(name));
@@ -384,6 +385,7 @@ static void CheckEnumerateProperties(bool register_class) {
     "MethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
     "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
     "ontest", "time", "oncomplex", "FireComplexSignal", "ComplexSignalData",
+    "IntProperty", ""
   };
   std::set<std::string> expected;
   for (size_t i = 0; i < arraysize(property_names); ++i)

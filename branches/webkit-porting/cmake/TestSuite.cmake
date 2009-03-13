@@ -63,9 +63,9 @@ ELSE(WIN32)
           > ${JS_TEST_WRAPPER_output}
       COMMAND chmod +x ${JS_TEST_WRAPPER_output}
       DEPENDS ${JS_TEST_WRAPPER_template})
-    IF(${ARGC} GREATER 2)
+    IF(${ARGC} GREATER 3)
       ADD_TEST(${_wrappee_js} ${JS_TEST_WRAPPER_output})
-    ENDIF(${ARGC} GREATER 2)
+    ENDIF(${ARGC} GREATER 3)
   ENDMACRO(JS_TEST_WRAPPER)
 ENDIF(WIN32)
 

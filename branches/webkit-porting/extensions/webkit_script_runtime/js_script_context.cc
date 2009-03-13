@@ -1187,7 +1187,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         JSObjectGetProperty(context_, array, length_name, &exception);
     if (CheckJSException(exception) && JSValueIsNumber(context_, js_length)) {
       double length = JSValueToNumber(context_, js_length, NULL);
-      return length >= 0 ? static_cast<size_t>(length) : 0;
+      return length >= 0 ? static_cast<unsigned int>(length) : 0;
     }
     return 0;
   }
