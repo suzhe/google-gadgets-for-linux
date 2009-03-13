@@ -98,7 +98,7 @@ void JSNativeWrapper::Unref(bool transient) const {
 ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
     const char *name, Variant *prototype) {
   if (!*name && call_self_slot_) {
-    *prototype = Variant(&call_self_slot_);
+    *prototype = Variant(call_self_slot_);
     return ScriptableInterface::PROPERTY_METHOD;
   }
   return ScriptableInterface::PROPERTY_DYNAMIC;
