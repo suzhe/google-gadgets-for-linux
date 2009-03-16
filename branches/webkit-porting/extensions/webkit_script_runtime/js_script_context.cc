@@ -28,6 +28,7 @@
 #include <ggadget/string_utils.h>
 #include <ggadget/scriptable_function.h>
 #include <ggadget/scoped_ptr.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/js/jscript_massager.h>
 #include "js_script_runtime.h"
 #include "converter.h"
@@ -652,8 +653,7 @@ class JSScriptContext::Impl : public SmallObject<> {
             // Normal GC triggering doesn't work well if only little JS code is
             // executed but many native objects are referenced by dead JS
             // objects. Call MaybeGC to ensure GC is not starved.
-            // FIXME: it'll cause serious performance problem.
-            // impl_->CollectGarbage();
+            impl_->MaybeGC();
             return result;
           }
         } else {
@@ -737,7 +737,7 @@ class JSScriptContext::Impl : public SmallObject<> {
       js_object_tracker_reference_name_(NULL),
       is_nan_func_(NULL),
       is_finite_func_(NULL),
-      recursive_level_(0) {
+      last_gc_time_(0) {
     ASSERT(runtime_);
 
     // These class refs will be released along with runtime.
@@ -1005,6 +1005,21 @@ class JSScriptContext::Impl : public SmallObject<> {
     JSGarbageCollect(context_);
   }
 
+  void MaybeGC() {
+    MainLoopInterface *main_loop = GetGlobalMainLoop();
+    uint64_t now = main_loop ? main_loop->GetCurrentTime() : 0;
+    if (now - last_gc_time_ > kMaxGCInterval) {
+#ifdef DEBUG_JS_VERBOSE
+      DLOG("JSScriptContext::MaybeGC(this=%p): GC Triggered: %ju", this, now);
+#endif
+      JSGarbageCollect(context_);
+      last_gc_time_ = now;
+#ifdef DEBUG_JS_VERBOSE
+      DLOG("JSScriptContext::MaybeGC(this=%p): GC Finished: %ju", this, now);
+#endif
+    }
+  }
+
   void GetCurrentFileAndLine(std::string *filename, int *lineno) {
     // FIXME
     if (filename)
@@ -1114,7 +1129,7 @@ class JSScriptContext::Impl : public SmallObject<> {
           msg.v().ConvertToString(&msg_str);
         }
       }
-      LOGE("NativeException: [obj:%p ID:%ju exception:%p]: %s",
+      LOGE("NativeException: [obj:%p ID:%jx exception:%p]: %s",
            scriptable, scriptable->GetClassId(),
            scriptable_exception, msg_str.c_str());
       if (exception) {
@@ -2091,9 +2106,10 @@ class JSScriptContext::Impl : public SmallObject<> {
 
   Signal2<bool, const char *, int> script_blocked_signal_;
 
-  int recursive_level_;
+  uint64_t last_gc_time_;
 
  private:
+  static const uint64_t kMaxGCInterval = 10000; // 10 seconds.
   static const char kJSObjectTrackerReferenceName[];
   static const JSClassDefinition kScriptableJSWrapperClassDefinition;
   static const JSClassDefinition kScriptableMethodCallerClassDefinition;
