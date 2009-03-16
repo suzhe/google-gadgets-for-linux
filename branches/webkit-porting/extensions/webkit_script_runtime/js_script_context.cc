@@ -64,7 +64,7 @@ class JSScriptContext::Impl : public SmallObject<> {
   // A class to hold necessary information to call a method of a Scriptable.
   class ScriptableMethodCaller : public SmallObject<> {
    public:
-    ScriptableMethodCaller(Impl *a_impl, const std::string &name, Slot *slot)
+    ScriptableMethodCaller(Impl *a_impl, const char *name, Slot *slot)
       : impl(a_impl), method_name(name), function_slot(slot) { }
     Impl *impl;
     std::string method_name;
@@ -98,6 +98,31 @@ class JSScriptContext::Impl : public SmallObject<> {
     Impl *impl;
     const char *class_name;
     Slot *constructor;
+  };
+
+  // A class to cache JSStringRef to UTF8 conversion result.
+  class JSStringUTF8Accessor {
+   public:
+    JSStringUTF8Accessor(JSStringRef js_str) : result_(NULL) {
+      size_t max_size = JSStringGetMaximumUTF8CStringSize(js_str);
+      if (max_size <= kCacheSize) {
+        JSStringGetUTF8CString(js_str, fixed_cache_, kCacheSize);
+        result_ = fixed_cache_;
+      } else {
+        dynamic_cache_ = ConvertJSStringToUTF8(js_str);
+        result_ = dynamic_cache_.c_str();
+        DLOG("JSStringUTF8Accessor: Too long: %s", result_);
+      }
+    }
+
+    const char *Get() const { return result_; }
+
+   private:
+    // 128 bytes should be enough for most cases.
+    static const size_t kCacheSize = 128;
+    char fixed_cache_[kCacheSize];
+    std::string dynamic_cache_;
+    const char *result_;
   };
 
   // A class to wrap a JSObject into a native Scriptable object.
@@ -364,13 +389,13 @@ class JSScriptContext::Impl : public SmallObject<> {
         size_t count = JSPropertyNameArrayGetCount(name_array);
         for (size_t i = 0; i < count; ++i) {
           JSStringRef name = JSPropertyNameArrayGetNameAtIndex(name_array, i);
-          std::string name_str = ConvertJSStringToUTF8(name);
+          JSStringUTF8Accessor utf8_name(name);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-          DLOG("  Enumerate: %s", name_str.c_str());
+          DLOG("  Enumerate: %s", utf8_name.Get());
 #endif
-          if (!(*callback)(name_str.c_str(),
+          if (!(*callback)(utf8_name.Get(),
                            ScriptableInterface::PROPERTY_DYNAMIC,
-                           GetProperty(name_str.c_str()).v())) {
+                           GetProperty(utf8_name.Get()).v())) {
             result = false;
             break;
           }
@@ -394,13 +419,13 @@ class JSScriptContext::Impl : public SmallObject<> {
         size_t count = JSPropertyNameArrayGetCount(name_array);
         for (size_t i = 0; i < count; ++i) {
           JSStringRef name = JSPropertyNameArrayGetNameAtIndex(name_array, i);
-          std::string name_str = ConvertJSStringToUTF8(name);
+          JSStringUTF8Accessor utf8_name(name);
           int index;
           // Only enumerate properties with positive numeric index.
-          if (!IsIndexProperty(name_str, &index))
+          if (!IsIndexProperty(utf8_name.Get(), &index))
               continue;
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-          DLOG("  Enumerate: %s", name_str.c_str());
+          DLOG("  Enumerate: %s", utf8_name.Get());
 #endif
           if (!(*callback)(index, GetPropertyByIndex(index).v())) {
             result = false;
@@ -865,7 +890,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     // For Windows compatibility.
     RegisterObjectMethod(NULL, "CollectGarbage", CollectGarbageFunc);
 
-#ifdef DEBUG
+#ifdef _DEBUG
     // For debug purpose.
     RegisterObjectMethod(NULL, "Interrupt", InterruptFunc);
 #endif
@@ -1476,8 +1501,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     return true;
   }
 
-  JSObjectRef CreateScriptableMethodCaller(const std::string &name,
-                                           Slot *slot) {
+  JSObjectRef CreateScriptableMethodCaller(const char *name, Slot *slot) {
     ScriptableMethodCaller *data = new ScriptableMethodCaller(this, name, slot);
     JSObjectRef caller = JSObjectMake(
         context_, scriptable_method_caller_class_, data);
@@ -1534,18 +1558,14 @@ class JSScriptContext::Impl : public SmallObject<> {
     return "[null object]";
   }
 
-  static bool IsSpecialProperty(const std::string &prop_name) {
-    size_t len = prop_name.length();
-    const char *ptr = prop_name.c_str();
-    return len > 6 && ptr[0] == '[' && ptr[1] == '[' && ptr[2] == '[' &&
-        ptr[len - 1] == ']' && ptr[len - 2] == ']' && ptr[len - 3] == ']';
+  static bool IsSpecialProperty(const char *prop_name) {
+    return prop_name[0] == '[' && prop_name[1] == '[' && prop_name[2] == '[';
   }
 
-  static bool IsIndexProperty(const std::string &prop_name, int *index) {
-    const char *ptr = prop_name.c_str();
+  static bool IsIndexProperty(const char *prop_name, int *index) {
     char *endptr = NULL;
-    *index = static_cast<int>(strtol(ptr, &endptr, 10));
-    return *index >= 0 && (endptr == ptr + prop_name.length());
+    *index = static_cast<int>(strtol(prop_name, &endptr, 10));
+    return *index >= 0 && (*endptr == '\0');
   }
 
  private:
@@ -1579,7 +1599,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = ConvertJSStringToUTF8(property_name);
+    JSStringUTF8Accessor utf8_name(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1587,15 +1607,15 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s)"
-           " detached", ctx, object, scriptable, utf8_name.c_str());
+           " detached", ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
 
-    if (IsSpecialProperty(utf8_name)) {
+    if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.c_str());
+           "special", ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
@@ -1603,13 +1623,13 @@ class JSScriptContext::Impl : public SmallObject<> {
     Variant prototype;
     int index = 0;
     bool result = false;
-    if (IsIndexProperty(utf8_name, &index)) {
+    if (IsIndexProperty(utf8_name.Get(), &index)) {
       prototype = scriptable->GetPropertyByIndex(index).v();
       result = (prototype.type() != Variant::TYPE_VOID);
     }
     if (!result) {
       ScriptableInterface::PropertyType prop_type =
-          scriptable->GetPropertyInfo(utf8_name.c_str(), &prototype);
+          scriptable->GetPropertyInfo(utf8_name.Get(), &prototype);
       result = (prop_type != ScriptableInterface::PROPERTY_NOT_EXIST);
     }
 
@@ -1618,7 +1638,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
     DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): %d",
-         ctx, object, scriptable, utf8_name.c_str(), result);
+         ctx, object, scriptable, utf8_name.Get(), result);
 #endif
     return result;
   }
@@ -1633,7 +1653,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = ConvertJSStringToUTF8(property_name);
+    JSStringUTF8Accessor utf8_name(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1641,28 +1661,28 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           " detached", ctx, object, scriptable, utf8_name.c_str());
+           " detached", ctx, object, scriptable, utf8_name.Get());
 #endif
       RaiseJSException(impl->owner_, exception,
                        "Failed to get property %s, scriptable detached.",
-                       utf8_name.c_str());
+                       utf8_name.Get());
       return NULL;
     }
 
-    if (IsSpecialProperty(utf8_name)) {
+    if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.c_str());
+           "special", ctx, object, scriptable, utf8_name.Get());
 #endif
       return NULL;
     }
 
     ResultVariant prop;
     int index = 0;
-    if (IsIndexProperty(utf8_name, &index))
+    if (IsIndexProperty(utf8_name.Get(), &index))
       prop = scriptable->GetPropertyByIndex(index);
     if (prop.v().type() == Variant::TYPE_VOID)
-      prop = scriptable->GetProperty(utf8_name.c_str());
+      prop = scriptable->GetProperty(utf8_name.Get());
 
     if (!impl->CheckScriptableException(scriptable, exception))
       return NULL;
@@ -1678,7 +1698,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         js_func = JSValueMakeNull(impl->context_);
       } else if (!impl->UnwrapJSFunctionSlot(slot, &js_func)) {
         // It's a method, returns a special object for calling this method.
-        js_func = impl->CreateScriptableMethodCaller(utf8_name, slot);
+        js_func = impl->CreateScriptableMethodCaller(utf8_name.Get(), slot);
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
         method = true;
 #endif
@@ -1686,7 +1706,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): "
              "%s (slot=%p, jsfunc=%p)", ctx, object, scriptable,
-             utf8_name.c_str(), method ? "method" : "slot", slot, js_func);
+             utf8_name.Get(), method ? "method" : "slot", slot, js_func);
 #endif
       return js_func;
     }
@@ -1695,11 +1715,11 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (!ConvertNativeToJS(impl->owner_, prop.v(), &result)) {
       RaiseJSException(impl->owner_, exception,
                        "Failed to convert native property %s value(%s) to "
-                       "JSValue.", utf8_name.c_str(), prop.v().Print().c_str());
+                       "JSValue.", utf8_name.Get(), prop.v().Print().c_str());
     }
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
     DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): %s",
-         ctx, object, scriptable, utf8_name.c_str(), prop.v().Print().c_str());
+         ctx, object, scriptable, utf8_name.Get(), prop.v().Print().c_str());
 #endif
     return result;
   }
@@ -1715,7 +1735,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     Impl *impl = wrapper->impl;
     ScriptableInterface *scriptable = wrapper->scriptable;
-    std::string utf8_name = ConvertJSStringToUTF8(property_name);
+    JSStringUTF8Accessor utf8_name(property_name);
 
     // Save current context for other functions.
     JSContextScope(impl, ctx);
@@ -1723,19 +1743,19 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           " detached", ctx, object, scriptable, utf8_name.c_str());
+           " detached", ctx, object, scriptable, utf8_name.Get());
 #endif
       RaiseJSException(impl->owner_, exception,
                        "Failed to set property %s, scriptable detached.",
-                       utf8_name.c_str());
+                       utf8_name.Get());
       return false;
     }
 
     // Let JavaScript engine to handle special properties.
-    if (IsSpecialProperty(utf8_name)) {
+    if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.c_str());
+           "special", ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
@@ -1747,7 +1767,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         ScriptableInterface::PROPERTY_NOT_EXIST;
 
     // Try index property first.
-    if (IsIndexProperty(utf8_name, &index)) {
+    if (IsIndexProperty(utf8_name.Get(), &index)) {
       is_index = true;
       prop_type = ScriptableInterface::PROPERTY_DYNAMIC;
       prototype = scriptable->GetPropertyByIndex(index).v();
@@ -1761,7 +1781,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     // Then normal property.
     if (prototype.type() == Variant::TYPE_VOID) {
       is_index = false;
-      prop_type = scriptable->GetPropertyInfo(utf8_name.c_str(), &prototype);
+      prop_type = scriptable->GetPropertyInfo(utf8_name.Get(), &prototype);
     }
 
     if (!impl->CheckScriptableException(scriptable, exception)) {
@@ -1773,7 +1793,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         prop_type == ScriptableInterface::PROPERTY_CONSTANT) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "readonly", ctx, object, scriptable, utf8_name.c_str());
+           "readonly", ctx, object, scriptable, utf8_name.Get());
 #endif
       return true;
     }
@@ -1781,7 +1801,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (prop_type == ScriptableInterface::PROPERTY_NOT_EXIST && !is_index) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
       DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "not exist", ctx, object, scriptable, utf8_name.c_str());
+           "not exist", ctx, object, scriptable, utf8_name.Get());
 #endif
       // FIXME: Throwing exception here will break dom unittest.
       // Because dom exception itself is a stricted scriptable object, and when
@@ -1792,7 +1812,7 @@ class JSScriptContext::Impl : public SmallObject<> {
         RaiseJSException(
             impl->owner_, exception,
             "The native object doesn't support setting property %s.",
-            utf8_name.c_str());
+            utf8_name.Get());
         return true;
       }
       */
@@ -1810,7 +1830,7 @@ class JSScriptContext::Impl : public SmallObject<> {
                            value, &native_value)) {
       RaiseJSException(impl->owner_, exception,
                        "Failed to convert JS property %s value(%s) to native.",
-                       utf8_name.c_str(),
+                       utf8_name.Get(),
                        PrintJSValue(impl->owner_, value).c_str());
       // bypass default javascript logic.
       return true;
@@ -1824,7 +1844,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     if (!result) {
-      result = scriptable->SetProperty(utf8_name.c_str(), native_value);
+      result = scriptable->SetProperty(utf8_name.Get(), native_value);
       if (!impl->CheckScriptableException(scriptable, exception))
         result = false;
     }
@@ -1833,16 +1853,17 @@ class JSScriptContext::Impl : public SmallObject<> {
       if (scriptable->IsStrict()) {
         RaiseJSException(impl->owner_, exception,
                          "Failed to set native property %s (may be readonly).",
-                         utf8_name.c_str());
+                         utf8_name.Get());
       }
       FreeNativeValue(native_value);
     }
 
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
     DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) %d, %s",
-         ctx, object, scriptable, utf8_name.c_str(), result,
+         ctx, object, scriptable, utf8_name.Get(), result,
          native_value.Print().c_str());
 #endif
+
     return result || scriptable->IsStrict();
   }
 
@@ -2070,7 +2091,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     return JSValueMakeUndefined(ctx);
   }
 
-#ifdef DEBUG
+#ifdef _DEBUG
   static JSValueRef InterruptFunc(JSContextRef ctx, JSObjectRef function,
                                   JSObjectRef this_object,
                                   size_t argument_count,
