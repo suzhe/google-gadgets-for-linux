@@ -457,6 +457,9 @@ bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
 
 JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv, jsval *rval) {
+  AutoLocalRootScope local_root_scope(cx);
+  if (!local_root_scope.good())
+    return JS_FALSE;
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   ScopedLogContext log_context(context_wrapper);

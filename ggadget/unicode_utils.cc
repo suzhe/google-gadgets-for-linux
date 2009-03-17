@@ -404,63 +404,6 @@ size_t ConvertStringUTF16ToUTF8(const UTF16String &src, std::string *dest) {
   return ConvertStringUTF16ToUTF8(src.c_str(), src.length(), dest);
 }
 
-size_t ConvertStringUTF16ToUTF8Buffer(const UTF16Char *src, size_t src_length,
-                                      char *dest, size_t dest_length,
-                                      size_t *used_dest_length) {
-  if (!used_dest_length)
-    return 0;
-  *used_dest_length = 0;
-  if (!dest || !dest_length || !src || !*src)
-    return 0;
-
-  size_t used_src_length = 0;
-  size_t utf8_len;
-  size_t utf16_len;
-  char utf8[4] = { 0, 0, 0, 0 };
-  UTF32Char utf32;
-  while (src_length && *src) {
-    utf16_len = ConvertCharUTF16ToUTF32Internal(src, src_length, &utf32);
-    if (!utf16_len) break;
-    if (dest_length >= 4) {
-      utf8_len = ConvertCharUTF32ToUTF8Internal(utf32, dest, 4);
-      if (!utf8_len) break;
-    } else {
-      utf8_len = ConvertCharUTF32ToUTF8Internal(utf32, utf8, 4);
-      if (!utf8_len || utf8_len > dest_length)
-        break;
-      memcpy(dest, utf8, utf8_len);
-    }
-    dest += utf8_len;
-    dest_length -= utf8_len;
-    *used_dest_length += utf8_len;
-    used_src_length += utf16_len;
-    src += utf16_len;
-    src_length -= utf16_len;
-  }
-  return used_src_length;
-}
-
-size_t ConvertStringUTF16ToUTF8Buffer(const UTF16String &src,
-                                      char *dest, size_t dest_length,
-                                      size_t *used_dest_length) {
-  return ConvertStringUTF16ToUTF8Buffer(src.c_str(), src.length(),
-                                        dest, dest_length, used_dest_length);
-}
-
-void UTF16ToUTF8Converter::DoConvert(const UTF16Char *src, size_t src_length) {
-  size_t used = 0;
-  if (ConvertStringUTF16ToUTF8Buffer(src, src_length, buffer_,
-                                     arraysize(buffer_) - 1, &used) ==
-      src_length) {
-    // The static buffer can contain the whole result, so use it.
-    ASSERT(used < arraysize(buffer_));
-    buffer_[used] = 0;
-  } else {
-    buffer_[0] = 0;
-    ConvertStringUTF16ToUTF8(src, src_length, &dynamic_buffer_);
-  }
-}
-
 size_t ConvertStringUTF16ToUTF32(const UTF16Char *src, size_t src_length,
                                  UTF32String *dest) {
   if (!dest)

@@ -412,6 +412,9 @@ JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
 JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                                        uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
 
   Variant *params = NULL;
   uintN expected_argc = argc;
@@ -471,6 +474,10 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
     // Should not occur.
     return JS_FALSE;
 
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   int int_id = JSVAL_TO_INT(id);
   ResultVariant return_value = scriptable_->GetPropertyByIndex(int_id);
   if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
@@ -487,6 +494,10 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   ASSERT(scriptable_);
   if (!JSVAL_IS_INT(id))
     // Should not occur.
+    return JS_FALSE;
+
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
     return JS_FALSE;
 
   int int_id = JSVAL_TO_INT(id);
@@ -539,10 +550,15 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   if (!idstr)
     return JS_FALSE;
 
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   const jschar *utf16_name = JS_GetStringChars(idstr);
   size_t name_length = JS_GetStringLength(idstr);
-  UTF16ToUTF8Converter utf8_name(utf16_name, name_length);
-  ResultVariant return_value = scriptable_->GetProperty(utf8_name.get());
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
+  ResultVariant return_value = scriptable_->GetProperty(name.c_str());
   if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
@@ -557,7 +573,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
     RaiseException(js_context_,
                    "Failed to convert native property %s value(%s) to jsval",
-                   utf8_name.get(), return_value.v().Print().c_str());
+                   name.c_str(), return_value.v().Print().c_str());
     return JS_FALSE;
   }
   return JS_TRUE;
@@ -573,11 +589,16 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!idstr)
     return JS_FALSE;
 
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   const jschar *utf16_name = JS_GetStringChars(idstr);
   size_t name_length = JS_GetStringLength(idstr);
-  UTF16ToUTF8Converter utf8_name(utf16_name, name_length);
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
   Variant prototype;
-  if (scriptable_->GetPropertyInfo(utf8_name.get(), &prototype) ==
+  if (scriptable_->GetPropertyInfo(name.c_str(), &prototype) ==
       ScriptableInterface::PROPERTY_NOT_EXIST) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
@@ -592,14 +613,14 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     RaiseException(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
-                   utf8_name.get(), PrintJSValue(js_context_, js_val).c_str());
+                   name.c_str(), PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
-  if (!scriptable_->SetProperty(utf8_name.get(), value)) {
+  if (!scriptable_->SetProperty(name.c_str(), value)) {
     RaiseException(js_context_,
                    "Failed to set native property %s (may be readonly).",
-                   utf8_name.get());
+                   name.c_str());
     FreeNativeValue(value);
     return JS_FALSE;
   }
@@ -672,13 +693,18 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   if (!JSVAL_IS_STRING(id))
     return JS_TRUE;
 
-  JSString *idstr = JSVAL_TO_STRING(id);
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
+  JSString *idstr = JS_ValueToString(js_context_, id);
   if (!idstr)
     return JS_FALSE;
 
   const jschar *utf16_name = JS_GetStringChars(idstr);
   size_t name_length = JS_GetStringLength(idstr);
-  UTF16ToUTF8Converter utf8_name(utf16_name, name_length);
+  std::string name;
+  ConvertStringUTF16ToUTF8(utf16_name, name_length, &name);
 
   // The JS program defines a new symbol. This has higher priority than the
   // properties of the global scriptable object.
@@ -687,14 +713,14 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
 
   Variant prototype;
   ScriptableInterface::PropertyType type =
-      scriptable_->GetPropertyInfo(utf8_name.get(), &prototype);
+      scriptable_->GetPropertyInfo(name.c_str(), &prototype);
   if (type == ScriptableInterface::PROPERTY_NOT_EXIST) {
-    if (strcmp(utf8_name.get(), "toString") == 0) {
+    if (name == "toString") {
       // Define a default toString() operator to ease debugging.
       JS_DefineUCFunction(js_context_, js_object_, utf16_name, name_length,
                           WrapperDefaultToString, 0, 0);
       *objp = js_object_;
-    } else if (strcmp(utf8_name.get(), "__NATIVE_CLASS_ID__") == 0) {
+    } else if (name == "__NATIVE_CLASS_ID__") {
       // Register __NATIVE_CLASS_ID__ property for JS debugging.
       jsval js_val;
       ConvertNativeToJS(js_context_,

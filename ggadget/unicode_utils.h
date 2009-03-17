@@ -184,56 +184,6 @@ size_t ConvertStringUTF16ToUTF8(const UTF16Char *src, size_t src_length,
 size_t ConvertStringUTF16ToUTF8(const UTF16String &src, std::string *dest);
 
 /**
- * Converts a utf16 string into a utf8 buffer. Doesn't output the ending
- * zero.
- *
- * @param src the utf16 string to be converted.
- * @param src_length length of the source utf8 string.
- * @param dest the output buffer.
- * @param dest_length the length of the destination buffer (not including the
- *     ending zero).
- * @param[out] used_dest_length actual output length used in output buffer
- *     (no ending zero will be output.)
- * @return how many @c UTF16Char elements in source utf16 string have been
- *     converted.
- */
-size_t ConvertStringUTF16ToUTF8Buffer(const UTF16Char *src, size_t src_length,
-                                      char *dest, size_t dest_length,
-                                      size_t *used_dest_length);
-
-/**
- * Converts a utf16 string into a utf16 buffer.
- *
- * Same as above function but takes a UTF16String object as source.
- */
-size_t ConvertStringUTF16ToUTF8Buffer(const UTF16String &src,
-                                      char *dest, size_t dest_length,
-                                      size_t *used_dest_length);
-
-/**
- * This class is a temporary converter to convert a utf16 string to utf8.
- * It call avoid memory allocations if the length of the converted string is
- * less than 64 bytes.
- */
-class UTF16ToUTF8Converter {
- public:
-  UTF16ToUTF8Converter(const UTF16String &src) {
-    DoConvert(src.c_str(), src.length());
-  }
-  UTF16ToUTF8Converter(const UTF16Char *src, size_t src_length) {
-    DoConvert(src, src_length);
-  }
-
-  const char *get() {
-    return dynamic_buffer_.size() ? dynamic_buffer_.c_str() : buffer_;
-  }
- private:
-  void DoConvert(const UTF16Char *src, size_t src_length);
-  char buffer_[64];
-  std::string dynamic_buffer_;
-};
-
-/**
  * Converts a utf16 string to a utf32 string.
  *
  * @param src the utf16 string to be converted.
