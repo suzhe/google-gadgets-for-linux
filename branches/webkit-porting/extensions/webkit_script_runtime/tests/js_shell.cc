@@ -170,7 +170,9 @@ static JSValueRef Quit(JSContextRef ctx, JSObjectRef function,
 static JSValueRef GC(JSContextRef ctx, JSObjectRef function,
                      JSObjectRef this_object, size_t argument_count,
                      const JSValueRef arguments[], JSValueRef* exception) {
-  JSGarbageCollect(ctx);
+  JSScriptContext *context =
+      static_cast<JSScriptContext *>(JSObjectGetPrivate(function));
+  context->CollectGarbage();
   return JSValueMakeUndefined(ctx);
 }
 
@@ -304,6 +306,8 @@ int main(int argc, char *argv[]) {
     return QUIT_ERROR;
 
   InitGlobalFunctions(context);
+
+  context->AssignFromNative(NULL, NULL, "isWebkit", ggadget::Variant(true));
 
   if (argc > 1) {
     for (int i = 1; i < argc; i++) {

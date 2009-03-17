@@ -138,6 +138,9 @@ class XMLHttpRequestInterface : public ScriptableInterface {
                      NewSlot(this, &XMLHttpRequestException::ToString));
     }
 
+    // Required by webkit-script-runtime.
+    virtual bool IsStrict() const { return false; }
+
     std::string ToString() const {
       const char *name;
       switch (code_) {

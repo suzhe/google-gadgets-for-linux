@@ -249,6 +249,8 @@ class ScriptableHelper : public I,
    * Sets the exception to be raised to the script engine.
    * There must be no pending exception when this method is called to prevent
    * memory leaks.
+   * The specified exception object must not be strict, otherwise some script
+   * runtimes may not be able to handle it (such as webkit-script-runtime).
    */
   void SetPendingException(ScriptableInterface *exception) {
     impl_->SetPendingException(exception);

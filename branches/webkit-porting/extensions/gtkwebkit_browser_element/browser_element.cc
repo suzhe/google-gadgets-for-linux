@@ -97,6 +97,9 @@ class BrowserElement::Impl {
   }
 
   ~Impl() {
+    // Indicates it's being destroyed.
+    owner_ = NULL;
+
     minimized_connection_->Disconnect();
     restored_connection_->Disconnect();
     popout_connection_->Disconnect();
@@ -337,7 +340,8 @@ class BrowserElement::Impl {
   static gboolean WebViewConsoleMessage(WebKitWebView *web_view,
                                         gchar *message, gint line,
                                         gchar *source_id, Impl *impl) {
-    ScopedLogContext(impl->owner_->GetView()->GetGadget());
+    if (!impl->owner_) return FALSE;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     LOGI("WebViewConsoleMessage(%s:%d): %s", source_id, line, message);
     return TRUE;
   }
@@ -345,6 +349,8 @@ class BrowserElement::Impl {
   static void WebViewLoadStarted(WebKitWebView *web_view,
                                  WebKitWebFrame *web_frame,
                                  Impl *impl) {
+    if (!impl->owner_) return;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadStarted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
   }
@@ -352,6 +358,8 @@ class BrowserElement::Impl {
   static void WebViewLoadCommitted(WebKitWebView *web_view,
                                    WebKitWebFrame *web_frame,
                                    Impl *impl) {
+    if (!impl->owner_) return;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadCommitted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
   }
@@ -359,6 +367,8 @@ class BrowserElement::Impl {
   static void WebViewLoadProgressChanged(WebKitWebView *web_view,
                                          gint progress,
                                          Impl *impl) {
+    if (!impl->owner_) return;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadProgressChanged(Impl=%p, web_view=%p, progress=%d)",
          impl, web_view, progress);
   }
@@ -366,6 +376,8 @@ class BrowserElement::Impl {
   static void WebViewLoadFinished(WebKitWebView *web_view,
                                   WebKitWebFrame *web_frame,
                                   Impl *impl) {
+    if (!impl->owner_) return;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadFinished(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
   }
@@ -374,6 +386,8 @@ class BrowserElement::Impl {
                                       const char *title,
                                       const char *uri,
                                       Impl *impl) {
+    if (!impl->owner_) return;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewHoveringOverLink(Impl=%p, web_view=%p, title=%s, uri=%s)",
          impl, web_view, title, uri);
 
@@ -384,6 +398,8 @@ class BrowserElement::Impl {
   static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
                                              WebKitWebFrame *web_frame,
                                              Impl *impl) {
+    if (!impl->owner_) return NULL;
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewCreateWebView(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
 
@@ -399,13 +415,18 @@ class BrowserElement::Impl {
       WebKitWebView *web_view, WebKitWebFrame *web_frame,
       WebKitNetworkRequest *request, WebKitWebNavigationAction *action,
       WebKitWebPolicyDecision *decision, Impl *impl) {
+    if (!impl->owner_) return FALSE;
     const char *new_uri =
         webkit_network_request_get_uri(request);
-    const char *original_uri =
-        webkit_web_navigation_action_get_original_uri(action);
+
+    // original uri in action is not reliable, especially when the original
+    // content has no uri.
+    const char *original_uri = impl->loaded_uri_.c_str();
+
     WebKitWebNavigationReason reason =
         webkit_web_navigation_action_get_reason(action);
 
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewNavigationPolicyDecisionRequested"
          "(Impl=%p, web_view=%p, web_frame=%p):\n"
          "  New URI: %s\n"
@@ -423,29 +444,39 @@ class BrowserElement::Impl {
       if (result)
         webkit_web_policy_decision_ignore(decision);
     }
+
+    if (!result)
+      impl->loaded_uri_ = new_uri ? new_uri : "";
+
     return result;
   }
 
   static void WebViewWindowWidthNotify(WebKitWebWindowFeatures *features,
                                        GParamSpec *param,
                                        Impl *impl) {
+    if (!impl->owner_) return;
     gint width = 0;
     g_object_get(features, "width", &width, NULL);
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewWindowWidthNotify(Impl=%p, width=%d)", impl, width);
   }
 
   static void WebViewWindowHeightNotify(WebKitWebWindowFeatures *features,
                                         GParamSpec *param,
                                         Impl *impl) {
+    if (!impl->owner_) return;
     gint height = 0;
     g_object_get(features, "height", &height, NULL);
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewWindowHeightNotify(Impl=%p, width=%d)", impl, height);
   }
 #else
   static WebKitNavigationResponse WebViewNavigationRequested(
       WebKitWebView *web_view, WebKitWebFrame *web_frame,
       WebKitNetworkRequest *request, Impl *impl) {
+    if (!impl->owner_) return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
     const char *new_uri = webkit_network_request_get_uri(request);
+    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewNavigationRequested(Impl=%p, web_view=%p, "
          "web_frame=%p, uri=%s)",
          impl, web_view, web_frame, webkit_network_request_get_uri(request));

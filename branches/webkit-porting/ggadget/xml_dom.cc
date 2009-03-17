@@ -100,6 +100,9 @@ class DOMException : public ScriptableHelperDefault {
     SetInheritsFrom(GlobalException::Get());
   }
 
+  // Required by webkit-script-runtime.
+  virtual bool IsStrict() const { return false; }
+
   virtual void DoClassRegister() {
     RegisterProperty("code", NewSlot(&DOMException::GetCode), NULL);
     RegisterMethod("toString", NewSlot(&DOMException::ToString));

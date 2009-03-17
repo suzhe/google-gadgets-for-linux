@@ -138,8 +138,9 @@ class JSScriptContext::Impl : public SmallObject<> {
         call_self_slot_(NULL),
         ref_count_(0) {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper(ctx=%p, this=%p, jsobj=%p)",
-           impl_, this, object_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSScriptableWrapper(impl=%p, ctx=%p, this=%p, jsobj=%p)",
+           impl_, impl_->GetContext(), this, object_);
 #endif
       ASSERT(object_);
       // Count the current JavaScript reference.
@@ -159,8 +160,9 @@ class JSScriptContext::Impl : public SmallObject<> {
     // See WrapJSObject() and TrackerFinalizeCallback() below.
     void DetachJS() {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::DetachJS(ctx=%p, this=%p, jsobj=%p)",
-           impl_, this, object_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSScriptableWrapper::DetachJS(impl=%p, ctx=%p, this=%p, jsobj=%p)",
+           impl_, impl_->GetContext(), this, object_);
 #endif
       if (object_) {
         // Clear it first to prevent DetachJS() from being called recursively.
@@ -177,8 +179,9 @@ class JSScriptContext::Impl : public SmallObject<> {
    protected:
     virtual ~JSScriptableWrapper() {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("~JSScriptableWrapper(ctx=%p, this=%p, jsobj=%p)",
-           impl_, this, object_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("~JSScriptableWrapper(impl=%p, ctx=%p, this=%p, jsobj=%p)",
+           impl_, impl_->GetContext(), this, object_);
 #endif
       // Emit the ondelete signal, as early as possible.
       on_reference_change_signal_(0, 0);
@@ -191,8 +194,9 @@ class JSScriptContext::Impl : public SmallObject<> {
    public:
     virtual void Ref() const {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::Ref(ctx=%p, this=%p, jsobj=%p, ref=%d)",
-           impl_, this, object_, ref_count_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSScriptableWrapper::Ref(impl=%p, ctx=%p, this=%p, jsobj=%p, "
+           "ref=%d)", impl_, impl_->GetContext(), this, object_, ref_count_);
 #endif
       ASSERT(ref_count_ >= 0);
       on_reference_change_signal_(ref_count_, 1);
@@ -207,8 +211,10 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     virtual void Unref(bool transient) const {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::Unref(ctx=%p, this=%p, jsobj=%p, "
-           "ref=%d, trans=%d)", impl_, this, object_, ref_count_, transient);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSScriptableWrapper::Unref(impl=%p, ctx=%p, this=%p, jsobj=%p, "
+           "ref=%d, trans=%d)", impl_, impl_->GetContext(), this, object_,
+           ref_count_, transient);
 #endif
       on_reference_change_signal_(ref_count_, -1);
       ref_count_--;
@@ -245,6 +251,7 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual PropertyType GetPropertyInfo(const char *name, Variant *prototype) {
+      ScopedLogContext log_context(impl_->owner_);
       PropertyType result = ScriptableInterface::PROPERTY_NOT_EXIST;
       if (object_) {
         if (name && *name) {
@@ -265,16 +272,19 @@ class JSScriptContext::Impl : public SmallObject<> {
         }
       }
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::GetPropertyInfo(ctx=%p, this=%p, jsobj=%p, "
-           "prop=%s, result=%d)", impl_, this, object_, name, result);
+      DLOG("JSScriptableWrapper::GetPropertyInfo(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p, prop=%s, result=%d)", impl_, impl_->GetContext(), this,
+           object_, name, result);
 #endif
       return result;
     }
 
     virtual ResultVariant GetProperty(const char *name) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::GetProperty(ctx=%p, this=%p, jsobj=%p, "
-           "prop=%s)", impl_, this, object_, name);
+      DLOG("JSScriptableWrapper::GetProperty(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p, prop=%s)", impl_, impl_->GetContext(), this, object_,
+           name);
 #endif
       Variant result;
       if (object_) {
@@ -295,10 +305,11 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual bool SetProperty(const char *name, const Variant &value) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::SetProperty(ctx=%p, this=%p, jsobj=%p, "
-           "prop=%s, value=%s)", impl_, this, object_, name,
-           value.Print().c_str());
+      DLOG("JSScriptableWrapper::SetProperty(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p, prop=%s, value=%s)", impl_, impl_->GetContext(), this,
+           object_, name, value.Print().c_str());
 #endif
       if (!object_ || !name || !*name)
         return false;
@@ -320,9 +331,11 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual ResultVariant GetPropertyByIndex(int index) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::GetPropertyByIndex(ctx=%p, this=%p, "
-           "jsobj=%p, idx=%d)", impl_, this, object_, index);
+      DLOG("JSScriptableWrapper::GetPropertyByIndex(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p, idx=%d)", impl_, impl_->GetContext(), this, object_,
+           index);
 #endif
       if (!object_)
         return ResultVariant(Variant());
@@ -345,10 +358,11 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual bool SetPropertyByIndex(int index, const Variant &value) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::SetPropertyByIndex(ctx=%p, this=%p, "
-           "jsobj=%p, idx=%d, value=%s)", impl_, this, object_, index,
-           value.Print().c_str());
+      DLOG("JSScriptableWrapper::SetPropertyByIndex(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p, idx=%d, value=%s)", impl_, impl_->GetContext(), this,
+           object_, index, value.Print().c_str());
 #endif
       if (!object_)
         return false;
@@ -377,9 +391,10 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::EnumerateProperties(ctx=%p, this=%p, "
-           "jsobj=%p)", impl_, this, object_);
+      DLOG("JSScriptableWrapper::EnumerateProperties(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p)", impl_, impl_->GetContext(), this, object_);
 #endif
       ASSERT(callback);
       bool result = true;
@@ -407,9 +422,10 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
     virtual bool EnumerateElements(EnumerateElementsCallback *callback) {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::EnumerateElements(ctx=%p, this=%p, jsobj=%p)",
-           impl_, this, object_);
+      DLOG("JSScriptableWrapper::EnumerateElements(impl=%p, ctx=%p, this=%p, "
+           "jsobj=%p)", impl_, impl_->GetContext(), this, object_);
 #endif
       ASSERT(callback);
       bool result = true;
@@ -449,8 +465,9 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     void MethodRemoved(JSFunctionSlot *slot, JSObjectRef js_function) {
 #ifdef DEBUG_JS_VERBOSE_JS_SCRIPTABLE_WRAPPER
-      DLOG("JSScriptableWrapper::MethodRemoved(slot=%p, jsfunc=%p)",
-           slot, js_function);
+      DLOG("JSScriptableWrapper::MethodRemoved(impl=%p, ctx=%p, this=%p, "
+           "slot=%p, jsfunc=%p)", impl_, impl_->GetContext(), this, slot,
+           js_function);
 #endif
       MethodSlotMap::iterator it = method_slots_.find(js_function);
       ASSERT(it != method_slots_.end());
@@ -559,15 +576,19 @@ class JSScriptContext::Impl : public SmallObject<> {
       // used to unwrap this slot.
       impl_->js_function_slots_.insert(this);
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot(ctx=%p, this=%p, func=%p, owner=%p, parent=%p)",
-           impl_, this, function_, owner_, parent_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSFunctionSlot(impl=%p, ctx=%p, this=%p, func=%p, owner=%p, "
+           "parent=%p)", impl_, impl_->GetContext(), this, function_, owner_,
+           parent_);
 #endif
     }
 
     virtual ~JSFunctionSlot() {
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("~JSFunctionSlot(ctx=%p, this=%p, func=%p, owner=%p, parent=%p)",
-           impl_, this, function_, owner_, parent_);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("~JSFunctionSlot(impl=%p, ctx=%p, this=%p, func=%p, owner=%p, "
+           "parent=%p)", impl_, impl_->GetContext(), this, function_, owner_,
+           parent_);
 #endif
       // Set *death_flag_ to true to let Call() know this slot is to be deleted.
       if (death_flag_ptr_)
@@ -582,8 +603,10 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     void DetachJS(bool js_function_object_destroyed) {
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot::DetachJS(ctx=%p, this=%p, func=%p, owner=%p, %d)",
-           impl_, this, function_, owner_, js_function_object_destroyed);
+      ScopedLogContext log_context(impl_->owner_);
+      DLOG("JSFunctionSlot::DetachJS(impl=%p, ctx=%p, this=%p, func=%p, "
+           "owner=%p, %d)", impl_, impl_->GetContext(), this, function_,
+           owner_, js_function_object_destroyed);
 #endif
       if (function_) {
         JSObjectRef function = function_;
@@ -621,9 +644,10 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
+      ScopedLogContext log_context(impl_->owner_);
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p, scriptable=%p, func=%p)",
-           impl_, this, object, function_);
+      DLOG("JSFunctionSlot::Call(impl=%p, ctx=%p, this=%p, scriptable=%p, "
+           "func=%p)", impl_, impl_->GetContext(), this, object, function_);
 #endif
       Variant return_value(GetReturnType());
       if (!function_) {
@@ -687,8 +711,9 @@ class JSScriptContext::Impl : public SmallObject<> {
       }
 
 #ifdef DEBUG_JS_VERBOSE_JS_FUNCTION_SLOT
-      DLOG("JSFunctionSlot::Call(ctx=%p, this=%p, this_obj=%p) result=%s",
-           impl_, this, this_object, return_value.Print().c_str());
+      DLOG("JSFunctionSlot::Call(impl=%p, ctx=%p, this=%p, this_obj=%p) "
+           "result=%s", impl_, impl_->GetContext(), this, this_object,
+           return_value.Print().c_str());
 #endif
       return ResultVariant(return_value);
     }
@@ -717,6 +742,7 @@ class JSScriptContext::Impl : public SmallObject<> {
    public:
     JSContextRef context() const { return impl_->context_; }
     JSObjectRef function() const { return function_; }
+    JSScriptableWrapper *parent() const { return parent_; }
 
    private:
     Impl *impl_;
@@ -736,7 +762,9 @@ class JSScriptContext::Impl : public SmallObject<> {
   class JSContextScope {
    public:
     JSContextScope(Impl *impl, JSContextRef context)
-      : impl_(impl), saved_context_(impl->context_) {
+      : impl_(impl),
+        saved_context_(impl->context_),
+        log_context_(impl->owner_) {
       impl_->context_ = context;
     }
 
@@ -747,6 +775,7 @@ class JSScriptContext::Impl : public SmallObject<> {
    private:
     Impl *impl_;
     JSContextRef saved_context_;
+    ScopedLogContext log_context_;
   };
 
  public:
@@ -763,6 +792,7 @@ class JSScriptContext::Impl : public SmallObject<> {
       is_nan_func_(NULL),
       is_finite_func_(NULL),
       last_gc_time_(0) {
+    ScopedLogContext log_context(owner_);
     ASSERT(runtime_);
 
     // These class refs will be released along with runtime.
@@ -802,19 +832,47 @@ class JSScriptContext::Impl : public SmallObject<> {
     array_class_obj_ = GetFunctionOrConstructorObject(NULL, "Array");
     ASSERT(array_class_obj_);
 
-    DLOG("Create JSScriptContext: this=%p, jsctx=%p", this, context_);
+    DLOG("Create JSScriptContext: impl=%p, ctx=%p", this, context_);
   }
 
-  ~Impl() {
-    CollectGarbage();
-    DLOG("Destroy JSScriptContext: this=%p, jsctx=%p\n"
-         "  Remained ScriptableJSWrapper : %zu\n"
-         "  Remained JSFunctionSlot : %zu\n"
-         "  Remained JSScriptableWrapper : %zu",
-         this, context_,
+#ifdef _DEBUG
+  void PrintRemainedObjectsInfo() {
+    DLOG("Remained:\n"
+         "  ScriptableJSWrapper : %zu\n"
+         "  JSFunctionSlot : %zu\n"
+         "  JSScriptableWrapper : %zu",
          scriptable_js_wrappers_.size(),
          js_function_slots_.size(),
          js_scriptable_wrappers_.size());
+#ifdef DEBUG_JS_VERBOSE
+    for (ScriptableJSWrapperMap::iterator it = scriptable_js_wrappers_.begin();
+         it != scriptable_js_wrappers_.end(); ++it) {
+      DLOG("  ScriptableJSWrapper: ClassId: %jx, Ref: %d, %p",
+           static_cast<ScriptableInterface *>(it->first)->GetClassId(),
+           static_cast<ScriptableInterface *>(it->first)->GetRefCount(),
+           it->first);
+    }
+    for (JSFunctionSlotMap::iterator it = js_function_slots_.begin();
+         it != js_function_slots_.end() ; ++it) {
+      DLOG("  JSFunctionSlot: Parent: %p, %p",
+           static_cast<JSFunctionSlot *>(*it)->parent(), *it);
+    }
+    for (JSScriptableWrapperMap::iterator it = js_scriptable_wrappers_.begin();
+         it != js_scriptable_wrappers_.end(); ++it) {
+      DLOG("  JSScriptableWrapper: Ref: %d, %p",
+           static_cast<ScriptableInterface *>(*it)->GetRefCount(), *it);
+    }
+#endif
+  }
+#endif
+
+  ~Impl() {
+    ScopedLogContext log_context(owner_);
+    DLOG("Destroy JSScriptContext: impl=%p, ctx=%p", this, context_);
+    CollectGarbage();
+#ifdef _DEBUG
+    PrintRemainedObjectsInfo();
+#endif
     // Detach JSFunctionSlot first, because they may still attached to
     // js objects which are wrapped by ScriptableJSWrapper objects.
     while(!js_function_slots_.empty()) {
@@ -834,9 +892,10 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   void Execute(const char *script, const char *filename, int lineno) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::Execute(this=%p, script=%s, file=%s, line=%d)",
-         this, script, filename, lineno);
+    DLOG("JSScriptContext::Execute(impl=%p, ctx=%p, script=%s, file=%s, "
+         "line=%d)", this, context_, script, filename, lineno);
 #endif
     ASSERT(script && *script);
     std::string massaged_script =
@@ -857,9 +916,10 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   Slot *Compile(const char *script, const char *filename, int lineno) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::Compile(this=%p, script=%s, file=%s, line=%d)",
-         this, script, filename, lineno);
+    DLOG("JSScriptContext::Compile(impl=%p, ctx=%p, script=%s, file=%s, "
+         "line=%d)", this, context_, script, filename, lineno);
 #endif
     if (script && *script) {
       JSValueRef exception = NULL;
@@ -872,11 +932,12 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   bool SetGlobalObject(ScriptableInterface *global) {
+    ScopedLogContext log_context(owner_);
     ASSERT(global);
     JSObjectRef global_object = JSContextGetGlobalObject(context_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::SetGlobalObject(this=%p, global=%p, js_global=%p)",
-         this, global, global_object);
+    DLOG("JSScriptContext::SetGlobalObject(impl=%p, ctx=%p, global=%p, "
+         "js_global=%p)", this, context_, global, global_object);
 #endif
     // Add some adapters for JScript.
     // JScript programs call Date.getVarDate() to convert a JavaScript Date to
@@ -920,12 +981,16 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   bool RegisterClass(const char *name, Slot *constructor) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::RegisterClass(this=%p, name=%s, ctor=%p)",
-         this, name, constructor);
+    DLOG("JSScriptContext::RegisterClass(impl=%p, ctx=%p, name=%s, ctor=%p)",
+         this, context_, name, constructor);
 #endif
     ASSERT(name && *name);
     ASSERT(constructor);
+    JSObjectRef global_object = JSContextGetGlobalObject(context_);
+    ASSERT(global_object);
+
     ClassConstructorData *data = new ClassConstructorData();
     data->impl = this;
     data->class_name = name;
@@ -934,8 +999,6 @@ class JSScriptContext::Impl : public SmallObject<> {
         JSObjectMake(context_, class_constructor_class_, data);
     ASSERT(class_object);
 
-    JSObjectRef global_object = JSContextGetGlobalObject(context_);
-    ASSERT(global_object);
     return SetJSObjectProperty(global_object, name, class_object, 0);
   }
 
@@ -945,10 +1008,11 @@ class JSScriptContext::Impl : public SmallObject<> {
                          ScriptContextInterface *src_context,
                          ScriptableInterface *src_object,
                          const char *src_expr) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::AssignFromContext(this=%p, dest_ctx=%p, dest_obj=%p,"
-         " dest_expr=%s, dest_prop=%s, src_ctx=%p, src_obj=%p, src_expr=%s)",
-         this, owner_, dest_object, dest_object_expr, dest_property,
+    DLOG("JSScriptContext::AssignFromContext(impl=%p, ctx=%p, dest_obj=%p,"
+         " dest_expr=%s, dest_prop=%s, src_c_ctx=%p, src_obj=%p, src_expr=%s)",
+         this, context_, dest_object, dest_object_expr, dest_property,
          src_context, src_object, src_expr);
 #endif
     ASSERT(src_context);
@@ -990,9 +1054,10 @@ class JSScriptContext::Impl : public SmallObject<> {
                         const char *object_expr,
                         const char *property,
                         const Variant &value) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::AssignFromNative(this=%p, obj=%p, expr=%s, "
-         "prop=%s, value=%s)", this, object, object_expr, property,
+    DLOG("JSScriptContext::AssignFromNative(impl=%p, ctx=%p, obj=%p, expr=%s, "
+         "prop=%s, value=%s)", this, context_, object, object_expr, property,
          value.Print().c_str());
 #endif
     ASSERT(property);
@@ -1013,9 +1078,10 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   Variant Evaluate(ScriptableInterface *object, const char *expr) {
+    ScopedLogContext log_context(owner_);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::Evaluate(this=%p, obj=%p, expr=%s)",
-         this, object, expr);
+    DLOG("JSScriptContext::Evaluate(impl=%p, ctx=%p, obj=%p, expr=%s)",
+         this, context_, object, expr);
 #endif
     Variant result;
     JSValueRef js_val = NULL;
@@ -1027,7 +1093,14 @@ class JSScriptContext::Impl : public SmallObject<> {
   }
 
   void CollectGarbage() {
+    ScopedLogContext log_context(owner_);
+#ifdef DEBUG_JS_VERBOSE
+    DLOG("JSScriptContext::CollectGarbage(impl=%p, ctx=%p) start", this, context_);
+#endif
     JSGarbageCollect(context_);
+#ifdef DEBUG_JS_VERBOSE
+    DLOG("JSScriptContext::CollectGarbage(impl=%p, ctx=%p) end", this, context_);
+#endif
   }
 
   void MaybeGC() {
@@ -1035,12 +1108,14 @@ class JSScriptContext::Impl : public SmallObject<> {
     uint64_t now = main_loop ? main_loop->GetCurrentTime() : 0;
     if (now - last_gc_time_ > kMaxGCInterval) {
 #ifdef DEBUG_JS_VERBOSE
-      DLOG("JSScriptContext::MaybeGC(this=%p): GC Triggered: %ju", this, now);
+      DLOG("JSScriptContext::MaybeGC(impl=%p, ctx=%p): GC Triggered: %ju",
+           this, context_, now);
 #endif
       JSGarbageCollect(context_);
       last_gc_time_ = now;
 #ifdef DEBUG_JS_VERBOSE
-      DLOG("JSScriptContext::MaybeGC(this=%p): GC Finished: %ju", this, now);
+      DLOG("JSScriptContext::MaybeGC(impl=%p, ctx=%p): GC Finished: %ju",
+           this, context_, now);
 #endif
     }
   }
@@ -1063,8 +1138,8 @@ class JSScriptContext::Impl : public SmallObject<> {
       AttachScriptable(object, scriptable);
     }
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::WrapScriptable(this=%p, scriptable=%p, object=%p)",
-         this, scriptable, object);
+    DLOG("JSScriptContext::WrapScriptable(impl=%p, ctx=%p, scriptable=%p, "
+         "object=%p)", this, context_, scriptable, object);
 #endif
     return object;
   }
@@ -1078,8 +1153,8 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (!tracker->scriptable_wrapper)
       tracker->scriptable_wrapper = new JSScriptableWrapper(this, object);
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::WrapJSObject(this=%p, object=%p, scriptable=%p)",
-         this, object, tracker->scriptable_wrapper);
+    DLOG("JSScriptContext::WrapJSObject(impl=%p, ctx=%p, js_obj=%p, "
+         "scriptable=%p)", this, context_, object, tracker->scriptable_wrapper);
 #endif
     return tracker->scriptable_wrapper;
   }
@@ -1253,6 +1328,7 @@ class JSScriptContext::Impl : public SmallObject<> {
   // Attachs a given Scriptable object to a JSObjectRef object.
   // The JSObjectRef object must be an instance of ScriptableJSWrapper class.
   void AttachScriptable(JSObjectRef object, ScriptableInterface *scriptable) {
+    ScopedLogContext log_context(owner_);
     ASSERT(IsWrapperOfScriptable(object));
     ASSERT(scriptable);
 
@@ -1265,16 +1341,16 @@ class JSScriptContext::Impl : public SmallObject<> {
         DetachScriptable(object, false);
       } else {
 #ifdef DEBUG_JS_VERBOSE
-        DLOG("Scriptable already attached: ctx=%p  obj=%p  scriptable=%p",
-             context_, object, scriptable);
+        DLOG("Scriptable already attached: impl=%p, ctx=%p, jsobj=%p, "
+             "scriptable=%p", this, context_, object, scriptable);
 #endif
         return;
       }
     }
 
 #ifdef DEBUG_JS_VERBOSE
-    DLOG("JSScriptContext::AttachScriptable(ctx=%p, obj=%p, scriptable=%p)",
-         context_, object, scriptable);
+    DLOG("JSScriptContext::AttachScriptable(impl=%p, ctx=%p, jsobj=%p, "
+         "scriptable=%p)", this, context_, object, scriptable);
 #endif
     // It's harmless and simple to reset wrapper->impl every time.
     // As we don't support accessing an JS object in multiple contexts.
@@ -1285,8 +1361,8 @@ class JSScriptContext::Impl : public SmallObject<> {
       // There must be at least one native reference,
       // JavaScript wrapper shall be protected.
 #ifdef DEBUG_JS_VERBOSE
-      DLOG("Protect Object: ctx=%p  obj=%p  scriptable=%s",
-           context_, object, GetJSWrapperObjectName(object).c_str());
+      DLOG("Protect Object: impl=%p, ctx=%p, jsobj=%p, scriptable=%s",
+           this, context_, object, GetJSWrapperObjectName(object).c_str());
 #endif
       JSValueProtect(context_, object);
     }
@@ -1312,6 +1388,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
   // Detachs the Scriptable object attached to a given JSObjectRef object.
   void DetachScriptable(JSObjectRef object, bool caused_by_native) {
+    ScopedLogContext log_context(owner_);
     ASSERT(IsWrapperOfScriptable(object));
     ScriptableJSWrapper *wrapper = GetScriptableJSWrapper(object);
     ASSERT(wrapper);
@@ -1323,8 +1400,8 @@ class JSScriptContext::Impl : public SmallObject<> {
       // Clear it to prevent this function being called recursively.
       wrapper->scriptable = NULL;
 #ifdef DEBUG_JS_VERBOSE
-      DLOG("JSScriptContext::DetachScriptable(ctx=%p  obj=%p  scriptable=%p)",
-           context_, object, scriptable);
+      DLOG("JSScriptContext::DetachScriptable(impl=%p, ctx=%p, jsobj=%p, "
+           "scriptable=%p)", this, context_, object, scriptable);
 #endif
       scriptable_js_wrappers_.erase(scriptable);
 
@@ -1336,8 +1413,8 @@ class JSScriptContext::Impl : public SmallObject<> {
         // so the JavaScript wrapper must still be protected, and needs
         // unprotecting first.
 #ifdef DEBUG_JS_VERBOSE
-        DLOG("Unprotect Object: ctx=%p  obj=%p  scriptable=%s",
-             context_, object, GetJSWrapperObjectName(object).c_str());
+        DLOG("Unprotect Object: impl=%p, ctx=%p, jsobj=%p, scriptable=%s",
+             this, context_, object, GetJSWrapperObjectName(object).c_str());
 #endif
         JSValueUnprotect(context_, object);
 #ifdef DEBUG_FORCE_GC
@@ -1362,13 +1439,14 @@ class JSScriptContext::Impl : public SmallObject<> {
       // wrapper.
       DetachScriptable(object, true);
     } else {
+      ScopedLogContext log_context(owner_);
       ASSERT(change == 1 || change == -1);
       if (change == 1 && ref_count == 1) {
         // The Scriptable object is not floating anymore, so the wrapper object
         // needs protecting.
 #ifdef DEBUG_JS_VERBOSE
-        DLOG("Protect Object: ctx=%p  obj=%p  scriptable=%s",
-             context_, object, GetJSWrapperObjectName(object).c_str());
+        DLOG("Protect Object: impl=%p, ctx=%p, jsobj=%p, scriptable=%s",
+             this, context_, object, GetJSWrapperObjectName(object).c_str());
 #endif
         JSValueProtect(context_, object);
       } else if (change == -1 && ref_count == 2) {
@@ -1377,8 +1455,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 #ifdef DEBUG_JS_VERBOSE
         ScriptableJSWrapper *wrapper = GetScriptableJSWrapper(object);
         ASSERT(wrapper);
-        DLOG("Unprotect Object: ctx=%p  obj=%p  scriptable=%p",
-             context_, object, wrapper->scriptable);
+        DLOG("Unprotect Object: impl=%p, ctx=%p, jsobj=%p, scriptable=%p",
+             this, context_, object, wrapper->scriptable);
 #endif
         JSValueUnprotect(context_, object);
 #ifdef DEBUG_FORCE_GC
@@ -1606,16 +1684,16 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s)"
-           " detached", ctx, object, scriptable, utf8_name.Get());
+      DLOG("HasPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) detached", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
 
     if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.Get());
+      DLOG("HasPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) special", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
@@ -1637,8 +1715,9 @@ class JSScriptContext::Impl : public SmallObject<> {
       result = false;
 
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("HasPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): %d",
-         ctx, object, scriptable, utf8_name.Get(), result);
+    DLOG("HasPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+         "prop=%s): %d", impl, ctx, object, scriptable, utf8_name.Get(),
+         result);
 #endif
     return result;
   }
@@ -1660,8 +1739,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           " detached", ctx, object, scriptable, utf8_name.Get());
+      DLOG("GetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) detached", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       RaiseJSException(impl->owner_, exception,
                        "Failed to get property %s, scriptable detached.",
@@ -1671,8 +1750,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.Get());
+      DLOG("GetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) special", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       return NULL;
     }
@@ -1704,8 +1783,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 #endif
       }
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): "
-             "%s (slot=%p, jsfunc=%p)", ctx, object, scriptable,
+      DLOG("GetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s): %s (slot=%p, jsfunc=%p)", impl, ctx, object, scriptable,
              utf8_name.Get(), method ? "method" : "slot", slot, js_func);
 #endif
       return js_func;
@@ -1718,8 +1797,9 @@ class JSScriptContext::Impl : public SmallObject<> {
                        "JSValue.", utf8_name.Get(), prop.v().Print().c_str());
     }
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("GetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s): %s",
-         ctx, object, scriptable, utf8_name.Get(), prop.v().Print().c_str());
+    DLOG("GetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+         "prop=%s): %s", impl, ctx, object, scriptable, utf8_name.Get(),
+         prop.v().Print().c_str());
 #endif
     return result;
   }
@@ -1742,8 +1822,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           " detached", ctx, object, scriptable, utf8_name.Get());
+      DLOG("SetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) detached", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       RaiseJSException(impl->owner_, exception,
                        "Failed to set property %s, scriptable detached.",
@@ -1754,8 +1834,8 @@ class JSScriptContext::Impl : public SmallObject<> {
     // Let JavaScript engine to handle special properties.
     if (IsSpecialProperty(utf8_name.Get())) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "special", ctx, object, scriptable, utf8_name.Get());
+      DLOG("SetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) special", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       return false;
     }
@@ -1792,37 +1872,31 @@ class JSScriptContext::Impl : public SmallObject<> {
     if (prop_type == ScriptableInterface::PROPERTY_METHOD ||
         prop_type == ScriptableInterface::PROPERTY_CONSTANT) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "readonly", ctx, object, scriptable, utf8_name.Get());
+      DLOG("SetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) readonly", impl, ctx, object, scriptable, utf8_name.Get());
 #endif
       return true;
     }
 
     if (prop_type == ScriptableInterface::PROPERTY_NOT_EXIST && !is_index) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) "
-           "not exist", ctx, object, scriptable, utf8_name.Get());
+      DLOG("SetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "prop=%s) not exist", impl, ctx, object, scriptable,
+           utf8_name.Get());
 #endif
-      // FIXME: Throwing exception here will break dom unittest.
-      // Because dom exception itself is a stricted scriptable object, and when
-      // throwing dom exception, javascript engine will try to set "sourceURL"
-      // and "lineno" properties to it and will cause another exception.
-      /*
-      if (scriptable->IsStrict()) {
+      // JSScriptableWrapper can handle property set even if the property is not
+      // exist.
+      if (scriptable->IsInstanceOf(JSScriptableWrapper::CLASS_ID)) {
+        prototype = Variant(Variant::TYPE_VARIANT);
+      } else if (scriptable->IsStrict()) {
         RaiseJSException(
             impl->owner_, exception,
             "The native object doesn't support setting property %s.",
             utf8_name.Get());
         return true;
+      } else {
+        return false;
       }
-      */
-
-      // JSScriptableWrapper can handle property set even if the property is not
-      // exist.
-      if (scriptable->IsInstanceOf(JSScriptableWrapper::CLASS_ID))
-        prototype = Variant(Variant::TYPE_VARIANT);
-      else
-        return scriptable->IsStrict();
     }
 
     Variant native_value;
@@ -1859,9 +1933,9 @@ class JSScriptContext::Impl : public SmallObject<> {
     }
 
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("SetPropertyCallback(ctx=%p, jsobj=%p, scriptable=%p, prop=%s) %d, %s",
-         ctx, object, scriptable, utf8_name.Get(), result,
-         native_value.Print().c_str());
+    DLOG("SetPropertyCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+         "prop=%s) %d, %s", impl, ctx, object, scriptable, utf8_name.Get(),
+         result, native_value.Print().c_str());
 #endif
 
     return result || scriptable->IsStrict();
@@ -1924,8 +1998,8 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     if (!scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("CallAsFunctionCallback(ctx=%p, jsobj=%p, scriptable=%p this=%p) "
-           " detached", ctx, function, scriptable, this_object);
+      DLOG("CallAsFunctionCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p "
+           "this=%p) detached", impl, ctx, function, scriptable, this_object);
 #endif
       return NULL;
     }
@@ -1944,8 +2018,8 @@ class JSScriptContext::Impl : public SmallObject<> {
         argument_count, arguments, exception);
 
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("CallAsFunctionCallback(ctx=%p, jsobj=%p, scriptable=%p this=%p): %s",
-         ctx, function, scriptable, this_object,
+    DLOG("CallAsFunctionCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p "
+         "this=%p): %s", impl, ctx, function, scriptable, this_object,
          PrintJSValue(impl->owner_, result).c_str());
 #endif
     return result;
@@ -2013,18 +2087,20 @@ class JSScriptContext::Impl : public SmallObject<> {
       ASSERT(impl == data->impl);
     }
 
-#ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-    DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p, method=%s)",
-         ctx, this_obj, scriptable, data->method_name.c_str());
-#endif
-
     // Save current context for other functions.
     JSContextScope(impl, ctx);
 
+#ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
+    DLOG("CallMethodCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+         "method=%s)", impl, ctx, this_obj, scriptable,
+         data->method_name.c_str());
+#endif
+
     if (wrapper && !scriptable) {
 #ifdef DEBUG_JS_VERBOSE_SCRIPTABLE_JS_WRAPPER
-      DLOG("CallMethodCallback(ctx=%p, jsobj=%p, scriptable=%p, method=%s) "
-           " detached", ctx, this_obj, scriptable, data->method_name.c_str());
+      DLOG("CallMethodCallback(impl=%p, ctx=%p, jsobj=%p, scriptable=%p, "
+           "method=%s) detached", impl, ctx, this_obj, scriptable,
+           data->method_name.c_str());
 #endif
       RaiseJSException(impl->owner_, exception,
                        "Cannot call method %s of a detached scriptable.",
@@ -2087,7 +2163,10 @@ class JSScriptContext::Impl : public SmallObject<> {
                                        size_t argument_count,
                                        const JSValueRef arguments[],
                                        JSValueRef* exception) {
-    JSGarbageCollect(ctx);
+    JSScriptContext *context =
+        static_cast<JSScriptContext *>(JSObjectGetPrivate(function));
+    ASSERT(context);
+    context->CollectGarbage();
     return JSValueMakeUndefined(ctx);
   }
 
@@ -2116,6 +2195,7 @@ class JSScriptContext::Impl : public SmallObject<> {
   JSObjectRef date_class_obj_;
   JSObjectRef array_class_obj_;
 
+  // first: scriptable, second: js object (wrapper)
   typedef std::map<void *, void *> ScriptableJSWrapperMap;
   ScriptableJSWrapperMap scriptable_js_wrappers_;
 
