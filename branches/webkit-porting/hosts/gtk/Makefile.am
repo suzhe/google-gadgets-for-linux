@@ -91,6 +91,14 @@ if GGL_HOST_LINUX
 ggl_gtk_LDADD += \
 	-dlpreopen $(top_builddir)/extensions/linux_system_framework/linux-system-framework.la
 endif
+if GGL_BUILD_WEBKIT_SCRIPT_RUNTIME
+ggl_gtk_LDADD += \
+	-dlpreopen $(top_builddir)/extensions/webkit_script_runtime/webkit-script-runtime.la
+endif
+if GGL_BUILD_GTKWEBKIT_BROWSER_ELEMENT
+ggl_gtk_LDADD += \
+	-dlpreopen $(top_builddir)/extensions/gtkwebkit_browser_element/gtkwebkit-browser-element.la
+endif
 endif
 
 all-local:

@@ -1063,7 +1063,7 @@ has_javascriptcore=no
 if test x$build_webkit_script_runtime = xyes; then
   if test x$ggl_host_type = xlinux -o \
           x$ggl_host_type = xsolaris; then
-    PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.1],
+    PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.3],
                       [has_javascriptcore=yes],
                       [has_javascriptcore=no])
     if test x$has_javascriptcore = xyes; then
@@ -1105,7 +1105,7 @@ fi
 # Check gtk webkit for gtkwebkit-browser-element
 has_gtkwebkit=no
 if test x$build_gtkwebkit_browser_element = xyes; then
-  PKG_CHECK_MODULES([GTKWEBKIT], [webkit-1.0 >= 1.0.1],
+  PKG_CHECK_MODULES([GTKWEBKIT], [webkit-1.0 >= 1.0.3],
                     [has_gtkwebkit=yes], [has_gtkwebkit=no])
   if test x$has_gtkwebkit != xyes; then
     AC_MSG_WARN([GtkWebKit is required by gtkwebkit-browser-element])
