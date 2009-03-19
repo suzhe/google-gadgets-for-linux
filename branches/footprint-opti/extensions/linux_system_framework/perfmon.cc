@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstring>
 #include <ggadget/common.h>
+#include <ggadget/light_map.h>
 #include <ggadget/main_loop_interface.h>
 
 namespace ggadget {
@@ -202,7 +203,7 @@ class CpuUsageWatch : public WatchCallbackInterface {
   int watch_id_;
   double current_cpu_usage_;
 
-  typedef std::map<int, PerfmonInterface::CallbackSlot *> SlotMap;
+  typedef LightMap<int, PerfmonInterface::CallbackSlot *> SlotMap;
   SlotMap slots_;
 };
 

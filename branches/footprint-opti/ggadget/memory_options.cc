@@ -62,8 +62,8 @@ class MemoryOptions::Impl : public SmallObject<> {
     onoptionchanged_signal_(name);
   }
 
-  typedef std::map<std::string, OptionsItem, GadgetStringComparator> OptionsMap;
-  typedef std::set<std::string, GadgetStringComparator> EncryptedSet;
+  typedef LightMap<std::string, OptionsItem, GadgetStringComparator> OptionsMap;
+  typedef LightSet<std::string, GadgetStringComparator> EncryptedSet;
   OptionsMap values_;
   OptionsMap defaults_;
   OptionsMap internal_values_;

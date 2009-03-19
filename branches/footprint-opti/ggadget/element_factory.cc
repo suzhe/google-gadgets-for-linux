@@ -59,7 +59,7 @@ class ElementFactory::Impl : public SmallObject<> {
     return true;
   }
 
-  typedef std::map<const char *, ElementFactory::ElementCreator,
+  typedef LightMap<const char *, ElementFactory::ElementCreator,
                    GadgetCharPtrComparator> CreatorMap;
 
   CreatorMap creators_;

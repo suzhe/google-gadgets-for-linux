@@ -32,7 +32,7 @@ namespace ggadget {
 
 class ImageCache::Impl : public SmallObject<> {
   class SharedImage;
-  typedef std::map<std::string, SharedImage *> ImageMap;
+  typedef LightMap<std::string, SharedImage *> ImageMap;
 
   class SharedImage : public ImageInterface {
    public:

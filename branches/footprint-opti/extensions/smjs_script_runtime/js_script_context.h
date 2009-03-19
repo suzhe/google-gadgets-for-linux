@@ -20,6 +20,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <ggadget/light_map.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/signals.h>
@@ -181,10 +182,10 @@ class JSScriptContext : public ScriptContextInterface {
   std::string filename_;
   int lineno_;
 
-  typedef std::map<ScriptableInterface *, NativeJSWrapper *> NativeJSWrapperMap;
+  typedef LightMap<ScriptableInterface *, NativeJSWrapper *> NativeJSWrapperMap;
   NativeJSWrapperMap native_js_wrapper_map_;
 
-  typedef std::map<JSObject *, JSNativeWrapper *> JSNativeWrapperMap;
+  typedef LightMap<JSObject *, JSNativeWrapper *> JSNativeWrapperMap;
   JSNativeWrapperMap js_native_wrapper_map_;
 
   typedef std::vector<JSClassWithNativeCtor *> ClassVector;

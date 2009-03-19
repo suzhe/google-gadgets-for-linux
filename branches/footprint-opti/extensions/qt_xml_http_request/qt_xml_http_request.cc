@@ -795,7 +795,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   }
 
  private:
-  typedef std::map<int, Session*> Sessions;
+  typedef LightMap<int, Session*> Sessions;
   Sessions sessions_;
   int next_session_id_;
   QString default_user_agent_;

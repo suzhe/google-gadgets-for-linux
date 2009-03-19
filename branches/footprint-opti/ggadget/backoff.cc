@@ -174,7 +174,7 @@ class Backoff::Impl : public SmallObject<> {
     ResultType result_type;
   };
 
-  typedef std::map<std::string, BackoffInfo> BackoffInfoMap;
+  typedef LightMap<std::string, BackoffInfo> BackoffInfoMap;
   BackoffInfoMap backoff_info_map_;
 };
 

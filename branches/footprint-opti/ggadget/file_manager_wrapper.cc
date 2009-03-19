@@ -16,9 +16,9 @@
 
 #include "file_manager_wrapper.h"
 
-#include <set>
 #include <vector>
 #include "gadget_consts.h"
+#include "light_map.h"
 #include "logger.h"
 #include "slot.h"
 #include "string_utils.h"
@@ -232,7 +232,7 @@ class FileManagerWrapper::Impl : public SmallObject<> {
 
   class EnumProxy {
    public:
-    EnumProxy(std::set<std::string> *history, const std::string &prefix,
+    EnumProxy(LightSet<std::string> *history, const std::string &prefix,
               Slot1<bool, const char *> *callback)
         : history_(history), prefix_(prefix), callback_(callback) {
     }
@@ -245,7 +245,7 @@ class FileManagerWrapper::Impl : public SmallObject<> {
       return true;
     }
    private:
-    std::set<std::string> *history_;
+    LightSet<std::string> *history_;
     std::string prefix_;
     Slot1<bool, const char *> *callback_;
   };
@@ -262,7 +262,7 @@ class FileManagerWrapper::Impl : public SmallObject<> {
 
     // Record enumrated files to prevent duplication in multiple managers.
     bool result = true;
-    std::set<std::string> history;
+    LightSet<std::string> history;
     for (size_t i = 0; result && i < file_managers_.size(); i++) {
       const std::string &prefix = file_managers_[i].first;
       FileManagerInterface *fm = file_managers_[i].second;

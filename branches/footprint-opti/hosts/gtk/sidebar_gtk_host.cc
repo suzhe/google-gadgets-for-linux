@@ -1889,7 +1889,7 @@ class SideBarGtkHost::Impl {
  public:  // members
   GadgetBrowserHost gadget_browser_host_;
 
-  typedef std::map<int, GadgetInfo> GadgetInfoMap;
+  typedef LightMap<int, GadgetInfo> GadgetInfoMap;
   GadgetInfoMap gadgets_;
 
   SideBarGtkHost *owner_;
