@@ -26,6 +26,7 @@
 #include <QtCore/QMutexLocker>
 #include <QtGui/QApplication>
 #include <ggadget/common.h>
+#include <ggadget/light_map.h>
 #include <ggadget/logger.h>
 #include "qt_main_loop.h"
 
@@ -57,11 +58,11 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
 
   virtual ~Impl() {
     FreeUnusedWatches();
-    std::map<int, WatchNode *>::iterator iter;
+    LightMap<int, WatchNode *>::iterator iter;
     for (iter = watches_.begin();
          iter != watches_.end();
          iter++) {
-      delete (*iter).second;
+      delete iter->second;
     }
     watches_.clear();
     if (pipe_fd_[0] >= 0)
@@ -230,7 +231,7 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
     unused_watches_.clear();
   }
 
-  std::map<int, WatchNode*> watches_;
+  LightMap<int, WatchNode*> watches_;
   QtMainLoop *main_loop_;
   pthread_t main_thread_;
   int pipe_fd_[2];

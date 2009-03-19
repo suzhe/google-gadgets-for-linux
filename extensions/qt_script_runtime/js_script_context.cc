@@ -33,7 +33,7 @@
 namespace ggadget {
 namespace qt {
 
-static std::map<QScriptEngine*, JSScriptContext*> *g_data = NULL;
+static LightMap<QScriptEngine*, JSScriptContext*> *g_data = NULL;
 
 JSScriptContext *GetEngineContext(QScriptEngine *engine) {
   return (*g_data)[engine];
@@ -44,7 +44,7 @@ static JSScriptContext::Impl* GetEngineContextImpl(QScriptEngine *engine) {
 }
 
 void InitScriptContextData() {
-  if (!g_data) g_data = new std::map<QScriptEngine*, JSScriptContext*>();
+  if (!g_data) g_data = new LightMap<QScriptEngine*, JSScriptContext*>();
 }
 
 // String.substr is not ecma standard and qtscript doesn't provide it, so make
@@ -177,7 +177,7 @@ class JSScriptContext::Impl {
   Impl(JSScriptContext *parent)
       : parent_(parent), resolver_(NULL), line_number_(0) {}
   ~Impl() {
-    std::map<ScriptableInterface*, ResolverScriptClass*>::iterator iter;
+    LightMap<ScriptableInterface*, ResolverScriptClass*>::iterator iter;
     for (iter = script_classes_.begin(); iter != script_classes_.end(); iter++) {
       delete iter->second;
     }
@@ -248,8 +248,8 @@ class JSScriptContext::Impl {
 
   QScriptEngine engine_;
   JSScriptContext *parent_;
-  std::map<std::string, Slot*> class_constructors_;
-  std::map<ScriptableInterface*, ResolverScriptClass*> script_classes_;
+  LightMap<std::string, Slot*> class_constructors_;
+  LightMap<ScriptableInterface*, ResolverScriptClass*> script_classes_;
   Signal1<void, const char *> error_reporter_signal_;
   Signal2<bool, const char *, int> script_blocked_signal_;
   ResolverScriptClass *resolver_;

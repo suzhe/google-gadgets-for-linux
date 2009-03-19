@@ -335,7 +335,7 @@ class DefaultOptions : public MemoryOptions {
   }
 
   // Singleton management.
-  typedef std::map<std::string, DefaultOptions *> OptionsMap;
+  typedef LightMap<std::string, DefaultOptions *> OptionsMap;
   static DefaultOptions *GetOptions(const char *name, size_t size_limit) {
     ASSERT(name && *name);
     DefaultOptions *options;

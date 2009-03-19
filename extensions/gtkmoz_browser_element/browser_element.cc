@@ -399,7 +399,7 @@ class BrowserController {
   int ping_timer_watch_;
   bool ping_flag_;
   std::string up_buffer_;
-  typedef std::map<size_t, BrowserElementImpl *> BrowserElements;
+  typedef LightMap<size_t, BrowserElementImpl *> BrowserElements;
   BrowserElements browser_elements_;
   size_t browser_seq_;
   bool removing_watch_;
@@ -1090,9 +1090,9 @@ class BrowserElementImpl {
     return result;
   }
 
-  typedef std::map<size_t, ScriptableHolder<ScriptableInterface> >
+  typedef LightMap<size_t, ScriptableHolder<ScriptableInterface> >
       HostObjectMap;
-  typedef std::map<size_t, BrowserObjectWrapper *> BrowserObjectMap;
+  typedef LightMap<size_t, BrowserObjectWrapper *> BrowserObjectMap;
   HostObjectMap host_objects_;
   BrowserObjectMap browser_objects_;
 

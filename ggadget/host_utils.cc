@@ -220,7 +220,7 @@ static bool DialogCallback(int flag, View *view) {
 }
 
 bool ShowDialogView(HostInterface *host, const char *location, int flags,
-                    const std::map<std::string, Variant> &params) {
+                    const LightMap<std::string, Variant> &params) {
   FileManagerInterface *file_manager = GetGlobalFileManager();
   std::string xml;
   if (!file_manager || !file_manager->ReadFile(location, &xml))
@@ -255,7 +255,7 @@ static void AboutOpenURL(const char *url, HostInterface *host) {
 }
 
 void ShowAboutDialog(HostInterface *host) {
-  std::map<std::string, Variant> params;
+  LightMap<std::string, Variant> params;
   params["title"] = Variant(GMS_("GOOGLE_GADGETS"));
   params["version"] = Variant(std::string(GGL_VERSION) + " " +
       StringPrintf(GM_("API_VERSION"), GGL_API_VERSION));
@@ -349,7 +349,7 @@ class HostArgumentParser::Impl {
   bool started_;
   bool error_occurred_;
 
-  typedef std::map<int, Variant> ArgumentValueMap;
+  typedef LightMap<int, Variant> ArgumentValueMap;
   ArgumentValueMap specified_args_;
   StringVector remained_args_;
 };

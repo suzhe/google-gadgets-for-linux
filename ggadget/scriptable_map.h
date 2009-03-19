@@ -32,12 +32,12 @@ namespace ggadget {
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.
  */
-template <typename Value, typename CompareFn>
+template <typename MapType>
 class ScriptableMap : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x1136ce531e9046cd, ScriptableInterface);
 
-  typedef std::map<std::string, Value, CompareFn> Map;
+  typedef MapType Map;
   typedef typename Map::const_iterator MapConstIterator;
 
   ScriptableMap(const Map &map) : map_(map) {
@@ -63,18 +63,17 @@ class ScriptableMap : public ScriptableHelperDefault {
     return true;
   }
 
-  const std::map<std::string, Value, CompareFn> &map() const { return map_; }
+  const MapType &map() const { return map_; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableMap);
-  const std::map<std::string, Value, CompareFn> &map_;
+  const MapType &map_;
 };
 
 /** Creates a @c ScriptableMap instance. */
-template <typename Value, typename CompareFn>
-ScriptableMap<Value, CompareFn> *
-NewScriptableMap(const std::map<std::string, Value, CompareFn> &map) {
-  return new ScriptableMap<Value, CompareFn>(map);
+template <typename MapType>
+ScriptableMap<MapType> *NewScriptableMap(const MapType &map) {
+  return new ScriptableMap<MapType>(map);
 }
 
 } // namespace ggadget

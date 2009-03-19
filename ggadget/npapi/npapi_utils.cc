@@ -94,7 +94,7 @@ static PluginLibraries g_plugin_libraries;
 // The keys are MIME types, and the values are the indexes into
 // g_plugin_libraries, or kInvalidIndex if no plugin can be successfully
 // loaded for the MIME type.
-typedef std::map<std::string, size_t> MIMEPluginMap;
+typedef LightMap<std::string, size_t> MIMEPluginMap;
 static MIMEPluginMap g_mime_plugin_map;
 
 static void EnsureLoadPluginsInfo() {
@@ -350,8 +350,8 @@ struct Identifier {
   std::string name;
 };
 
-std::map<std::string, Identifier> g_string_identifiers;
-std::map<int32_t, Identifier> g_int_identifiers;
+LightMap<std::string, Identifier> g_string_identifiers;
+LightMap<int32_t, Identifier> g_int_identifiers;
 
 NPIdentifier GetStringIdentifier(const NPUTF8 *name) {
   ENSURE_MAIN_THREAD(NULL);

@@ -137,6 +137,12 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
       return JS_TRUE;
     }
   }
+
+  // Protects the result from JS_ValueToString from GC.
+  AutoLocalRootScope local_root_scope(cx);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   JSString *js_string = JS_ValueToString(cx, js_val);
   if (js_string) {
     jschar *chars = JS_GetStringChars(js_string);
@@ -164,6 +170,12 @@ static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
     *native_val = Variant(kEmptyUTF16String);
     return JS_TRUE;
   }
+
+  // Protects the result from JS_ValueToString from GC.
+  AutoLocalRootScope local_root_scope(cx);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   JSString *js_string = JS_ValueToString(cx, js_val);
   if (js_string) {
     jschar *chars = JS_GetStringChars(js_string);
@@ -210,20 +222,24 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *owner,
       (JSVAL_IS_INT(js_val) && JSVAL_TO_INT(js_val) == 0)) {
     function_object = NULL;
   } else if (JSVAL_IS_STRING(js_val)) {
+    // Protects the result of CompileFunction from GC.
+    AutoLocalRootScope local_root_scope(cx);
+    if (!local_root_scope.good())
+      return JS_FALSE;
+
     JSString *script_source = JSVAL_TO_STRING(js_val);
     jschar *script_chars = JS_GetStringChars(script_source);
     if (!script_chars)
       return JS_FALSE;
 
-    std::string utf8_script;
-    ConvertStringUTF16ToUTF8(script_chars, JS_GetStringLength(script_source),
-                             &utf8_script);
-
     std::string filename;
     int lineno;
     JSScriptContext::GetCurrentFileAndLine(cx, &filename, &lineno);
-    JSFunction *function = CompileFunction(cx, utf8_script.c_str(),
-                                           filename.c_str(), lineno);
+    JSFunction *function = CompileFunction(cx,
+        UTF16ToUTF8Converter(script_chars,
+                             JS_GetStringLength(script_source)).get(),
+        filename.c_str(), lineno);
+
     if (!function)
       result = JS_FALSE;
     function_object = JS_GetFunctionObject(function);

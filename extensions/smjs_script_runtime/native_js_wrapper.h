@@ -138,7 +138,7 @@ private:
   std::string name_;
   Connection *on_reference_change_connection_;
 
-  typedef std::set<JSFunctionSlot *> JSFunctionSlots;
+  typedef LightSet<JSFunctionSlot *> JSFunctionSlots;
   JSFunctionSlots js_function_slots_;
 };
 
