@@ -24,7 +24,7 @@ void use(void *v1, void *v2, void *v3) {
 }
 
 TEST(LightMap, Value) {
-  typedef LightMap<std::string, int> Map1;
+  typedef LightMap<std::string, const void *> Map1;
   typedef LightMap<std::string, void *> Map2;
   typedef LightMap<std::string, const Map2 *> Map3;
   // The int value map and const Map2 * map should all use LightMap<...,void *>
@@ -39,8 +39,8 @@ TEST(LightMap, Value) {
 }
 
 TEST(LightMap, Both) {
-  typedef LightMap<int, const int *> Map1;
-  typedef LightMap<Map1 *, size_t> Map2;
+  typedef LightMap<const char *, const int *> Map1;
+  typedef LightMap<Map1 *, void *> Map2;
   typedef LightMap<void *, Map2 *> Map3;
   typedef LightMap<const Map2 *, const Map3 *> Map4;
   void *v0 = NULL;
@@ -58,51 +58,51 @@ TEST(LightMap, Both) {
 }
 
 TEST(LightMap, Operations) {
-  typedef LightMap<const char *, int, CharPtrComparator> Map;
+  typedef LightMap<const char *, const char *, CharPtrComparator> Map;
   Map map;
   EXPECT_TRUE(map.empty());
 
-  map.insert(std::make_pair("a", 1));
+  map.insert(std::make_pair("a", "value a"));
   EXPECT_FALSE(map.empty());
-  map["b"] = 2;
-  EXPECT_EQ(2, map["b"]);
-  map["b"] = 3;
-  int *c_ptr = &map["c"];
-  *c_ptr = 4;
-  EXPECT_EQ(1, map["a"]);
-  EXPECT_EQ(3, map["b"]);
-  EXPECT_EQ(4, map["c"]);
+  map["b"] = "value b";
+  EXPECT_STREQ("value b", map["b"]);
+  map["b"] = "value b new";
+  const char **c_ptr = &map["c"];
+  *c_ptr = "value c";
+  EXPECT_STREQ("value a", map["a"]);
+  EXPECT_STREQ("value b new", map["b"]);
+  EXPECT_STREQ("value c", map["c"]);
   EXPECT_EQ(3U, map.size());
 
   Map::iterator it = map.begin();
   EXPECT_STREQ("a", it->first);
-  EXPECT_EQ(1, it->second);
+  EXPECT_STREQ("value a", it->second);
   Map::const_reverse_iterator const_rit = map.rbegin();
   EXPECT_STREQ("c", const_rit->first);
-  EXPECT_EQ(4, const_rit->second);
+  EXPECT_STREQ("value c", const_rit->second);
 
   const char *keys[] = { "a", "b", "c" };
-  const int values[] = { 1, 3, 4 };
+  const char *values[] = { "value a", "value b new", "value c" };
   int i = 0;
   for (Map::iterator it = map.begin(); it != map.end(); ++it, ++i) {
     EXPECT_STREQ(keys[i], it->first);
-    EXPECT_EQ(values[i], it->second);
+    EXPECT_STREQ(values[i], it->second);
   }
   i = 0;
   for (Map::const_iterator it = map.begin(); it != map.end(); ++it, ++i) {
     EXPECT_STREQ(keys[i], it->first);
-    EXPECT_EQ(values[i], it->second);
+    EXPECT_STREQ(values[i], it->second);
   }
   i = 2;
   for (Map::reverse_iterator it = map.rbegin(); it != map.rend(); ++it, --i) {
     EXPECT_STREQ(keys[i], it->first);
-    EXPECT_EQ(values[i], it->second);
+    EXPECT_STREQ(values[i], it->second);
   }
   i = 2;
   for (Map::const_reverse_iterator it = map.rbegin(); it != map.rend();
        ++it, --i) {
     EXPECT_STREQ(keys[i], it->first);
-    EXPECT_EQ(values[i], it->second);
+    EXPECT_STREQ(values[i], it->second);
   }
 
   // Assignment to 'second' is not supported for now.

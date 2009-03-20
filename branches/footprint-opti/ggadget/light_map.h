@@ -171,7 +171,6 @@ template <typename Type> struct _Cast {
   typedef Type T;
   static const bool do_cast = false;
   static inline const T &From(const T &v) { return v; }
-  static inline const T &To(const T &v) { return v; }
 };
 template <typename Type> struct _Cast<Type *> {
   typedef void *T;
@@ -179,8 +178,6 @@ template <typename Type> struct _Cast<Type *> {
   static const bool do_cast = _LIGHT_MAP_DO_CAST;
   static inline const T &From(const ValueT &v)
   { return reinterpret_cast<const T &>(v); }
-  static inline const ValueT &To(const T &v)
-  { return reinterpret_cast<const ValueT &>(v); }
 };
 template <typename Type> struct _Cast<const Type *> {
   typedef void *T;
@@ -189,38 +186,17 @@ template <typename Type> struct _Cast<const Type *> {
   static const bool do_cast = _LIGHT_MAP_DO_CAST;
   static inline const T &From(const ValueT &v)
   { return reinterpret_cast<const T &>(const_cast<const ValueTNoConst &>(v)); }
-  static inline const ValueT &To(const T &v)
-  { return reinterpret_cast<const ValueT &>(v); }
 };
 
-// Any integral types (except enum types which are not supported for now)
-// can be cast to "void *".
-#define _DEFINE_CAST_TYPE(type)                   \
-template <> struct _Cast<type> {                  \
-  typedef void *T;                                \
-  static const bool do_cast = _LIGHT_MAP_DO_CAST; \
-  static inline const T &From(const type &v)      \
-  { return reinterpret_cast<const T &>(v); }      \
-  static inline const type &To(const T &v)        \
-  { return reinterpret_cast<const type &>(v); }   \
-};
-_DEFINE_CAST_TYPE(bool)
-_DEFINE_CAST_TYPE(char)
-_DEFINE_CAST_TYPE(unsigned char)
-_DEFINE_CAST_TYPE(short)
-_DEFINE_CAST_TYPE(unsigned short)
-_DEFINE_CAST_TYPE(int)
-_DEFINE_CAST_TYPE(unsigned int)
-_DEFINE_CAST_TYPE(long)
-_DEFINE_CAST_TYPE(unsigned long)
-#if GGL_SIZEOF_LONG_INT != 8
-_DEFINE_CAST_TYPE(int64_t)
-_DEFINE_CAST_TYPE(uint64_t)
-#endif
-#undef _DEFINE_CAST_TYPE
-
-// Makes it shorter.
+// Makes the type expression shorter.
 #define _CAST(t) typename _Cast<t>::T
+
+template <typename Type>
+const _CAST(Type) &CastFrom(const Type &v) { return _Cast<Type>::From(v); }
+
+template <typename CastTo, typename CastFrom>
+inline const CastTo &ForceCast(const CastFrom &v)
+{ return reinterpret_cast<const CastTo &>(v); }
 
 template <typename Value, typename Compare, bool DoCast = _Cast<Value>::do_cast>
 class CastCompare {
@@ -228,7 +204,7 @@ class CastCompare {
   COMPILE_ASSERT(DoCast, Or_should_be_handled_in_the_specialized_version);
   CastCompare(Compare comp) : comp_(comp) { }
   bool operator()(const _CAST(Value) &x, const _CAST(Value) &y) const
-  { return comp_(_Cast<Value>::To(x), _Cast<Value>::To(y)); }
+  { return comp_(ForceCast<Value>(x), ForceCast<Value>(y)); }
  private:
   Compare comp_;
 };
@@ -238,6 +214,39 @@ class CastCompare<Value, Compare, false> : public Compare {
  public:
   CastCompare() { }
   CastCompare(Compare comp) { }
+};
+
+template <typename Value, typename Iterator>
+struct CastIterator : public Iterator {
+  typedef Value value_type;
+  typedef CastIterator<Value, Iterator> Self;
+  Value &operator*() const
+  { return reinterpret_cast<Value &>(
+        const_cast<typename Iterator::value_type &>(Iterator::operator*())); }
+  Value *operator->() const
+  { return reinterpret_cast<Value *>(
+        const_cast<typename Iterator::value_type *>(Iterator::operator->())); }
+  Self &operator++() { Iterator::operator++(); return *this; }
+  Self operator++(int) { Self t = *this; Iterator::operator++(); return t; }
+  Self &operator--() { Iterator::operator--(); return *this; }
+  Self operator--(int) { Self t = *this; Iterator::operator--(); return t; }
+};
+
+template <typename Value, typename Iterator>
+struct CastConstIterator : public Iterator {
+  typedef Value value_type;
+  typedef CastConstIterator<Value, Iterator> Self;
+  CastConstIterator() { }
+  template <typename Iterator1>
+  CastConstIterator(const Iterator1 &t) : Iterator(t) { }
+  const Value &operator*() const
+  { return reinterpret_cast<const Value &>(Iterator::operator*()); }
+  const Value *operator->() const
+  { return reinterpret_cast<const Value *>(Iterator::operator->()); }
+  Self &operator++() { Iterator::operator++(); return *this; }
+  Self operator++(int) { Self t = *this; Iterator::operator++(); return t; }
+  Self &operator--() { Iterator::operator--(); return *this; }
+  Self operator--(int) { Self t = *this; Iterator::operator--(); return t; }
 };
 
 /**
@@ -263,46 +272,15 @@ class LightMapBase : public Super {
   // original place and thus must be const to avoid misuse.
   typedef std::pair<Key, Value> iterator_value_type;
 
-  template <typename Iterator>
-  struct CastIterator {
-    typedef iterator_value_type value_type;
-    typedef CastIterator<Iterator> Self;
-    CastIterator() { }
-    explicit CastIterator(const Iterator &it) : it_(it) { }
-
-    // Any another CastIterator whose it_ is assignable to this.it_ should be
-    // able to be converted automatically into this class. This occurs when
-    // const_iterator is expected for a non-const method invocation.
-    template <typename CastIterator1>
-    CastIterator(const CastIterator1 &another) : it_(another.it_) { }
-
-    // Don't provide operator* because we have no idea how to implement it.
-    const value_type *operator->() const
-    { return &(LightMapBase::temp_iterator_value_ = value_type(
-          // Here remove the constness of the key temporarily so that we can
-          // store it into the temporary value. The constant correctness is
-          // ensured by the return type of this function.
-          _Cast<Key>::To(const_cast<super_key_type &>(it_->first)),
-          _Cast<Value>::To(const_cast<super_mapped_type &>(it_->second)))); }
-    Self &operator++() { ++it_; return *this; }
-    Self operator++(int) { Self tmp = *this; ++it_; return tmp; }
-    Self &operator--() { --it_; return *this; }
-    Self operator--(int) { Self tmp = *this; --it_; return tmp; }
-    template <typename CastIterator1>
-    bool operator==(const CastIterator1 &i) const { return i.it_ == it_; }
-    template <typename CastIterator1>
-    bool operator!=(const CastIterator1 &i) const { return i.it_ != it_; }
-    Iterator it_;
-  };
-
   typedef Key key_type;
   typedef Value mapped_type;
   typedef Compare key_compare;
   typedef std::pair<const Key, Value> value_type;
-  typedef CastIterator<super_iterator> iterator;
-  typedef CastIterator<super_const_iterator> const_iterator;
-  typedef CastIterator<super_reverse_iterator> reverse_iterator;
-  typedef CastIterator<super_const_reverse_iterator> const_reverse_iterator;
+  typedef CastIterator<value_type, super_iterator> iterator;
+  typedef CastConstIterator<value_type, super_const_iterator> const_iterator;
+  typedef CastIterator<value_type, super_reverse_iterator> reverse_iterator;
+  typedef CastConstIterator<value_type, super_const_reverse_iterator>
+      const_reverse_iterator;
 
   LightMapBase() : Super(super_key_compare(Compare())) { }
   LightMapBase(const Compare &comp) : Super(super_key_compare(comp)) { }
@@ -311,54 +289,50 @@ class LightMapBase : public Super {
   LightMapBase &operator=(const LightMapBase &x)
   { Super::operator=(x); return *this; }
 
-  iterator begin() { return iterator(Super::begin()); }
-  const_iterator begin() const { return const_iterator(Super::begin()); }
-  iterator end() { return iterator(Super::end()); }
-  const_iterator end() const { return const_iterator(Super::end()); }
-  reverse_iterator rbegin() { return reverse_iterator(Super::rbegin()); }
+  iterator begin() { return ForceCast<iterator>(Super::begin()); }
+  const_iterator begin() const
+  { return ForceCast<const_iterator>(Super::begin()); }
+  iterator end() { return ForceCast<iterator>(Super::end()); }
+  const_iterator end() const { return ForceCast<const_iterator>(Super::end()); }
+  reverse_iterator rbegin()
+  { return ForceCast<reverse_iterator>(Super::rbegin()); }
   const_reverse_iterator rbegin() const
-  { return const_reverse_iterator(Super::rbegin()); }
-  reverse_iterator rend() { return reverse_iterator(Super::rend()); }
+  { return ForceCast<const_reverse_iterator>(Super::rbegin()); }
+  reverse_iterator rend() { return ForceCast<reverse_iterator>(Super::rend()); }
   const_reverse_iterator rend() const
-  { return const_reverse_iterator(Super::rend()); }
+  { return ForceCast<const_reverse_iterator>(Super::rend()); }
   Value &operator[](const Key &k)
-  { return reinterpret_cast<Value &>(Super::operator[](_Cast<Key>::From(k))); }
+  { return const_cast<Value &>(ForceCast<Value>(
+        Super::operator[](CastFrom(k)))); }
   iterator insert(iterator i, const value_type &x)
-  { return iterator(Super::insert(i.it_, super_value_type(
-        _Cast<Key>::From(x.first), _Cast<Value>::From(x.second)))); }
-  void erase(iterator i) { Super::erase(i.it_); }
-  void erase(iterator a, iterator b) { Super::erase(a.it_, b.it_); }
-  size_type erase(const Key &k) { return Super::erase(_Cast<Key>::From(k)); }
+  { return ForceCast<iterator>(Super::insert(ForceCast<super_iterator>(i),
+                                             ForceCast<super_value_type>(x))); }
+  void erase(iterator i) { Super::erase(ForceCast<super_iterator>(i)); }
+  void erase(iterator a, iterator b)
+  { Super::erase(ForceCast<super_iterator>(a), ForceCast<super_iterator>(b)); }
+  size_type erase(const Key &k)
+  { return Super::erase(CastFrom(k)); }
   iterator find(const Key &k)
-  { return iterator(Super::find(_Cast<Key>::From(k))); }
+  { return ForceCast<iterator>(Super::find(CastFrom(k))); }
   const_iterator find(const Key &k) const
-  { return const_iterator(Super::find(_Cast<Key>::From(k))); }
-  size_t count(const Key &k) const { return Super::count(_Cast<Key>::From(k)); }
+  { return ForceCast<const_iterator>(Super::find(CastFrom(k))); }
+  size_t count(const Key &k) const
+  { return Super::count(CastFrom(k)); }
   iterator lower_bound(const Key &k)
-  { return iterator(Super::lower_bound(_Cast<Key>::From(k))); }
+  { return ForceCast<iterator>(Super::lower_bound(CastFrom(k))); }
   const_iterator lower_bound(const Key &k) const
-  { return const_iterator(Super::lower_bound(_Cast<Key>::From(k))); }
+  { return ForceCast<const_iterator>(Super::lower_bound(CastFrom(k))); }
   iterator upper_bound(const Key &k)
-  { return iterator(Super::upper_bound(_Cast<Key>::From(k))); }
+  { return ForceCast<iterator>(Super::upper_bound(CastFrom(k))); }
   const_iterator upper_bound(const Key &k) const
-  { return const_iterator(Super::upper_bound(_Cast<Key>::From(k))); }
+  { return ForceCast<const_iterator>(Super::upper_bound(CastFrom(k))); }
   std::pair<iterator, iterator> equal_range(const Key &k)
-  { std::pair<super_iterator, super_iterator> r =
-        Super::equal_range(_Cast<Key>::From(k));
-    return std::make_pair(iterator(r.first), iterator(r.second)); }
+  { return ForceCast<std::pair<iterator, iterator> >(
+        Super::equal_range(CastFrom(k))); }
   std::pair<const_iterator, const_iterator> equal_range(const Key &k) const
-  { std::pair<super_const_iterator, super_const_iterator> r =
-        Super::equal_range(_Cast<Key>::From(k));
-    return std::make_pair(const_iterator(r.first), const_iterator(r.second)); }
-
- private:
-  // The temporary space to store the result of iterator's operator->().
-  static std::pair<Key, Value> temp_iterator_value_;
+  { return ForceCast<std::pair<const_iterator, const_iterator> >(
+        Super::equal_range(CastFrom(k))); }
 };
-
-template <typename Key, typename Value, typename Compare, typename Super>
-std::pair<Key, Value>
-    LightMapBase<Key, Value, Compare, Super>::temp_iterator_value_;
 
 /**
  * std::map using @c LokiAllocator and possibly sharing base classes.
@@ -384,14 +358,12 @@ class LightMap : public LightMapBase<Key, Value, Compare,
 
   std::pair<typename Super::iterator, bool> insert(
       const typename Super::value_type &x)
-  { std::pair<typename Super::super_iterator, bool> r = SuperSuper::insert(
-        typename Super::super_value_type(_Cast<Key>::From(x.first),
-                                         _Cast<Value>::From(x.second)));
-    return std::make_pair(typename Super::iterator(r.first), r.second); }
+  { return ForceCast<std::pair<typename Super::iterator, bool> >(
+        SuperSuper::insert(ForceCast<typename Super::super_value_type>(x))); }
 };
 
 /**
- * Specialized version of LightMap for maps whose values are castable to
+ * Specialized version of LightMap for maps whose value type is castable to
  * void *, but haven't a customized comparator.
  * Note: This specialization uses std::less<_CAST(Key)> (might be
  * std::less<void *>) might change the order of the values in the map.
@@ -413,15 +385,13 @@ class LightMap<Key, Value, std::less<Key>, true>
 
   std::pair<typename Super::iterator, bool> insert(
       const typename Super::value_type &x)
-  { std::pair<typename Super::super_iterator, bool> r = SuperSuper::insert(
-        typename Super::super_value_type(_Cast<Key>::From(x.first),
-                                         _Cast<Value>::From(x.second)));
-    return std::make_pair(typename Super::iterator(r.first), r.second); }
+  { return ForceCast<std::pair<typename Super::iterator, bool> >(
+        SuperSuper::insert(ForceCast<typename Super::super_value_type>(x))); }
 };
 
 /**
- * Specialized version of LightMap for maps whose keys and values are all
- * not castable to void *.
+ * Specialized version of LightMap for maps whose value type is not castable
+ * to void *.
  */
 template <typename Key, typename Value, typename Compare>
 class LightMap<Key, Value, Compare, false>
@@ -438,6 +408,11 @@ class LightMap<Key, Value, Compare, false>
   { Super::operator=(x); return *this; }
 };
 
+/**
+ * std::multimap using @c LokiAllocator and possibly sharing base classes.
+ * If the keys or values can be safely reinterpret casted void *, they
+ * will share the common base class as much as possible to reduce code size.
+ */
 template <typename Key, typename Value, typename Compare = std::less<Key>,
           bool DoCast = _Cast<Value>::do_cast>
 class LightMultiMap : public LightMapBase<Key, Value, Compare,
@@ -455,11 +430,41 @@ class LightMultiMap : public LightMapBase<Key, Value, Compare,
   { Super::operator=(x); return *this; }
 
   typename Super::iterator insert(const typename Super::value_type &x)
-  { return typename Super::iterator(SuperSuper::insert(
-        typename Super::super_value_type(_Cast<Key>::From(x.first),
-                                         _Cast<Value>::From(x.second)))); }
+  { return ForceCast<typename Super::iterator>(SuperSuper::insert(
+        ForceCast<typename Super::super_value_type>(x))); }
 };
 
+/**
+ * Specialized version of LightMultiMap for maps whose values are castable to
+ * void *, but haven't a customized comparator.
+ * Note: This specialization uses std::less<_CAST(Key)> (might be
+ * std::less<void *>) might change the order of the values in the map.
+ */
+template <typename Key, typename Value>
+class LightMultiMap<Key, Value, std::less<Key>, true>
+    : public LightMapBase<Key, Value, std::less<_CAST(Key)>,
+    std::multimap<_CAST(Key), _CAST(Value), std::less<_CAST(Key)>,
+        LokiAllocator<std::pair<const _CAST(Key), _CAST(Value)> > > > {
+ public:
+  typedef std::multimap<_CAST(Key), _CAST(Value), std::less<_CAST(Key)>,
+      LokiAllocator<std::pair<const _CAST(Key), _CAST(Value)> > > SuperSuper;
+  typedef LightMapBase<Key, Value, std::less<Key>, SuperSuper> Super;
+  LightMultiMap() { }
+  LightMultiMap(const std::less<Key> &comp) : Super(comp) { }
+  LightMultiMap(const LightMultiMap &x) : Super(x) { }
+  template <typename I> LightMultiMap(I first, I last) : Super(first, last) { }
+  LightMultiMap &operator=(const LightMultiMap &x)
+  { Super::operator=(x); return *this; }
+
+  typename Super::iterator insert(const typename Super::value_type &x)
+  { return ForceCast<typename Super::iterator>(SuperSuper::insert(
+        ForceCast<typename Super::super_value_type>(x))); }
+};
+
+/**
+ * Specialized version of LightMultiMap for maps whose value type is not
+ * castable to void *.
+ */
 template <typename Key, typename Value, typename Compare>
 class LightMultiMap<Key, Value, Compare, false>
     : public std::multimap<Key, Value, Compare,
@@ -475,19 +480,9 @@ class LightMultiMap<Key, Value, Compare, false>
   { Super::operator=(x); return *this; }
 };
 
-/**
- * std::set using @c LokiAllocator and possibly sharing base classes.
- * If the keys can be safely reinterpret casted void *, they will share
- * the common base class to reduce code size.
- */
-template <typename Key, typename Compare = std::less<Key>,
-          bool DoCast = _Cast<Key>::do_cast>
-class LightSet : public std::set<_CAST(Key), CastCompare<Key, Compare>,
-                                 LokiAllocator<_CAST(Key)> > {
+template <typename Key, typename Compare, typename Super>
+class LightSetBase : public Super {
  public:
-  typedef std::set<_CAST(Key), CastCompare<Key, Compare>,
-                   LokiAllocator<_CAST(Key)> > Super;
-
   typedef typename Super::key_type super_key_type;
   typedef typename Super::iterator super_iterator;
   typedef typename Super::const_iterator super_const_iterator;
@@ -497,108 +492,102 @@ class LightSet : public std::set<_CAST(Key), CastCompare<Key, Compare>,
   typedef typename Super::difference_type difference_type;
   typedef typename Super::key_compare super_key_compare;
 
-  template <typename Iterator>
-  struct CastIterator {
-    typedef Key value_type;
-    typedef CastIterator<Iterator> Self;
-    CastIterator() { }
-    explicit CastIterator(const Iterator &it) : it_(it) { }
-    Key &operator*() { return reinterpret_cast<Key &>(
-        const_cast<typename Iterator::value_type &>(it_.operator*())); }
-    Key *operator->() { return reinterpret_cast<Key *>(
-        const_cast<typename Iterator::value_type *>(it_.operator->())); }
-    Self &operator++() { ++it_; return *this; }
-    Self operator++(int) { Self tmp = *this; ++it_; return tmp; }
-    Self &operator--() { --it_; return *this; }
-    Self operator--(int) { Self tmp = *this; --it_; return tmp; }
-    template <typename CastIterator1>
-    bool operator==(const CastIterator1 &i) const { return i.it_ == it_; }
-    template <typename CastIterator1>
-    bool operator!=(const CastIterator1 &i) const { return i.it_ != it_; }
-    Iterator it_;
-  };
-
-  template <typename Iterator>
-  struct CastConstIterator {
-    typedef Key value_type;
-    typedef CastConstIterator<Iterator> Self;
-    CastConstIterator() { }
-    explicit CastConstIterator(Iterator it) : it_(it) { }
-    template <typename CastIterator1>
-    CastConstIterator(const CastIterator1 &another) : it_(another.it_) { }
-    const Key &operator*() const { return _Cast<Key>::To(it_.operator*()); }
-    const Key *operator->() const { return &_Cast<Key>::To(it_.operator*()); }
-    Self &operator++() { ++it_; return *this; }
-    Self operator++(int) { Self tmp = *this; ++it_; return tmp; }
-    Self &operator--() { --it_; return *this; }
-    Self operator--(int) { Self tmp = *this; --it_; return tmp; }
-    template <typename CastIterator1>
-    bool operator==(const CastIterator1 &i) const { return i.it_ == it_; }
-    template <typename CastIterator1>
-    bool operator!=(const CastIterator1 &i) const { return i.it_ != it_; }
-    Iterator it_;
-  };
-
   typedef Key key_type;
   typedef Key value_type;
   typedef Compare key_compare;
-  typedef CastIterator<super_iterator> iterator;
-  typedef CastConstIterator<super_const_iterator> const_iterator;
-  typedef CastIterator<super_reverse_iterator> reverse_iterator;
-  typedef CastConstIterator<super_const_reverse_iterator>
+  typedef CastIterator<Key, super_iterator> iterator;
+  typedef CastConstIterator<Key, super_const_iterator> const_iterator;
+  typedef CastIterator<Key, super_reverse_iterator> reverse_iterator;
+  typedef CastConstIterator<Key, super_const_reverse_iterator>
       const_reverse_iterator;
 
-  LightSet() : Super(super_key_compare(Compare())) { }
-  LightSet(const Compare &comp) : Super(super_key_compare(comp)) { }
+  LightSetBase() : Super(super_key_compare(Compare())) { }
+  LightSetBase(const Compare &comp) : Super(super_key_compare(comp)) { }
+  LightSetBase(const LightSetBase &x) : Super(x) { }
+  template <typename I> LightSetBase(I first, I last) : Super(first, last) { }
+  LightSetBase &operator=(const LightSetBase &x)
+  { Super::operator=(x); return *this; }
+
+  iterator begin() { return ForceCast<iterator>(Super::begin()); }
+  const_iterator begin() const
+  { return ForceCast<const_iterator>(Super::begin()); }
+  iterator end() { return ForceCast<iterator>(Super::end()); }
+  const_iterator end() const { return ForceCast<const_iterator>(Super::end()); }
+  reverse_iterator rbegin()
+  { return ForceCast<reverse_iterator>(Super::rbegin()); }
+  const_reverse_iterator rbegin() const
+  { return ForceCast<const_reverse_iterator>(Super::rbegin()); }
+  reverse_iterator rend() { return ForceCast<reverse_iterator>(Super::rend()); }
+  const_reverse_iterator rend() const
+  { return ForceCast<const_reverse_iterator>(Super::rend()); }
+  std::pair<iterator, bool> insert(const Key &x)
+  { return ForceCast<std::pair<iterator, bool> >(Super::insert(CastFrom(x))); }
+  iterator insert(iterator i, const Key &x)
+  { return ForceCast<iterator>(Super::insert(ForceCast<super_iterator>(i),
+                                             CastFrom(x))); }
+  void erase(iterator i) { Super::erase(ForceCast<super_iterator>(i)); }
+  void erase(iterator a, iterator b)
+  { Super::erase(ForceCast<super_iterator>(a), ForceCast<super_iterator>(b)); }
+  size_type erase(const Key &k) { return Super::erase(CastFrom(k)); }
+  iterator find(const Key &k)
+  { return ForceCast<iterator>(Super::find(CastFrom(k))); }
+  const_iterator find(const Key &k) const
+  { return ForceCast<const_iterator>(Super::find(CastFrom(k))); }
+  size_t count(const Key &k) const { return Super::find(CastFrom(k)); }
+  iterator lower_bound(const Key &k)
+  { return ForceCast<iterator>(Super::lower_bound(CastFrom(k))); }
+  const_iterator lower_bound(const Key &k) const
+  { return ForceCast<const_iterator>(Super::lower_bound(CastFrom(k))); }
+  iterator upper_bound(const Key &k)
+  { return ForceCast<iterator>(Super::upper_bound(CastFrom(k))); }
+  const_iterator upper_bound(const Key &k) const
+  { return ForceCast<const_iterator>(Super::upper_bound(CastFrom(k))); }
+  std::pair<iterator, iterator> equal_range(const Key &k)
+  { return ForceCast<std::pair<iterator, iterator> >(
+        Super::equal_range(CastFrom(k))); }
+  std::pair<const_iterator, const_iterator> equal_range(const Key &k) const
+  { return ForceCast<std::pair<const_iterator, const_iterator> >(
+        Super::equal_range(CastFrom(k))); }
+};
+
+/**
+ * std::set using @c LokiAllocator and possibly sharing base classes.
+ * If the keys can be safely reinterpret casted void *, they will share
+ * the common base class to reduce code size.
+ */
+template <typename Key, typename Compare = std::less<Key>,
+          bool DoCast = _Cast<Key>::do_cast>
+class LightSet : public LightSetBase<Key, Compare, std::set<_CAST(Key),
+    CastCompare<Key, Compare>, LokiAllocator<_CAST(Key)> > > {
+  typedef LightSetBase<Key, Compare, std::set<_CAST(Key),
+      CastCompare<Key, Compare>, LokiAllocator<_CAST(Key)> > > Super;
+  LightSet() { }
+  LightSet(const std::less<Key> &comp) : Super(comp) { }
   LightSet(const LightSet &x) : Super(x) { }
   template <typename I> LightSet(I first, I last) : Super(first, last) { }
   LightSet &operator=(const LightSet &x)
   { Super::operator=(x); return *this; }
+};
 
-  iterator begin() { return iterator(Super::begin()); }
-  const_iterator begin() const { return const_iterator(Super::begin()); }
-  iterator end() { return iterator(Super::end()); }
-  const_iterator end() const { return const_iterator(Super::end()); }
-  reverse_iterator rbegin() { return reverse_iterator(Super::rbegin()); }
-  const_reverse_iterator rbegin() const
-  { return const_reverse_iterator(Super::rbegin()); }
-  reverse_iterator rend() { return reverse_iterator(Super::rend()); }
-  const_reverse_iterator rend() const
-  { return const_reverse_iterator(Super::rend()); }
-  std::pair<iterator, bool> insert(const Key &x)
-  { std::pair<super_iterator, bool> r = Super::insert(ToSuper(x));
-    return std::make_pair(iterator(r.first), r.second); }
-  iterator insert(iterator i, const Key &x)
-  { return iterator(Super::insert(i.it_, ToSuper(x))); }
-  void erase(iterator i) { Super::erase(i.it_); }
-  void erase(iterator a, iterator b) { Super::erase(a.it_, b.it_); }
-  size_type erase(const Key &k) { return Super::erase(_Cast<Key>::From(k)); }
-  iterator find(const Key &k) { return iterator(Super::find(ToSuper(k))); }
-  const_iterator find(const Key &k) const
-  { return const_iterator(Super::find(ToSuper(k))); }
-  size_t count(const Key &k) const { return Super::find(ToSuper(k)); }
-  iterator lower_bound(const Key &k)
-  { return iterator(Super::lower_bound(ToSuper(k))); }
-  const_iterator lower_bound(const Key &k) const
-  { return const_iterator(Super::lower_bound(ToSuper(k))); }
-  iterator upper_bound(const Key &k)
-  { return iterator(Super::upper_bound(ToSuper(k))); }
-  const_iterator upper_bound(const Key &k) const
-  { return const_iterator(Super::upper_bound(ToSuper(k))); }
-  std::pair<iterator, iterator> equal_range(const Key &k)
-  { std::pair<super_iterator, super_iterator> r =
-        Super::equal_range(ToSuper(k));
-    return std::make_pair(iterator(r.first), iterator(r.second)); }
-  std::pair<const_iterator, const_iterator> equal_range(const Key &k) const
-  { std::pair<super_const_iterator, super_const_iterator> r =
-        Super::equal_range(ToSuper(k));
-    return std::make_pair(const_iterator(r.first), const_iterator(r.second)); }
-
- private:
-  inline static const super_key_type &ToSuper(const Key &k)
-  { return reinterpret_cast<const super_key_type &>(k); }
-  inline static const Key &ToSelf(const super_key_type &k)
-  { return reinterpret_cast<const Key &>(k); }
+/**
+ * Specialized version of LightMultiMap for maps whose values are castable to
+ * void *, but haven't a customized comparator.
+ * Note: This specialization uses std::less<_CAST(Key)> (might be
+ * std::less<void *>) might change the order of the values in the map.
+ */
+template <typename Key>
+class LightSet<Key, std::less<Key>, true>
+    : public LightSetBase<Key, std::less<_CAST(Key)>, std::set<_CAST(Key),
+          std::less<_CAST(Key)>, LokiAllocator<_CAST(Key)> > > {
+ public:
+  typedef LightSetBase<Key, std::less<Key>, std::set<_CAST(Key),
+      std::less<_CAST(Key)>, LokiAllocator<_CAST(Key)> > > Super;
+  LightSet() { }
+  LightSet(const std::less<Key> &comp) : Super(comp) { }
+  LightSet(const LightSet &x) : Super(x) { }
+  template <typename I> LightSet(I first, I last) : Super(first, last) { }
+  LightSet &operator=(const LightSet &x)
+  { Super::operator=(x); return *this; }
 };
 
 /**
@@ -607,7 +596,7 @@ class LightSet : public std::set<_CAST(Key), CastCompare<Key, Compare>,
  */
 template <typename Key, typename Compare>
 class LightSet<Key, Compare, false>
-    : public std::set<Key, Compare, LokiAllocator<Key> > {
+   : public std::set<Key, Compare, LokiAllocator<Key> > {
  public:
   typedef std::set<Key, Compare, LokiAllocator<Key> > Super;
   LightSet() { }

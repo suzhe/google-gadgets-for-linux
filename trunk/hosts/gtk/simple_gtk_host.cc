@@ -845,7 +845,7 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
-  typedef std::map<int, GadgetInfo> GadgetInfoMap;
+  typedef LightMap<int, GadgetInfo> GadgetInfoMap;
   GadgetInfoMap gadgets_;
 
   GadgetBrowserHost gadget_browser_host_;

@@ -133,10 +133,10 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   mutable int ref_count_;
   bool registering_class_;
 
-  typedef std::map<const char *, PropertyInfo,
+  typedef LightMap<const char *, PropertyInfo,
                    GadgetCharPtrComparator> PropertyInfoMap;
 
-  class ClassInfoMap : public std::map<uint64_t, PropertyInfoMap> {
+  class ClassInfoMap : public LightMap<uint64_t, PropertyInfoMap> {
    public:
     ~ClassInfoMap() {
       ClassInfoMap::iterator it = this->begin();
@@ -167,7 +167,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
     int obj_property_count;
     int total_created;
   };
-  typedef std::map<uint64_t, ClassStatInfo> ClassStatMap;
+  typedef LightMap<uint64_t, ClassStatInfo> ClassStatMap;
   struct ClassStat {
     ~ClassStat() {
       // Don't use LOG because the logger may be unavailable now.

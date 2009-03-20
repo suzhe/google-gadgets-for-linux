@@ -1647,7 +1647,7 @@ class View::Impl : public SmallObject<> {
 
   // Note: though other things are case-insenstive, this map is case-sensitive,
   // to keep compatible with the Windows version.
-  typedef std::map<std::string, BasicElement *> ElementsMap;
+  typedef LightMap<std::string, BasicElement *> ElementsMap;
   // Put all_elements_ here to make it the last member to be destructed,
   // because destruction of children_ needs it.
   ElementsMap all_elements_;

@@ -331,7 +331,7 @@ class GoogleGadgetManager : public GadgetManagerInterface {
   InstanceStatuses instance_statuses_;
 
   // Set of gadgets each of which has at least one active instance.
-  std::set<std::string> active_gadgets_;
+  LightSet<std::string> active_gadgets_;
 
   Signal1<bool, int> new_instance_signal_;
   Signal1<void, int> remove_instance_signal_;

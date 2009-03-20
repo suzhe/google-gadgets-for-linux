@@ -421,7 +421,7 @@ class ScriptablePerfmon::Impl : public SmallObject<> {
     }
   }
 
-  typedef std::map<std::string, Counter *> CounterMap;
+  typedef LightMap<std::string, Counter *> CounterMap;
   CounterMap counters_;
   PerfmonInterface *perfmon_;
   Gadget *gadget_;

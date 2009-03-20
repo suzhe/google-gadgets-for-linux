@@ -83,6 +83,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  img_element.h \
 			  item_element.h \
 			  label_element.h \
+			  light_map.h \
 			  listbox_element.h \
 			  locales.h \
 			  localized_file_manager.h \

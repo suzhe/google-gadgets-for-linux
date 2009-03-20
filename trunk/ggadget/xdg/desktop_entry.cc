@@ -116,7 +116,7 @@ class DesktopEntry::Impl {
 
   bool ReadBoolEntry(const char *key, bool *result) {
     ASSERT(key);
-    std::map<std::string, std::string>::const_iterator it = entries_.find(key);
+    LightMap<std::string, std::string>::const_iterator it = entries_.find(key);
     if (it != entries_.end()) {
       if (result)
         *result = (it->second == "1" || it->second == "true");
@@ -127,7 +127,7 @@ class DesktopEntry::Impl {
 
   bool ReadStringEntry(const char *key, std::string *result) {
     ASSERT(key);
-    std::map<std::string, std::string>::const_iterator it = entries_.find(key);
+    LightMap<std::string, std::string>::const_iterator it = entries_.find(key);
     if (it != entries_.end()) {
       if (result)
         *result = it->second;
@@ -141,7 +141,7 @@ class DesktopEntry::Impl {
     std::string language, territory;
     if (!GetSystemLocaleInfo(&language, &territory))
       return ReadStringEntry(key, result);
-    std::map<std::string, std::string>::const_iterator it;
+    LightMap<std::string, std::string>::const_iterator it;
     std::string locale_key =
         StringPrintf("%s[%s_%s]", key, language.c_str(), territory.c_str());
     it = entries_.find(locale_key);
@@ -201,7 +201,7 @@ class DesktopEntry::Impl {
 
   DesktopEntry::Type type_;
   std::string file_;
-  std::map<std::string, std::string> entries_;
+  LightMap<std::string, std::string> entries_;
 };
 
 DesktopEntry::DesktopEntry() : impl_(new Impl()) {
