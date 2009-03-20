@@ -16,7 +16,6 @@
 
 #include "js_script_context.h"
 
-#include <map>
 #include <set>
 #include <cstdlib>
 #include <sys/types.h>
@@ -28,6 +27,7 @@
 #include <ggadget/string_utils.h>
 #include <ggadget/scriptable_function.h>
 #include <ggadget/scoped_ptr.h>
+#include <ggadget/light_map.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/js/jscript_massager.h>
 #include "js_script_runtime.h"
@@ -526,7 +526,7 @@ class JSScriptContext::Impl : public SmallObject<> {
 
     // first = function object property (JSObjectRef)
     // second = native slot wrapping the function object (JSFunctionSlot*)
-    typedef std::map<void *, void *> MethodSlotMap;
+    typedef LightMap<void *, void *> MethodSlotMap;
     MethodSlotMap method_slots_;
 
     Impl *impl_;
@@ -2196,13 +2196,13 @@ class JSScriptContext::Impl : public SmallObject<> {
   JSObjectRef array_class_obj_;
 
   // first: scriptable, second: js object (wrapper)
-  typedef std::map<void *, void *> ScriptableJSWrapperMap;
+  typedef LightMap<void *, void *> ScriptableJSWrapperMap;
   ScriptableJSWrapperMap scriptable_js_wrappers_;
 
-  typedef std::set<void *> JSFunctionSlotMap;
+  typedef LightSet<void *> JSFunctionSlotMap;
   JSFunctionSlotMap js_function_slots_;
 
-  typedef std::set<void *> JSScriptableWrapperMap;
+  typedef LightSet<void *> JSScriptableWrapperMap;
   JSScriptableWrapperMap js_scriptable_wrappers_;
 
   Signal2<bool, const char *, int> script_blocked_signal_;
