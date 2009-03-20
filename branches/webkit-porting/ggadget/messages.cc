@@ -211,7 +211,7 @@ class Messages::Impl : public SmallObject<> {
     return messages_catalog_.size() != 0;
   }
 
-  typedef std::map<std::string, StringMap> MessagesCatalog;
+  typedef LightMap<std::string, StringMap> MessagesCatalog;
   MessagesCatalog messages_catalog_;
   std::string system_locale_;
   std::string default_locale_;

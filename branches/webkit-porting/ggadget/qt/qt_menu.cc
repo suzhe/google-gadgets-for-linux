@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <ggadget/light_map.h>
 #include <ggadget/logger.h>
 #include <ggadget/slot.h>
 #include "qt_menu.h"
@@ -44,7 +45,7 @@ class QtMenu::Impl {
   }
 
   void SetItemStyle(const char *item_text, int style) {
-    std::map<std::string, MenuItemInfo*>::iterator iter;
+    LightMap<std::string, MenuItemInfo*>::iterator iter;
     iter = menu_items_.find(item_text);
     if (iter == menu_items_.end()) return;
     QAction *action = iter->second->action_;
@@ -59,7 +60,7 @@ class QtMenu::Impl {
   }
 
   void AddAction(QAction *action, int priority) {
-    std::map<int, QAction*>::iterator iter = prio_map_.begin();
+    LightMap<int, QAction*>::iterator iter = prio_map_.begin();
     int prev = -1, next = -1;
 
     for (; iter != prio_map_.end(); iter++) {
@@ -109,9 +110,9 @@ class QtMenu::Impl {
 
   QMenu *GetNativeMenu() { return qt_menu_; }
   QMenu *qt_menu_;
-  std::map<std::string, MenuItemInfo*> menu_items_;
+  LightMap<std::string, MenuItemInfo*> menu_items_;
   // store the first action of each priority
-  std::map<int, QAction*> prio_map_;
+  LightMap<int, QAction*> prio_map_;
 };
 
 QtMenu::QtMenu(QMenu *qmenu)

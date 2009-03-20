@@ -17,7 +17,6 @@
 #include "run_once.h"
 #include <cstdlib>
 #include <list>
-#include <map>
 #include <signal.h>
 #include <string>
 #include <sys/select.h>
@@ -26,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include "light_map.h"
 #include "main_loop_interface.h"
 #include "signals.h"
 
@@ -73,7 +73,7 @@ class RunOnce::Impl : public WatchCallbackInterface {
       close(fd_);
     } else {
       // Removes watch for all running clients.
-      for (std::map<int, Session>::iterator ite = connections_.begin();
+      for (LightMap<int, Session>::iterator ite = connections_.begin();
            ite != connections_.end();
            ++ite) {
         GetGlobalMainLoop()->RemoveWatch(ite->second.watch_id);
@@ -152,7 +152,7 @@ end:
     if ((size = read(fd, &buf, kBufferSize)) > 0) {
       connections_[fd].data += std::string(buf, size);
     } else {
-      std::map<int, Session>::iterator ite = connections_.find(fd);
+      LightMap<int, Session>::iterator ite = connections_.find(fd);
       if (ite != connections_.end()) {
         on_message_(ite->second.data);
         main_loop->RemoveWatch(watch_id);
@@ -201,7 +201,7 @@ end:
   bool is_running_;
   int watch_id_;
   int fd_;
-  std::map<int, Session> connections_;
+  LightMap<int, Session> connections_;
   Signal1<void, const std::string &> on_message_;
 };
 

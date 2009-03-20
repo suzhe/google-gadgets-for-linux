@@ -1049,7 +1049,7 @@ class BasicElement::Impl : public SmallObject<> {
   static int total_draw_count_;
   static int total_queue_draw_count_;
 
-  static std::map<uint64_t, bool> class_has_children_;
+  static LightMap<uint64_t, bool> class_has_children_;
 #endif
 
   ViewInterface::HitTest hittest_   : 6;
@@ -1082,7 +1082,7 @@ class BasicElement::Impl : public SmallObject<> {
 int BasicElement::Impl::total_debug_color_index_ = 0;
 int BasicElement::Impl::total_draw_count_ = 0;
 int BasicElement::Impl::total_queue_draw_count_ = 0;
-std::map<uint64_t, bool> BasicElement::Impl::class_has_children_;
+LightMap<uint64_t, bool> BasicElement::Impl::class_has_children_;
 #endif
 
 // Must sync with ViewInterface::CursorType enumerates

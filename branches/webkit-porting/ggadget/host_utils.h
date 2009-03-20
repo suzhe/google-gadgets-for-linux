@@ -17,9 +17,9 @@
 #ifndef GGADGET_HOST_UTILS_H__
 #define GGADGET_HOST_UTILS_H__
 
-#include <map>
 #include <string>
 #include <ggadget/common.h>
+#include <ggadget/light_map.h>
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
 #include <ggadget/view_interface.h>
@@ -85,7 +85,7 @@ void GetPopupPosition(int x, int y, int w, int h,
  * @return @c true if OK button is clicked, otherwise @c false.
  */
 bool ShowDialogView(HostInterface *host, const char *location, int flags,
-                    const std::map<std::string, Variant> &params);
+                    const LightMap<std::string, Variant> &params);
 
 /**
  * Sets up a default handler to Gadget's OpenFeedbackURL signal.

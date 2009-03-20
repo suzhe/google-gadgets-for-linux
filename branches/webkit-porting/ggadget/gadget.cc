@@ -1263,7 +1263,7 @@ void Gadget::ShowAboutDialog() {
   if (ContainsHTML(about.c_str()))
     about = ExtractTextFromHTML(about.c_str());
 
-  std::map<std::string, Variant> params;
+  LightMap<std::string, Variant> params;
   params["title"] = Variant(title);
   params["copyright"] = Variant(copyright);
   params["about"] = Variant(about);

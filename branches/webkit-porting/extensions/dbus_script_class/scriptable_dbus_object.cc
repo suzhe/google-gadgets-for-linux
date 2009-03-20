@@ -428,7 +428,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
   DBusProxy *proxy_;
   int timeout_;
   Connection *on_signal_emit_connection_;
-  typedef std::map<std::string, DBusSignal *> SignalMap;
+  typedef LightMap<std::string, DBusSignal *> SignalMap;
   SignalMap signals_;
 };
 

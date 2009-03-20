@@ -32,11 +32,11 @@ namespace xdg {
 static const int kUpdateInterval = 5;
 
 // Store icon dirs and their mtime
-static std::map<std::string, int> *icon_dirs = NULL;
+static LightMap<std::string, int> *icon_dirs = NULL;
 
 // Store loaded icon_theme
 class IconTheme;
-static std::map<std::string, IconTheme*> *icon_themes = NULL;
+static LightMap<std::string, IconTheme*> *icon_themes = NULL;
 
 // Store icon formats
 static std::vector<std::string> *icon_formats = NULL;
@@ -72,10 +72,10 @@ class IconTheme {
         current_info_(NULL) {
     // Iterate on all icon directories to find directories of the specified
     // theme and load the first encountered index.theme
-    std::map<std::string, int>::iterator iter;
+    LightMap<std::string, int>::iterator iter;
     std::string theme_path;
     for (iter = icon_dirs->begin(); iter != icon_dirs->end(); ++iter) {
-      theme_path = (*iter).first + name;
+      theme_path = iter->first + name;
       DLOG("Trying find theme in %s", theme_path.c_str());
       if (access(theme_path.c_str(), R_OK|X_OK))
         continue;
@@ -238,14 +238,14 @@ class IconTheme {
 
   std::string GetIconPath(const std::string &icon_name, int size, bool inherits) {
     DLOG("GetIconPath:%s, %d", icon_name.c_str(), size);
-    std::map<std::string, int>::iterator subdir_iter;
+    LightMap<std::string, int>::iterator subdir_iter;
     std::list<std::string>::iterator dir_iter;
     std::string icon_path;
 
     for (subdir_iter = subdirs_.begin(); subdir_iter != subdirs_.end(); ++subdir_iter) {
-      SubDirInfo *info = &info_array_[(*subdir_iter).second];
+      SubDirInfo *info = &info_array_[subdir_iter->second];
       if (MatchesSize(info, size) == 0) {
-        icon_path = GetIconPathUnderSubdir(icon_name, (*subdir_iter).first);
+        icon_path = GetIconPathUnderSubdir(icon_name, subdir_iter->first);
         if (icon_path != "") return icon_path;
       }
     }
@@ -253,10 +253,10 @@ class IconTheme {
     int delta = 9999;
 
     for (subdir_iter = subdirs_.begin(); subdir_iter != subdirs_.end(); ++subdir_iter) {
-      SubDirInfo *info = &info_array_[(*subdir_iter).second];
+      SubDirInfo *info = &info_array_[subdir_iter->second];
       int d = abs(MatchesSize(info, size));
       if (d < delta) {
-        std::string path = GetIconPathUnderSubdir(icon_name, (*subdir_iter).first);
+        std::string path = GetIconPathUnderSubdir(icon_name, subdir_iter->first);
         if (path != "") {
           delta = d;
           icon_path = path;
@@ -282,7 +282,7 @@ class IconTheme {
   std::list<std::string> dirs_;
 
   // store the subdirs of this theme and array index of info_array_
-  std::map<std::string, int> subdirs_;
+  LightMap<std::string, int> subdirs_;
   SubDirInfo *info_array_;
   SubDirInfo *current_info_;
   std::string inherits_;
@@ -318,10 +318,10 @@ void AddIconDir(const std::string &dir) {
 
 static std::string LookupFallbackIcon(const std::string &icon_name) {
   std::string icon;
-  std::map<std::string, int>::iterator iter;
+  LightMap<std::string, int>::iterator iter;
   for (iter = icon_dirs->begin(); iter != icon_dirs->end(); ++iter) {
     for (size_t i = 0; i < icon_formats->size(); ++i) {
-      icon = (*iter).first + icon_name + (*icon_formats)[i];
+      icon = iter->first + icon_name + (*icon_formats)[i];
       if (!access(icon.c_str(), R_OK)) {
         DLOG("Found %s", icon.c_str());
         return icon;
@@ -445,8 +445,8 @@ static void EnsureUpdated() {
   time_t now = t.tv_sec;
 
   if (last_check_time == 0) {
-    icon_dirs = new std::map<std::string, int>;
-    icon_themes = new std::map<std::string, IconTheme*>;
+    icon_dirs = new LightMap<std::string, int>;
+    icon_themes = new LightMap<std::string, IconTheme*>;
     icon_formats = new std::vector<std::string>;
     EnableSvgIcon(false);
     InitIconDir();

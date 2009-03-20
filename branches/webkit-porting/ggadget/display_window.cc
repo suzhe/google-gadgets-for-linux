@@ -486,7 +486,7 @@ class DisplayWindow::Impl : public SmallObject<> {
   View *view_;
   Signal2<void, DisplayWindow *, ButtonId> onclose_signal_;
   int min_x_, min_y_, max_x_, max_y_;
-  typedef std::multimap<std::string, Control *,
+  typedef LightMultiMap<std::string, Control *,
                         GadgetStringComparator> ControlsMap;
   ControlsMap controls_;
 };
