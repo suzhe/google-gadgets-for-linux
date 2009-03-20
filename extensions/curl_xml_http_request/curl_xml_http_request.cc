@@ -1100,7 +1100,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
     CURL *share_ref;
   };
 
-  typedef std::map<int, Session> Sessions;
+  typedef LightMap<int, Session> Sessions;
   Sessions sessions_;
   int next_session_id_;
   std::string default_user_agent_;

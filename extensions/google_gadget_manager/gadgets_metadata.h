@@ -96,7 +96,7 @@ struct GadgetInfo {
   uint64_t accessed_date;
 };
 
-typedef std::map<std::string, GadgetInfo> GadgetInfoMap;
+typedef LightMap<std::string, GadgetInfo> GadgetInfoMap;
 
 class GadgetsMetadata {
  public:

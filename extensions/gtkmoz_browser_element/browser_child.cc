@@ -77,8 +77,11 @@
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
+#include <ggadget/light_map.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+
+using ggadget::LightMap;
 
 #define NO_NAMESPACE
 #include "browser_child.h"
@@ -105,9 +108,9 @@ struct BrowserObjectInfo {
   JSObject *js_object;
 };
 
-typedef std::map<size_t, BrowserObjectInfo> BrowserObjectMap;
+typedef LightMap<size_t, BrowserObjectInfo> BrowserObjectMap;
 class HostObjectWrapper;
-typedef std::map<size_t, HostObjectWrapper *> HostObjectMap;
+typedef LightMap<size_t, HostObjectWrapper *> HostObjectMap;
 
 struct BrowserInfo {
   BrowserInfo() : embed(NULL), browser_id(0), check_load_timer(0) { }
@@ -120,7 +123,7 @@ struct BrowserInfo {
 
 static size_t g_browser_object_seq = 0;
 
-typedef std::map<size_t, BrowserInfo> BrowserMap;
+typedef LightMap<size_t, BrowserInfo> BrowserMap;
 static BrowserMap g_browsers;
 
 // The singleton GtkMozEmbed instance for temporary use when a new window

@@ -60,15 +60,15 @@ class DBusProxy::Impl : public SmallObject<> {
     ArgPrototypeVector in_args;
     ArgPrototypeVector out_args;
   };
-  typedef std::map<std::string, MethodSignalPrototype> MethodSignalPrototypeMap;
+  typedef LightMap<std::string, MethodSignalPrototype> MethodSignalPrototypeMap;
 
   struct PropertyPrototype {
     PropertyAccess access;
     std::string signature;
   };
-  typedef std::map<std::string, PropertyPrototype> PropertyPrototypeMap;
+  typedef LightMap<std::string, PropertyPrototype> PropertyPrototypeMap;
 
-  typedef std::map<int, DBusPendingCall *> PendingCallMap;
+  typedef LightMap<int, DBusPendingCall *> PendingCallMap;
 
   // Class to hold owner<->names mapping information.
   class OwnerNamesCache {
@@ -147,11 +147,11 @@ class DBusProxy::Impl : public SmallObject<> {
     };
 
     // first: owner, second: names
-    typedef std::map<std::string, StringVector > OwnerNamesMap;
+    typedef LightMap<std::string, StringVector > OwnerNamesMap;
     OwnerNamesMap owner_names_;
 
     // first: name, second: name's information
-    typedef std::map<std::string, NameInfo> NamesInfoMap;
+    typedef LightMap<std::string, NameInfo> NamesInfoMap;
     NamesInfoMap names_info_;
   };
 
@@ -513,7 +513,7 @@ class DBusProxy::Impl : public SmallObject<> {
       return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    typedef std::map<std::string, Impl *> ProxyMap;
+    typedef LightMap<std::string, Impl *> ProxyMap;
     ProxyMap proxies_;
     OwnerNamesCache owner_names_;
 

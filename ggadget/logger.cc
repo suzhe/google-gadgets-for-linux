@@ -30,7 +30,7 @@ namespace ggadget {
 
 typedef Signal4<std::string, LogLevel, const char *, int,
                 const std::string &> LogSignal;
-typedef std::map<void *, LogSignal *> ContextSignalMap;
+typedef LightMap<void *, LogSignal *> ContextSignalMap;
 
 static bool g_log_destroyed = false;
 struct LogGlobalData {

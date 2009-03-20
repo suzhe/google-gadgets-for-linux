@@ -24,6 +24,7 @@
 #include <vector>
 #include <stdint.h>         // Integer types and macros.
 #include <ggadget/common.h>
+#include <ggadget/light_map.h>
 #include <ggadget/unicode_utils.h>
 
 namespace ggadget {
@@ -72,13 +73,13 @@ struct GadgetStringComparator {
  * Default gadget string map, case sensitivity controled by
  * @c GADGET_CASE_SENSITIVE.
  */
-typedef std::map<std::string, std::string,
+typedef LightMap<std::string, std::string,
                  GadgetStringComparator> GadgetStringMap;
 
 /**
  * Case sensitive string map.
  */
-typedef std::map<std::string, std::string> StringMap;
+typedef LightMap<std::string, std::string> StringMap;
 
 struct CaseInsensitiveCharPtrComparator {
   bool operator()(const char* s1, const char* s2) const {
@@ -92,7 +93,7 @@ struct CaseInsensitiveStringComparator {
   }
 };
 
-typedef std::map<std::string, std::string,
+typedef LightMap<std::string, std::string,
                  CaseInsensitiveStringComparator> CaseInsensitiveStringMap;
 
 typedef std::vector<std::string> StringVector;

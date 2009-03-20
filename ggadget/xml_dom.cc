@@ -1495,7 +1495,7 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   typedef DOMNodeBase<DOMElementInterface> Super;
   typedef std::vector<DOMAttr *> Attrs;
   // Maps attribute name to the index of Attrs.
-  typedef std::map<std::string, size_t> AttrsMap;
+  typedef LightMap<std::string, size_t> AttrsMap;
 
   DOMElement(DOMDocumentInterface *owner_document, const std::string &tag_name)
       : Super(owner_document, tag_name) {

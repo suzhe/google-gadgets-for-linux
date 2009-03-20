@@ -15,9 +15,17 @@
 # limitations under the License.
 #
 
-# Usage: cd to the root of the build output directory and run this script.
+# Usage: cd to the root of the build directory and run this script.
 
 CODESIGHS=third_party/codesighs
+if [ ! -d $CODESIGHS ]; then
+  # In case of in cmake's output directory.
+  CODESIGHS=../third_party/codesighs
+fi
+if [ ! -d $CODESIGHS ]; then
+  echo Error: no third_party/codesighs directory found.
+fi
+
 ALLFILES=`find . -type f -name "*.o" | grep -v /tests/ | grep -v /codesighs/`
 TSVFILE=/tmp/tsv.$$
 LASTTSVFILE=last_obj.tsv

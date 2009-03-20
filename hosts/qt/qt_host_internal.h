@@ -373,7 +373,7 @@ class QtHost::Impl : public QObject {
   DecoratedViewHost *expanded_popout_;
   DecoratedViewHost *expanded_original_;
 
-  typedef std::map<int, GadgetInfo> GadgetsMap;
+  typedef LightMap<int, GadgetInfo> GadgetsMap;
   GadgetsMap gadgets_;
 
   QMenu menu_;
