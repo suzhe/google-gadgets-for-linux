@@ -251,6 +251,7 @@ class QtViewHost::Impl : public QObject {
   void SetVisibility(bool flag) {
     if (!window_) return;
     if (flag) {
+      widget_->hide();
       widget_->show();
       widget_->raise();
       widget_->SetUndecoratedWMProperties();
