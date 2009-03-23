@@ -43,6 +43,12 @@
 //#define DEBUG_FORCE_GC
 #endif
 
+
+// TODO:
+// Current JavaScriptCore API doesn't support these features.
+// 1. GetCurrentFileAndLine()
+// 2. ScriptBlockedFeedback()
+
 namespace ggadget {
 namespace webkit {
 
