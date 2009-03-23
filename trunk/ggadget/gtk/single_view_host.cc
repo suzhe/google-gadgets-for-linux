@@ -444,6 +444,9 @@ class SingleViewHost::Impl {
     // after the window is shown.
     LoadWindowStates();
 
+    // Make sure the view is inside screen.
+    EnsureInsideScreen();
+
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
       can_close_dialog_ = false;
@@ -724,6 +727,23 @@ class SingleViewHost::Impl {
       stop_move_drag_source_ = 0;
     }
     SetCursor(ViewInterface::CURSOR_DEFAULT);
+  }
+
+  void EnsureInsideScreen() {
+    GdkScreen *screen = gtk_widget_get_screen(window_);
+    int screen_width = gdk_screen_get_width(screen);
+    int screen_height = gdk_screen_get_height(screen);
+    int win_center_x = win_x_ + win_width_ / 2;
+    int win_center_y = win_y_ + win_width_ / 2;
+
+    if (win_center_x < 0 || win_center_x >= screen_width ||
+        win_center_y < 0 || win_center_y >= screen_height) {
+      DLOG("View is out of screen: sw: %d, sh: %d, x: %d, y: %d",
+           screen_width, screen_height, win_center_x, win_center_y);
+      win_x_ = (screen_width - win_width_) / 2;
+      win_y_ = (screen_height - win_height_) / 2;
+      gtk_window_move(GTK_WINDOW(window_), win_x_, win_y_);
+    }
   }
 
   // gtk signal handlers.
