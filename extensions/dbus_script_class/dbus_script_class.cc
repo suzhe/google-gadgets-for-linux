@@ -73,7 +73,7 @@ extern "C" {
     // Only calling inside unittest can have NULl gadget and permissions.
     if (permissions &&
         !permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
-      LOG("No permissions to access D-Bus.");
+      DLOG("No permission to access D-Bus.");
       return true;
     }
     if (context) {
