@@ -202,7 +202,7 @@ extern "C" {
 
     // Check permissions.
     if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
-      LOG("No permission to access device status.");
+      DLOG("No permission to access device status.");
       return true;
     }
 
