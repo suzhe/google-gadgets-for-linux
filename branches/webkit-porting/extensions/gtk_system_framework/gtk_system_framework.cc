@@ -399,7 +399,7 @@ extern "C" {
       reg_system->RegisterMethod("getFileIcon",
           NewSlot(ggadget::framework::gtk_system_framework::GetFileIcon));
     } else {
-      LOG("No permission to read file.");
+      DLOG("No permission to read file.");
     }
 
     if (permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
@@ -408,7 +408,7 @@ extern "C" {
       reg_system->RegisterVariantConstant("screen",
                                           Variant(&g_script_screen_));
     } else {
-      LOG("No permission to access device status.");
+      DLOG("No permission to access device status.");
     }
     return true;
   }

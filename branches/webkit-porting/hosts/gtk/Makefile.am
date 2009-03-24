@@ -44,6 +44,12 @@ ggl_gtk_LDADD	= $(GTK2_LIBS) \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
+# Link to libggadget-npapi explicitly if necessary,
+# otherwise wrong library might be linked during linking stage.
+if GGL_BUILD_LIBGGADGET_NPAPI
+  ggl_gtk_LDADD += $(top_builddir)/ggadget/npapi/libggadget-npapi@GGL_EPOCH@.la
+endif
+
 # For static build mode, all necessary modules must be linked into binary
 # directly.
 if GGL_DISABLE_SHARED
