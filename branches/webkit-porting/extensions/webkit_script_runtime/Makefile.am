@@ -28,22 +28,22 @@ noinst_HEADERS = \
 				js_script_runtime.h \
 				json.h
 
-lib_LTLIBRARIES = libggadget-webkitjs.la
+lib_LTLIBRARIES = libggadget-webkitjs@GGL_EPOCH@.la
 
-libggadget_webkitjs_la_SOURCES = \
+libggadget_webkitjs@GGL_EPOCH@_la_SOURCES = \
 				converter.cc \
 				js_script_context.cc \
 				js_script_runtime.cc \
 				json.cc
 
-libggadget_webkitjs_la_CXXFLAGS = \
+libggadget_webkitjs@GGL_EPOCH@_la_CXXFLAGS = \
 				$(DEFAULT_COMPILE_FLAGS)
 
-libggadget_webkitjs_la_CPPFLAGS = \
+libggadget_webkitjs@GGL_EPOCH@_la_CPPFLAGS = \
 				$(JAVA_SCRIPT_CORE_CFLAGS) \
 				$(PREDEFINED_MACROS)
 
-libggadget_webkitjs_la_LIBADD = \
+libggadget_webkitjs@GGL_EPOCH@_la_LIBADD = \
 				$(JAVA_SCRIPT_CORE_LIBS) \
 				$(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 				$(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
@@ -64,7 +64,7 @@ webkit_script_runtime_la_CPPFLAGS = \
 webkit_script_runtime_la_LIBADD = \
 				$(JAVA_SCRIPT_CORE_LIBS) \
 				$(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-				libggadget-webkitjs.la
+				libggadget-webkitjs@GGL_EPOCH@.la
 
 webkit_script_runtime_la_LDFLAGS = \
 				-avoid-version \

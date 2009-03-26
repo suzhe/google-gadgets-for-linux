@@ -46,7 +46,7 @@ gtkwebkit_browser_element_la_LDFLAGS = \
 
 if GGL_BUILD_WEBKIT_SCRIPT_RUNTIME
 gtkwebkit_browser_element_la_LIBADD += \
-	$(top_builddir)/extensions/webkit_script_runtime/libggadget-webkitjs.la
+	$(top_builddir)/extensions/webkit_script_runtime/libggadget-webkitjs@GGL_EPOCH@.la
 endif
 endif
 

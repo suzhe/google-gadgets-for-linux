@@ -25,7 +25,7 @@ AM_CPPFLAGS		= $(PREDEFINED_MACROS) \
 
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-LDADD			= ../libggadget-webkitjs.la \
+LDADD			= ../libggadget-webkitjs@GGL_EPOCH@.la \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la \
