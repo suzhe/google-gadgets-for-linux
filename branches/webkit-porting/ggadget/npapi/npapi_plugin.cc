@@ -25,6 +25,7 @@
 #include <ggadget/basic_element.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/graphics_interface.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/permissions.h>
@@ -466,10 +467,18 @@ class Plugin::Impl : public SmallObject<> {
       Rectangle rect(invalid_rect->left, invalid_rect->top,
                      invalid_rect->right - invalid_rect->left,
                      invalid_rect->bottom - invalid_rect->top);
-      // The current plugins seems always invalid the whole rect.
-      // Otherwise we need to consider the zoom factor of the view.
-      element_->QueueDrawRect(rect);
       dirty_rect_.Union(rect);
+
+      // QueueDrawRect must be in the element's original coordinates, so zoom
+      // must be considered.
+      double zoom = element_->GetView()->GetGraphics()->GetZoom();
+      if (zoom != 1.0) {
+        rect.x /= zoom;
+        rect.y /= zoom;
+        rect.w /= zoom;
+        rect.h /= zoom;
+      }
+      element_->QueueDrawRect(rect);
     }
   }
 
