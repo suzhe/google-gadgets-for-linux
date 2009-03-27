@@ -19,7 +19,7 @@ SET(LIBS
   ggadget${GGL_EPOCH}
   ggadget-js${GGL_EPOCH}
   editline
-  ggadget-webkitjs
+  ggadget-webkitjs${GGL_EPOCH}
   ${JAVA_SCRIPT_CORE_LIBRARIES}
 )
 

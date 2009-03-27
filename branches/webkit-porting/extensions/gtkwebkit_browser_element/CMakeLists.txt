@@ -14,29 +14,21 @@
 #  limitations under the License.
 #
 
-IF(GGL_BUILD_WEBKIT_SCRIPT_RUNTIME)
+IF(GGL_BUILD_GTKWEBKIT_BROWSER_ELEMENT)
 
-APPLY_CONFIG(JAVA_SCRIPT_CORE)
+APPLY_CONFIG(GTK2)
+APPLY_CONFIG(GTKWEBKIT)
 
-ADD_SUBDIRECTORY(tests)
+SET(SRCS browser_element.cc)
 
-SET(SRCS
-  converter.cc
-  js_script_context.cc
-  js_script_runtime.cc
-  json.cc
-)
-
-ADD_LIBRARY(ggadget-webkitjs${GGL_EPOCH} SHARED ${SRCS})
-
-ADD_MODULE(webkit-script-runtime webkit_script_runtime.cc)
-TARGET_LINK_LIBRARIES(webkit-script-runtime
-  ggadget-webkitjs${GGL_EPOCH}
+ADD_MODULE(gtkwebkit-browser-element ${SRCS})
+TARGET_LINK_LIBRARIES(gtkwebkit-browser-element
   ggadget${GGL_EPOCH}
-  ggadget-js${GGL_EPOCH}
-  ${JAVA_SCRIPT_CORE_LIBRARIES}
+  ggadget-webkitjs${GGL_EPOCH}
+  ${GTK2_LIBRARIES}
+  ${GTKWEBKIT_LIBRARIES}
   dl
 )
-OUTPUT_MODULE(webkit-script-runtime)
+OUTPUT_MODULE(gtkwebkit-browser-element)
 
-ENDIF(GGL_BUILD_WEBKIT_SCRIPT_RUNTIME)
+ENDIF(GGL_BUILD_GTKWEBKIT_BROWSER_ELEMENT)
