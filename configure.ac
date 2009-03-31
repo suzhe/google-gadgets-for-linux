@@ -711,6 +711,7 @@ if test x$build_libggadget_gtk = xyes; then
   PKG_CHECK_MODULES(GTK2,
                     [cairo >= 1.0.0
                      pango  >= 1.10.0
+                     glib-2.0 >= 2.10.0
                      gtk+-2.0 >= 2.8.0
                      gdk-2.0 >= 2.8.0
                      gthread-2.0 >= 2.8.0
