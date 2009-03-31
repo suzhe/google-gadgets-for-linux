@@ -176,11 +176,23 @@ class GtkEditImpl {
   void SetCursor(int cursor);
   /** Get the most reasonable character offset according to the pixel
    * coordinate in the layout */
-  int XYToOffset(int x, int y);
+  int XYToTextIndex(int x, int y);
   /** Get the offset range that is currently selected,in number of characters.*/
   bool GetSelectionBounds(int *start, int *end);
   /** Set the offest range that should be selected, in number of characters. */
   void SetSelectionBounds(int selection_bound, int cursor);
+
+  /** Convert index in text_ into index in layout text. */
+  int TextIndexToLayoutIndex(int text_index, bool consider_preedit_cursor);
+
+  /** Convert index in layout text into index in text_. */
+  int LayoutIndexToTextIndex(int layout_index);
+
+  /** Get char length at index, in number of bytes. */
+  int GetCharLength(int index);
+
+  /** Get previous char length before index, in number of bytes. */
+  int GetPrevCharLength(int index);
 
   /** Insert text at current caret position */
   void EnterText(const char *str);
@@ -279,22 +291,26 @@ class GtkEditImpl {
    */
   std::string password_char_;
 
+  /** Last time of mouse double click event. */
+  uint64_t last_dblclick_time_;
+
   /** Canvas width */
   int width_;
   /** Canvas height */
   int height_;
 
-  /** The current cursor position in number of characters */
+  /** The current cursor position in number of bytes. */
   int cursor_;
-  /** The preedit cursor position within the preedit string */
+  /**
+   * The preedit cursor position within the preedit string,
+   * in number of bytes.
+   */
   int preedit_cursor_;
   /**
-   * The current selection bound in number of characters,
+   * The current selection bound in number of bytes,
    * range between cursor_ and selection_bound_ are selected.
    */
   int selection_bound_;
-  /** Length of current text in number of chars */
-  int text_length_;
 
   /** X offset of current scroll, in pixels */
   int scroll_offset_x_;
