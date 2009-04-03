@@ -134,6 +134,10 @@ else
     if test "x$ggl_check_libmozjs_18_branch" = "xyes"; then
       LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DMOZILLA_1_8_BRANCH"
     fi
+    AC_CHECK_FUNC(JS_SetOperationCallback,
+                  [LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JS_SetOperationCallback"])
+    AC_CHECK_FUNC(JS_TriggerOperationCallback,
+                  [LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JS_TriggerOperationCallback"])
     ifelse([$2], , :, [$2])
     AC_MSG_RESULT([yes (CFLAGS=$LIBMOZJS_CFLAGS  LIBS=$LIBMOZJS_LIBS)])
   else

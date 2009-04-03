@@ -107,16 +107,12 @@ MOZJS_API(void, JS_ReportErrorNumber, (JSContext *cx, JSErrorCallback errorCallb
 MOZJS_API(JSBool, JS_ReportPendingException, (JSContext *cx));
 MOZJS_API(JSBool, JS_ReportWarning, (JSContext *cx, const char *format, ...));
 MOZJS_API(JSBool, JS_ResolveStub, (JSContext *cx, JSObject *obj, jsval id));
-MOZJS_API(JSBranchCallback, JS_SetBranchCallback, (JSContext *cx, JSBranchCallback cb));
 MOZJS_API(void, JS_SetContextPrivate, (JSContext *cx, void *data));
 MOZJS_API(JSBool, JS_SetElement, (JSContext *cx, JSObject *obj, jsint index, jsval *vp));
 MOZJS_API(JSErrorReporter, JS_SetErrorReporter, (JSContext *cx, JSErrorReporter er));
 MOZJS_API(void, JS_SetGCParameter, (JSRuntime *rt, JSGCParamKey key, uint32 value));
 MOZJS_API(void, JS_SetGlobalObject, (JSContext *cx, JSObject *obj));
 MOZJS_API(void, JS_SetLocaleCallbacks, (JSContext *cx, JSLocaleCallbacks *callbacks));
-#ifdef JS_OPERATION_WEIGHT_BASE
-MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback, uint32 operationLimit));
-#endif
 MOZJS_API(uint32, JS_SetOptions, (JSContext *cx, uint32 options));
 MOZJS_API(void, JS_SetPendingException, (JSContext *cx, jsval v));
 MOZJS_API(JSBool, JS_SetPrivate, (JSContext *cx, JSObject *obj, void *data));
@@ -140,14 +136,13 @@ MOZJS_API(JSClass *, JS_GetClass, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
 #endif
 
-#undef MOZJS_API
-
 #ifdef JS_OPERATION_WEIGHT_BASE
-#define MOZJS_FUNC_JS_SetOperationCallback \
-  MOZJS_FUNC(JS_SetOperationCallback)
+MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback, uint32 operationLimit));
 #else
-#define MOZJS_FUNC_JS_SetOperationCallback
+MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback));
 #endif
+
+#undef MOZJS_API
 
 #define MOZJS_FUNCTIONS \
   MOZJS_FUNC(JS_AddNamedRootRT) \
@@ -221,13 +216,13 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
   MOZJS_FUNC(JS_ReportPendingException) \
   MOZJS_FUNC(JS_ReportWarning) \
   MOZJS_FUNC(JS_ResolveStub) \
-  MOZJS_FUNC(JS_SetBranchCallback) \
   MOZJS_FUNC(JS_SetContextPrivate) \
   MOZJS_FUNC(JS_SetElement) \
   MOZJS_FUNC(JS_SetErrorReporter) \
   MOZJS_FUNC(JS_SetGCParameter) \
   MOZJS_FUNC(JS_SetGlobalObject) \
   MOZJS_FUNC(JS_SetLocaleCallbacks) \
+  MOZJS_FUNC(JS_SetOperationCallback) \
   MOZJS_FUNC(JS_SetOptions) \
   MOZJS_FUNC(JS_SetPendingException) \
   MOZJS_FUNC(JS_SetPrivate) \
@@ -246,7 +241,6 @@ MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
   MOZJS_FUNC(JS_malloc) \
   MOZJS_FUNC(JS_realloc) \
   MOZJS_FUNC(JS_GetClass) \
-  MOZJS_FUNC_JS_SetOperationCallback
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
 
@@ -321,7 +315,6 @@ MOZJS_FUNCTIONS
 #define JS_ReportErrorNumber ggadget::libmozjs::JS_ReportErrorNumber.func
 #define JS_ReportPendingException ggadget::libmozjs::JS_ReportPendingException.func
 #define JS_ReportWarning ggadget::libmozjs::JS_ReportWarning.func
-#define JS_SetBranchCallback ggadget::libmozjs::JS_SetBranchCallback.func
 #define JS_SetContextPrivate ggadget::libmozjs::JS_SetContextPrivate.func
 #define JS_SetElement ggadget::libmozjs::JS_SetElement.func
 #define JS_SetErrorReporter ggadget::libmozjs::JS_SetErrorReporter.func

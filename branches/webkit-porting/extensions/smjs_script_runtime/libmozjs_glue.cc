@@ -104,7 +104,6 @@ namespace libmozjs {
 #undef JS_ReportPendingException
 #undef JS_ReportWarning
 #undef JS_ResolveStub
-#undef JS_SetBranchCallback
 #undef JS_SetContextPrivate
 #undef JS_SetElement
 #undef JS_SetErrorReporter
@@ -132,17 +131,12 @@ namespace libmozjs {
 #undef JS_GetClass
 
 // Define real function pointers.
-#ifdef _DEBUG
 #define MOZJS_FUNC(fname) \
   static void fname##NotFoundHandler() { \
     LOGE("libmozjs symbol %s is missing.", #fname); \
     abort(); \
   } \
   fname##Type fname = { (fname##FuncType)fname##NotFoundHandler };
-#else
-#define MOZJS_FUNC(fname) \
-  fname##Type fname = { NULL };
-#endif
 
 MOZJS_FUNCTIONS
 
@@ -202,7 +196,7 @@ bool LibmozjsGlueStartup() {
 
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.0.*", PR_TRUE
+    "1.9.1", PR_TRUE
   };
 
   rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0,
@@ -226,9 +220,10 @@ bool LibmozjsGlueStartup() {
       StringPrintf(LEADING_UNDERSCORE "%s", syms->functionName);
     NSFuncPtr old = *syms->function;
     *syms->function = (NSFuncPtr) dlsym(g_libmozjs_handler, name.c_str());
-    if (*syms->function == old) {
+    if (*syms->function == old || *syms->function == NULL) {
       LOGE("Missing symbol in " GGL_MOZJS_LIBNAME ": %s", syms->functionName);
-      rv = NS_ERROR_LOSS_OF_SIGNIFICANT_DATA;
+      *syms->function = old;
+      // Don't fail here, because the missing method might never be called.
     }
     ++syms;
   }
