@@ -112,9 +112,19 @@ class BrowserElement::Impl {
     browser_context_ = NULL;
 #endif
 
-    if (GTK_IS_WIDGET(web_view_)) {
-      gtk_widget_destroy(web_view_);
-      web_view_ = NULL;
+    GtkWidget *web_view = web_view_;
+    // To prevent WebViewDestroyed() from destroying it again.
+    web_view_ = NULL;
+    if (GTK_IS_WIDGET(web_view)) {
+      // Due to a bug of webkit (https://bugs.webkit.org/show_bug.cgi?id=25042)
+      // Destroying web view widget directly will cause crash.
+      // It must be removed from it's parent before destroying.
+      GtkWidget *container = gtk_widget_get_parent(web_view);
+      if (container)
+        gtk_container_remove(GTK_CONTAINER(container), web_view);
+
+      g_object_run_dispose(G_OBJECT(web_view));
+      g_object_unref(web_view);
     }
   }
 
@@ -147,6 +157,7 @@ class BrowserElement::Impl {
       }
 
       web_view_ = GTK_WIDGET(webkit_web_view_new());
+      g_object_ref(web_view_);
       ASSERT(web_view_);
 
       g_signal_connect(G_OBJECT(web_view_), "destroy",
@@ -330,11 +341,14 @@ class BrowserElement::Impl {
   static void WebViewDestroyed(GtkWidget *widget, Impl *impl) {
     DLOG("WebViewDestroyed(Impl=%p, web_view=%p)", impl, widget);
 
-    impl->web_view_ = NULL;
 #ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
     delete impl->browser_context_;
     impl->browser_context_ = NULL;
 #endif
+    if (impl->web_view_) {
+      g_object_unref(impl->web_view_);
+      impl->web_view_ = NULL;
+    }
   }
 
   static gboolean WebViewConsoleMessage(WebKitWebView *web_view,
