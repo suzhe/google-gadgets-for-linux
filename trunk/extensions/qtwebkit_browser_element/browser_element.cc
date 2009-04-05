@@ -20,6 +20,7 @@
 #else
 #include <QtWebKit/QWebView>
 #include <QtWebKit/QWebPage>
+#include <QtWebKit/QWebSettings>
 #endif
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
@@ -99,6 +100,10 @@ BasicElement *BrowserElement::CreateInstance(View *view, const char *name) {
 extern "C" {
   bool Initialize() {
     LOGI("Initialize qtwebkit_browser_element extension.");
+#if QT_VERSION >= 0x040400
+    QWebSettings *setting = QWebSettings::globalSettings();
+    setting->setAttribute(QWebSettings::PluginsEnabled, true);
+#endif
     return true;
   }
 
