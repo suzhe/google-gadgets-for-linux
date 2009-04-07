@@ -168,10 +168,7 @@ class JSScriptContext : public ScriptContextInterface {
   static void ReportError(JSContext *cx, const char *message,
                           JSErrorReport *report);
   static JSBool OperationCallback(JSContext *cx);
-#ifndef JS_OPERATION_WEIGHT_BASE
-  // To be compatible with old version's deperecated JSBranchCallback.
-  static JSBool BranchCallback(JSContext *cx, JSScript *script);
-#endif
+
   static bool OnClearOperationTimeTimer(int watch_id);
 
   class JSClassWithNativeCtor;
