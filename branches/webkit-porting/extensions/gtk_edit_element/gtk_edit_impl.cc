@@ -1158,7 +1158,7 @@ void GtkEditImpl::MoveCursor(MovementStep step, int count, bool extend_selection
       break;
     case BUFFER:
       ASSERT(count == -1 || count == 1);
-      new_cursor = (count == -1 ? 0 : text_.length());
+      new_cursor = static_cast<int>(count == -1 ? 0 : text_.length());
       break;
   }
 
@@ -1207,7 +1207,7 @@ int GtkEditImpl::MoveWords(int current_index, int count) {
   ASSERT(preedit_.length() == 0);
 
   if (!visible_) {
-    return count > 0 ? text_.length() : 0;
+    return static_cast<int>(count > 0 ? text_.length() : 0);
   }
 
   // The cursor movement direction shall be determined by the direction of
@@ -1234,7 +1234,7 @@ int GtkEditImpl::MoveWords(int current_index, int count) {
 #endif
   bool rtl = (line->resolved_dir == PANGO_DIRECTION_RTL);
   const char *ptr = text + index;
-  int offset = g_utf8_pointer_to_offset(text, ptr);
+  int offset = static_cast<int>(g_utf8_pointer_to_offset(text, ptr));
   while (count != 0) {
     if (((rtl && count < 0) || (!rtl && count > 0)) && *ptr) {
       while (ptr && *ptr) {
@@ -1294,7 +1294,7 @@ int GtkEditImpl::MoveDisplayLines(int current_index, int count) {
   if (line_index < 0) {
     return 0;
   } else if (line_index >= n_lines) {
-    return text_.length();
+    return static_cast<int>(text_.length());
   }
 
   int trailing;
@@ -1396,7 +1396,7 @@ int GtkEditImpl::XYToTextIndex(int x, int y) {
   if (y < 0) {
     return 0;
   } else if (y >= height) {
-    return text_.length();
+    return static_cast<int>(text_.length());
   }
 
   int trailing;
@@ -1515,14 +1515,14 @@ int GtkEditImpl::GetCharLength(int index) {
   const char *ptr = text + index;
   const char *end = text + text_.length();
   const char *next = g_utf8_find_next_char(ptr, end);
-  return next ? static_cast<int>(next - ptr) : end - ptr;
+  return static_cast<int>(next ? static_cast<int>(next - ptr) : end - ptr);
 }
 
 int GtkEditImpl::GetPrevCharLength(int index) {
   const char *text = text_.c_str();
   const char *ptr = text + index;
   const char *prev = g_utf8_find_prev_char(text, ptr);
-  return prev ? static_cast<int>(ptr - prev) : ptr - text;
+  return static_cast<int>(prev ? static_cast<int>(ptr - prev) : ptr - text);
 }
 
 void GtkEditImpl::EnterText(const char *str) {
@@ -1827,7 +1827,8 @@ void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
   gtk_im_context_get_preedit_string(context, &str,
                                     &edit->preedit_attrs_,
                                     &cursor_pos);
-  edit->preedit_cursor_ = g_utf8_offset_to_pointer(str, cursor_pos) - str;
+  edit->preedit_cursor_ =
+      static_cast<int>(g_utf8_offset_to_pointer(str, cursor_pos) - str);
   edit->preedit_.assign(str);
   g_free(str);
   edit->QueueRefresh(true, true);
