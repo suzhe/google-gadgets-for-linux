@@ -173,10 +173,10 @@ namespace libmozjs {
 LIBMOZJS_GLUE_H
 
 # Append api type declarations.
-# Remove JS_GetClass(), it'll be handled specially
+# Remove JS_GetClass() and JS_SetOperationCallback, they'll be handled specially
 cat used_mozjs_api_declare | \
   grep -v ' JS_GetClass,' | \
-  sed -e '/^.*JS_SetOperationCallback,.*$/s/^\(.*\)$/#ifdef JS_OPERATION_WEIGHT_BASE\n\1\n#endif/' \
+  grep -v ' JS_SetOperationCallback,' \
   >> libmozjs_glue.h
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
@@ -186,29 +186,21 @@ MOZJS_API(JSClass *, JS_GetClass, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSClass *, JS_GetClass, (JSObject *obj));
 #endif
 
-#undef MOZJS_API
-
 #ifdef JS_OPERATION_WEIGHT_BASE
-#define MOZJS_FUNC_JS_SetOperationCallback \\
-LIBMOZJS_GLUE_H
-
-sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1)/' used_mozjs_api_list | \
-  grep JS_SetOperationCallback >> libmozjs_glue.h
-
-cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
+MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback, uint32 operationLimit));
 #else
-#define MOZJS_FUNC_JS_SetOperationCallback
+MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback callback));
 #endif
+
+#undef MOZJS_API
 
 #define MOZJS_FUNCTIONS \\
 LIBMOZJS_GLUE_H
 
 # Append api list
-sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1) \\/' used_mozjs_api_list | \
-  grep -v JS_SetOperationCallback >> libmozjs_glue.h
+sed -e 's/^\(.*\)$/  MOZJS_FUNC(\1) \\/' used_mozjs_api_list >> libmozjs_glue.h
 
 cat >> libmozjs_glue.h << LIBMOZJS_GLUE_H
-  MOZJS_FUNC_JS_SetOperationCallback
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
 
@@ -306,17 +298,12 @@ sed -e 's/^\(.*\)$/#undef \1/' used_mozjs_api_list >> libmozjs_glue.cc
 cat >> libmozjs_glue.cc << LIBMOZJS_GLUE_CC
 
 // Define real function pointers.
-#ifdef _DEBUG
 #define MOZJS_FUNC(fname) \\
   static void fname##NotFoundHandler() { \\
     LOGE("libmozjs symbol %s is missing.", #fname); \\
     abort(); \\
   } \\
   fname##Type fname = { (fname##FuncType)fname##NotFoundHandler };
-#else
-#define MOZJS_FUNC(fname) \\
-  fname##Type fname = { NULL };
-#endif
 
 MOZJS_FUNCTIONS
 
@@ -366,7 +353,7 @@ bool LibmozjsGlueStartup() {
 
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.0.*", PR_TRUE
+    "1.9.1", PR_TRUE
   };
 
   rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0,
@@ -390,9 +377,10 @@ bool LibmozjsGlueStartup() {
       StringPrintf(LEADING_UNDERSCORE "%s", syms->functionName);
     NSFuncPtr old = *syms->function;
     *syms->function = (NSFuncPtr) dlsym(g_libmozjs_handler, name.c_str());
-    if (*syms->function == old) {
+    if (*syms->function == old || *syms->function == NULL) {
       LOGE("Missing symbol in " GGL_MOZJS_LIBNAME ": %s", syms->functionName);
-      rv = NS_ERROR_LOSS_OF_SIGNIFICANT_DATA;
+      *syms->function = old;
+      // Don't fail here, because the missing method might never be called.
     }
     ++syms;
   }

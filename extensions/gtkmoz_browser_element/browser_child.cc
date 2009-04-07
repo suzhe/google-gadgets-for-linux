@@ -1192,7 +1192,7 @@ static bool InitGecko() {
 
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.0.*", PR_TRUE
+    "1.9.1", PR_TRUE
   };
 
   char xpcom_location[4096];

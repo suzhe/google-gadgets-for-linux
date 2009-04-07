@@ -580,7 +580,7 @@ class DBusProxy::Impl : public SmallObject<> {
     CancelAllPendingCalls();
 
     DBusConnection *bus = GetBus();
-    if (bus && PingPeer(bus)) {
+    if (bus) {
       Introspect(bus);
       return true;
     }
