@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/system_utils.h>
 #include <ggadget/string_utils.h>
@@ -43,7 +44,6 @@ namespace libmozjs {
 #undef JS_CompileUCFunction
 #undef JS_CompileUCScript
 #undef JS_ConvertStub
-#undef JS_DHashTableEnumerate
 #undef JS_DefineFunction
 #undef JS_DefineFunctions
 #undef JS_DefineProperty
@@ -55,6 +55,7 @@ namespace libmozjs {
 #undef JS_DestroyIdArray
 #undef JS_Finish
 #undef JS_DestroyScript
+#undef JS_DHashTableEnumerate
 #undef JS_EnterLocalRootScope
 #undef JS_Enumerate
 #undef JS_EnumerateStub
@@ -74,6 +75,7 @@ namespace libmozjs {
 #undef JS_GetProperty
 #undef JS_GetReservedSlot
 #undef JS_GetRuntime
+#undef JS_GetRuntimePrivate
 #undef JS_GetStringBytes
 #undef JS_GetStringChars
 #undef JS_GetStringLength
@@ -84,6 +86,7 @@ namespace libmozjs {
 #undef JS_IsArrayObject
 #undef JS_IsExceptionPending
 #undef JS_LeaveLocalRootScope
+#undef JS_malloc
 #undef JS_MarkGCThing
 #undef JS_NewArrayObject
 #undef JS_NewContext
@@ -97,6 +100,7 @@ namespace libmozjs {
 #undef JS_NewUCStringCopyN
 #undef JS_NewUCStringCopyZ
 #undef JS_PropertyStub
+#undef JS_realloc
 #undef JS_RemoveRoot
 #undef JS_RemoveRootRT
 #undef JS_ReportError
@@ -118,6 +122,7 @@ namespace libmozjs {
 #undef JS_SetReservedSlot
 #undef JS_SetRuntimePrivate
 #undef JS_SetUCProperty
+#undef JS_TriggerAllOperationCallbacks
 #undef JS_TypeOfValue
 #undef JS_ValueToBoolean
 #undef JS_ValueToECMAInt32
@@ -126,8 +131,6 @@ namespace libmozjs {
 #undef JS_ValueToInt32
 #undef JS_ValueToNumber
 #undef JS_ValueToString
-#undef JS_malloc
-#undef JS_realloc
 #undef JS_GetClass
 
 // Define real function pointers.
@@ -220,8 +223,9 @@ bool LibmozjsGlueStartup() {
       StringPrintf(LEADING_UNDERSCORE "%s", syms->functionName);
     NSFuncPtr old = *syms->function;
     *syms->function = (NSFuncPtr) dlsym(g_libmozjs_handler, name.c_str());
-    if (*syms->function == old || *syms->function == NULL) {
-      LOGE("Missing symbol in " GGL_MOZJS_LIBNAME ": %s", syms->functionName);
+    if (*syms->function == old || !*syms->function) {
+      LOG("Warning: missing symbol in " GGL_MOZJS_LIBNAME ": %s",
+          syms->functionName);
       *syms->function = old;
       // Don't fail here, because the missing method might never be called.
     }
@@ -245,7 +249,32 @@ void LibmozjsGlueShutdown() {
 }
 
 nsresult LibmozjsGlueStartupWithXPCOM() {
-  return XPCOMGlueLoadXULFunctions(kMOZJSSymbols);
+  nsDynamicFunctionLoad *temp_syms =
+    new nsDynamicFunctionLoad[arraysize(kMOZJSSymbols)];
+  NSFuncPtr *temp_funcs =
+    new NSFuncPtr[arraysize(kMOZJSSymbols)];
+
+  for (size_t i = 0; i < arraysize(kMOZJSSymbols); ++i) {
+    temp_syms[i].functionName = kMOZJSSymbols[i].functionName;
+    temp_syms[i].function = &temp_funcs[i];
+  }
+
+  XPCOMGlueLoadXULFunctions(temp_syms);
+
+  for (size_t i = 0; i < arraysize(kMOZJSSymbols) &&
+       kMOZJSSymbols[i].functionName; ++i) {
+    if (temp_funcs[i] == *kMOZJSSymbols[i].function || !temp_funcs[i]) {
+      LOG("Warning: missing symbol in " GGL_MOZJS_LIBNAME ": %s",
+          kMOZJSSymbols[i].functionName);
+    } else {
+      *kMOZJSSymbols[i].function = temp_funcs[i];
+    }
+  }
+
+  delete [] temp_syms;
+  delete [] temp_funcs;
+
+  return NS_OK;
 }
 
 } // namespace libmozjs

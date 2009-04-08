@@ -43,6 +43,9 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
   JSRuntime *runtime_;
 };
 
+// The maximum execution time of a piece of script (10 seconds).
+const uint64_t kMaxScriptRunTime = 10000;
+
 } // namespace smjs
 } // namespace ggadget
 
