@@ -283,6 +283,7 @@ cat > libmozjs_glue.cc << LIBMOZJS_GLUE_CC
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/system_utils.h>
 #include <ggadget/string_utils.h>
@@ -377,8 +378,9 @@ bool LibmozjsGlueStartup() {
       StringPrintf(LEADING_UNDERSCORE "%s", syms->functionName);
     NSFuncPtr old = *syms->function;
     *syms->function = (NSFuncPtr) dlsym(g_libmozjs_handler, name.c_str());
-    if (*syms->function == old || *syms->function == NULL) {
-      LOGE("Missing symbol in " GGL_MOZJS_LIBNAME ": %s", syms->functionName);
+    if (*syms->function == old || !*syms->function) {
+      LOG("Warning: missing symbol in " GGL_MOZJS_LIBNAME ": %s",
+          syms->functionName);
       *syms->function = old;
       // Don't fail here, because the missing method might never be called.
     }
@@ -402,7 +404,32 @@ void LibmozjsGlueShutdown() {
 }
 
 nsresult LibmozjsGlueStartupWithXPCOM() {
-  return XPCOMGlueLoadXULFunctions(kMOZJSSymbols);
+  nsDynamicFunctionLoad *temp_syms =
+    new nsDynamicFunctionLoad[arraysize(kMOZJSSymbols)];
+  NSFuncPtr *temp_funcs =
+    new NSFuncPtr[arraysize(kMOZJSSymbols)];
+
+  for (size_t i = 0; i < arraysize(kMOZJSSymbols); ++i) {
+    temp_syms[i].functionName = kMOZJSSymbols[i].functionName;
+    temp_syms[i].function = &temp_funcs[i];
+  }
+
+  XPCOMGlueLoadXULFunctions(temp_syms);
+
+  for (size_t i = 0; i < arraysize(kMOZJSSymbols) &&
+       kMOZJSSymbols[i].functionName; ++i) {
+    if (temp_funcs[i] == *kMOZJSSymbols[i].function || !temp_funcs[i]) {
+      LOG("Warning: missing symbol in " GGL_MOZJS_LIBNAME ": %s",
+          kMOZJSSymbols[i].functionName);
+    } else {
+      *kMOZJSSymbols[i].function = temp_funcs[i];
+    }
+  }
+
+  delete [] temp_syms;
+  delete [] temp_funcs;
+
+  return NS_OK;
 }
 
 } // namespace libmozjs

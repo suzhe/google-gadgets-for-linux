@@ -46,7 +46,6 @@ MOZJS_API(JSFunction *, JS_CompileFunction, (JSContext *cx, JSObject *obj, const
 MOZJS_API(JSFunction *, JS_CompileUCFunction, (JSContext *cx, JSObject *obj, const char *name, uintN nargs, const char **argnames, const jschar *chars, size_t length, const char *filename, uintN lineno));
 MOZJS_API(JSScript *, JS_CompileUCScript, (JSContext *cx, JSObject *obj, const jschar *chars, size_t length, const char *filename, uintN lineno));
 MOZJS_API(JSBool, JS_ConvertStub, (JSContext *cx, JSObject *obj, JSType type, jsval *vp));
-MOZJS_API(uint32, JS_DHashTableEnumerate, (JSDHashTable *table, JSDHashEnumerator etor, void *arg));
 MOZJS_API(JSFunction *, JS_DefineFunction, (JSContext *cx, JSObject *obj, const char *name, JSNative call, uintN nargs, uintN attrs));
 MOZJS_API(JSBool, JS_DefineFunctions, (JSContext *cx, JSObject *obj, JSFunctionSpec *fs));
 MOZJS_API(JSBool, JS_DefineProperty, (JSContext *cx, JSObject *obj, const char *name, jsval value, JSPropertyOp getter, JSPropertyOp setter, uintN attrs));
@@ -58,6 +57,7 @@ MOZJS_API(void, JS_DestroyContext, (JSContext *cx));
 MOZJS_API(void, JS_DestroyIdArray, (JSContext *cx, JSIdArray *ida));
 MOZJS_API(void, JS_Finish, (JSRuntime *rt));
 MOZJS_API(void, JS_DestroyScript, (JSContext *cx, JSScript *script));
+MOZJS_API(uint32, JS_DHashTableEnumerate, (JSDHashTable *table, JSDHashEnumerator etor, void *arg));
 MOZJS_API(JSBool, JS_EnterLocalRootScope, (JSContext *cx));
 MOZJS_API(JSIdArray *, JS_Enumerate, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSBool, JS_EnumerateStub, (JSContext *cx, JSObject *obj));
@@ -77,6 +77,7 @@ MOZJS_API(void *, JS_GetPrivate, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSBool, JS_GetProperty, (JSContext *cx, JSObject *obj, const char *name, jsval *vp));
 MOZJS_API(JSBool, JS_GetReservedSlot, (JSContext *cx, JSObject *obj, uint32 index, jsval *vp));
 MOZJS_API(JSRuntime *, JS_GetRuntime, (JSContext *cx));
+MOZJS_API(void *, JS_GetRuntimePrivate, (JSRuntime *rt));
 MOZJS_API(char *, JS_GetStringBytes, (JSString *str));
 MOZJS_API(jschar *, JS_GetStringChars, (JSString *str));
 MOZJS_API(size_t, JS_GetStringLength, (JSString *str));
@@ -87,6 +88,7 @@ MOZJS_API(JSBool, JS_InitStandardClasses, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSBool, JS_IsArrayObject, (JSContext *cx, JSObject *obj));
 MOZJS_API(JSBool, JS_IsExceptionPending, (JSContext *cx));
 MOZJS_API(void, JS_LeaveLocalRootScope, (JSContext *cx));
+MOZJS_API(void *, JS_malloc, (JSContext *cx, size_t nbytes));
 MOZJS_API(void, JS_MarkGCThing, (JSContext *cx, void *thing, const char *name, void *arg));
 MOZJS_API(JSObject *, JS_NewArrayObject, (JSContext *cx, jsint length, jsval *vector));
 MOZJS_API(JSContext *, JS_NewContext, (JSRuntime *rt, size_t stackChunkSize));
@@ -100,6 +102,7 @@ MOZJS_API(JSString *, JS_NewUCString, (JSContext *cx, jschar *chars, size_t leng
 MOZJS_API(JSString *, JS_NewUCStringCopyN, (JSContext *cx, const jschar *s, size_t n));
 MOZJS_API(JSString *, JS_NewUCStringCopyZ, (JSContext *cx, const jschar *s));
 MOZJS_API(JSBool, JS_PropertyStub, (JSContext *cx, JSObject *obj, jsval id, jsval *vp));
+MOZJS_API(void *, JS_realloc, (JSContext *cx, void *p, size_t nbytes));
 MOZJS_API(JSBool, JS_RemoveRoot, (JSContext *cx, void *rp));
 MOZJS_API(JSBool, JS_RemoveRootRT, (JSRuntime *rt, void *rp));
 MOZJS_API(void, JS_ReportError, (JSContext *cx, const char *format, ...));
@@ -120,6 +123,7 @@ MOZJS_API(JSBool, JS_SetProperty, (JSContext *cx, JSObject *obj, const char *nam
 MOZJS_API(JSBool, JS_SetReservedSlot, (JSContext *cx, JSObject *obj, uint32 index, jsval v));
 MOZJS_API(void, JS_SetRuntimePrivate, (JSRuntime *rt, void *data));
 MOZJS_API(JSBool, JS_SetUCProperty, (JSContext *cx, JSObject *obj, const jschar *name, size_t namelen, jsval *vp));
+MOZJS_API(void, JS_TriggerAllOperationCallbacks, (JSRuntime *rt));
 MOZJS_API(JSType, JS_TypeOfValue, (JSContext *cx, jsval v));
 MOZJS_API(JSBool, JS_ValueToBoolean, (JSContext *cx, jsval v, JSBool *bp));
 MOZJS_API(JSBool, JS_ValueToECMAInt32, (JSContext *cx, jsval v, int32 *ip));
@@ -128,8 +132,6 @@ MOZJS_API(JSBool, JS_ValueToId, (JSContext *cx, jsval v, jsid *idp));
 MOZJS_API(JSBool, JS_ValueToInt32, (JSContext *cx, jsval v, int32 *ip));
 MOZJS_API(JSBool, JS_ValueToNumber, (JSContext *cx, jsval v, jsdouble *dp));
 MOZJS_API(JSString *, JS_ValueToString, (JSContext *cx, jsval v));
-MOZJS_API(void *, JS_malloc, (JSContext *cx, size_t nbytes));
-MOZJS_API(void *, JS_realloc, (JSContext *cx, void *p, size_t nbytes));
 #ifdef JS_THREADSAFE
 MOZJS_API(JSClass *, JS_GetClass, (JSContext *cx, JSObject *obj));
 #else
@@ -155,7 +157,6 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_CompileUCFunction) \
   MOZJS_FUNC(JS_CompileUCScript) \
   MOZJS_FUNC(JS_ConvertStub) \
-  MOZJS_FUNC(JS_DHashTableEnumerate) \
   MOZJS_FUNC(JS_DefineFunction) \
   MOZJS_FUNC(JS_DefineFunctions) \
   MOZJS_FUNC(JS_DefineProperty) \
@@ -167,6 +168,7 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_DestroyIdArray) \
   MOZJS_FUNC(JS_Finish) \
   MOZJS_FUNC(JS_DestroyScript) \
+  MOZJS_FUNC(JS_DHashTableEnumerate) \
   MOZJS_FUNC(JS_EnterLocalRootScope) \
   MOZJS_FUNC(JS_Enumerate) \
   MOZJS_FUNC(JS_EnumerateStub) \
@@ -186,6 +188,7 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_GetProperty) \
   MOZJS_FUNC(JS_GetReservedSlot) \
   MOZJS_FUNC(JS_GetRuntime) \
+  MOZJS_FUNC(JS_GetRuntimePrivate) \
   MOZJS_FUNC(JS_GetStringBytes) \
   MOZJS_FUNC(JS_GetStringChars) \
   MOZJS_FUNC(JS_GetStringLength) \
@@ -196,6 +199,7 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_IsArrayObject) \
   MOZJS_FUNC(JS_IsExceptionPending) \
   MOZJS_FUNC(JS_LeaveLocalRootScope) \
+  MOZJS_FUNC(JS_malloc) \
   MOZJS_FUNC(JS_MarkGCThing) \
   MOZJS_FUNC(JS_NewArrayObject) \
   MOZJS_FUNC(JS_NewContext) \
@@ -209,6 +213,7 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_NewUCStringCopyN) \
   MOZJS_FUNC(JS_NewUCStringCopyZ) \
   MOZJS_FUNC(JS_PropertyStub) \
+  MOZJS_FUNC(JS_realloc) \
   MOZJS_FUNC(JS_RemoveRoot) \
   MOZJS_FUNC(JS_RemoveRootRT) \
   MOZJS_FUNC(JS_ReportError) \
@@ -230,6 +235,7 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_SetReservedSlot) \
   MOZJS_FUNC(JS_SetRuntimePrivate) \
   MOZJS_FUNC(JS_SetUCProperty) \
+  MOZJS_FUNC(JS_TriggerAllOperationCallbacks) \
   MOZJS_FUNC(JS_TypeOfValue) \
   MOZJS_FUNC(JS_ValueToBoolean) \
   MOZJS_FUNC(JS_ValueToECMAInt32) \
@@ -238,8 +244,6 @@ MOZJS_API(void, JS_SetOperationCallback, (JSContext *cx, JSOperationCallback cal
   MOZJS_FUNC(JS_ValueToInt32) \
   MOZJS_FUNC(JS_ValueToNumber) \
   MOZJS_FUNC(JS_ValueToString) \
-  MOZJS_FUNC(JS_malloc) \
-  MOZJS_FUNC(JS_realloc) \
   MOZJS_FUNC(JS_GetClass) \
 
 #define MOZJS_FUNC(fname) extern fname##Type fname;
@@ -257,7 +261,6 @@ MOZJS_FUNCTIONS
 #define JS_CompileFunction ggadget::libmozjs::JS_CompileFunction.func
 #define JS_CompileUCFunction ggadget::libmozjs::JS_CompileUCFunction.func
 #define JS_CompileUCScript ggadget::libmozjs::JS_CompileUCScript.func
-#define JS_DHashTableEnumerate ggadget::libmozjs::JS_DHashTableEnumerate.func
 #define JS_DefineFunction ggadget::libmozjs::JS_DefineFunction.func
 #define JS_DefineFunctions ggadget::libmozjs::JS_DefineFunctions.func
 #define JS_DefineProperty ggadget::libmozjs::JS_DefineProperty.func
@@ -269,6 +272,7 @@ MOZJS_FUNCTIONS
 #define JS_DestroyIdArray ggadget::libmozjs::JS_DestroyIdArray.func
 #define JS_Finish ggadget::libmozjs::JS_Finish.func
 #define JS_DestroyScript ggadget::libmozjs::JS_DestroyScript.func
+#define JS_DHashTableEnumerate ggadget::libmozjs::JS_DHashTableEnumerate.func
 #define JS_EnterLocalRootScope ggadget::libmozjs::JS_EnterLocalRootScope.func
 #define JS_Enumerate ggadget::libmozjs::JS_Enumerate.func
 #define JS_EvaluateScript ggadget::libmozjs::JS_EvaluateScript.func
@@ -287,6 +291,7 @@ MOZJS_FUNCTIONS
 #define JS_GetProperty ggadget::libmozjs::JS_GetProperty.func
 #define JS_GetReservedSlot ggadget::libmozjs::JS_GetReservedSlot.func
 #define JS_GetRuntime ggadget::libmozjs::JS_GetRuntime.func
+#define JS_GetRuntimePrivate ggadget::libmozjs::JS_GetRuntimePrivate.func
 #define JS_GetStringBytes ggadget::libmozjs::JS_GetStringBytes.func
 #define JS_GetStringChars ggadget::libmozjs::JS_GetStringChars.func
 #define JS_GetStringLength ggadget::libmozjs::JS_GetStringLength.func
@@ -297,6 +302,7 @@ MOZJS_FUNCTIONS
 #define JS_IsArrayObject ggadget::libmozjs::JS_IsArrayObject.func
 #define JS_IsExceptionPending ggadget::libmozjs::JS_IsExceptionPending.func
 #define JS_LeaveLocalRootScope ggadget::libmozjs::JS_LeaveLocalRootScope.func
+#define JS_malloc ggadget::libmozjs::JS_malloc.func
 #define JS_MarkGCThing ggadget::libmozjs::JS_MarkGCThing.func
 #define JS_NewArrayObject ggadget::libmozjs::JS_NewArrayObject.func
 #define JS_NewContext ggadget::libmozjs::JS_NewContext.func
@@ -309,6 +315,7 @@ MOZJS_FUNCTIONS
 #define JS_NewUCString ggadget::libmozjs::JS_NewUCString.func
 #define JS_NewUCStringCopyN ggadget::libmozjs::JS_NewUCStringCopyN.func
 #define JS_NewUCStringCopyZ ggadget::libmozjs::JS_NewUCStringCopyZ.func
+#define JS_realloc ggadget::libmozjs::JS_realloc.func
 #define JS_RemoveRoot ggadget::libmozjs::JS_RemoveRoot.func
 #define JS_RemoveRootRT ggadget::libmozjs::JS_RemoveRootRT.func
 #define JS_ReportError ggadget::libmozjs::JS_ReportError.func
@@ -329,6 +336,7 @@ MOZJS_FUNCTIONS
 #define JS_SetReservedSlot ggadget::libmozjs::JS_SetReservedSlot.func
 #define JS_SetRuntimePrivate ggadget::libmozjs::JS_SetRuntimePrivate.func
 #define JS_SetUCProperty ggadget::libmozjs::JS_SetUCProperty.func
+#define JS_TriggerAllOperationCallbacks ggadget::libmozjs::JS_TriggerAllOperationCallbacks.func
 #define JS_TypeOfValue ggadget::libmozjs::JS_TypeOfValue.func
 #define JS_ValueToBoolean ggadget::libmozjs::JS_ValueToBoolean.func
 #define JS_ValueToECMAInt32 ggadget::libmozjs::JS_ValueToECMAInt32.func
@@ -337,8 +345,6 @@ MOZJS_FUNCTIONS
 #define JS_ValueToInt32 ggadget::libmozjs::JS_ValueToInt32.func
 #define JS_ValueToNumber ggadget::libmozjs::JS_ValueToNumber.func
 #define JS_ValueToString ggadget::libmozjs::JS_ValueToString.func
-#define JS_malloc ggadget::libmozjs::JS_malloc.func
-#define JS_realloc ggadget::libmozjs::JS_realloc.func
 #define JS_GetClass ggadget::libmozjs::JS_GetClass.func
 
 // Stub functions are likely be used in static initialization code.
