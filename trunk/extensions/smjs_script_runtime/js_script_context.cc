@@ -38,8 +38,6 @@
 namespace ggadget {
 namespace smjs {
 
-// The maximum execution time of a piece of script (10 seconds).
-static const uint64_t kMaxScriptRunTime = 10000;
 // OperationCallback is checked after the script executed instructions
 // weighted 100 * JS_OPERATION_WEIGHT_BASE (new version), or 100 branches
 // (old version, deperecated).
@@ -169,6 +167,7 @@ JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContext *context)
   JS_SetOperationCallback(context_, OperationCallback);
 #endif
 #endif
+
   JS_SetErrorReporter(context, ReportError);
   // JS_SetOptions(context_, JS_GetOptions(context_) | JSOPTION_STRICT);
 

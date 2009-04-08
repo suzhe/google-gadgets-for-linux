@@ -136,8 +136,8 @@ else
     fi
     AC_CHECK_FUNC(JS_SetOperationCallback,
                   [LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JS_SetOperationCallback"])
-    AC_CHECK_FUNC(JS_TriggerOperationCallback,
-                  [LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JS_TriggerOperationCallback"])
+    AC_CHECK_FUNC(JS_TriggerAllOperationCallbacks,
+                  [LIBMOZJS_CFLAGS="$LIBMOZJS_CFLAGS -DHAVE_JS_TriggerAllOperationCallbacks"])
     ifelse([$2], , :, [$2])
     AC_MSG_RESULT([yes (CFLAGS=$LIBMOZJS_CFLAGS  LIBS=$LIBMOZJS_LIBS)])
   else
