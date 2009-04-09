@@ -22,8 +22,9 @@
 #include <QtCore/QTextStream>
 #endif
 #include <QtCore/QUrl>
-#include <QtCore/QBuffer>
+#include <QtCore/QRegExp>
 #include <QtNetwork/QHttp>
+#include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QHttpHeader>
 
 #if QT_VERSION >= 0x040400
@@ -809,9 +810,47 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
 
 static ggadget::qt::XMLHttpRequestFactory gFactory;
 
+// parse proxy env value, which may look like:
+// "http://username:password@yourproxy.com:8080"
+static bool ParseProxyEnv(const QString &value, QString *host, quint16 *port,
+                          QString *user, QString *password) {
+  QRegExp re("(^.*://)?((.+)(:(.+))?@)?([^:]+)(:([0-9]+))?");
+
+  if (re.indexIn(value) == -1) return false;
+  *host = re.cap(6);
+  if (re.cap(8) != "") {
+    *port = static_cast<quint16>(re.cap(8).toInt());
+  } else {
+    *port = 80;
+  }
+  *user = re.cap(3);
+  *password = re.cap(5);
+  return true;
+}
+
 extern "C" {
   bool Initialize() {
     LOGI("Initialize qt_xml_http_request extension.");
+    const char *proxy_names[] = {
+      "all_proxy", "http_proxy", "https_proxy", NULL
+    };
+
+    QString host, user, password;
+    quint16 port;
+    for (int i = 0; proxy_names[i]; i++) {
+      const char *env = getenv(proxy_names[i]);
+      if (env && ParseProxyEnv(env, &host, &port, &user, &password)) {
+        QNetworkProxy proxy;
+        proxy.setType(QNetworkProxy::HttpProxy);
+        proxy.setHostName(host);
+        proxy.setPort(port);
+        if (user != "") proxy.setUser(user);
+        if (password != "") proxy.setPassword(password);
+        QNetworkProxy::setApplicationProxy(proxy);
+        DLOG("Using proxy %s:%d", host.toUtf8().data(), port);
+        break;
+      }
+    }
     return ggadget::SetXMLHttpRequestFactory(&gFactory);
   }
 
