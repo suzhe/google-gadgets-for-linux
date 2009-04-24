@@ -30,7 +30,6 @@ SET(SRCS
   key_convert.cc
   main_loop.cc
   menu_builder.cc
-  npapi_plugin_element.cc
   pixbuf_image.cc
   single_view_host.cc
   tooltip.cc
@@ -39,6 +38,10 @@ SET(SRCS
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+
+IF(GGL_BUILD_LIBGGADGET_NPAPI)
+  SET(SRCS ${SRCS} npapi_plugin_element.cc)
+ENDIF(GGL_BUILD_LIBGGADGET_NPAPI)
 
 if(RSVG_FOUND)
   SET(SRCS ${SRCS} rsvg_image.cc)
@@ -49,7 +52,6 @@ ADD_SUBDIRECTORY(tests)
 ADD_LIBRARY(ggadget-gtk${GGL_EPOCH} SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-gtk${GGL_EPOCH}
   ggadget-xdg${GGL_EPOCH}
-  ggadget-npapi${GGL_EPOCH}
   ${CAIRO_LIBRARIES}
   ${GTK2_LIBRARIES}
   ${GTHREAD_LIBRARIES}
@@ -57,6 +59,12 @@ TARGET_LINK_LIBRARIES(ggadget-gtk${GGL_EPOCH}
   ${FONTCONFIG_LIBRARIES}
   ${RSVG_LIBRARIES}
 )
+
+IF(GGL_BUILD_LIBGGADGET_NPAPI)
+  TARGET_LINK_LIBRARIES(ggadget-gtk${GGL_EPOCH}
+    ggadget-npapi${GGL_EPOCH})
+ENDIF(GGL_BUILD_LIBGGADGET_NPAPI)
+
 OUTPUT_LIBRARY(ggadget-gtk${GGL_EPOCH})
 
 INSTALL(FILES
@@ -65,12 +73,17 @@ INSTALL(FILES
   key_convert.h
   main_loop.h
   menu_builder.h
-  npapi_plugin_element.h
   single_view_host.h
   tooltip.h
   utilities.h
   view_widget_binder.h
   DESTINATION ${GGL_INCLUDE_DIR}/ggadget/gtk COMPONENT Devel)
+
+IF(GGL_BUILD_LIBGGADGET_NPAPI)
+  INSTALL(FILES
+    npapi_plugin_element.h
+    DESTINATION ${GGL_INCLUDE_DIR}/ggadget/gtk COMPONENT Devel)
+ENDIF(GGL_BUILD_LIBGGADGET_NPAPI)
 
 INSTALL_PKG_CONFIG(libggadget-gtk)
 
