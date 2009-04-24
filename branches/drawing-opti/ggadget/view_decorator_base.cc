@@ -446,7 +446,7 @@ void ViewDecoratorBase::GetChildViewSize(double *width, double *height) const {
 }
 
 void ViewDecoratorBase::QueueDrawChildView() {
-  impl_->view_element_->QueueDraw();
+  impl_->view_element_->QueueDrawChildView();
 }
 
 void ViewDecoratorBase::ChildViewCoordToViewCoord(double child_x,

@@ -28,6 +28,8 @@
 #include <ggadget/view_host_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/small_object.h>
+#include <ggadget/clip_region.h>
+#include <ggadget/math_utils.h>
 #include "cairo_canvas.h"
 #include "cairo_graphics.h"
 #include "key_convert.h"
@@ -79,7 +81,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
-      mouse_down_hittest_(ViewInterface::HT_CLIENT) {
+      mouse_down_hittest_(ViewInterface::HT_CLIENT),
+      last_width_(0),
+      last_height_(0) {
     ASSERT(view);
     ASSERT(host);
     ASSERT(GTK_IS_WIDGET(widget));
@@ -87,6 +91,8 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
     g_object_ref(G_OBJECT(widget_));
     gtk_widget_set_app_paintable(widget_, TRUE);
+    gtk_widget_set_double_buffered(widget_, FALSE);
+
     gint events = GDK_EXPOSURE_MASK |
                   GDK_FOCUS_CHANGE_MASK |
                   GDK_ENTER_NOTIFY_MASK |
@@ -335,15 +341,73 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     return result != EVENT_RESULT_UNHANDLED;
   }
 
+  static GdkRegion *CreateExposeRegion(GdkRegion *expose_region,
+                                       const ClipRegion *view_region,
+                                       int width, int height,
+                                       int last_width, int last_height,
+                                       double zoom) {
+    GdkRegion *region = gdk_region_new();
+    size_t count = view_region->GetRectangleCount();
+    GdkRectangle gdk_rect;
+    if (count) {
+      Rectangle rect;
+      for (size_t i = 0; i < count; ++i) {
+        rect = view_region->GetRectangle(i);
+        if (zoom != 1) {
+          rect.Zoom(zoom);
+          rect.Integerize(true);
+        }
+        gdk_rect.x = static_cast<int>(rect.x);
+        gdk_rect.y = static_cast<int>(rect.y);
+        gdk_rect.width = static_cast<int>(rect.w);
+        gdk_rect.height = static_cast<int>(rect.h);
+        gdk_region_union_with_rect(region, &gdk_rect);
+      }
+      if (width > last_width) {
+        gdk_rect.x = last_width;
+        gdk_rect.y = 0;
+        gdk_rect.width = width - last_width;
+        gdk_rect.height = height;
+        gdk_region_union_with_rect(region, &gdk_rect);
+      }
+      if (height > last_height) {
+        gdk_rect.x = 0;
+        gdk_rect.y = last_height;
+        gdk_rect.width = width;
+        gdk_rect.height = height - last_height;
+        gdk_region_union_with_rect(region, &gdk_rect);
+      }
+    } else {
+      gdk_rect.x = 0;
+      gdk_rect.y = 0;
+      gdk_rect.width = width;
+      gdk_rect.height = height;
+      gdk_region_union_with_rect(region, &gdk_rect);
+    }
+    gdk_region_intersect(region, expose_region);
+    return region;
+  }
+
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     gint width, height;
     gdk_drawable_get_size(widget->window, &width, &height);
 
+    impl->view_->Layout();
+
+    GdkRegion *region = CreateExposeRegion(
+      event->region, impl->view_->GetClipRegion(), width, height,
+      impl->last_width_, impl->last_height_, impl->zoom_);
+
+    impl->last_width_ = width;
+    impl->last_height_ = height;
+
+    // Create off-screen buffer for the region.
+    gdk_window_begin_paint_region(widget->window, region);
+    gdk_region_destroy(region);
+
     cairo_t *cr = gdk_cairo_create(widget->window);
-    gdk_cairo_region(cr, event->region);
-    cairo_clip(cr);
 
     // If background is disabled, and if composited is enabled,  the window
     // needs clearing every times.
@@ -387,6 +451,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
     canvas->Destroy();
     cairo_destroy(cr);
+
+    // Copy off-screen buffer to screen.
+    gdk_window_end_paint(widget->window);
 
 #ifdef _DEBUG
     ++impl->draw_count_;
@@ -778,6 +845,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   double mouse_down_x_;
   double mouse_down_y_;
   ViewInterface::HitTest mouse_down_hittest_;
+
+  int last_width_;
+  int last_height_;
 
   struct EventHandlerInfo {
     const char *event;

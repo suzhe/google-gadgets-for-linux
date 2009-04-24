@@ -90,6 +90,8 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.restore();
   }
 
+  view_->Layout();
+
   if (enable_input_mask_) {
     if (!offscreen_pixmap_
         || offscreen_pixmap_->width() != width()

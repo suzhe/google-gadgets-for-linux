@@ -1136,14 +1136,7 @@ class View::Impl : public SmallObject<> {
     children_.MarkRedraw();
   }
 
-  void Draw(CanvasInterface *canvas) {
-#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-    DLOG("host(%p) draw view(%p) on canvas %p with size: %f x %f",
-         view_host_, owner_, canvas, canvas->GetWidth(), canvas->GetHeight());
-    draw_count_ = 0;
-    uint64_t start = main_loop_->GetCurrentTime();
-#endif
-
+  void Layout() {
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
@@ -1152,7 +1145,29 @@ class View::Impl : public SmallObject<> {
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedSizeEvents();
+
+    if (theme_changed_) {
+      SimpleEvent event(Event::EVENT_THEME_CHANGED);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      FireEvent(&scriptable_event, onthemechanged_event_);
+      theme_changed_ = false;
+    }
     draw_queued_ = false;
+
+    // Clear clip region if the whole view needs redrawing, so that view host
+    // will draw the whole view correctly.
+    if (need_redraw_) {
+      clip_region_.Clear();
+    }
+  }
+
+  void Draw(CanvasInterface *canvas) {
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+    DLOG("host(%p) draw view(%p) on canvas %p with size: %f x %f",
+         view_host_, owner_, canvas, canvas->GetWidth(), canvas->GetHeight());
+    draw_count_ = 0;
+    uint64_t start = main_loop_->GetCurrentTime();
+#endif
 
     // no draw queued, so the draw request is initiated from host.
     // And because the canvas cache_ is valid, just need to paint the canvas
@@ -1178,19 +1193,14 @@ class View::Impl : public SmallObject<> {
       need_redraw_ = true;
     }
 
-    if (theme_changed_) {
-      SimpleEvent event(Event::EVENT_THEME_CHANGED);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
-      FireEvent(&scriptable_event, onthemechanged_event_);
-      theme_changed_ = false;
+    // Clear clip region if there is no canvas cache or the whole view needs
+    // redrawing. So that all elements will draw correctly.
+    if (need_redraw_ || !canvas_cache_) {
+      clip_region_.Clear();
     }
 
     CanvasInterface *target;
     if (canvas_cache_) {
-      if (need_redraw_ || !clip_region_enabled_)
-        clip_region_.Clear();
-      else
-        clip_region_.Integerize();
       target = canvas_cache_;
       target->PushState();
       target->IntersectGeneralClipRegion(clip_region_);
@@ -1735,7 +1745,7 @@ FileManagerInterface *View::GetFileManager() const {
 }
 
 void View::Layout() {
-  impl_->children_.Layout();
+  impl_->Layout();
 }
 
 GraphicsInterface *View::GetGraphics() const {
@@ -1855,6 +1865,10 @@ void View::Draw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
 }
 
+const ClipRegion *View::GetClipRegion() const {
+  return &impl_->clip_region_;
+}
+
 EventResult View::OnMouseEvent(const MouseEvent &event) {
   ScopedLogContext log_context(impl_->gadget_);
   return impl_->OnMouseEvent(event);
@@ -1960,17 +1974,17 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return !impl_->clip_region_enabled_ || !impl_->enable_cache_ ||
-      impl_->clip_region_.IsEmpty() ||
+  return !impl_->clip_region_enabled_ || impl_->clip_region_.IsEmpty() ||
       impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
 void View::AddElementToClipRegion(BasicElement *element,
                                   const Rectangle *rect) {
-  if (impl_->clip_region_enabled_ && impl_->enable_cache_) {
-    impl_->clip_region_.AddRectangle(rect ?
-                                     element->GetRectExtentsInView(*rect) :
-                                     element->GetExtentsInView());
+  if (impl_->clip_region_enabled_) {
+    Rectangle element_rect = rect ? element->GetRectExtentsInView(*rect) :
+        element->GetExtentsInView();
+    element_rect.Integerize(true);
+    impl_->clip_region_.AddRectangle(element_rect);
   }
 }
 

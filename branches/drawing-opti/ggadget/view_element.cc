@@ -26,6 +26,7 @@
 #include "view_host_interface.h"
 #include "math_utils.h"
 #include "small_object.h"
+#include "clip_region.h"
 
 namespace ggadget {
 
@@ -308,25 +309,23 @@ ViewInterface::HitTest ViewElement::GetHitTest(double x, double y) const {
 void ViewElement::Layout() {
   BasicElement::Layout();
   if (impl_->child_view_) {
-    // If view element's absolute position or size was changed, then it's
-    // necessary to call child view's layout, to make sure that the elements
-    // in child view which use native widget can be layouted correctly.
-    // It's not necessary to call child view's layout every time, because it
-    // might be costly.
-    double x0, y0, x1, y1;
-    SelfCoordToViewCoord(0, 0, &x0, &y0);
-    SelfCoordToViewCoord(GetPixelWidth(), GetPixelHeight(), &x1, &y1);
-    GetView()->ViewCoordToNativeWidgetCoord(x0, y0, &x0, &y0);
-    GetView()->ViewCoordToNativeWidgetCoord(x1, y1, &x1, &y1);
-    if (impl_->abs_x0_ != x0 || impl_->abs_y0_ != y0 ||
-        impl_->abs_x1_ != x1 || impl_->abs_y1_ != y1) {
-      DLOG("Force layout child view.");
-      impl_->child_view_->Layout();
-      impl_->abs_x0_ = x0;
-      impl_->abs_y0_ = y0;
-      impl_->abs_x1_ = x1;
-      impl_->abs_y1_ = y1;
+    impl_->child_view_->Layout();
+    const ClipRegion *region = impl_->child_view_->GetClipRegion();
+    if (region && !region->IsEmpty()) {
+      if (1.0 == impl_->scale_) {
+        QueueDrawRegion(*region);
+      } else {
+        ClipRegion scaled_region(*region);
+        scaled_region.Zoom(impl_->scale_);
+        QueueDrawRegion(scaled_region);
+      }
     }
+  }
+}
+
+void ViewElement::QueueDrawChildView() {
+  if (impl_->child_view_) {
+    GetView()->QueueDraw();
   }
 }
 

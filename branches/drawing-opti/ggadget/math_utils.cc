@@ -166,13 +166,6 @@ static inline void GetMaxMin(double x, double y, double *max, double *min) {
   }
 }
 
-Rectangle::Rectangle(double ax, double ay, double aw, double ah)
-  : x(ax), y(ay), w(aw), h(ah) {
-}
-
-Rectangle::Rectangle() : x(0), y(0), w(0), h(0) {
-}
-
 Rectangle Rectangle::GetPolygonExtents(size_t n, const double *vertexes) {
   ASSERT(n);
   ASSERT(vertexes);
@@ -230,15 +223,6 @@ bool Rectangle::Overlaps(const Rectangle &another) const {
   return true;
 }
 
-bool Rectangle::IsInside(const Rectangle &another) const {
-  return x >= another.x && (x + w) <= (another.x + another.w) &&
-         y >= another.y && (y + h) <= (another.y + another.h);
-}
-
-bool Rectangle::IsPointIn(double px, double py) const {
-  return px >= x && py >= y && px < x + w && py < y + h;
-}
-
 void Rectangle::Integerize(bool expand) {
   if (expand) {
     double nx = floor(x);
@@ -247,21 +231,6 @@ void Rectangle::Integerize(bool expand) {
   } else {
     Set(round(x), round(y), round(w), round(h));
   }
-}
-
-void Rectangle::Set(double a_x, double a_y, double a_w, double a_h) {
-  x = a_x;
-  y = a_y;
-  w = a_w;
-  h = a_h;
-}
-
-void Rectangle::Reset() {
-  x = y = w = h = 0;
-}
-
-bool Rectangle::operator==(const Rectangle &rect) const {
-  return x == rect.x && y == rect.y && w == rect.w && h == rect.h;
 }
 
 } // namespace ggadget

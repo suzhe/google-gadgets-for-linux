@@ -29,6 +29,7 @@ class ScriptContextInterface;
 class MenuInterface;
 class ViewHostInterface;
 class Gadget;
+class ClipRegion;
 
 /**
  * @ingroup Interfaces
@@ -239,6 +240,12 @@ class ViewInterface {
   virtual void MarkRedraw() = 0;
 
   /**
+   * Layout the view to make sure the clip region is up-to-date.
+   * It'll be called by view host just before calling Draw().
+   */
+  virtual void Layout() = 0;
+
+  /**
    * Draws the current view to a canvas.
    * The specified canvas shall already be prepared to be drawn directly
    * without any transformation.
@@ -246,6 +253,20 @@ class ViewInterface {
    * zooming factory as the whole gadget.
    */
   virtual void Draw(CanvasInterface *canvas) = 0;
+
+  /**
+   * Gets current clip region of the view.
+   *
+   * Usually it'll be called by host before calling Draw() method to draw the
+   * View onto screen. View host can optimize the drawing operation by
+   * making use of the clip region.
+   *
+   * If NULL or an empty ClipRegion is returned, then the whole region of the
+   * view will be redrawn.
+   *
+   * The clip region must already be integerized.
+   */
+  virtual const ClipRegion *GetClipRegion() const = 0;
 
  public: // Event handlers.
   /** Handler of the mouse events. */

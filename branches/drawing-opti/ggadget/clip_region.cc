@@ -163,6 +163,21 @@ void ClipRegion::Integerize() {
     it->Integerize(true);
 }
 
+void ClipRegion::Zoom(double zoom) {
+  for (RectangleVector::iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it)
+    it->Zoom(zoom);
+}
+
+size_t ClipRegion::GetRectangleCount() const {
+  return impl_->rectangles_.size();
+}
+
+Rectangle ClipRegion::GetRectangle(size_t index) const {
+  return index < impl_->rectangles_.size() ? impl_->rectangles_[index] :
+      Rectangle();
+}
+
 bool ClipRegion::EnumerateRectangles(RectangleSlot *slot) const {
   bool result = false;
   if (slot) {

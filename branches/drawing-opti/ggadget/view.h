@@ -88,13 +88,6 @@ class View : public ViewInterface {
   FileManagerInterface *GetFileManager() const;
 
   /**
-   * Force layout its children.
-   *
-   * It'll only be called by ViewElement to propagate layout request.
-   */
-  void Layout();
-
-  /**
    * Registers all properties of the View instance to specified Scriptable
    * instance./
    */
@@ -138,7 +131,11 @@ class View : public ViewInterface {
                                double *right, double *bottom) const;
   virtual void MarkRedraw();
 
+  virtual void Layout();
+
   virtual void Draw(CanvasInterface *canvas);
+
+  virtual const ClipRegion *GetClipRegion() const;
 
   virtual EventResult OnMouseEvent(const MouseEvent &event);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);
