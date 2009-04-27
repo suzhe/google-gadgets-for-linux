@@ -56,7 +56,7 @@ if test x$cross_compiling = xno; then
   if test "x$GGL_DIST_DESC" = "x"; then
     for relfile in $DIST_RELEASE_FILES; do
       if test -f $relfile; then
-        GGL_DIST_DESC=`cat $relfile | $SED -e "1p"`
+        GGL_DIST_DESC=`cat $relfile | $SED -n -e "1p"`
         if test "x$GGL_DIST_DESC" != "x"; then
           break
         fi
