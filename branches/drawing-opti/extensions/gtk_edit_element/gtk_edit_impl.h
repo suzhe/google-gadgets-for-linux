@@ -120,8 +120,7 @@ class GtkEditImpl {
   PangoLayout* EnsureLayout();
   /** Create a new layout containning current edit content */
   PangoLayout* CreateLayout();
-  /** Create cairo canvas on-demand. */
-  CairoCanvas* EnsureCanvas();
+
   /** Adjust the scroll information */
   void AdjustScroll();
   /**
@@ -149,15 +148,18 @@ class GtkEditImpl {
   void HideCursor();
 
   /** Draw the Cursor to the canvas */
-  void DrawCursor(CairoCanvas *canvas);
+  void DrawCursor(CanvasInterface *canvas);
+
   /** Draw the text to the canvas */
-  void DrawText(CairoCanvas *canvas);
+  void DrawText(CanvasInterface *canvas);
 
   void GetCursorRects(Rectangle *strong, Rectangle *weak);
 
   void UpdateCursorRegion();
 
   void UpdateSelectionRegion();
+
+  void UpdateContentRegion();
 
   /** Move cursor */
   void MoveCursor(MovementStep step, int count, bool extend_selection);
@@ -271,8 +273,6 @@ class GtkEditImpl {
   /** Graphics object, must be CairoGraphics */
   const GraphicsInterface *graphics_;
 
-  /** The CairoCanvas which hold cairo_t inside */
-  CairoCanvas *canvas_;
   /** Gtk InputMethod Context */
   GtkIMContext *im_context_;
 
@@ -369,9 +369,6 @@ class GtkEditImpl {
   /** Indicates if the cursor position has been moved since last draw. */
   bool cursor_moved_;
 
-  /** Indicates if the canvas cache needs updating. */
-  bool update_canvas_;
-
   /** The font family of the text */
   std::string font_family_;
   /** The font size of the text */
@@ -387,6 +384,8 @@ class GtkEditImpl {
   ClipRegion selection_region_;
   ClipRegion last_cursor_region_;
   ClipRegion cursor_region_;
+  ClipRegion last_content_region_;
+  ClipRegion content_region_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkEditImpl);
 };  // class GtkEditImpl

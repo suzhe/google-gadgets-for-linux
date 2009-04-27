@@ -1193,17 +1193,20 @@ class View::Impl : public SmallObject<> {
       need_redraw_ = true;
     }
 
-    // Clear clip region if there is no canvas cache or the whole view needs
-    // redrawing. So that all elements will draw correctly.
+    bool old_clip_region_enabled_ = clip_region_enabled_;
+    // Disable clip region temporary if there is no canvas cache or
+    // the whole view needs redrawing. So that all elements will draw correctly.
     if (need_redraw_ || !canvas_cache_) {
-      clip_region_.Clear();
+      clip_region_enabled_ = false;
     }
 
     CanvasInterface *target;
     if (canvas_cache_) {
       target = canvas_cache_;
       target->PushState();
-      target->IntersectGeneralClipRegion(clip_region_);
+      if (clip_region_enabled_) {
+        target->IntersectGeneralClipRegion(clip_region_);
+      }
       target->ClearRect(0, 0, width_, height_);
     } else {
       target = canvas;
@@ -1253,6 +1256,7 @@ class View::Impl : public SmallObject<> {
 
     clip_region_.Clear();
     need_redraw_ = false;
+    clip_region_enabled_ = old_clip_region_enabled_;
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     uint64_t end = main_loop_->GetCurrentTime();
@@ -1269,11 +1273,13 @@ class View::Impl : public SmallObject<> {
 #ifdef _DEBUG
   static bool DrawRectOnCanvasCallback(double x, double y, double w, double h,
                                        CanvasInterface *canvas) {
-    Color c(1, 0, 0);
+    static int color_index = 1;
+    Color c(color_index & 1, (color_index >> 1) & 1, (color_index >> 2) & 1);
     canvas->DrawLine(x, y, x + w, y, 1, c);
     canvas->DrawLine(x + w, y, x + w, y + h, 1, c);
     canvas->DrawLine(x + w, y + h, x, y + h, 1, c);
     canvas->DrawLine(x, y + h, x, y, 1, c);
+    color_index = (color_index >= 4 ? 1 : (color_index << 1));
     return true;
   }
 
