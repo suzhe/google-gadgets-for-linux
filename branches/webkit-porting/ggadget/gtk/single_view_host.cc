@@ -237,6 +237,9 @@ class SingleViewHost::Impl {
     g_signal_connect(G_OBJECT(widget_), "expose-event",
                      G_CALLBACK(ExposeHandler), this);
 
+    g_signal_connect(G_OBJECT(fixed_), "set-focus-child",
+                     G_CALLBACK(FixedSetFocusChildHandler), this);
+
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
     // input event mask effective.
@@ -1049,6 +1052,31 @@ class SingleViewHost::Impl {
     impl->draw_finished_ = true;
     // Make sure view widget binder can receive this event.
     return FALSE;
+  }
+
+  // Some elements may create gtk native widgets under this widget. When such
+  // a widget get focus, we must update the focus chain though the view
+  // hierachy.
+  static void FixedSetFocusChildHandler(GtkContainer *container,
+                                        GtkWidget *widget,
+                                        gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (widget) {
+      // Send fake MOUSE_DOWN/MOUSE_UP events to update the focus chain
+      // from the hosted view down to the element containing the native
+      // widget.
+      gint x = widget->allocation.x + widget->allocation.width / 2;
+      gint y = widget->allocation.y + widget->allocation.height / 2;
+      double view_x, view_y;
+      impl->NativeWidgetCoordToViewCoord(x, y, &view_x, &view_y);
+      MouseEvent down_event(Event::EVENT_MOUSE_DOWN, view_x, view_y,
+                            0, 0, MouseEvent::BUTTON_LEFT, 0);
+      impl->view_->OnMouseEvent(down_event);
+      MouseEvent up_event(Event::EVENT_MOUSE_UP, view_x, view_y,
+                          0, 0, MouseEvent::BUTTON_LEFT, 0);
+      impl->view_->OnMouseEvent(up_event);
+      // gtk_widget_grab_focus(widget);
+    }
   }
 
   SingleViewHost *owner_;

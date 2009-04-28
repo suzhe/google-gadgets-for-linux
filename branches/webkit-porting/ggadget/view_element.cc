@@ -139,6 +139,8 @@ void ViewElement::SetChildView(View *child_view) {
         NewSlot(impl_, &Impl::UpdateScaleAndSize));
     impl_->onopen_connection_ = child_view->ConnectOnOpenEvent(
         NewSlot(impl_, &Impl::OnChildViewOpen));
+    if (GetView()->GetFocusedElement() != this)
+      child_view->SetFocus(NULL);
   }
 
   impl_->child_view_ = child_view;

@@ -172,6 +172,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
 
+    // Clicking on this widget removes any native child widget focus.
+    gtk_window_set_focus(GTK_WINDOW(widget), NULL);
+
     impl->button_pressed_ = true;
     impl->host_->ShowTooltip("");
 
