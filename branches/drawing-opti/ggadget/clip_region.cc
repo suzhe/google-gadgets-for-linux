@@ -19,10 +19,11 @@
 #include "math_utils.h"
 #include "slot.h"
 #include "small_object.h"
+#include "light_map.h"
 
 namespace ggadget {
 
-typedef std::vector<Rectangle> RectangleVector;
+typedef std::vector<Rectangle, LokiAllocator<Rectangle> > RectangleVector;
 
 class ClipRegion::Impl : public SmallObject<> {
  public:

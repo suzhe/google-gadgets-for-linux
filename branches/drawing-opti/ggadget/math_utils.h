@@ -282,6 +282,10 @@ class Rectangle {
     h *= zoom;
   }
 
+  bool IsEmpty() const {
+    return w == 0 && h == 0;
+  }
+
  public:
   /**
    * Gets the extents of a polygon represented by a set of vertexes.

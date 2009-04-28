@@ -54,6 +54,12 @@ class ViewWidgetBinder {
    */
   void EnableInputShapeMask(bool enable);
 
+  /** Sets if there is a queue draw pending. */
+  void SetQueueDrawPending(bool pending);
+
+  /** Gets if there is a queue draw pending. */
+  bool GetQueueDrawPending() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ViewWidgetBinder);
   class Impl;

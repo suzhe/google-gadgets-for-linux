@@ -782,6 +782,14 @@ EventResult ComboBoxElement::HandleOtherEvent(const Event &event) {
   return EVENT_RESULT_UNHANDLED;
 }
 
+void ComboBoxElement::AggregateMoreClipRegion(ClipRegion *region,
+                                              const Rectangle &boundary) {
+  if (impl_->droplist_)
+    impl_->droplist_->AggregateClipRegion(region, boundary);
+  if (impl_->edit_)
+    impl_->edit_->AggregateClipRegion(region, boundary);
+}
+
 void ComboBoxElement::OnPopupOff() {
   QueueDraw();
   impl_->droplist_->SetVisible(false);

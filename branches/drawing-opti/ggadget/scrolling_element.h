@@ -39,6 +39,8 @@ class ScrollingElement : public BasicElement {
   virtual void DoRegister();
   virtual void DoClassRegister();
 
+  virtual void AggregateMoreClipRegion(ClipRegion *region,
+                                       const Rectangle &boundary);
  public:
   virtual void MarkRedraw();
 

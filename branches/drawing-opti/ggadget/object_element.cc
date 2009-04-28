@@ -119,4 +119,10 @@ EventResult ObjectElement::HandleOtherEvent(const Event &event) {
       EVENT_RESULT_UNHANDLED;
 }
 
+void ObjectElement::AggregateMoreClipRegion(ClipRegion *region,
+                                            const Rectangle &boundary) {
+  if (impl_->object_)
+    impl_->object_->AggregateClipRegion(region, boundary);
+}
+
 } // namespace ggadget

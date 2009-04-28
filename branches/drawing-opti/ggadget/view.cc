@@ -1154,10 +1154,21 @@ class View::Impl : public SmallObject<> {
     }
     draw_queued_ = false;
 
-    // Clear clip region if the whole view needs redrawing, so that view host
-    // will draw the whole view correctly.
-    if (need_redraw_) {
+    Rectangle boundary(0, 0, width_, height_);
+    if (!need_redraw_) {
+      if (popup_element_.Get()) {
+        popup_element_.Get()->AggregateClipRegion(&clip_region_, boundary);
+      }
+      children_.AggregateClipRegion(&clip_region_, boundary);
+    } else {
+      // Clear clip region if the whole view needs redrawing, so that view host
+      // will draw the whole view correctly.
       clip_region_.Clear();
+      clip_region_.AddRectangle(boundary);
+      if (popup_element_.Get()) {
+        popup_element_.Get()->AggregateClipRegion(NULL, Rectangle());
+      }
+      children_.AggregateClipRegion(NULL, Rectangle());
     }
   }
 
@@ -1232,7 +1243,7 @@ class View::Impl : public SmallObject<> {
       children_.Draw(target);
     }
 
-    if (popup) {
+    if (popup && owner_->IsElementInClipRegion(popup)) {
       double pin_x = popup->GetPixelPinX();
       double pin_y = popup->GetPixelPinY();
       double abs_pin_x = 0;
@@ -1420,6 +1431,8 @@ class View::Impl : public SmallObject<> {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
+    owner_->AddElementToClipRegion(element, NULL);
+
     // Clears tooltip immediately.
     if (element == tooltip_element_.Get() && view_host_)
       view_host_->ShowTooltip("");
@@ -1464,6 +1477,9 @@ class View::Impl : public SmallObject<> {
 
   void SetPopupElement(BasicElement *element) {
     if (popup_element_.Get()) {
+      // To make sure the area covered by popup element can be redrawn
+      // correctly.
+      owner_->AddElementToClipRegion(popup_element_.Get(), NULL);
       popup_element_.Get()->OnPopupOff();
     }
     popup_element_.Reset(element);
@@ -1980,18 +1996,17 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return !impl_->clip_region_enabled_ || impl_->clip_region_.IsEmpty() ||
+  return !impl_->clip_region_enabled_ ||
       impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
+
 void View::AddElementToClipRegion(BasicElement *element,
                                   const Rectangle *rect) {
-  if (impl_->clip_region_enabled_) {
-    Rectangle element_rect = rect ? element->GetRectExtentsInView(*rect) :
-        element->GetExtentsInView();
-    element_rect.Integerize(true);
-    impl_->clip_region_.AddRectangle(element_rect);
-  }
+  Rectangle element_rect = rect ? element->GetRectExtentsInView(*rect) :
+      element->GetExtentsInView();
+  element_rect.Integerize(true);
+  impl_->clip_region_.AddRectangle(element_rect);
 }
 
 void View::EnableClipRegion(bool enable) {

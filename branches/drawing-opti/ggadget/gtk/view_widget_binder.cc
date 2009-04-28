@@ -74,6 +74,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #ifdef GRAB_POINTER_EXPLICITLY
       pointer_grabbed_(false),
 #endif
+      queue_draw_pending_(false),
 #ifdef _DEBUG
       draw_count_(0),
       last_fps_time_(0),
@@ -341,8 +342,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     return result != EVENT_RESULT_UNHANDLED;
   }
 
-  static GdkRegion *CreateExposeRegion(GdkRegion *expose_region,
-                                       const ClipRegion *view_region,
+  static GdkRegion *CreateExposeRegion(const ClipRegion *view_region,
                                        int width, int height,
                                        int last_width, int last_height,
                                        double zoom) {
@@ -353,7 +353,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       Rectangle rect;
       for (size_t i = 0; i < count; ++i) {
         rect = view_region->GetRectangle(i);
-        if (zoom != 1) {
+        if (zoom != 1.0) {
           rect.Zoom(zoom);
           rect.Integerize(true);
         }
@@ -363,28 +363,21 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
         gdk_rect.height = static_cast<int>(rect.h);
         gdk_region_union_with_rect(region, &gdk_rect);
       }
-      if (width > last_width) {
-        gdk_rect.x = last_width;
-        gdk_rect.y = 0;
-        gdk_rect.width = width - last_width;
-        gdk_rect.height = height;
-        gdk_region_union_with_rect(region, &gdk_rect);
-      }
-      if (height > last_height) {
-        gdk_rect.x = 0;
-        gdk_rect.y = last_height;
-        gdk_rect.width = width;
-        gdk_rect.height = height - last_height;
-        gdk_region_union_with_rect(region, &gdk_rect);
-      }
-    } else {
-      gdk_rect.x = 0;
+    }
+    if (width > last_width) {
+      gdk_rect.x = last_width;
       gdk_rect.y = 0;
-      gdk_rect.width = width;
+      gdk_rect.width = width - last_width;
       gdk_rect.height = height;
       gdk_region_union_with_rect(region, &gdk_rect);
     }
-    gdk_region_intersect(region, expose_region);
+    if (height > last_height) {
+      gdk_rect.x = 0;
+      gdk_rect.y = last_height;
+      gdk_rect.width = width;
+      gdk_rect.height = height - last_height;
+      gdk_region_union_with_rect(region, &gdk_rect);
+    }
     return region;
   }
 
@@ -393,19 +386,58 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     gint width, height;
     gdk_drawable_get_size(widget->window, &width, &height);
+    gint last_width = impl->last_width_;
+    gint last_height = impl->last_height_;
+    //bool queue_draw_pending = impl->queue_draw_pending_;
+
+    //GdkRectangle window_rect;
+    //window_rect.x = 0;
+    //window_rect.y = 0;
+    //window_rect.width = width;
+    //window_rect.height = height;
 
     impl->view_->Layout();
 
-    GdkRegion *region = CreateExposeRegion(
-      event->region, impl->view_->GetClipRegion(), width, height,
-      impl->last_width_, impl->last_height_, impl->zoom_);
-
     impl->last_width_ = width;
     impl->last_height_ = height;
+    impl->queue_draw_pending_ = false;
 
-    // Create off-screen buffer for the region.
-    gdk_window_begin_paint_region(widget->window, region);
-    gdk_region_destroy(region);
+    GdkRegion *region = CreateExposeRegion(
+        impl->view_->GetClipRegion(), width, height,
+        last_width, last_height, impl->zoom_);
+
+    if (gdk_region_empty(region)) {
+      gdk_region_destroy(region);
+      gdk_window_begin_paint_region(widget->window, event->region);
+    } else {
+      gdk_region_intersect(region, event->region);
+      gdk_window_begin_paint_region(widget->window, region);
+      gdk_region_destroy(region);
+    }
+
+#if 0
+    if (queue_draw_pending && gdk_region_rect_in(event->region, &window_rect)
+        == GDK_OVERLAP_RECTANGLE_IN) {
+      GdkRegion *region = CreateExposeRegion(
+          impl->view_->GetClipRegion(), width, height,
+          last_width, last_height, impl->zoom_);
+
+      if (gdk_region_empty(region)) {
+        DLOG("View(%p) has pending queue draw, but doesn't have clip region.",
+             impl->view_);
+        gdk_region_destroy(region);
+        // No need to redraw.
+        return TRUE;
+      }
+
+      gdk_region_intersect(region, event->region);
+      gdk_window_begin_paint_region(widget->window, region);
+      gdk_region_destroy(region);
+    } else {
+      DLOG("System requires redraw view(%p)", impl->view_);
+      gdk_window_begin_paint_region(widget->window, event->region);
+    }
+#endif
 
     cairo_t *cr = gdk_cairo_create(widget->window);
 
@@ -467,6 +499,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       impl->draw_count_ = 0;
     }
 #endif
+
     return TRUE;
   }
 
@@ -837,6 +870,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #ifdef GRAB_POINTER_EXPLICITLY
   bool pointer_grabbed_;
 #endif
+  bool queue_draw_pending_;
 #ifdef _DEBUG
   int draw_count_;
   uint64_t last_fps_time_;
@@ -904,6 +938,14 @@ void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
 ViewWidgetBinder::~ViewWidgetBinder() {
   delete impl_;
   impl_ = NULL;
+}
+
+void ViewWidgetBinder::SetQueueDrawPending(bool pending) {
+  impl_->queue_draw_pending_ = pending;
+}
+
+bool ViewWidgetBinder::GetQueueDrawPending() const {
+  return impl_->queue_draw_pending_;
 }
 
 } // namespace gtk

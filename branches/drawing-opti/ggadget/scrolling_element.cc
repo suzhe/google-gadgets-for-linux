@@ -331,4 +331,10 @@ const ScrollBarElement *ScrollingElement::GetScrollBar() const {
   return impl_->scrollbar_;
 }
 
+void ScrollingElement::AggregateMoreClipRegion(ClipRegion *region,
+                                               const Rectangle &boundary) {
+  if (impl_->scrollbar_)
+    impl_->scrollbar_->AggregateClipRegion(region, boundary);
+}
+
 } // namespace ggadget
