@@ -20,7 +20,7 @@ var kPluginDownloadURLPrefix = "http://desktop.google.com";
 // then with category names. The elements of the table are arrays of plugins.
 // For example, gPlugins may contain the following value:
 // {en:{news:[plugin1,plugin2,...],...}}.
-var gPlugins = { en: [] };
+var gPlugins = {};
 var gPluginIdIndex = {};
 
 // Plugin updated in recent two months are listed in the "new" category.
@@ -32,7 +32,9 @@ var kPluginTypeSidebar = "sidebar";
 var kPluginTypeIGoogle = "igoogle";
 var kPluginTypeFeed = "feed";
 
+var kAllLanguage = "all";
 var kAnyLanguage = "any";
+
 var kCategoryAll = "all";
 var kCategoryNew = "new";
 var kCategoryRecommendations = "recommendations";
@@ -95,6 +97,8 @@ function LoadMetadata() {
     var languages = SplitValues(attrs.language);
     if (languages.length == 0)
       languages.push("en");
+    languages.push(kAllLanguage);
+
     var categories = SplitValues(attrs.category);
     // TODO: other special categories.
     plugin.rank = parseFloat(attrs.rank);
