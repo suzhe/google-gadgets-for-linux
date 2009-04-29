@@ -1156,6 +1156,7 @@ class BrowserElement::Impl : public BrowserElementImpl {
 BrowserElement::BrowserElement(View *view, const char *name)
     : BasicElement(view, "browser", name, true),
       impl_(new Impl(this)) {
+  SetEnabled(true);
 }
 
 void BrowserElement::DoClassRegister() {
