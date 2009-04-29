@@ -30,6 +30,7 @@ class MenuInterface;
 class ViewHostInterface;
 class Gadget;
 class ClipRegion;
+class Rectangle;
 
 /**
  * @ingroup Interfaces
@@ -267,6 +268,31 @@ class ViewInterface {
    * The clip region must already be integerized.
    */
   virtual const ClipRegion *GetClipRegion() const = 0;
+
+  /**
+   * Enables or disables current clip region. Clip region is enabled by default.
+   *
+   * When clip region is enabled, all elements outside current clip region will
+   * not be drawn at all.
+   * It's usually be called by view host before calling Draw(), if the host
+   * wants draw the whole view.
+   * Disabling clip region will not clear the content in curreng clip region
+   * returned by GetClipRegion() method.
+   *
+   * @return the old clip region state.
+   */
+  virtual bool EnableClipRegion(bool enable) = 0;
+
+  /**
+   * Adds a rectangle to current clip region.
+   *
+   * It's usually be called by view host before calling Draw(), if the host
+   * wants to draw additional area of the view besides the area covered by
+   * current clip region.
+   *
+   * The specified rectangle shall already be integerized.
+   */
+  virtual void AddRectangleToClipRegion(const Rectangle &rect) = 0;
 
  public: // Event handlers.
   /** Handler of the mouse events. */

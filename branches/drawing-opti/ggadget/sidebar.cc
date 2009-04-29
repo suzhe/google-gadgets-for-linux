@@ -558,11 +558,14 @@ class SideBar::Impl : public View {
         children_->InsertElement(element, NULL);
     } else {
       if (index >= count) {
+        element->SetPixelY(main_div_->GetPixelHeight());
         children_->InsertElement(element, NULL);
       } else {
         BasicElement *e = children_->GetItemByIndex(index);
-        if (e != element)
+        if (e != element) {
+          element->SetPixelY(e ? e->GetPixelY() : main_div_->GetPixelHeight());
           children_->InsertElement(element, e);
+        }
       }
     }
     LayoutSubViews();

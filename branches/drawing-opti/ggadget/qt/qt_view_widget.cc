@@ -90,7 +90,9 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.restore();
   }
 
+  // FIXME: support clip region.
   view_->Layout();
+  bool old = view_->EnableClipRegion(false);
 
   if (enable_input_mask_) {
     if (!offscreen_pixmap_
@@ -113,6 +115,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     QtCanvas canvas(width(), height(), &p);
     view_->Draw(&canvas);
   }
+  view_->EnableClipRegion(old);
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {

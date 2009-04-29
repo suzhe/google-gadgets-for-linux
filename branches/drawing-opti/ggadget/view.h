@@ -136,6 +136,8 @@ class View : public ViewInterface {
   virtual void Draw(CanvasInterface *canvas);
 
   virtual const ClipRegion *GetClipRegion() const;
+  virtual bool EnableClipRegion(bool enable);
+  virtual void AddRectangleToClipRegion(const Rectangle &rect);
 
   virtual EventResult OnMouseEvent(const MouseEvent &event);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);
@@ -257,15 +259,6 @@ class View : public ViewInterface {
    *        the clip region.
    */
   void AddElementToClipRegion(BasicElement *element, const Rectangle *rect);
-
-  /**
-   * Enables or disables current clip regions.
-   * When clip region is disabled then IsElementInClipRegion() will always
-   * return true and all elements will be drawn when drawing View.
-   *
-   * It's useful when draw an element into off-screen buffer.
-   */
-  void EnableClipRegion(bool enable);
 
  public: // Timer, interval and animation functions.
   /**
@@ -495,6 +488,15 @@ class View : public ViewInterface {
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
   Connection *ConnectOnContextMenuEvent(Slot0<void> *handler);
   Connection *ConnectOnThemeChangedEvent(Slot0<void> *handler);
+
+ public:
+  /**
+   * A special signal which will be called when AddRectangleToClipRegion() is
+   * called, so that ViewElements in this view can add the rectangle to sub
+   * view's clip region.
+   */
+  Connection *ConnectOnAddRectangleToClipRegion(
+      Slot4<void, double, double, double, double> *handler);
 
  public:
   /** For performance testing. */

@@ -392,6 +392,29 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     return region;
   }
 
+  static void AddGdkRectangleToViewClipRegion(ViewInterface *view,
+                                              const GdkRectangle &gdk_rect,
+                                              bool zoom) {
+    Rectangle rect(gdk_rect.x, gdk_rect.y, gdk_rect.width, gdk_rect.height);
+    rect.Zoom(1.0 / zoom);
+    rect.Integerize(true);
+    view->AddRectangleToClipRegion(rect);
+  }
+
+  static void AddGdkRegionToViewClipRegion(ViewInterface *view,
+                                           GdkRegion *region,
+                                           bool zoom) {
+    if (!gdk_region_empty(region)) {
+      GdkRectangle *rects;
+      gint n_rects;
+      gdk_region_get_rectangles(region, &rects, &n_rects);
+      for (gint i = 0; i < n_rects; ++i) {
+        AddGdkRectangleToViewClipRegion(view, rects[i], zoom);
+      }
+      g_free(rects);
+    }
+  }
+
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
@@ -433,13 +456,16 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
         rect.height = height;
         gdk_region_union_with_rect(region, &rect);
         impl->input_shape_mask_ = gdk_pixmap_new(NULL, width, height, 1);
+
+        // Redraw whole view.
+        AddGdkRectangleToViewClipRegion(impl->view_, rect, impl->zoom_);
       }
     }
 #endif
 
     if (event->area.x == 0 && event->area.y == 0 &&
         event->area.width == 1 && event->area.height == 1) {
-      // DLOG("View(%p): self queue draw.", impl->view_);
+      DLOG("View(%p): self queue draw.", impl->view_);
       if (gdk_region_empty(region)) {
         DLOG("View(%p) has pending queue draw, but doesn't have clip region.",
              impl->view_);
@@ -449,8 +475,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       }
       gdk_window_begin_paint_region(widget->window, region);
     } else {
-      // DLOG("System requires redraw view(%p)", impl->view_);
+      DLOG("System requires redraw view(%p)", impl->view_);
       gdk_region_union(region, event->region);
+      AddGdkRegionToViewClipRegion(impl->view_, event->region, impl->zoom_);
       gdk_window_begin_paint_region(widget->window, region);
     }
 
@@ -468,7 +495,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     // Let View draw on the gdk window directly.
     // It's ok, because the View has canvas cache internally.
     CairoCanvas *canvas = new CairoCanvas(cr,
-                                          impl->view_->GetGraphics()->GetZoom(),
+                                          impl->zoom_,
                                           impl->view_->GetWidth(),
                                           impl->view_->GetHeight());
     ASSERT(canvas);

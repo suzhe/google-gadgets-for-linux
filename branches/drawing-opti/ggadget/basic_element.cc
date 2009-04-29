@@ -565,13 +565,14 @@ class BasicElement::Impl : public SmallObject<> {
       // Only do draw when it's direct draw or the content has been changed.
       if (!indirect_draw || content_changed_ || force_draw) {
         // Disable clip region, so that all children can be drawn correctly.
+        bool old = false;
         if (cache_enabled_)
-          view_->EnableClipRegion(false);
+          old = view_->EnableClipRegion(false);
 
         owner_->DoDraw(target);
 
         if (cache_enabled_)
-          view_->EnableClipRegion(true);
+          view_->EnableClipRegion(old);
       }
 
       if (indirect_draw) {

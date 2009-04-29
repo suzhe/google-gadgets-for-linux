@@ -469,9 +469,9 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
         canvas->TranslateCoordinates(-pinx, -piny);
       }
 
-      GetView()->EnableClipRegion(false);
+      bool old = GetView()->EnableClipRegion(false);
       item->Draw(canvas);
-      GetView()->EnableClipRegion(true);
+      GetView()->EnableClipRegion(old);
 
       canvas->PopState();
       item->SetDrawOverlay(true);

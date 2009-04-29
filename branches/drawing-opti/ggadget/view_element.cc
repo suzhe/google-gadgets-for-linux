@@ -51,7 +51,11 @@ class ViewElement::Impl : public SmallObject<> {
       abs_x1_(0),
       abs_y1_(0),
       onsize_connection_(NULL),
-      onopen_connection_(NULL) {
+      onopen_connection_(NULL),
+      on_add_clip_rect_connection_(NULL) {
+    on_add_clip_rect_connection_ =
+        owner_->GetView()->ConnectOnAddRectangleToClipRegion(
+            NewSlot(this, &Impl::OnAddClipRect));
   }
 
   ~Impl() {
@@ -59,6 +63,8 @@ class ViewElement::Impl : public SmallObject<> {
       onsize_connection_->Disconnect();
     if (onopen_connection_)
       onopen_connection_->Disconnect();
+    if (on_add_clip_rect_connection_)
+      on_add_clip_rect_connection_->Disconnect();
   }
 
   void OnChildViewOpen() {
@@ -83,6 +89,19 @@ class ViewElement::Impl : public SmallObject<> {
     }
   }
 
+  void OnAddClipRect(double x, double y, double w, double h) {
+    if (child_view_) {
+      double r[8];
+      owner_->ViewCoordToChildViewCoord(x, y, &r[0], &r[1]);
+      owner_->ViewCoordToChildViewCoord(x, y + h, &r[2], &r[3]);
+      owner_->ViewCoordToChildViewCoord(x + w, y + h, &r[4], &r[5]);
+      owner_->ViewCoordToChildViewCoord(x + w, y, &r[6], &r[7]);
+
+      Rectangle child_rect = Rectangle::GetPolygonExtents(4, r);
+      child_view_->AddRectangleToClipRegion(child_rect);
+    }
+  }
+
   ViewElement *owner_;
   View *child_view_; // This view is not owned by the element.
   double scale_;
@@ -102,6 +121,8 @@ class ViewElement::Impl : public SmallObject<> {
 
   Connection *onsize_connection_;
   Connection *onopen_connection_;
+
+  Connection *on_add_clip_rect_connection_;
 };
 
 ViewElement::ViewElement(View *parent_view, View *child_view,

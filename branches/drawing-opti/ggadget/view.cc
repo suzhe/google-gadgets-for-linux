@@ -225,7 +225,8 @@ class View::Impl : public SmallObject<> {
       resize_border_specified_(false),
       mouse_over_(false),
       view_focused_(false),
-      safe_to_destroy_(true) {
+      safe_to_destroy_(true),
+      content_changed_(true) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -1170,6 +1171,17 @@ class View::Impl : public SmallObject<> {
       }
       children_.AggregateClipRegion(NULL, Rectangle());
     }
+
+    if (!clip_region_.IsEmpty()) {
+      content_changed_ = true;
+      if (on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+        size_t count = clip_region_.GetRectangleCount();
+        for (size_t i = 0; i < count; ++i) {
+          Rectangle r = clip_region_.GetRectangle(i);
+          on_add_rectangle_to_clip_region_(r.x, r.y, r.w, r.h);
+        }
+      }
+    }
   }
 
   void Draw(CanvasInterface *canvas) {
@@ -1183,8 +1195,7 @@ class View::Impl : public SmallObject<> {
     // no draw queued, so the draw request is initiated from host.
     // And because the canvas cache_ is valid, just need to paint the canvas
     // cache to the dest canvas.
-    if (clip_region_.IsEmpty() && clip_region_enabled_ &&
-        canvas_cache_ && !need_redraw_) {
+    if (!content_changed_ && canvas_cache_ && !need_redraw_) {
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
       DLOG("Draw View(%p) from canvas cache.", owner_);
 #endif
@@ -1192,10 +1203,9 @@ class View::Impl : public SmallObject<> {
       return;
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     } else {
-      DLOG("Redraw whole view: clip region(%zu):%d, "
+      DLOG("Redraw whole view: content changed: %d, "
            "canvas cache: %p, need redraw:%d",
-           clip_region_.GetRectangleCount(), clip_region_enabled_,
-           canvas_cache_, need_redraw_);
+           content_changed_, canvas_cache_, need_redraw_);
 #endif
     }
 
@@ -1214,7 +1224,7 @@ class View::Impl : public SmallObject<> {
     bool old_clip_region_enabled_ = clip_region_enabled_;
     // Disable clip region temporary if there is no canvas cache or
     // the whole view needs redrawing. So that all elements will draw correctly.
-    if (need_redraw_ || !canvas_cache_) {
+    if (need_redraw_) {
       clip_region_enabled_ = false;
     }
 
@@ -1275,6 +1285,7 @@ class View::Impl : public SmallObject<> {
     clip_region_.Clear();
     need_redraw_ = false;
     clip_region_enabled_ = old_clip_region_enabled_;
+    content_changed_ = false;
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     uint64_t end = main_loop_->GetCurrentTime();
@@ -1681,6 +1692,7 @@ class View::Impl : public SmallObject<> {
   EventSignal onthemechanged_event_;
 
   Signal0<void> on_destroy_signal_;
+  Signal4<void, double, double, double, double> on_add_rectangle_to_clip_region_;
 
   ImageCache image_cache_;
 
@@ -1733,6 +1745,7 @@ class View::Impl : public SmallObject<> {
   bool mouse_over_              : 1;
   bool view_focused_            : 1;
   bool safe_to_destroy_         : 1;
+  bool content_changed_         : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;
@@ -2016,8 +2029,20 @@ void View::AddElementToClipRegion(BasicElement *element,
   impl_->clip_region_.AddRectangle(element_rect);
 }
 
-void View::EnableClipRegion(bool enable) {
+bool View::EnableClipRegion(bool enable) {
+  bool old = impl_->clip_region_enabled_;
   impl_->clip_region_enabled_ = enable;
+  return old;
+}
+
+void View::AddRectangleToClipRegion(const Rectangle &rect) {
+  Rectangle view_rect(0, 0, impl_->width_, impl_->height_);
+  if (view_rect.Intersect(rect)) {
+    view_rect.Integerize(true);
+    impl_->clip_region_.AddRectangle(view_rect);
+    impl_->on_add_rectangle_to_clip_region_(
+        view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+  }
 }
 
 void View::IncreaseDrawCount() {
@@ -2296,6 +2321,10 @@ Connection *View::ConnectOnContextMenuEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnThemeChangedEvent(Slot0<void> *handler) {
   return impl_->onthemechanged_event_.Connect(handler);
+}
+Connection *View::ConnectOnAddRectangleToClipRegion(
+    Slot4<void, double, double, double, double> *handler) {
+  return impl_->on_add_rectangle_to_clip_region_.Connect(handler);
 }
 
 } // namespace ggadget
