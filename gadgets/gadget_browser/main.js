@@ -213,31 +213,30 @@ function GetDisplayCategory(category) {
 var gUpdatingLanguageBox = false;
 function UpdateLanguageBox() {
   gUpdatingLanguageBox = true;
-  var default_language = framework.system.languageCode().toLowerCase();
-  if (!default_language || !gPlugins[default_language] ||
-      !GetDisplayLanguage(default_language))
-    default_language = "en";
-  gadget.debug.trace("Default language: " + default_language);
 
   language_box.removeAllElements();
   var languages = [];
   for (var language in gPlugins) {
-    var disp_lang = GetDisplayLanguage(language);
-    if (disp_lang)
-      languages.push({lang: language, disp: disp_lang});
+    if (language != kAllLanguage) {
+      var disp_lang = GetDisplayLanguage(language);
+      if (disp_lang)
+        languages.push({lang: language, disp: disp_lang});
+    }
   }
   languages.sort(function(a, b) { return a.disp.localeCompare(b.disp); });
+  languages.unshift({
+    lang: kAllLanguage,
+    disp: GetDisplayLanguage(kAllLanguage)
+  });
   for (var i = 0; i < languages.length; i++) {
     var language = languages[i].lang;
     language_box.appendElement(
       "<item name='" + language +
       "'><label vAlign='middle' size='10'>" + languages[i].disp +
       "</label></item>");
-
-    if (default_language == language)
-      language_box.selectedIndex = language_box.children.count - 1;
   }
-  SelectLanguage(default_language);
+  language_box.selectedIndex = 0;
+  SelectLanguage(kAllLanguage);
   gUpdatingLanguageBox = false;
 }
 
