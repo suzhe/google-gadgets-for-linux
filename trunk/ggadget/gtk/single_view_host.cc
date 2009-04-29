@@ -1067,7 +1067,7 @@ class SingleViewHost::Impl {
       // widget.
       gint x = widget->allocation.x + widget->allocation.width / 2;
       gint y = widget->allocation.y + widget->allocation.height / 2;
-      double view_x, view_y;
+      double view_x = 0, view_y = 0;
       impl->NativeWidgetCoordToViewCoord(x, y, &view_x, &view_y);
       MouseEvent down_event(Event::EVENT_MOUSE_DOWN, view_x, view_y,
                             0, 0, MouseEvent::BUTTON_LEFT, 0);
