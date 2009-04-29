@@ -836,7 +836,7 @@ extern "C" {
     };
 
     QString host, user, password;
-    quint16 port;
+    quint16 port = 0;
     for (int i = 0; proxy_names[i]; i++) {
       const char *env = getenv(proxy_names[i]);
       if (env && ParseProxyEnv(env, &host, &port, &user, &password)) {
