@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <cairo.h>
+#include <gdk/gdk.h>
 
 #include "view_widget_binder.h"
 #include <ggadget/common.h>
@@ -62,6 +63,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     : view_(view),
       host_(host),
       widget_(widget),
+#if GTK_CHECK_VERSION(2,10,0)
+      input_shape_mask_(NULL),
+#endif
       handlers_(new gulong[kEventHandlersNum]),
       current_drag_event_(NULL),
       on_zoom_connection_(NULL),
@@ -74,7 +78,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #ifdef GRAB_POINTER_EXPLICITLY
       pointer_grabbed_(false),
 #endif
-      queue_draw_pending_(false),
 #ifdef _DEBUG
       draw_count_(0),
       last_fps_time_(0),
@@ -159,6 +162,11 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     }
 
     g_object_unref(G_OBJECT(widget_));
+#if GTK_CHECK_VERSION(2,10,0)
+    if (input_shape_mask_) {
+      g_object_unref(G_OBJECT(input_shape_mask_));
+    }
+#endif
   }
 
   void OnZoom(double zoom) {
@@ -387,44 +395,51 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    gint width, height;
-    gdk_drawable_get_size(widget->window, &width, &height);
     gint last_width = impl->last_width_;
     gint last_height = impl->last_height_;
-    //bool queue_draw_pending = impl->queue_draw_pending_;
-
-    //GdkRectangle window_rect;
-    //window_rect.x = 0;
-    //window_rect.y = 0;
-    //window_rect.width = width;
-    //window_rect.height = height;
-
-    impl->view_->Layout();
+    gint width, height;
+    gdk_drawable_get_size(widget->window, &width, &height);
 
     impl->last_width_ = width;
     impl->last_height_ = height;
-    impl->queue_draw_pending_ = false;
+
+    impl->view_->Layout();
 
     GdkRegion *region = CreateExposeRegion(
         impl->view_->GetClipRegion(), width, height,
         last_width, last_height, impl->zoom_);
 
-    if (gdk_region_empty(region)) {
-      gdk_region_destroy(region);
-      gdk_window_begin_paint_region(widget->window, event->region);
-    } else {
-      gdk_region_intersect(region, event->region);
-      gdk_window_begin_paint_region(widget->window, region);
-      gdk_region_destroy(region);
+#if GTK_CHECK_VERSION(2,10,0)
+    // We need set input shape mask if there is no background.
+    if (impl->no_background_ && impl->composited_ &&
+        impl->enable_input_shape_mask_) {
+      if (impl->input_shape_mask_) {
+        gint mask_width, mask_height;
+        gdk_drawable_get_size(GDK_DRAWABLE(impl->input_shape_mask_),
+                              &mask_width, &mask_height);
+        if (mask_width != width || mask_height != height) {
+          // input shape mask needs recreate.
+          g_object_unref(G_OBJECT(impl->input_shape_mask_));
+          impl->input_shape_mask_ = NULL;
+        }
+      }
+
+      if (impl->input_shape_mask_ == NULL) {
+        DLOG("View(%p): need (re)create input shape mask.", impl->view_);
+        GdkRectangle rect;
+        rect.x = 0;
+        rect.y = 0;
+        rect.width = width;
+        rect.height = height;
+        gdk_region_union_with_rect(region, &rect);
+        impl->input_shape_mask_ = gdk_pixmap_new(NULL, width, height, 1);
+      }
     }
+#endif
 
-#if 0
-    if (queue_draw_pending && gdk_region_rect_in(event->region, &window_rect)
-        == GDK_OVERLAP_RECTANGLE_IN) {
-      GdkRegion *region = CreateExposeRegion(
-          impl->view_->GetClipRegion(), width, height,
-          last_width, last_height, impl->zoom_);
-
+    if (event->area.x == 0 && event->area.y == 0 &&
+        event->area.width == 1 && event->area.height == 1) {
+      // DLOG("View(%p): self queue draw.", impl->view_);
       if (gdk_region_empty(region)) {
         DLOG("View(%p) has pending queue draw, but doesn't have clip region.",
              impl->view_);
@@ -432,15 +447,12 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
         // No need to redraw.
         return TRUE;
       }
-
-      gdk_region_intersect(region, event->region);
       gdk_window_begin_paint_region(widget->window, region);
-      gdk_region_destroy(region);
     } else {
-      DLOG("System requires redraw view(%p)", impl->view_);
-      gdk_window_begin_paint_region(widget->window, event->region);
+      // DLOG("System requires redraw view(%p)", impl->view_);
+      gdk_region_union(region, event->region);
+      gdk_window_begin_paint_region(widget->window, region);
     }
-#endif
 
     cairo_t *cr = gdk_cairo_create(widget->window);
 
@@ -463,32 +475,30 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
     impl->view_->Draw(canvas);
 
-#if GTK_CHECK_VERSION(2,10,0)
-    // We need set input shape mask if there is no background.
-    if (impl->no_background_ && impl->composited_ &&
-        impl->enable_input_shape_mask_) {
-      // create an identical bitmap to use as shape mask
-      GdkBitmap *bitmap =
-        static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
-      cairo_t *mask = gdk_cairo_create(bitmap);
-      CairoCanvas *mask_canvas =
-          new CairoCanvas(mask, impl->view_->GetGraphics()->GetZoom(),
-                          impl->view_->GetWidth(), impl->view_->GetHeight());
-      mask_canvas->ClearCanvas();
-      impl->view_->Draw(mask_canvas);
-      mask_canvas->Destroy();
-      cairo_destroy(mask);
-
-      gtk_widget_input_shape_combine_mask(widget, bitmap, 0, 0);
-      gdk_bitmap_unref(bitmap);
-    }
-#endif
-
     canvas->Destroy();
     cairo_destroy(cr);
 
+#if GTK_CHECK_VERSION(2,10,0)
+    // We need set input shape mask if there is no background.
+    if (impl->no_background_ && impl->composited_ &&
+        impl->enable_input_shape_mask_ && impl->input_shape_mask_) {
+      cairo_t *mask_cr = gdk_cairo_create(impl->input_shape_mask_);
+      gdk_cairo_region(mask_cr, region);
+      cairo_clip(mask_cr);
+      cairo_set_operator(mask_cr, CAIRO_OPERATOR_CLEAR);
+      cairo_paint(mask_cr);
+      cairo_set_operator(mask_cr, CAIRO_OPERATOR_SOURCE);
+      gdk_cairo_set_source_pixmap(mask_cr, widget->window, 0, 0);
+      cairo_paint(mask_cr);
+      cairo_destroy(mask_cr);
+      gdk_window_input_shape_combine_mask(widget->window,
+                                          impl->input_shape_mask_, 0, 0);
+    }
+#endif
+
     // Copy off-screen buffer to screen.
     gdk_window_end_paint(widget->window);
+    gdk_region_destroy(region);
 
 #ifdef _DEBUG
     ++impl->draw_count_;
@@ -861,6 +871,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   ViewInterface *view_;
   ViewHostInterface *host_;
   GtkWidget *widget_;
+#if GTK_CHECK_VERSION(2,10,0)
+  GdkBitmap *input_shape_mask_;
+#endif
   gulong *handlers_;
   DragEvent *current_drag_event_;
   Connection *on_zoom_connection_;
@@ -873,7 +886,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #ifdef GRAB_POINTER_EXPLICITLY
   bool pointer_grabbed_;
 #endif
-  bool queue_draw_pending_;
 #ifdef _DEBUG
   int draw_count_;
   uint64_t last_fps_time_;
@@ -931,24 +943,26 @@ ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
 }
 
 void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
-  impl_->enable_input_shape_mask_ = enable;
+  if (impl_->enable_input_shape_mask_ != enable) {
+    impl_->enable_input_shape_mask_ = enable;
 #if GTK_CHECK_VERSION(2,10,0)
-  if (impl_->widget_ && impl_->no_background_ && impl_->composited_ && !enable)
-    gtk_widget_input_shape_combine_mask(impl_->widget_, NULL, 0, 0);
+    if (impl_->widget_ && impl_->no_background_ &&
+        impl_->composited_ && !enable) {
+      if (impl_->widget_->window) {
+        gdk_window_input_shape_combine_mask(impl_->widget_->window, NULL, 0, 0);
+      }
+      if (impl_->input_shape_mask_) {
+        g_object_unref(G_OBJECT(impl_->input_shape_mask_));
+        impl_->input_shape_mask_ = NULL;
+      }
+    }
+  }
 #endif
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {
   delete impl_;
   impl_ = NULL;
-}
-
-void ViewWidgetBinder::SetQueueDrawPending(bool pending) {
-  impl_->queue_draw_pending_ = pending;
-}
-
-bool ViewWidgetBinder::GetQueueDrawPending() const {
-  return impl_->queue_draw_pending_;
 }
 
 } // namespace gtk

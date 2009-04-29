@@ -32,7 +32,9 @@ class DivElement::Impl : public SmallObject<> {
       : owner_(owner),
         background_texture_(NULL),
         background_mode_(BACKGROUND_MODE_TILE),
-        layout_recurse_depth_(0) {
+        layout_recurse_depth_(0),
+        last_client_width_(0),
+        last_client_height_(0) {
   }
   ~Impl() {
     delete background_texture_;
@@ -43,6 +45,8 @@ class DivElement::Impl : public SmallObject<> {
   Texture *background_texture_;
   BackgroundMode background_mode_;
   int layout_recurse_depth_;
+  int last_client_width_;
+  int last_client_height_;
 };
 
 DivElement::DivElement(View *view, const char *name)
@@ -83,8 +87,16 @@ void DivElement::Layout() {
   if (x_range < 0) x_range = 0;
   if (y_range < 0) y_range = 0;
 
-  SetYPageStep(static_cast<int>(round(GetClientHeight())));
-  SetXPageStep(static_cast<int>(round(GetClientWidth())));
+  int client_height = static_cast<int>(round(GetClientHeight()));
+  int client_width = static_cast<int>(round(GetClientWidth()));
+  if (client_height != impl_->last_client_height_) {
+    impl_->last_client_height_ = client_height;
+    SetYPageStep(client_height);
+  }
+  if (client_width != impl_->last_client_width_) {
+    impl_->last_client_width_ = client_width;
+    SetXPageStep(client_width);
+  }
 
   // Check the resurce depth to prevent infinite recursion when updating the
   // scroll bar. This may be caused by rare case that the children height

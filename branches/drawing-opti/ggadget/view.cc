@@ -1190,6 +1190,13 @@ class View::Impl : public SmallObject<> {
 #endif
       canvas->DrawCanvas(0, 0, canvas_cache_);
       return;
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+    } else {
+      DLOG("Redraw whole view: clip region(%zu):%d, "
+           "canvas cache: %p, need redraw:%d",
+           clip_region_.GetRectangleCount(), clip_region_enabled_,
+           canvas_cache_, need_redraw_);
+#endif
     }
 
     if (popup_element_.Get() && !popup_element_.Get()->IsReallyVisible())
