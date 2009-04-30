@@ -79,9 +79,9 @@ class CopyElement::Impl : public SmallObject<> {
 
     if (snapshot_) {
       snapshot_->ClearCanvas();
-      bool old = owner_->GetView()->EnableClipRegion(false);
+      owner_->GetView()->EnableClipRegion(false);
       source_->Draw(snapshot_);
-      owner_->GetView()->EnableClipRegion(old);
+      owner_->GetView()->EnableClipRegion(true);
     }
 
     owner_->QueueDraw();

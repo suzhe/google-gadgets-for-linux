@@ -1221,20 +1221,18 @@ class View::Impl : public SmallObject<> {
       need_redraw_ = true;
     }
 
-    bool old_clip_region_enabled_ = clip_region_enabled_;
-    // Disable clip region temporary if there is no canvas cache or
-    // the whole view needs redrawing. So that all elements will draw correctly.
     if (need_redraw_) {
-      clip_region_enabled_ = false;
+      // Add whole view into clip region, so that all elements will be redrawn
+      // correctly.
+      clip_region_.Clear();
+      clip_region_.AddRectangle(Rectangle(0, 0, width_, height_));
     }
 
     CanvasInterface *target;
     if (canvas_cache_) {
       target = canvas_cache_;
       target->PushState();
-      if (clip_region_enabled_) {
-        target->IntersectGeneralClipRegion(clip_region_);
-      }
+      target->IntersectGeneralClipRegion(clip_region_);
       target->ClearRect(0, 0, width_, height_);
     } else {
       target = canvas;
@@ -1284,7 +1282,6 @@ class View::Impl : public SmallObject<> {
 
     clip_region_.Clear();
     need_redraw_ = false;
-    clip_region_enabled_ = old_clip_region_enabled_;
     content_changed_ = false;
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
@@ -2029,10 +2026,8 @@ void View::AddElementToClipRegion(BasicElement *element,
   impl_->clip_region_.AddRectangle(element_rect);
 }
 
-bool View::EnableClipRegion(bool enable) {
-  bool old = impl_->clip_region_enabled_;
+void View::EnableClipRegion(bool enable) {
   impl_->clip_region_enabled_ = enable;
-  return old;
 }
 
 void View::AddRectangleToClipRegion(const Rectangle &rect) {
@@ -2040,8 +2035,10 @@ void View::AddRectangleToClipRegion(const Rectangle &rect) {
   if (view_rect.Intersect(rect)) {
     view_rect.Integerize(true);
     impl_->clip_region_.AddRectangle(view_rect);
-    impl_->on_add_rectangle_to_clip_region_(
-        view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+    if (impl_->on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+      impl_->on_add_rectangle_to_clip_region_(
+          view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+    }
   }
 }
 

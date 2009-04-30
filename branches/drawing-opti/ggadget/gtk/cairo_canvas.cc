@@ -452,11 +452,6 @@ class CairoCanvas::Impl : public SmallObject<> {
     return true;
   }
 
-  bool IntersectRectangle(double x, double y, double w, double h) {
-    cairo_rectangle(cr_, x, y, w, h);
-    return true;
-  }
-
   cairo_t *cr_;
   double width_;
   double height_;
@@ -604,12 +599,24 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 }
 
 bool CairoCanvas::IntersectGeneralClipRegion(const ClipRegion &region) {
-  cairo_antialias_t pre = cairo_get_antialias(impl_->cr_);
-  cairo_set_antialias(impl_->cr_, CAIRO_ANTIALIAS_NONE);
-  if (region.EnumerateRectangles(NewSlot(impl_, &Impl::IntersectRectangle)))
-    cairo_clip(impl_->cr_);
-  cairo_set_antialias(impl_->cr_, pre);
-  return true;
+  size_t count = region.GetRectangleCount();
+  bool do_clip = false;
+  if (count) {
+    cairo_antialias_t pre = cairo_get_antialias(impl_->cr_);
+    cairo_set_antialias(impl_->cr_, CAIRO_ANTIALIAS_NONE);
+    for (size_t i = 0; i < count; ++i) {
+      Rectangle rect = region.GetRectangle(i);
+      if (!rect.IsEmpty()) {
+        cairo_rectangle(impl_->cr_, rect.x, rect.y, rect.w, rect.h);
+        do_clip = true;
+      }
+    }
+    if (do_clip) {
+      cairo_clip(impl_->cr_);
+    }
+    cairo_set_antialias(impl_->cr_, pre);
+  }
+  return do_clip;
 }
 
 bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {

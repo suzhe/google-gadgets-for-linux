@@ -465,7 +465,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
     if (event->area.x == 0 && event->area.y == 0 &&
         event->area.width == 1 && event->area.height == 1) {
-      DLOG("View(%p): self queue draw.", impl->view_);
+      //DLOG("View(%p): self queue draw.", impl->view_);
       if (gdk_region_empty(region)) {
         DLOG("View(%p) has pending queue draw, but doesn't have clip region.",
              impl->view_);
@@ -475,7 +475,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       }
       gdk_window_begin_paint_region(widget->window, region);
     } else {
-      DLOG("System requires redraw view(%p)", impl->view_);
+      //DLOG("System requires redraw view(%p)", impl->view_);
       gdk_region_union(region, event->region);
       AddGdkRegionToViewClipRegion(impl->view_, event->region, impl->zoom_);
       gdk_window_begin_paint_region(widget->window, region);

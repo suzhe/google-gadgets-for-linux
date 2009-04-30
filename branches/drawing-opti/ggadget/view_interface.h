@@ -270,20 +270,6 @@ class ViewInterface {
   virtual const ClipRegion *GetClipRegion() const = 0;
 
   /**
-   * Enables or disables current clip region. Clip region is enabled by default.
-   *
-   * When clip region is enabled, all elements outside current clip region will
-   * not be drawn at all.
-   * It's usually be called by view host before calling Draw(), if the host
-   * wants draw the whole view.
-   * Disabling clip region will not clear the content in curreng clip region
-   * returned by GetClipRegion() method.
-   *
-   * @return the old clip region state.
-   */
-  virtual bool EnableClipRegion(bool enable) = 0;
-
-  /**
    * Adds a rectangle to current clip region.
    *
    * It's usually be called by view host before calling Draw(), if the host
