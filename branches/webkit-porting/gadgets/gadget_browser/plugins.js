@@ -223,6 +223,8 @@ function DownloadPlugin(plugin, is_updating) {
         // gPlugins may have been updated during the download, so re-get the
         // plugin with its id.
         plugin = gPluginIdIndex[plugin.id];
+        if (is_updating)
+          plugin = plugin.copy_for_update;
         if (plugin) {
           if (gadgetBrowserUtils.saveGadget(plugin.id, request.responseBody)) {
             if (!is_updating) {
@@ -350,8 +352,15 @@ function GetUpdatablePlugins(language, result) {
   var all_plugins = gPlugins[language][kCategoryAll];
   for (var i = 0; i < all_plugins.length; i++) {
     var plugin = all_plugins[i];
-    if (gadgetBrowserUtils.needUpdateGadget(plugin.id))
-      result.push(plugin);
+    if (gadgetBrowserUtils.needUpdateGadget(plugin.id)) {
+      // Make a copy of the plugin info because the updated status should be
+      // independent from the added status.
+      var plugin_copy_func = new Function();
+      plugin_copy_func.prototype = plugin;
+      var plugin_copy = new plugin_copy_func();
+      plugin.copy_for_update = plugin_copy;
+      result.push(plugin_copy);
+    }
   }
   result.sort(ComparePluginDate);
 }

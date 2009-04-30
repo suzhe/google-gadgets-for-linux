@@ -566,7 +566,12 @@ void GoogleGadgetManager::UpdateGadgetInstances(const char *gadget_id) {
   for (int i = 0; i < size; i++) {
     if (instance_statuses_[i] == kInstanceStatusActive &&
         GetInstanceGadgetId(i) == gadget_id) {
-      update_instance_signal_(i);
+      if (update_instance_signal_.HasActiveConnections()) {
+        update_instance_signal_(i);
+      } else {
+        remove_instance_signal_(i);
+        new_instance_signal_(i);
+      }
     }
   }
 }
@@ -879,13 +884,24 @@ std::string GoogleGadgetManager::LoadThumbnailFromCache(
   return std::string();
 }
 
+// Define TEST_UPDATING to test gadget updating. All installed gadgets are
+// treated updatable and the gadget will always be downloaded.
+// #define TEST_UPDATING
+
 bool GoogleGadgetManager::NeedDownloadGadget(const char *gadget_id) {
+#ifdef TEST_UPDATING
+  return true;
+#else
   return NeedDownloadOrUpdateGadget(gadget_id, true);
+#endif
 }
 
 bool GoogleGadgetManager::NeedUpdateGadget(const char *gadget_id) {
-  return GadgetHasInstance(gadget_id) &&
-         NeedDownloadOrUpdateGadget(gadget_id, false);
+  return GadgetHasInstance(gadget_id)
+#ifndef TEST_UPDATING
+         && NeedDownloadOrUpdateGadget(gadget_id, false)
+#endif
+         ;
 }
 
 bool GoogleGadgetManager::SaveGadget(const char *gadget_id,
