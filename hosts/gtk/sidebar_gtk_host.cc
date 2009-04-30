@@ -1572,8 +1572,6 @@ class SideBarGtkHost::Impl {
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
     ASSERT(gadget);
-    CloseDetailsView(gadget->GetInstanceID());
-    OnMainViewPopIn(gadget->GetInstanceID());
     int id = gadget->GetInstanceID();
     // If RemoveGadgetInstance() returns false, then means this instance is not
     // installed by gadget manager.
@@ -1581,9 +1579,20 @@ class SideBarGtkHost::Impl {
       RemoveGadgetInstanceCallback(id);
   }
 
+  void SaveGadgetDisplayTargetInfo(const GadgetInfo &info) {
+    OptionsInterface *opt = info.gadget->GetOptions();
+    opt->PutInternalValue(kOptionDisplayTarget,
+                          Variant(info.gadget->GetDisplayTarget()));
+    opt->PutInternalValue(kOptionPositionInSideBar,
+                          Variant(info.index_in_sidebar));
+  }
+
   void RemoveGadgetInstanceCallback(int instance_id) {
     GadgetInfoMap::iterator it = gadgets_.find(instance_id);
     if (it != gadgets_.end()) {
+      CloseDetailsView(instance_id);
+      OnMainViewPopIn(instance_id);
+      SaveGadgetDisplayTargetInfo(it->second);
       if (it->second.debug_console)
         gtk_widget_destroy(it->second.debug_console);
       delete it->second.gadget;
