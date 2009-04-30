@@ -528,6 +528,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   void RemoveMe(bool save_data) {
     if (!remove_me_timer_) {
+      if (!save_data) {
+        options_->DeleteStorage();
+      }
       remove_me_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
           0, new RemoveMeWatchCallback(host_, owner_, save_data));
     }
