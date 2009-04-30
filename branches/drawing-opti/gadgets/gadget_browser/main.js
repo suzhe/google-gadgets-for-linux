@@ -393,16 +393,21 @@ function UpdateAddButtonVisualStatus(plugin) {
 
 function add_button_onmousedown(index) {
   // Reset the button status if the user clicks on it.
-  SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
+  if (gCurrentCategory != kCategoryUpdates)
+    SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
 }
 
 function add_button_onclick(index) {
   var plugin = gCurrentPlugins[index];
   if (plugin.download_status != kDownloadStatusAdding) {
+    var is_updating = (gCurrentCategory == kCategoryUpdates);
     plugin.button = event.srcElement;
     SetDownloadStatus(plugin, kDownloadStatusAdding);
     if (gadgetBrowserUtils.needDownloadGadget(plugin.id)) {
-      DownloadPlugin(plugin);
+      DownloadPlugin(plugin, is_updating);
+    } else if (is_updating) {
+      // The gadget has already been updated.
+      SetDownloadStatus(plugin, kDownloadStatusAdded);
     } else {
       if (AddPlugin(plugin) >= 0)
         SetDownloadStatus(plugin, kDownloadStatusAdded);
@@ -429,13 +434,15 @@ function plugin_title_onmouseout(index) {
 }
 
 function add_button_onmouseover(index) {
-  if (gCurrentPlugins[index].download_status != kDownloadStatusAdding)
+  if (gCurrentCategory != kCategoryUpdates &&
+      gCurrentPlugins[index].download_status != kDownloadStatusAdding)
     SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
   MouseOverPlugin(event.srcElement.parentElement, index);
 }
 
 function add_button_onmouseout(index) {
-  if (gCurrentPlugins[index].download_status != kDownloadStatusAdding)
+  if (gCurrentCategory != kCategoryUpdates &&
+      gCurrentPlugins[index].download_status != kDownloadStatusAdding)
     SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
   MouseOutPlugin(event.srcElement.parentElement, index);
 }
