@@ -1397,6 +1397,7 @@ AC_CONFIG_FILES([Makefile
                  extensions/webkit_script_runtime/Makefile
                  extensions/webkit_script_runtime/tests/Makefile
                  extensions/gtkwebkit_browser_element/Makefile
+                 extensions/html_flash_element/Makefile
                  gadgets/Makefile
                  gadgets/analog_clock/Makefile
                  gadgets/designer/Makefile

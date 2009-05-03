@@ -36,4 +36,5 @@ SUBDIRS = dbus_script_class \
 	  google_gadget_manager \
 	  analytics_usage_collector \
 	  webkit_script_runtime \
-	  gtkwebkit_browser_element
+	  gtkwebkit_browser_element \
+	  html_flash_element
