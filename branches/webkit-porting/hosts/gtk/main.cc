@@ -64,7 +64,6 @@ static const char *kGlobalExtensions[] = {
   "default-options",
   "dbus-script-class",
   "gtk-edit-element",
-  "gtk-flash-element",
   "gst-video-element",
   "gtk-system-framework",
   "gst-audio-framework",
@@ -81,6 +80,7 @@ static const char *kGlobalExtensions[] = {
 static const char *kXULRunnerExtensions[] = {
   "smjs-script-runtime",
   "gtkmoz-browser-element",
+  "gtk-flash-element",
   NULL
 };
 
@@ -88,6 +88,7 @@ static const char *kXULRunnerExtensions[] = {
 static const char *kWebkitExtensions[] = {
   "webkit-script-runtime",
   "gtkwebkit-browser-element",
+  "html-flash-element",
   NULL
 };
 

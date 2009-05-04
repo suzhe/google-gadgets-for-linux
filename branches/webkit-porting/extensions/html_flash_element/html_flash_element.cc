@@ -26,7 +26,8 @@ namespace internal {
 static const char kHtmlFlashCode[] =
   "<html>\n"
   "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
-  "<body>\n"
+  "<style>*{ margin:0px; padding:0px }</style>\n"
+  "<body oncontextmenu=\"return false;\">\n"
   "<embed src=\"\" quality=\"high\" bgcolor=\"#ffffff\" width=\"100%\" "
   "height=\"100%\" type=\"application/x-shockwave-flash\" "
   "swLiveConnect=\"true\" wmode=\"transparent\" name=\"movieObject\" "
@@ -37,6 +38,8 @@ static const char kHtmlFlashCode[] =
   "</script>\n"
   "</html>";
 
+static const int kWaitInterval = 100; // 100 milliseconds
+
 class HtmlFlashElement : public BasicElement {
   class ExternalObject : public ScriptableHelperNativeOwnedDefault {
    public:
@@ -45,16 +48,9 @@ class HtmlFlashElement : public BasicElement {
     ExternalObject(HtmlFlashElement *owner) : owner_(owner) { }
 
    protected:
-    virtual void DoClassRegister() {
+    virtual void DoRegister() {
       RegisterProperty("movieObject", NULL,
-                       NewSlot(&ExternalObject::SetMovieObject));
-    }
-
-   private:
-    void SetMovieObject(ScriptableInterface *movie_object) {
-      DLOG("SetMovieObject: %p, Id=%jx",
-           movie_object, movie_object ? movie_object->GetClassId() : 0);
-      owner_->movie_object_.Reset(movie_object);
+                       NewSlot(owner_, &HtmlFlashElement::SetMovieObject));
     }
 
    private:
@@ -68,8 +64,17 @@ class HtmlFlashElement : public BasicElement {
     : BasicElement(view, "flash", name, false),
       browser_(view->GetElementFactory()->CreateElement("_browser", view, "")),
       external_(this) {
+    SetPixelX(0);
+    SetPixelY(0);
+    SetRelativeWidth(1.0);
+    SetRelativeHeight(1.0);
     if (browser_) {
       browser_->SetParentElement(this);
+      browser_->SetPixelX(0);
+      browser_->SetPixelY(0);
+      browser_->SetRelativeWidth(1.0);
+      browser_->SetRelativeHeight(1.0);
+      browser_->SetEnabled(true);
       if (!browser_->SetProperty("external", Variant(&external_)) ||
           !browser_->SetProperty("innerText", Variant(kHtmlFlashCode))) {
         DLOG("Invalid browser element.");
@@ -172,8 +177,12 @@ class HtmlFlashElement : public BasicElement {
   }
 
   void SetSrc(const char *src) {
-    if (movie_object_.Get())
+    DLOG("SetSrc: %s", src);
+    if (movie_object_.Get()) {
       movie_object_.Get()->SetProperty("src", Variant(src));
+    } else {
+      src_ = src ? src : "";
+    }
   }
 
   std::string GetSrc() {
@@ -183,7 +192,17 @@ class HtmlFlashElement : public BasicElement {
         return VariantValue<std::string>()(result.v());
       }
     }
-    return "";
+    return src_;
+  }
+
+  void SetMovieObject(ScriptableInterface *movie_object) {
+    DLOG("SetMovieObject: %p, Id=%jx",
+         movie_object, movie_object ? movie_object->GetClassId() : 0);
+    movie_object_.Reset(movie_object);
+    if (movie_object && src_.length()) {
+      DLOG("Delayed SetSrc: %s", src_.c_str());
+      movie_object->SetProperty("src", Variant(src_));
+    }
   }
 
  private:
@@ -192,6 +211,7 @@ class HtmlFlashElement : public BasicElement {
   BasicElement *browser_;
   ScriptableHolder<ScriptableInterface> movie_object_;
   ExternalObject external_;
+  std::string src_;
 };
 
 } // namespace internal
