@@ -201,26 +201,6 @@ class BrowserElement::Impl {
       gtk_widget_set_size_request(GTK_WIDGET(web_view_), width_, height_);
       gtk_widget_show(web_view_);
 
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-      JSScriptRuntime *runtime = down_cast<JSScriptRuntime *>(
-          ScriptRuntimeManager::get()->GetScriptRuntime("webkitjs"));
-
-      if (runtime) {
-        WebKitWebFrame *main_frame =
-            webkit_web_view_get_main_frame(WEBKIT_WEB_VIEW(web_view_));
-        ASSERT(main_frame);
-        JSGlobalContextRef js_context =
-            webkit_web_frame_get_global_context(main_frame);
-        ASSERT(js_context);
-
-        browser_context_ = runtime->WrapExistingContext(js_context);
-        browser_context_->AssignFromNative(NULL, "", "external",
-                                           Variant(external_object_.Get()));
-      } else {
-        LOGE("webkit-script-runtime is not loaded.");
-      }
-#endif
-
       if (content_.length()) {
         webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(web_view_),
                                          content_.c_str(), "");
@@ -258,6 +238,32 @@ class BrowserElement::Impl {
         gtk_widget_hide(web_view_);
     }
   }
+
+#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
+  void SetupJavaScriptContext() {
+    JSScriptRuntime *runtime = down_cast<JSScriptRuntime *>(
+        ScriptRuntimeManager::get()->GetScriptRuntime("webkitjs"));
+
+    if (runtime) {
+      WebKitWebFrame *main_frame =
+          webkit_web_view_get_main_frame(WEBKIT_WEB_VIEW(web_view_));
+      ASSERT(main_frame);
+      JSGlobalContextRef js_context =
+          webkit_web_frame_get_global_context(main_frame);
+      ASSERT(js_context);
+
+      if (!browser_context_ || browser_context_->GetContext() != js_context) {
+        delete browser_context_;
+        browser_context_ = runtime->WrapExistingContext(js_context);
+      }
+
+      browser_context_->AssignFromNative(NULL, "", "external",
+                                         Variant(external_object_.Get()));
+    } else {
+      LOGE("webkit-script-runtime is not loaded.");
+    }
+  }
+#endif
 
   void SetContent(const std::string &content) {
     DLOG("SetContent:\n%s", content.c_str());
@@ -367,6 +373,9 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadStarted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
+#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
+    impl->SetupJavaScriptContext();
+#endif
   }
 
   static void WebViewLoadCommitted(WebKitWebView *web_view,
@@ -376,6 +385,9 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadCommitted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
+#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
+    impl->SetupJavaScriptContext();
+#endif
   }
 
   static void WebViewLoadProgressChanged(WebKitWebView *web_view,

@@ -19,6 +19,7 @@
 #include <ggadget/view.h>
 #include <ggadget/basic_element.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 namespace internal {
@@ -28,17 +29,43 @@ static const char kHtmlFlashCode[] =
   "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
   "<style>*{ margin:0px; padding:0px }</style>\n"
   "<body oncontextmenu=\"return false;\">\n"
-  "<embed src=\"\" quality=\"high\" bgcolor=\"#ffffff\" width=\"100%\" "
+  "<embed src=\"%s\" "
+  "quality=\"high\" bgcolor=\"#ffffff\" width=\"100%\" play=\"true\" "
   "height=\"100%\" type=\"application/x-shockwave-flash\" "
   "swLiveConnect=\"true\" wmode=\"transparent\" name=\"movieObject\" "
-  "pluginspage=\"http://www.macromedia.com/go/getflashplayer\"/>\n"
+  "pluginspage=\"http://www.adobe.com/go/getflashplayer\"/>\n"
   "</body>\n"
   "<script language=\"JavaScript\">\n"
   "window.external.movieObject = window.document.movieObject;\n"
   "</script>\n"
   "</html>";
 
-static const int kWaitInterval = 100; // 100 milliseconds
+static const char *kFlashMethods[] = {
+  "GetVariable",
+  "GotoFrame",
+  "IsPlaying",
+  "LoadMovie",
+  "Pan",
+  "PercentLoaded",
+  "Play",
+  "Rewind",
+  "SetVariable",
+  "SetZoomRect",
+  "StopPlay",
+  "TotalFrames",
+  "Zoom",
+  "TCallFrame",
+  "TCallLabel",
+  "TCurrentFrame",
+  "TCurrentLabel",
+  "TGetProperty",
+  "TGetPropertyAsNumber",
+  "TGotoFrame",
+  "TGotoLabel",
+  "TPlay",
+  "TSetProperty",
+  "TStopPlay"
+};
 
 class HtmlFlashElement : public BasicElement {
   class ExternalObject : public ScriptableHelperNativeOwnedDefault {
@@ -55,6 +82,54 @@ class HtmlFlashElement : public BasicElement {
 
    private:
      HtmlFlashElement *owner_;
+  };
+
+  class MethodCaller : public Slot {
+   public:
+    MethodCaller(HtmlFlashElement *owner, const char *name)
+      : owner_(owner), name_(name) {
+    }
+
+    virtual ResultVariant Call(ScriptableInterface *object,
+                               int argc, const Variant argv[]) const {
+      if (owner_ && name_ && owner_->movie_object_.Get()) {
+        Slot *slot = NULL;
+        ResultVariant prop = owner_->movie_object_.Get()->GetProperty(name_);
+        if (prop.v().type() == Variant::TYPE_SCRIPTABLE) {
+          ScriptableInterface *obj =
+              VariantValue<ScriptableInterface *>()(prop.v());
+          if (obj) {
+            ResultVariant slot_prop = obj->GetProperty("");
+            if (slot_prop.v().type() == Variant::TYPE_SLOT) {
+              slot = VariantValue<Slot *>()(slot_prop.v());
+            }
+          }
+        } else if (prop.v().type() == Variant::TYPE_SLOT) {
+          slot = VariantValue<Slot *>()(prop.v());
+        }
+        if (slot) {
+          return slot->Call(owner_->movie_object_.Get(), argc, argv);
+        }
+      }
+      return ResultVariant();
+    }
+
+    virtual bool HasMetadata() const {
+      return false;
+    }
+
+    virtual Variant::Type GetReturnType() const {
+      return Variant::TYPE_VARIANT;
+    }
+
+    virtual bool operator==(const Slot &another) const {
+      return owner_ == down_cast<const MethodCaller *>(&another)->owner_ &&
+          name_ == down_cast<const MethodCaller *>(&another)->name_;
+    }
+
+   private:
+    HtmlFlashElement *owner_;
+    const char *name_;
   };
 
  public:
@@ -75,8 +150,9 @@ class HtmlFlashElement : public BasicElement {
       browser_->SetRelativeWidth(1.0);
       browser_->SetRelativeHeight(1.0);
       browser_->SetEnabled(true);
-      if (!browser_->SetProperty("external", Variant(&external_)) ||
-          !browser_->SetProperty("innerText", Variant(kHtmlFlashCode))) {
+      // Force the browser window to be loaded.
+      browser_->Layout();
+      if (!browser_->SetProperty("external", Variant(&external_))) {
         DLOG("Invalid browser element.");
         delete browser_;
         browser_ = NULL;
@@ -116,8 +192,15 @@ class HtmlFlashElement : public BasicElement {
   }
 
   virtual void DoRegister() {
-    SetDynamicPropertyHandler(NewSlot(this, &HtmlFlashElement::GetProperty),
-                              NewSlot(this, &HtmlFlashElement::SetProperty));
+    if (browser_) {
+      for (size_t i = 0; i < arraysize(kFlashMethods); ++i) {
+        RegisterMethod(kFlashMethods[i],
+                       new MethodCaller(this, kFlashMethods[i]));
+      }
+
+      SetDynamicPropertyHandler(NewSlot(this, &HtmlFlashElement::GetProperty),
+                                NewSlot(this, &HtmlFlashElement::SetProperty));
+    }
   }
 
   virtual void DoDraw(CanvasInterface *canvas) {
@@ -178,20 +261,15 @@ class HtmlFlashElement : public BasicElement {
 
   void SetSrc(const char *src) {
     DLOG("SetSrc: %s", src);
-    if (movie_object_.Get()) {
-      movie_object_.Get()->SetProperty("src", Variant(src));
-    } else {
+    if (browser_) {
+      movie_object_.Reset(NULL);
       src_ = src ? src : "";
+      std::string content = StringPrintf(kHtmlFlashCode, src_.c_str());
+      browser_->SetProperty("innerText", Variant(content));
     }
   }
 
   std::string GetSrc() {
-    if (movie_object_.Get()) {
-      ResultVariant result = movie_object_.Get()->GetProperty("src");
-      if (result.v().type() == Variant::TYPE_STRING) {
-        return VariantValue<std::string>()(result.v());
-      }
-    }
     return src_;
   }
 
@@ -199,10 +277,6 @@ class HtmlFlashElement : public BasicElement {
     DLOG("SetMovieObject: %p, Id=%jx",
          movie_object, movie_object ? movie_object->GetClassId() : 0);
     movie_object_.Reset(movie_object);
-    if (movie_object && src_.length()) {
-      DLOG("Delayed SetSrc: %s", src_.c_str());
-      movie_object->SetProperty("src", Variant(src_));
-    }
   }
 
  private:

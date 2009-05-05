@@ -59,7 +59,8 @@ ggl_gtk_LDADD += \
 	-dlpreopen $(top_builddir)/extensions/default_options/default-options.la \
 	-dlpreopen $(top_builddir)/extensions/google_gadget_manager/google-gadget-manager.la \
 	-dlpreopen $(top_builddir)/extensions/gtk_edit_element/gtk-edit-element.la \
-	-dlpreopen $(top_builddir)/extensions/gtk_system_framework/gtk-system-framework.la
+	-dlpreopen $(top_builddir)/extensions/gtk_system_framework/gtk-system-framework.la \
+	-dlpreopen $(top_builddir)/extensions/html_flash_element/html-flash-element.la
 
 if GGL_BUILD_CURL_XML_HTTP_REQUEST
 ggl_gtk_LDADD += \
