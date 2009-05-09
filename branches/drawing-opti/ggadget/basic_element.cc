@@ -491,8 +491,7 @@ class BasicElement::Impl : public SmallObject<> {
       ppin_y_ = height_ > 0.0 ? pin_y_ / height_ : 0.0;
     }
 
-    if (position_changed_ || size_changed_ || visibility_changed_ ||
-        (content_changed_ && cache_enabled_)) {
+    if (position_changed_ || size_changed_ || visibility_changed_) {
       AddToClipRegion(NULL);
     }
 
@@ -504,7 +503,6 @@ class BasicElement::Impl : public SmallObject<> {
     if (content_changed_) {
       // To let all associated copy elements to update their content.
       FireOnContentChangedSignal();
-      content_changed_ = false;
     }
 
     // No other code will use it before calling Draw(), so it's safe to reset.
@@ -534,6 +532,8 @@ class BasicElement::Impl : public SmallObject<> {
         if (!cache_) {
           cache_ = view_->GetGraphics()->NewCanvas(width, height);
           force_draw = true;
+        } else if (content_changed_) {
+          cache_->ClearCanvas();
         }
       }
 
@@ -739,13 +739,6 @@ class BasicElement::Impl : public SmallObject<> {
   void FireOnContentChangedSignal() {
     if (on_content_changed_signal_.HasActiveConnections())
       on_content_changed_signal_();
-
-    // Fire content changed signal of its parents.
-    BasicElement *elm = owner_->GetParentElement();
-    for (; elm; elm = elm->GetParentElement()) {
-      if (elm->impl_->on_content_changed_signal_.HasActiveConnections())
-        elm->impl_->on_content_changed_signal_();
-    }
   }
 
   void PostSizeEvent() {

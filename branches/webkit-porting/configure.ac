@@ -1063,28 +1063,27 @@ fi
 # Check WebKit/JavaScriptCore
 has_javascriptcore=no
 if test x$build_webkit_script_runtime = xyes; then
-  if test x$ggl_host_type = xlinux -o \
-          x$ggl_host_type = xsolaris; then
-    PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.3],
-                      [has_javascriptcore=yes],
-                      [has_javascriptcore=no])
-    if test x$has_javascriptcore = xyes; then
-      CPPFLAGS="$CPPFLAGS $JAVA_SCRIPT_CORE_CFLAGS"
-      AC_CHECK_HEADERS([JavaScriptCore/JavaScript.h],
-                       [has_JavaScript_h=yes],
-                       [has_JavaScript_h=no])
-      AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
-                       [has_JavaScriptCore_h=yes],
-                       [has_JavaScriptCore_h=no])
-      CPPFLAGS="$ggl_save_CPPFLAGS"
-      if test x$has_JavaScript_h = xyes; then
-        PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_H"
-      fi
-      if test x$has_JavaScriptCore_h = xyes; then
-        PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
-      fi
+  PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.3],
+                    [has_javascriptcore=yes],
+                    [has_javascriptcore=no])
+  if test x$has_javascriptcore = xyes; then
+    CPPFLAGS="$CPPFLAGS $JAVA_SCRIPT_CORE_CFLAGS"
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScript.h],
+                     [has_JavaScript_h=yes],
+                     [has_JavaScript_h=no])
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
+                     [has_JavaScriptCore_h=yes],
+                     [has_JavaScriptCore_h=no])
+    CPPFLAGS="$ggl_save_CPPFLAGS"
+    if test x$has_JavaScript_h = xyes; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_H"
     fi
-  elif test x$ggl_host_type = xmacosx; then
+    if test x$has_JavaScriptCore_h = xyes; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
+    fi
+  fi
+
+  if test x$has_javascriptcore != xyes -a x$ggl_host_type = xmacosx; then
     # Use system built-in JavaScriptCore.framework
     # No gtk webkit support on mac yet.
     AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],

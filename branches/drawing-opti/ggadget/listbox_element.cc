@@ -231,7 +231,6 @@ class ListBoxElement::Impl : public SmallObject<> {
     if (item && !item->IsSelected()) {
       item->SetSelected(true);
       pending_scroll_ = 2;
-      owner_->QueueDraw();
       changed = true;
     }
 
