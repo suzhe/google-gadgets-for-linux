@@ -57,7 +57,6 @@ static const Color kDefaultBackgroundColor(1, 1, 1);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
 static const Color kDefaultSelectionTextColor(1, 1, 1);
 static const uint64_t kTripleClickTimeout = 500;
-static const double kClipRegionFuzzyRatio = 0.9;
 
 GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
                          MainLoopInterface *main_loop,
