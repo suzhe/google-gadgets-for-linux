@@ -28,6 +28,7 @@ SET(SRCS
 )
 
 ADD_LIBRARY(ggadget-webkitjs${GGL_EPOCH} SHARED ${SRCS})
+OUTPUT_LIBRARY(ggadget-webkitjs${GGL_EPOCH})
 
 ADD_MODULE(webkit-script-runtime webkit_script_runtime.cc)
 TARGET_LINK_LIBRARIES(webkit-script-runtime
