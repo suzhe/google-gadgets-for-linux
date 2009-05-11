@@ -108,8 +108,9 @@ function RUN_ALL_TESTS() {
   if (count > passed) {
     print("\nFAIL");
     quit(QUIT_ASSERT);
+  } else {
+    print("\nPASS");
   }
-  print("\nPASS");
 }
 
 function _Message(relation, expected, actual) {

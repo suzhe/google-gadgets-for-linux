@@ -650,24 +650,24 @@ class BasicElement::Impl : public SmallObject<> {
     }
   }
 
-  void AggregateClipRegion(ClipRegion *region, const Rectangle &boundary) {
+  void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region) {
     if (region != NULL && !boundary.IsEmpty()) {
-      size_t count = clip_region_.GetRectangleCount();
-      for (size_t i = 0; i < count; ++i) {
-        Rectangle rect = clip_region_.GetRectangle(i);
-        if (rect.Intersect(boundary)) {
-          rect.Integerize(true);
-          region->AddRectangle(rect);
-        }
-      }
-
-      if (visible_ && opacity_ != 0.0) {
-        Rectangle extents = owner_->GetExtentsInView();
-        if (extents.Intersect(boundary)) {
-          if (children_ && children_->GetCount()) {
-            children_->AggregateClipRegion(region, extents);
+      Rectangle extents = owner_->GetExtentsInView();
+      if (extents.Intersect(boundary)) {
+        size_t count = clip_region_.GetRectangleCount();
+        for (size_t i = 0; i < count; ++i) {
+          Rectangle rect = clip_region_.GetRectangle(i);
+          if (rect.Intersect(extents)) {
+            rect.Integerize(true);
+            region->AddRectangle(rect);
           }
-          owner_->AggregateMoreClipRegion(region, extents);
+        }
+
+        if (visible_ && opacity_ != 0.0) {
+          if (children_ && children_->GetCount()) {
+            children_->AggregateClipRegion(extents, region);
+          }
+          owner_->AggregateMoreClipRegion(extents, region);
           // Short circuit.
           clip_region_.Clear();
           return;
@@ -679,9 +679,9 @@ class BasicElement::Impl : public SmallObject<> {
     // children's AggregateClipRegion() and AggregateMoreClipRegion() must be
     // called in order to let children clear their clip region cache.
     if (children_ && children_->GetCount()) {
-      children_->AggregateClipRegion(NULL, Rectangle());
+      children_->AggregateClipRegion(Rectangle(), NULL);
     }
-    owner_->AggregateMoreClipRegion(NULL, Rectangle());
+    owner_->AggregateMoreClipRegion(Rectangle(), NULL);
   }
 
   void QueueDraw() {
@@ -2126,13 +2126,13 @@ EventResult BasicElement::HandleOtherEvent(const Event &event) {
   return EVENT_RESULT_UNHANDLED;
 }
 
-void BasicElement::AggregateClipRegion(ClipRegion *region,
-                                       const Rectangle &boundary) {
-  impl_->AggregateClipRegion(region, boundary);
+void BasicElement::AggregateClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region) {
+  impl_->AggregateClipRegion(boundary, region);
 }
 
-void BasicElement::AggregateMoreClipRegion(ClipRegion *region,
-                                           const Rectangle &boundary) {
+void BasicElement::AggregateMoreClipRegion(const Rectangle &boundary,
+                                           ClipRegion *region) {
 }
 
 } // namespace ggadget

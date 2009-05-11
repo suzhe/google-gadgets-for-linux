@@ -785,12 +785,12 @@ EventResult ComboBoxElement::HandleOtherEvent(const Event &event) {
   return EVENT_RESULT_UNHANDLED;
 }
 
-void ComboBoxElement::AggregateMoreClipRegion(ClipRegion *region,
-                                              const Rectangle &boundary) {
+void ComboBoxElement::AggregateMoreClipRegion(const Rectangle &boundary,
+                                              ClipRegion *region) {
   if (impl_->droplist_)
-    impl_->droplist_->AggregateClipRegion(region, boundary);
+    impl_->droplist_->AggregateClipRegion(boundary, region);
   if (impl_->edit_)
-    impl_->edit_->AggregateClipRegion(region, boundary);
+    impl_->edit_->AggregateClipRegion(boundary, region);
 }
 
 void ComboBoxElement::OnPopupOff() {

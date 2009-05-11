@@ -1158,18 +1158,18 @@ class View::Impl : public SmallObject<> {
     Rectangle boundary(0, 0, width_, height_);
     if (!need_redraw_) {
       if (popup_element_.Get()) {
-        popup_element_.Get()->AggregateClipRegion(&clip_region_, boundary);
+        popup_element_.Get()->AggregateClipRegion(boundary, &clip_region_);
       }
-      children_.AggregateClipRegion(&clip_region_, boundary);
+      children_.AggregateClipRegion(boundary, &clip_region_);
     } else {
       // Clear clip region if the whole view needs redrawing, so that view host
       // will draw the whole view correctly.
       clip_region_.Clear();
       clip_region_.AddRectangle(boundary);
       if (popup_element_.Get()) {
-        popup_element_.Get()->AggregateClipRegion(NULL, Rectangle());
+        popup_element_.Get()->AggregateClipRegion(Rectangle(), NULL);
       }
-      children_.AggregateClipRegion(NULL, Rectangle());
+      children_.AggregateClipRegion(Rectangle(), NULL);
     }
 
     if (!clip_region_.IsEmpty()) {

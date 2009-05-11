@@ -316,7 +316,7 @@ function ParseRawXML() {
 }
 
 function GetElementAttrib(elem, attrib_name) {
-  var attrib = elem.getAttribute(attrib_name);
+  var attrib = elem ? elem.getAttribute(attrib_name) : "";
   return TrimString(attrib);
 }
 

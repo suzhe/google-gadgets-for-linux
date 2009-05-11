@@ -42,8 +42,8 @@
 #include <cstdlib>
 #include "unicode_utils.h"
 namespace std {
-template class std::basic_string<UTF16Char>;
-template class std::basic_string<UTF32Char>;
+template class std::basic_string<ggadget::UTF16Char>;
+template class std::basic_string<ggadget::UTF32Char>;
 }
 
 namespace ggadget {
@@ -278,7 +278,7 @@ size_t ConvertStringUTF32ToUTF8(const UTF32Char *src, size_t src_length,
   if (!src || !src_length)
     return 0;
 
-  dest->reserve(src_length);
+  dest->reserve(src_length * 3);
   size_t used_length = 0;
   size_t utf8_len;
   char utf8[6];
@@ -381,7 +381,7 @@ size_t ConvertStringUTF16ToUTF8(const UTF16Char *src, size_t src_length,
   if (!src || !src_length)
     return 0;
 
-  dest->reserve(src_length);
+  dest->reserve(src_length * 3);
   size_t used_length = 0;
   size_t utf8_len;
   size_t utf16_len;

@@ -47,6 +47,10 @@
 #include "simple_gtk_host.h"
 #include "standalone_gtk_host.h"
 
+#ifndef GGL_GTK_HTML_SCRIPT_ENGINE
+#define GGL_GTK_HTML_SCRIPT_ENGINE "xulrunner"
+#endif
+
 using ggadget::Variant;
 
 static const char kOptionsName[] = "gtk-host-options";
@@ -60,18 +64,31 @@ static const char *kGlobalExtensions[] = {
   "default-options",
   "dbus-script-class",
   "gtk-edit-element",
-  "gtkmoz-browser-element",
-  "gtk-flash-element",
   "gst-video-element",
   "gtk-system-framework",
   "gst-audio-framework",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
-  "smjs-script-runtime",
   "curl-xml-http-request",
   "analytics-usage-collector",
   "google-gadget-manager",
+  NULL
+};
+
+// extensions based on xulrunner.
+static const char *kXULRunnerExtensions[] = {
+  "smjs-script-runtime",
+  "gtkmoz-browser-element",
+  "gtk-flash-element",
+  NULL
+};
+
+// extensions based on webkit.
+static const char *kWebkitExtensions[] = {
+  "webkit-script-runtime",
+  "gtkwebkit-browser-element",
+  "html-flash-element",
   NULL
 };
 
@@ -116,6 +133,9 @@ static const char kHelpString[] =
   "      Disable the usage collector\n"
   "  -gp, --grant-permissions\n"
   "      Grant all permissions required by gadgets silently.\n"
+  "  -hs, --html-script-engine\n"
+  "      Specify html/script engine, default: " GGL_GTK_HTML_SCRIPT_ENGINE ".\n"
+  "      Available engines: xulrunner, webkit.\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -138,6 +158,7 @@ enum ArgumentID {
   ARG_DEBUG_CONSOLE,
   ARG_NO_COLLECTOR,
   ARG_GRANT_PERMISSIONS,
+  ARG_HTML_SCRIPT_ENGINE,
   ARG_HELP
 };
 
@@ -157,6 +178,7 @@ static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
   { ARG_DEBUG_CONSOLE,     Variant::TYPE_INT64, "-dc", "--debug-console" },
   { ARG_NO_COLLECTOR,      Variant::TYPE_BOOL,  "-nc", "--no-collector" },
   { ARG_GRANT_PERMISSIONS, Variant::TYPE_BOOL,  "-gp", "--grant-permissions" },
+  { ARG_HTML_SCRIPT_ENGINE,Variant::TYPE_STRING,"-hs", "--html-script-engine" },
   { ARG_HELP,              Variant::TYPE_BOOL,  "-h",  "--help" },
   { -1,                    Variant::TYPE_VOID, NULL, NULL } // End of list
 };
@@ -180,7 +202,8 @@ struct Arguments {
 #endif
       debug_console(ggadget::Gadget::DEBUG_CONSOLE_DISABLED),
       no_collector(false),
-      grant_permissions(false) {
+      grant_permissions(false),
+      html_script_engine(GGL_GTK_HTML_SCRIPT_ENGINE) {
   }
 
   int debug_mode;
@@ -196,6 +219,7 @@ struct Arguments {
   ggadget::Gadget::DebugConsoleConfig debug_console;
   bool no_collector;
   bool grant_permissions;
+  std::string html_script_engine;
 };
 
 static ggadget::HostArgumentParser g_argument_parser(kArgumentsInfo);
@@ -242,6 +266,9 @@ static void ExtractArgumentsValue() {
     g_arguments.no_collector = ggadget::VariantValue<bool>()(arg_value);
   if (g_argument_parser.GetArgumentValue(ARG_GRANT_PERMISSIONS, &arg_value))
     g_arguments.grant_permissions = ggadget::VariantValue<bool>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_HTML_SCRIPT_ENGINE, &arg_value))
+    g_arguments.html_script_engine =
+        ggadget::VariantValue<std::string>()(arg_value);
 }
 
 static void OnHostExit(ggadget::HostInterface *host) {
@@ -458,6 +485,14 @@ int main(int argc, char* argv[]) {
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)
     ext_manager->LoadExtension(kGlobalExtensions[i], false);
+
+  if (g_arguments.html_script_engine == "xulrunner") {
+    for (size_t i = 0; kXULRunnerExtensions[i]; ++i)
+      ext_manager->LoadExtension(kXULRunnerExtensions[i], false);
+  } else if (g_arguments.html_script_engine == "webkit") {
+    for (size_t i = 0; kWebkitExtensions[i]; ++i)
+      ext_manager->LoadExtension(kWebkitExtensions[i], false);
+  }
 
   // Register JavaScript runtime.
   ggadget::ScriptRuntimeManager *script_runtime_manager =

@@ -604,10 +604,10 @@ void ObjectVideoPlayer::DoDraw(CanvasInterface *canvas) {
   }
 }
 
-void ObjectVideoPlayer::AggregateMoreClipRegion(ClipRegion *region,
-                                                const Rectangle &boundary) {
+void ObjectVideoPlayer::AggregateMoreClipRegion(const Rectangle &boundary,
+                                                ClipRegion *region) {
   if (impl_->video_element_) {
-    impl_->video_element_->AggregateClipRegion(region, boundary);
+    impl_->video_element_->AggregateClipRegion(boundary, region);
   }
 }
 

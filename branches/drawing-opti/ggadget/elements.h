@@ -303,11 +303,11 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * If either region is NULL or boundary is empty, then only clip region
    * cache will be cleared.
    *
-   * @param region Contains all clip rectangles in view's coordinates.
    * @param boundary Clip region boundary in view's coordinates. All clip
    *        rectangles shall not beyond this boundary.
+   * @param region Contains all clip rectangles in view's coordinates.
    */
-  void AggregateClipRegion(ClipRegion *region, const Rectangle &boundary);
+  void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region);
 
  private:
   class Impl;

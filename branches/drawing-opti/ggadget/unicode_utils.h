@@ -20,13 +20,15 @@
 #include <string>
 #include <ggadget/common.h>
 
+namespace ggadget {
 typedef uint16_t UTF16Char;
 typedef uint32_t UTF32Char;
+}
 
 namespace std {
 /* To meet the ODR(One Definition Rule) requirement */
-extern template class std::basic_string<UTF16Char>;
-extern template class std::basic_string<UTF32Char>;
+extern template class std::basic_string<ggadget::UTF16Char>;
+extern template class std::basic_string<ggadget::UTF32Char>;
 }
 
 namespace ggadget {

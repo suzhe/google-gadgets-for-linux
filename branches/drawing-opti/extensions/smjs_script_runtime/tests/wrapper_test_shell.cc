@@ -33,6 +33,7 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
     // For testing name overriding.
     RegisterConstant("s1", &test_scriptable1);
     RegisterProperty("s2", NewSlot(this, &GlobalObject::GetS2), NULL);
+    RegisterMethod("globalMethod", NewSlot(this, &GlobalObject::GlobalMethod));
   }
   virtual bool IsStrict() const { return false; }
 
@@ -42,6 +43,8 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
   }
 
   ScriptableInterface *GetS2() { return &test_scriptable2; }
+
+  std::string GlobalMethod() { return "hello world"; }
 
   BaseScriptable test_scriptable1;
   ExtScriptable test_scriptable2;
