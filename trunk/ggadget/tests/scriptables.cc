@@ -37,6 +37,7 @@ BaseScriptable::BaseScriptable(bool native_owned, bool register_class)
     : register_class_(register_class),
       native_owned_(native_owned),
       double_property_(0),
+      int_property_(0),
       enum_property_(VALUE_0),
       variant_property_(0) {
   if (native_owned) Ref();
@@ -49,6 +50,9 @@ BaseScriptable::BaseScriptable(bool native_owned, bool register_class)
     RegisterProperty("DoubleProperty",
                      NewSlot(this, &BaseScriptable::GetDoubleProperty),
                      NewSlot(this, &BaseScriptable::SetDoubleProperty));
+    RegisterProperty("IntProperty",
+                     NewSlot(this, &BaseScriptable::GetIntProperty),
+                     NewSlot(this, &BaseScriptable::SetIntProperty));
     RegisterProperty("BufferReadOnly",
                      NewSlot(this, &BaseScriptable::GetBuffer), NULL);
     RegisterProperty("Buffer",
@@ -78,6 +82,9 @@ void BaseScriptable::DoClassRegister() {
     RegisterProperty("DoubleProperty",
                      NewSlot(&BaseScriptable::GetDoubleProperty),
                      NewSlot(&BaseScriptable::SetDoubleProperty));
+    RegisterProperty("IntProperty",
+                     NewSlot(&BaseScriptable::GetIntProperty),
+                     NewSlot(&BaseScriptable::SetIntProperty));
     RegisterProperty("BufferReadOnly",
                      NewSlot(&BaseScriptable::GetBuffer), NULL);
     RegisterProperty("Buffer",

@@ -155,6 +155,8 @@ build_qt_system_framework=yes
 build_qt_xml_http_request=yes
 build_qtwebkit_browser_element=yes
 build_smjs_script_runtime=yes
+build_webkit_script_runtime=yes
+build_gtkwebkit_browser_element=yes
 
 #================ compile options ==============
 AC_ARG_ENABLE([debug],
@@ -345,6 +347,18 @@ AC_ARG_ENABLE([smjs-script-runtime],
                              [don't build smjs-script-runtime]),
               [build_smjs_script_runtime=$enableval],
               [build_smjs_script_runtime=yes])
+
+AC_ARG_ENABLE([webkit-script-runtime],
+              AS_HELP_STRING([--disable-webkit-script-runtime],
+                             [don't build webkit-script-runtime]),
+              [build_webkit_script_runtime=$enableval],
+              [build_webkit_script_runtime=yes])
+
+AC_ARG_ENABLE([gtkwebkit-browser-element],
+              AS_HELP_STRING([--disable-gtkwebkit-browser-element],
+                             [don't build gtkwebkit-browser-element]),
+              [build_gtkwebkit_browser_element=$enableval],
+              [build_gtkwebkit_browser_element=yes])
 
 #================ other options =======================
 AC_ARG_ENABLE([update-mime-database],
@@ -1046,6 +1060,62 @@ if test x$build_smjs_script_runtime = xyes -o \
   fi
 fi
 
+# Check WebKit/JavaScriptCore
+has_javascriptcore=no
+if test x$build_webkit_script_runtime = xyes; then
+  PKG_CHECK_MODULES(JAVA_SCRIPT_CORE, [webkit-1.0 >= 1.0.3],
+                    [has_javascriptcore=yes],
+                    [has_javascriptcore=no])
+  if test x$has_javascriptcore = xyes; then
+    CPPFLAGS="$CPPFLAGS $JAVA_SCRIPT_CORE_CFLAGS"
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScript.h],
+                     [has_JavaScript_h=yes],
+                     [has_JavaScript_h=no])
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
+                     [has_JavaScriptCore_h=yes],
+                     [has_JavaScriptCore_h=no])
+    CPPFLAGS="$ggl_save_CPPFLAGS"
+    if test x$has_JavaScript_h = xyes; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_H"
+    fi
+    if test x$has_JavaScriptCore_h = xyes; then
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
+    fi
+  fi
+
+  if test x$has_javascriptcore != xyes -a x$ggl_host_type = xmacosx; then
+    # Use system built-in JavaScriptCore.framework
+    # No gtk webkit support on mac yet.
+    AC_CHECK_HEADERS([JavaScriptCore/JavaScriptCore.h],
+                     [has_javascriptcore=yes],
+                     [has_javascriptcore=no])
+    if test x$has_javascriptcore = xyes; then
+      JAVA_SCRIPT_CORE_LIBS="-framework JavaScriptCore"
+      PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_JAVA_SCRIPT_CORE_H"
+    fi
+  else
+    AC_MSG_WARN([JavaScriptCore support is not available for $ggl_host_type])
+  fi
+
+  if test x$has_javascriptcore != xyes; then
+    AC_MSG_WARN([WebKit/JavaScriptCore is required by webkit-script-runtime.])
+    build_webkit_script_runtime=no;
+  fi
+fi
+
+# Check gtk webkit for gtkwebkit-browser-element
+has_gtkwebkit=no
+if test x$build_gtkwebkit_browser_element = xyes; then
+  PKG_CHECK_MODULES([GTKWEBKIT], [webkit-1.0 >= 1.0.3],
+                    [has_gtkwebkit=yes], [has_gtkwebkit=no])
+  if test x$has_gtkwebkit != xyes; then
+    AC_MSG_WARN([GtkWebKit is required by gtkwebkit-browser-element])
+    build_gtkwebkit_browser_element=no;
+  elif test x$build_webkit_script_runtime = xyes; then
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_WEBKIT_SUPPORT_JSC"
+  fi
+fi
+
 # Check necessary functions
 AC_CHECK_FUNC(mkdtemp, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MKDTEMP"])
 AC_CHECK_FUNC(mmap, [PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_MMAP"])
@@ -1100,20 +1170,29 @@ fi
 
 # Check mandatory dependencies
 if test x$build_gtk_host = xyes; then
+  has_gtk_script_engine=no
+  if test x$build_smjs_script_runtime = xyes -o \
+          x$build_webkit_script_runtime = xyes; then
+    has_gtk_script_engine=yes
+  fi
   if test x$build_curl_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
-          x$build_smjs_script_runtime != xyes; then
-    AC_MSG_WARN([curl, libxml2 or libmozjs are missing, gtk host won't work.])
+          x$has_gtk_script_engine != xyes; then
+    AC_MSG_WARN([gtk host won't work because of missing dependencies])
     build_gtk_host=no
   fi
 fi
 
 if test x$build_qt_host = xyes; then
+  has_qt_script_engine=no
+  if test x$build_smjs_script_runtime = xyes -o \
+          x$build_qt_script_runtime = xyes; then
+    has_qt_script_engine=yes
+  fi
   if test x$build_qt_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
-          '(' x$build_smjs_script_runtime != xyes -a \
-          x$build_qt_script_runtime != xyes ')'; then
-    AC_MSG_WARN([qt4, libxml2 or js runtime are missing, qt host won't work.])
+          x$has_qt_script_engine != xyes; then
+    AC_MSG_WARN([qt host won't work because of missing dependencies.])
     build_qt_host=no
   fi
 fi
@@ -1135,6 +1214,16 @@ if test x$enable_xdgmime = xyes; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_ENABLE_XDGMIME"
 fi
 
+GGL_GTK_HTML_SCRIPT_ENGINE=xulrunner
+if test x$build_smjs_script_runtime = xyes -a \
+        x$build_gtkmoz_browser_element = xyes; then
+  GGL_GTK_HTML_SCRIPT_ENGINE=xulrunner
+elif test x$build_webkit_script_runtime = xyes -a \
+          x$build_gtkwebkit_browser_element = xyes; then
+  GGL_GTK_HTML_SCRIPT_ENGINE=webkit
+fi
+
+PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_HTML_SCRIPT_ENGINE=\\\"$GGL_GTK_HTML_SCRIPT_ENGINE\\\""
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_HOST],
@@ -1225,6 +1314,14 @@ AM_CONDITIONAL(
   [test x$build_smjs_script_runtime = xyes])
 
 AM_CONDITIONAL(
+  [GGL_BUILD_WEBKIT_SCRIPT_RUNTIME],
+  [test x$build_webkit_script_runtime = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GTKWEBKIT_BROWSER_ELEMENT],
+  [test x$build_gtkwebkit_browser_element = xyes])
+
+AM_CONDITIONAL(
   [GGL_ENABLE_UPDATE_MIME_DATABASE],
   [test x$enable_update_mime_database = xyes])
 
@@ -1296,6 +1393,10 @@ AC_CONFIG_FILES([Makefile
                  extensions/qtwebkit_browser_element/Makefile
                  extensions/smjs_script_runtime/Makefile
                  extensions/smjs_script_runtime/tests/Makefile
+                 extensions/webkit_script_runtime/Makefile
+                 extensions/webkit_script_runtime/tests/Makefile
+                 extensions/gtkwebkit_browser_element/Makefile
+                 extensions/html_flash_element/Makefile
                  gadgets/Makefile
                  gadgets/analog_clock/Makefile
                  gadgets/designer/Makefile
@@ -1345,52 +1446,54 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 Build options:
-  Version                       $GGL_VERSION
-  Install prefix                $prefix
-  Install included libltdl      $enable_ltdl_install
-  Build shared libs             $enable_shared
-  Build static libs             $enable_static
-  Enable debug                  $enable_debug
-  Host type                     $ggl_host_type
-  Cross Compiling               $cross_compiling
-  OEM brand                     $ggl_oem_brand
+  Version                         $GGL_VERSION
+  Install prefix                  $prefix
+  Install included libltdl        $enable_ltdl_install
+  Build shared libs               $enable_shared
+  Build static libs               $enable_static
+  Enable debug                    $enable_debug
+  Host type                       $ggl_host_type
+  Cross Compiling                 $cross_compiling
+  OEM brand                       $ggl_oem_brand
 
  Libraries:
-  Build libggadget-dbus         $build_libggadget_dbus
-  Build libggadget-gtk          $build_libggadget_gtk
-  Build libggadget-npapi        $build_libggadget_npapi
-  Build libggadget-qt           $build_libggadget_qt
+  Build libggadget-dbus           $build_libggadget_dbus
+  Build libggadget-gtk            $build_libggadget_gtk
+  Build libggadget-npapi          $build_libggadget_npapi
+  Build libggadget-qt             $build_libggadget_qt
 
  Extensions:
-  Build curl-xml-http-request   $build_curl_xml_http_request
-  Build dbus-script-class       $build_dbus_script_class
-  Build gst-audio-framework     $build_gst_audio_framework
-  Build gst-video-element       $build_gst_video_element
-  Build gtk-edit-element        $build_gtk_edit_element
-  Build gtk-flash-element       $build_gtk_flash_element
-  Build gtk-system-framework    $build_gtk_system_framework
-  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
-  Build libxml2-xml-parser      $build_libxml2_xml_parser
-  Build linux-system-framework  $build_linux_system_framework
-  Build qt-edit-element         $build_qt_edit_element
-  Build qt-script-runtime       $build_qt_script_runtime
-  Build qt-system-framework     $build_qt_system_framework
-  Build qt-xml-http-request     $build_qt_xml_http_request
-  Build qtwebkit-browser        $build_qtwebkit_browser_element
-  Build smjs-script-runtime     $build_smjs_script_runtime
+  Build curl-xml-http-request     $build_curl_xml_http_request
+  Build dbus-script-class         $build_dbus_script_class
+  Build gst-audio-framework       $build_gst_audio_framework
+  Build gst-video-element         $build_gst_video_element
+  Build gtk-edit-element          $build_gtk_edit_element
+  Build gtk-flash-element         $build_gtk_flash_element
+  Build gtk-system-framework      $build_gtk_system_framework
+  Build gtkmoz-browser-element    $build_gtkmoz_browser_element
+  Build libxml2-xml-parser        $build_libxml2_xml_parser
+  Build linux-system-framework    $build_linux_system_framework
+  Build qt-edit-element           $build_qt_edit_element
+  Build qt-script-runtime         $build_qt_script_runtime
+  Build qt-system-framework       $build_qt_system_framework
+  Build qt-xml-http-request       $build_qt_xml_http_request
+  Build qtwebkit-browser          $build_qtwebkit_browser_element
+  Build smjs-script-runtime       $build_smjs_script_runtime
+  Build webkit-script-runtime     $build_webkit_script_runtime
+  Build gtkwebkit-browser-element $build_gtkwebkit_browser_element
 
  Other features:
-  GTK SVG Support               $has_librsvg
-  NetworkManager support        $has_network_manager
-  Startup notification support  $has_startup_notification
-  Built-in xdgmime support      $enable_xdgmime
-  Browser plugins directory     $default_browser_plugins_dir
-  Default gstreamer audio sink  $default_gst_audio_sink
-  Memory check command          $memcheck_command
+  GTK SVG Support                 $has_librsvg
+  NetworkManager support          $has_network_manager
+  Startup notification support    $has_startup_notification
+  Built-in xdgmime support        $enable_xdgmime
+  Browser plugins directory       $default_browser_plugins_dir
+  Default gstreamer audio sink    $default_gst_audio_sink
+  Memory check command            $memcheck_command
 
  Hosts:
-  Build gtk host                $build_gtk_host
-  Build qt host                 $build_qt_host
+  Build gtk host                  $build_gtk_host
+  Build qt host                   $build_qt_host
 ])
 
 if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then
