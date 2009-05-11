@@ -18,6 +18,7 @@
 #define GGADGET_CLIP_REGION_H__
 
 #include <ggadget/common.h>
+#include <ggadget/math_utils.h>
 
 namespace ggadget {
 
@@ -104,6 +105,17 @@ class ClipRegion {
    * Integerize all rectangles in the region.
    */
   void Integerize();
+
+  /** Zoom clip region by specified zoom factor. */
+  void Zoom(double zoom);
+
+  /**
+   * Gets number of rectangles in this region.
+   */
+  size_t GetRectangleCount() const;
+
+  /** Gets a rectangle in this region. */
+  Rectangle GetRectangle(size_t index) const;
 
   /**
    * Enumerate the rectangles. The region could be represented by a list of

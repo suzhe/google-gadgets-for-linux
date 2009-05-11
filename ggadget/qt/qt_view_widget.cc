@@ -22,6 +22,7 @@
 #include <QtGui/QMouseEvent>
 #include <ggadget/graphics_interface.h>
 #include <ggadget/gadget.h>
+#include <ggadget/math_utils.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/qt/qt_canvas.h>
 #include <ggadget/qt/utilities.h>
@@ -89,6 +90,11 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.fillRect(rect(), Qt::transparent);
     p.restore();
   }
+
+  // FIXME: support clip region.
+  view_->Layout();
+  view_->AddRectangleToClipRegion(
+      Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
 
   if (enable_input_mask_) {
     if (!offscreen_pixmap_

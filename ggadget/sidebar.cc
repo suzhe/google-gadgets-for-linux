@@ -58,7 +58,7 @@ class SideBar::Impl : public View {
     }
     virtual ~SideBarViewHost() {
       owner_->RemoveViewElement(view_element_);
-      owner_->Layout();
+      owner_->LayoutSubViews();
       view_element_ = NULL;
       DLOG("SideBarViewHost Dtor: %p", this);
     }
@@ -70,7 +70,6 @@ class SideBar::Impl : public View {
       // set invisible before ShowView is called
       view_element_->SetVisible(false);
       view_element_->SetChildView(down_cast<View*>(view));
-      QueueDraw();
     }
     virtual ViewInterface *GetView() const {
       return view_element_->GetChildView();
@@ -93,10 +92,10 @@ class SideBar::Impl : public View {
     }
     virtual void QueueDraw() {
       if (view_element_)
-        view_element_->QueueDraw();
+        view_element_->QueueDrawChildView();
     }
     virtual void QueueResize() {
-      owner_->Layout();
+      owner_->LayoutSubViews();
     }
     virtual void EnableInputShapeMask(bool /* enable */) {
       // Do nothing.
@@ -123,14 +122,14 @@ class SideBar::Impl : public View {
       delete feedback_handler;
       if (view_element_->GetChildView()) {
         view_element_->SetVisible(true);
-        owner_->Layout();
+        owner_->LayoutSubViews();
         return true;
       }
       return false;
     }
     virtual void CloseView() {
       view_element_->SetVisible(false);
-      owner_->Layout();
+      owner_->LayoutSubViews();
     }
     virtual bool ShowContextMenu(int button) {
       return owner_->view_host_->ShowContextMenu(button);
@@ -182,7 +181,7 @@ class SideBar::Impl : public View {
       children_(NULL),
       initializing_(false) {
     SetResizable(ViewInterface::RESIZABLE_TRUE);
-    // EnableCanvasCache(false);
+    EnableCanvasCache(false);
     SetupUI();
   }
   ~Impl() {
@@ -288,7 +287,7 @@ class SideBar::Impl : public View {
             }
           } else {
             UpResize(true, index, &offset);
-            Layout();
+            LayoutSubViews();
           }
         } else if (hit_element_normal_part_ && focused->GetChildView() &&
                    (std::abs(offset) > kUndockDragThreshold ||
@@ -354,7 +353,7 @@ class SideBar::Impl : public View {
     if (top_div_->IsVisible()) {
       top_div_->SetPixelWidth(width - kBorderWidth * 2);
     }
-    Layout();
+    LayoutSubViews();
   }
 
  public:
@@ -431,7 +430,7 @@ class SideBar::Impl : public View {
     if (null_element_) {
       RemoveViewElement(null_element_);
       null_element_ = NULL;
-      Layout();
+      LayoutSubViews();
     }
   }
 
@@ -559,21 +558,24 @@ class SideBar::Impl : public View {
         children_->InsertElement(element, NULL);
     } else {
       if (index >= count) {
+        element->SetPixelY(main_div_->GetPixelHeight());
         children_->InsertElement(element, NULL);
       } else {
         BasicElement *e = children_->GetItemByIndex(index);
-        if (e != element)
+        if (e != element) {
+          element->SetPixelY(e ? e->GetPixelY() : main_div_->GetPixelHeight());
           children_->InsertElement(element, e);
+        }
       }
     }
-    Layout();
+    LayoutSubViews();
   }
 
   void RemoveViewElement(ViewElement *element) {
     children_->RemoveElement(element);
   }
 
-  void Layout() {
+  void LayoutSubViews() {
     double y = 0;
     size_t count = children_->GetCount();
     double sidebar_width = main_div_->GetPixelWidth();
@@ -672,7 +674,7 @@ class SideBar::Impl : public View {
         element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
         index++;
       }
-      Layout();
+      LayoutSubViews();
     }
     if (count == 0) return false;
     *offset = count;

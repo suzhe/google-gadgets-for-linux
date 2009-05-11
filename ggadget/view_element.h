@@ -85,6 +85,10 @@ class ViewElement : public BasicElement {
    */
   void ViewCoordToChildViewCoord(double view_x, double view_y,
                                  double *child_x, double *child_y) const;
+
+  /** Calls when child view needs redraw. */
+  void QueueDrawChildView();
+
  public:
   virtual EventResult OnMouseEvent(const MouseEvent &event,
                                    bool direct,

@@ -19,10 +19,11 @@
 #include "math_utils.h"
 #include "slot.h"
 #include "small_object.h"
+#include "light_map.h"
 
 namespace ggadget {
 
-typedef std::vector<Rectangle> RectangleVector;
+typedef std::vector<Rectangle, LokiAllocator<Rectangle> > RectangleVector;
 
 class ClipRegion::Impl : public SmallObject<> {
  public:
@@ -34,38 +35,31 @@ class ClipRegion::Impl : public SmallObject<> {
    * This method merges two overlapped rectangles a and b into one rectangle,
    * and stores the result into out.
    *
-   * @return 0 means the overlap ratio of a and b is less than fuzzy_ratio,
+   * @return false means the overlap ratio of a and b is less than fuzzy_ratio,
    *         thus can't merge them.
-   *         1 means the overlap ratio is large enough and a is larger than b,
-   *         so b is merged into a.
-   *         -1 means a is merged into b.
    */
-  int MergeRectangles(const Rectangle &a, const Rectangle &b, Rectangle *out) {
-    Rectangle rect(a);
+  bool MergeRectangles(const Rectangle &a, const Rectangle &b, Rectangle *out) {
+    Rectangle union_rect(a);
     if (a == b) {
-      *out = rect;
-      return 1;
-    } else if (a.Overlaps(b)) {
-      rect.Union(b);
-      double fuzzy_area = rect.w * rect.h * fuzzy_ratio_;
-      double a_area = a.w * a.h;
-      double b_area = b.w * b.h;
-      if (a_area >= fuzzy_area || b_area >= fuzzy_area) {
-        *out = rect;
-        return a_area >= b_area ? 1 : -1;
-      }
-    } else if ((a.y == b.y && a.h == b.h &&
-                ((a.x + a.w >= b.x && a.x <= b.x) ||
-                 (b.x + b.w >= a.x && b.x <= a.x))) ||
-               (a.x == b.x && a.w == b.w &&
-                ((a.y + a.h >= b.y && a.y <= b.y) ||
-                 (b.y + b.h >= a.y && b.y <= a.y)))) {
-      // Merge neighbor rectangles.
-      rect.Union(b);
-      *out = rect;
-      return 1;
+      *out = union_rect;
+      return true;
     }
-    return 0;
+
+    union_rect.Union(b);
+    double union_area = union_rect.w * union_rect.h;
+    double intersect_area = 0;
+
+    Rectangle intersect_rect(a);
+    if (intersect_rect.Intersect(b)) {
+      intersect_area = intersect_rect.w * intersect_rect.h;
+    }
+
+    if (a.w * a.h + b.w * b.h - intersect_area > union_area * fuzzy_ratio_) {
+      *out = union_rect;
+      return true;
+    }
+
+    return false;
   }
 
  public:
@@ -112,7 +106,7 @@ void ClipRegion::AddRectangle(const Rectangle &rect) {
   Rectangle big_rect(rect);
   for (RectangleVector::iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it) {
-    if (impl_->MergeRectangles(big_rect, *it, &big_rect) == 0)
+    if (!impl_->MergeRectangles(big_rect, *it, &big_rect))
       new_rectangles.push_back(*it);
   }
   new_rectangles.push_back(big_rect);
@@ -161,6 +155,21 @@ void ClipRegion::Integerize() {
   for (RectangleVector::iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
     it->Integerize(true);
+}
+
+void ClipRegion::Zoom(double zoom) {
+  for (RectangleVector::iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it)
+    it->Zoom(zoom);
+}
+
+size_t ClipRegion::GetRectangleCount() const {
+  return impl_->rectangles_.size();
+}
+
+Rectangle ClipRegion::GetRectangle(size_t index) const {
+  return index < impl_->rectangles_.size() ? impl_->rectangles_[index] :
+      Rectangle();
 }
 
 bool ClipRegion::EnumerateRectangles(RectangleSlot *slot) const {

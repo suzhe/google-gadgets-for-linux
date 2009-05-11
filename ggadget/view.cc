@@ -225,7 +225,8 @@ class View::Impl : public SmallObject<> {
       resize_border_specified_(false),
       mouse_over_(false),
       view_focused_(false),
-      safe_to_destroy_(true) {
+      safe_to_destroy_(true),
+      content_changed_(true) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -1136,14 +1137,7 @@ class View::Impl : public SmallObject<> {
     children_.MarkRedraw();
   }
 
-  void Draw(CanvasInterface *canvas) {
-#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-    DLOG("host(%p) draw view(%p) on canvas %p with size: %f x %f",
-         view_host_, owner_, canvas, canvas->GetWidth(), canvas->GetHeight());
-    draw_count_ = 0;
-    uint64_t start = main_loop_->GetCurrentTime();
-#endif
-
+  void Layout() {
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
@@ -1152,18 +1146,67 @@ class View::Impl : public SmallObject<> {
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedSizeEvents();
+
+    if (theme_changed_) {
+      SimpleEvent event(Event::EVENT_THEME_CHANGED);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      FireEvent(&scriptable_event, onthemechanged_event_);
+      theme_changed_ = false;
+    }
     draw_queued_ = false;
+
+    Rectangle boundary(0, 0, width_, height_);
+    if (!need_redraw_) {
+      if (popup_element_.Get()) {
+        popup_element_.Get()->AggregateClipRegion(boundary, &clip_region_);
+      }
+      children_.AggregateClipRegion(boundary, &clip_region_);
+    } else {
+      // Clear clip region if the whole view needs redrawing, so that view host
+      // will draw the whole view correctly.
+      clip_region_.Clear();
+      clip_region_.AddRectangle(boundary);
+      if (popup_element_.Get()) {
+        popup_element_.Get()->AggregateClipRegion(Rectangle(), NULL);
+      }
+      children_.AggregateClipRegion(Rectangle(), NULL);
+    }
+
+    if (!clip_region_.IsEmpty()) {
+      content_changed_ = true;
+      if (on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+        size_t count = clip_region_.GetRectangleCount();
+        for (size_t i = 0; i < count; ++i) {
+          Rectangle r = clip_region_.GetRectangle(i);
+          on_add_rectangle_to_clip_region_(r.x, r.y, r.w, r.h);
+        }
+      }
+    }
+  }
+
+  void Draw(CanvasInterface *canvas) {
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+    DLOG("host(%p) draw view(%p) on canvas %p with size: %f x %f",
+         view_host_, owner_, canvas, canvas->GetWidth(), canvas->GetHeight());
+    draw_count_ = 0;
+    uint64_t start = main_loop_->GetCurrentTime();
+#endif
 
     // no draw queued, so the draw request is initiated from host.
     // And because the canvas cache_ is valid, just need to paint the canvas
     // cache to the dest canvas.
-    if (clip_region_.IsEmpty() && clip_region_enabled_ &&
-        canvas_cache_ && !need_redraw_) {
+    if (!content_changed_ && canvas_cache_ && !need_redraw_) {
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
       DLOG("Draw View(%p) from canvas cache.", owner_);
 #endif
       canvas->DrawCanvas(0, 0, canvas_cache_);
       return;
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+    } else {
+      DLOG("Redraw whole view: content changed: %d, "
+           "canvas cache: %p, need redraw:%d",
+           content_changed_, canvas_cache_, need_redraw_);
+#endif
     }
 
     if (popup_element_.Get() && !popup_element_.Get()->IsReallyVisible())
@@ -1178,19 +1221,15 @@ class View::Impl : public SmallObject<> {
       need_redraw_ = true;
     }
 
-    if (theme_changed_) {
-      SimpleEvent event(Event::EVENT_THEME_CHANGED);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
-      FireEvent(&scriptable_event, onthemechanged_event_);
-      theme_changed_ = false;
+    if (need_redraw_) {
+      // Add whole view into clip region, so that all elements will be redrawn
+      // correctly.
+      clip_region_.Clear();
+      clip_region_.AddRectangle(Rectangle(0, 0, width_, height_));
     }
 
     CanvasInterface *target;
     if (canvas_cache_) {
-      if (need_redraw_ || !clip_region_enabled_)
-        clip_region_.Clear();
-      else
-        clip_region_.Integerize();
       target = canvas_cache_;
       target->PushState();
       target->IntersectGeneralClipRegion(clip_region_);
@@ -1219,7 +1258,7 @@ class View::Impl : public SmallObject<> {
       children_.Draw(target);
     }
 
-    if (popup) {
+    if (popup && owner_->IsElementInClipRegion(popup)) {
       double pin_x = popup->GetPixelPinX();
       double pin_y = popup->GetPixelPinY();
       double abs_pin_x = 0;
@@ -1243,6 +1282,7 @@ class View::Impl : public SmallObject<> {
 
     clip_region_.Clear();
     need_redraw_ = false;
+    content_changed_ = false;
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     uint64_t end = main_loop_->GetCurrentTime();
@@ -1259,11 +1299,13 @@ class View::Impl : public SmallObject<> {
 #ifdef _DEBUG
   static bool DrawRectOnCanvasCallback(double x, double y, double w, double h,
                                        CanvasInterface *canvas) {
-    Color c(1, 0, 0);
+    static int color_index = 1;
+    Color c(color_index & 1, (color_index >> 1) & 1, (color_index >> 2) & 1);
     canvas->DrawLine(x, y, x + w, y, 1, c);
     canvas->DrawLine(x + w, y, x + w, y + h, 1, c);
     canvas->DrawLine(x + w, y + h, x, y + h, 1, c);
     canvas->DrawLine(x, y + h, x, y, 1, c);
+    color_index = (color_index >= 4 ? 1 : (color_index << 1));
     return true;
   }
 
@@ -1404,6 +1446,8 @@ class View::Impl : public SmallObject<> {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
+    owner_->AddElementToClipRegion(element, NULL);
+
     // Clears tooltip immediately.
     if (element == tooltip_element_.Get() && view_host_)
       view_host_->ShowTooltip("");
@@ -1448,6 +1492,9 @@ class View::Impl : public SmallObject<> {
 
   void SetPopupElement(BasicElement *element) {
     if (popup_element_.Get()) {
+      // To make sure the area covered by popup element can be redrawn
+      // correctly.
+      owner_->AddElementToClipRegion(popup_element_.Get(), NULL);
       popup_element_.Get()->OnPopupOff();
     }
     popup_element_.Reset(element);
@@ -1642,6 +1689,7 @@ class View::Impl : public SmallObject<> {
   EventSignal onthemechanged_event_;
 
   Signal0<void> on_destroy_signal_;
+  Signal4<void, double, double, double, double> on_add_rectangle_to_clip_region_;
 
   ImageCache image_cache_;
 
@@ -1694,6 +1742,7 @@ class View::Impl : public SmallObject<> {
   bool mouse_over_              : 1;
   bool view_focused_            : 1;
   bool safe_to_destroy_         : 1;
+  bool content_changed_         : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;
@@ -1735,7 +1784,7 @@ FileManagerInterface *View::GetFileManager() const {
 }
 
 void View::Layout() {
-  impl_->children_.Layout();
+  impl_->Layout();
 }
 
 GraphicsInterface *View::GetGraphics() const {
@@ -1855,6 +1904,10 @@ void View::Draw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
 }
 
+const ClipRegion *View::GetClipRegion() const {
+  return &impl_->clip_region_;
+}
+
 EventResult View::OnMouseEvent(const MouseEvent &event) {
   ScopedLogContext log_context(impl_->gadget_);
   return impl_->OnMouseEvent(event);
@@ -1960,22 +2013,33 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return !impl_->clip_region_enabled_ || !impl_->enable_cache_ ||
-      impl_->clip_region_.IsEmpty() ||
+  return !impl_->clip_region_enabled_ ||
       impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
+
 void View::AddElementToClipRegion(BasicElement *element,
                                   const Rectangle *rect) {
-  if (impl_->clip_region_enabled_ && impl_->enable_cache_) {
-    impl_->clip_region_.AddRectangle(rect ?
-                                     element->GetRectExtentsInView(*rect) :
-                                     element->GetExtentsInView());
-  }
+  Rectangle element_rect = rect ? element->GetRectExtentsInView(*rect) :
+      element->GetExtentsInView();
+  element_rect.Integerize(true);
+  impl_->clip_region_.AddRectangle(element_rect);
 }
 
 void View::EnableClipRegion(bool enable) {
   impl_->clip_region_enabled_ = enable;
+}
+
+void View::AddRectangleToClipRegion(const Rectangle &rect) {
+  Rectangle view_rect(0, 0, impl_->width_, impl_->height_);
+  if (view_rect.Intersect(rect)) {
+    view_rect.Integerize(true);
+    impl_->clip_region_.AddRectangle(view_rect);
+    if (impl_->on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+      impl_->on_add_rectangle_to_clip_region_(
+          view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+    }
+  }
 }
 
 void View::IncreaseDrawCount() {
@@ -2254,6 +2318,10 @@ Connection *View::ConnectOnContextMenuEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnThemeChangedEvent(Slot0<void> *handler) {
   return impl_->onthemechanged_event_.Connect(handler);
+}
+Connection *View::ConnectOnAddRectangleToClipRegion(
+    Slot4<void, double, double, double, double> *handler) {
+  return impl_->on_add_rectangle_to_clip_region_.Connect(handler);
 }
 
 } // namespace ggadget

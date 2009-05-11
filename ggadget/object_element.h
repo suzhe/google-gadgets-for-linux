@@ -69,6 +69,8 @@ class ObjectElement : public BasicElement {
   virtual EventResult HandleDragEvent(const DragEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
+  virtual void AggregateMoreClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ObjectElement);

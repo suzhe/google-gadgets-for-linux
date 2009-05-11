@@ -232,7 +232,10 @@ class ComboBoxElement::Impl : public SmallObject<> {
   }
 
   void SelectionChanged() {
-    owner_->QueueDraw();
+    if (!edit_) {
+      owner_->QueueDrawRect(Rectangle(0, 0, owner_->GetPixelWidth(),
+                                      droplist_->GetPixelY()));
+    }
     // From now on, draws the selected item using itemOverColor.
     droplist_->SetMouseSelectionMode(false);
     update_edit_value_ = true;
@@ -780,6 +783,14 @@ EventResult ComboBoxElement::HandleOtherEvent(const Event &event) {
     }
   }
   return EVENT_RESULT_UNHANDLED;
+}
+
+void ComboBoxElement::AggregateMoreClipRegion(const Rectangle &boundary,
+                                              ClipRegion *region) {
+  if (impl_->droplist_)
+    impl_->droplist_->AggregateClipRegion(boundary, region);
+  if (impl_->edit_)
+    impl_->edit_->AggregateClipRegion(boundary, region);
 }
 
 void ComboBoxElement::OnPopupOff() {
