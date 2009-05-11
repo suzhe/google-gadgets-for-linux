@@ -60,6 +60,14 @@ class BaseScriptable : public ScriptableHelperDefault {
     AppendBuffer("GetDoubleProperty()=%.3lf\n", double_property_);
     return double_property_;
   }
+  void SetIntProperty(int64_t int_property) {
+    int_property_ = int_property;
+    AppendBuffer("SetIntProperty(%jd)\n", int_property_);
+  }
+  int64_t GetIntProperty() const {
+    AppendBuffer("GetIntProperty()=%jd\n", int_property_);
+    return int_property_;
+  }
 
   std::string GetBuffer() const {
     return g_buffer;
@@ -98,6 +106,7 @@ class BaseScriptable : public ScriptableHelperDefault {
  private:
   bool native_owned_;
   double double_property_;
+  int64_t int_property_;
   EnumType enum_property_;
   Variant variant_property_;
 };
@@ -254,4 +263,3 @@ extern const Variant kNewObjectDefaultArgs[];
 extern const Variant kReleaseObjectDefaultArgs[];
 
 #endif // GGADGET_TESTS_SCRIPTABLES_H__
-

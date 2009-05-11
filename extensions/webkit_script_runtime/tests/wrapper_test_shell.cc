@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#include "ggadget/tests/scriptables.h"
 #include "../js_script_context.h"
+#include "ggadget/script_context_interface.h"
+#include "ggadget/tests/scriptables.h"
 
 using namespace ggadget;
-using namespace ggadget::smjs;
 
 class GlobalObject : public ScriptableHelperNativeOwnedDefault {
  public:
@@ -57,15 +57,15 @@ static ScriptableInterface *NullCtor() {
 }
 
 // Called by the initialization code in js_shell.cc.
-JSBool InitCustomObjects(JSScriptContext *context) {
+bool InitCustomObjects(ScriptContextInterface *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
   context->RegisterClass("TestScriptable",
                          NewSlot(global, &GlobalObject::ConstructScriptable));
   context->RegisterClass("TestNullCtor", NewSlot(NullCtor));
-  return JS_TRUE;
+  return true;
 }
 
-void DestroyCustomObjects(JSScriptContext *context) {
+void DestroyCustomObjects(ScriptContextInterface *context) {
   delete global;
 }

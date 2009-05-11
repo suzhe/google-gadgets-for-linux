@@ -99,6 +99,9 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
       RegisterMethod("toString", NewSimpleGetterSlot(&message_));
     }
 
+    // Required by webkit-script-runtime.
+    virtual bool IsStrict() const { return false; }
+
    private:
     std::string message_;
   };
