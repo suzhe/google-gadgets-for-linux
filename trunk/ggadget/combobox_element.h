@@ -129,6 +129,8 @@ class ComboBoxElement : public BasicElement {
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual EventResult HandleOtherEvent(const Event &event);
+  virtual void AggregateMoreClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region);
 
  public:
   virtual bool IsChildInVisibleArea(const BasicElement *child) const;

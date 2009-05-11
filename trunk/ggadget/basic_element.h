@@ -452,6 +452,20 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   void ClearSizeChanged();
 
+  /**
+   * Aggregates clip region of all children and self. It'll be called just
+   * after calling Layout() and before calling Draw().
+   * The clip region cache of this element will be cleared.
+   *
+   * If either region is NULL or boundary is empty, then only clip region
+   * cache will be cleared.
+   *
+   * @param boundary Clip region boundary in view's coordinates. All clip
+   *        rectangles shall not beyond this boundary.
+   * @param region Contains all clip rectangles in view's coordinates.
+   */
+  void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region);
+
  public: // Coordination translation methods.
   /**
    * Converts coordinates in this element's space to coordinates in a
@@ -825,6 +839,13 @@ public: // Other overridable public methods.
    * The default value is (0,0).
    */
   virtual void GetDefaultPosition(double *x, double *y) const;
+
+  /**
+   * This function will be called by AggregateClipRegion(). Subclasses shall
+   * implement it to call implicit children's AggregateClipRegion() method.
+   */
+  virtual void AggregateMoreClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region);
 
  private:
   class Impl;

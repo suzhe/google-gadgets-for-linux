@@ -63,6 +63,9 @@ class ObjectVideoPlayer : public BasicElement {
    */
   virtual void DoDraw(CanvasInterface *canvas);
 
+  virtual void AggregateMoreClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region);
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ObjectVideoPlayer);
 

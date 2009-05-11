@@ -604,4 +604,11 @@ void ObjectVideoPlayer::DoDraw(CanvasInterface *canvas) {
   }
 }
 
+void ObjectVideoPlayer::AggregateMoreClipRegion(const Rectangle &boundary,
+                                                ClipRegion *region) {
+  if (impl_->video_element_) {
+    impl_->video_element_->AggregateClipRegion(boundary, region);
+  }
+}
+
 } // namespace ggadget

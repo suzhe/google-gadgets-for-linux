@@ -391,6 +391,18 @@ class Elements::Impl : public SmallObject<> {
     element_removed_ = false;
   }
 
+  void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region) {
+    Children::iterator it = children_.begin();
+    Children::iterator end = children_.end();
+    BasicElement *popup = view_->GetPopupElement();
+    for (; it != end; ++it) {
+      // Skip popup element, it'll be handled in view.
+      if (popup != (*it)) {
+        (*it)->AggregateClipRegion(boundary, region);
+      }
+    }
+  }
+
   void Draw(CanvasInterface *canvas) {
     ASSERT(canvas);
     if (children_.empty() || !width_ || !height_)
@@ -661,6 +673,11 @@ void Elements::GetChildrenExtents(double *width, double *height) {
 
 void Elements::MarkRedraw() {
   impl_->MarkRedraw();
+}
+
+void Elements::AggregateClipRegion(const Rectangle &boundary,
+                                   ClipRegion *region) {
+  impl_->AggregateClipRegion(boundary, region);
 }
 
 } // namespace ggadget

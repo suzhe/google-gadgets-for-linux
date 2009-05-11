@@ -102,7 +102,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelWidth(double width) {
     if (width >= 0.0 && (width != width_ || width_relative_)) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       width_ = width;
       width_relative_ = false;
       WidthChanged();
@@ -111,7 +111,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelHeight(double height) {
     if (height >= 0.0 && (height != height_ || height_relative_)) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       height_ = height;
       height_relative_ = false;
       HeightChanged();
@@ -120,7 +120,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativeWidth(double width) {
     if (width >= 0.0 && (width != pwidth_ || !width_relative_)) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       pwidth_ = width;
       width_relative_ = true;
       WidthChanged();
@@ -129,7 +129,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativeHeight(double height) {
     if (height >= 0.0 && (height != pheight_ || !height_relative_)) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       pheight_ = height;
       height_relative_ = true;
       HeightChanged();
@@ -138,7 +138,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelX(double x) {
     if (x != x_ || x_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       x_ = x;
       x_relative_ = false;
       PositionChanged();
@@ -147,7 +147,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelY(double y) {
     if (y != y_ || y_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       y_ = y;
       y_relative_ = false;
       PositionChanged();
@@ -156,7 +156,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativeX(double x) {
     if (x != px_ || !x_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       px_ = x;
       x_relative_ = true;
       PositionChanged();
@@ -165,7 +165,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativeY(double y) {
     if (y != py_ || !y_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       py_ = y;
       y_relative_ = true;
       PositionChanged();
@@ -174,7 +174,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelPinX(double pin_x) {
     if (pin_x != pin_x_ || pin_x_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       pin_x_ = pin_x;
       pin_x_relative_ = false;
       PositionChanged();
@@ -183,7 +183,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetPixelPinY(double pin_y) {
     if (pin_y != pin_y_ || pin_y_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       pin_y_ = pin_y;
       pin_y_relative_ = false;
       PositionChanged();
@@ -192,7 +192,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativePinX(double pin_x) {
     if (pin_x != ppin_x_ || !pin_x_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       ppin_x_ = pin_x;
       pin_x_relative_ = true;
       PositionChanged();
@@ -201,7 +201,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRelativePinY(double pin_y) {
     if (pin_y != ppin_y_ || !pin_y_relative_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       ppin_y_ = pin_y;
       pin_y_relative_ = true;
       PositionChanged();
@@ -210,7 +210,7 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetRotation(double rotation) {
     if (rotation != rotation_) {
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       rotation_ = rotation;
       PositionChanged();
     }
@@ -491,9 +491,9 @@ class BasicElement::Impl : public SmallObject<> {
       ppin_y_ = height_ > 0.0 ? pin_y_ / height_ : 0.0;
     }
 
-    if ((position_changed_ || size_changed_ || visibility_changed_) &&
-        IsReallyVisible())
-      view_->AddElementToClipRegion(owner_, NULL);
+    if (position_changed_ || size_changed_ || visibility_changed_) {
+      AddToClipRegion(NULL);
+    }
 
     if (size_changed_)
       PostSizeEvent();
@@ -501,14 +501,8 @@ class BasicElement::Impl : public SmallObject<> {
       children_->Layout();
 
     if (content_changed_) {
-      if (cache_enabled_) {
-        // Add it into clip region, so that the canvas cache can be updated
-        // correctly.
-        view_->AddElementToClipRegion(owner_, NULL);
-      }
       // To let all associated copy elements to update their content.
       FireOnContentChangedSignal();
-      content_changed_ = false;
     }
 
     // No other code will use it before calling Draw(), so it's safe to reset.
@@ -553,8 +547,7 @@ class BasicElement::Impl : public SmallObject<> {
       // - Opacity of the element is not 1.0 and it has children.
       // - Canvas cache is enabled.
       bool indirect_draw = cache_enabled_ || mask || flip_ != FLIP_NONE ||
-                          (opacity_ != 1.0 && children_ &&
-                           children_->GetCount());
+          (opacity_ != 1.0 && children_ && children_->GetCount());
       if (indirect_draw) {
         if (cache_) {
           target = cache_;
@@ -647,10 +640,54 @@ class BasicElement::Impl : public SmallObject<> {
 #endif
 
  public:
+  void AddToClipRegion(const Rectangle *rect) {
+    if ((visible_ && opacity_ != 0.0) || visibility_changed_) {
+      if (rect) {
+        clip_region_.AddRectangle(owner_->GetRectExtentsInView(*rect));
+      } else {
+        clip_region_.AddRectangle(owner_->GetExtentsInView());
+      }
+    }
+  }
+
+  void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region) {
+    if (region != NULL && !boundary.IsEmpty()) {
+      Rectangle extents = owner_->GetExtentsInView();
+      if (extents.Intersect(boundary)) {
+        size_t count = clip_region_.GetRectangleCount();
+        for (size_t i = 0; i < count; ++i) {
+          Rectangle rect = clip_region_.GetRectangle(i);
+          if (rect.Intersect(extents)) {
+            rect.Integerize(true);
+            region->AddRectangle(rect);
+          }
+        }
+
+        if (visible_ && opacity_ != 0.0) {
+          if (children_ && children_->GetCount()) {
+            children_->AggregateClipRegion(extents, region);
+          }
+          owner_->AggregateMoreClipRegion(extents, region);
+          // Short circuit.
+          clip_region_.Clear();
+          return;
+        }
+      }
+    }
+
+    clip_region_.Clear();
+    // children's AggregateClipRegion() and AggregateMoreClipRegion() must be
+    // called in order to let children clear their clip region cache.
+    if (children_ && children_->GetCount()) {
+      children_->AggregateClipRegion(Rectangle(), NULL);
+    }
+    owner_->AggregateMoreClipRegion(Rectangle(), NULL);
+  }
+
   void QueueDraw() {
     if ((visible_ || visibility_changed_) && !draw_queued_) {
       draw_queued_ = true;
-      view_->AddElementToClipRegion(owner_, NULL);
+      AddToClipRegion(NULL);
       view_->QueueDraw();
       if (!content_changed_)
         MarkContentChanged();
@@ -664,7 +701,7 @@ class BasicElement::Impl : public SmallObject<> {
     if ((visible_ || visibility_changed_) && !draw_queued_) {
       // Don't set draw_queued_, because it's only queued part of the element.
       // Other part might be queued later.
-      view_->AddElementToClipRegion(owner_, &rect);
+      AddToClipRegion(&rect);
       view_->QueueDraw();
       if (!content_changed_)
         MarkContentChanged();
@@ -674,22 +711,18 @@ class BasicElement::Impl : public SmallObject<> {
 #endif
   }
 
-  bool QueueClipRectCallback(double x, double y, double w, double h) {
-    Rectangle rect(x, y, w, h);
-    view_->AddElementToClipRegion(owner_, &rect);
-    return true;
-  }
-
   void QueueDrawRegion(const ClipRegion &region) {
     if ((visible_ || visibility_changed_) && !draw_queued_) {
       // Don't set draw_queued_, because it's only queued part of the element.
       // Other part might be queued later.
-      if (region.EnumerateRectangles(
-          NewSlot(this, &Impl::QueueClipRectCallback))) {
-        view_->QueueDraw();
-        if (!content_changed_)
-          MarkContentChanged();
+      size_t count = region.GetRectangleCount();
+      for (size_t i = 0; i < count; ++i) {
+        Rectangle rect = region.GetRectangle(i);
+        AddToClipRegion(&rect);
       }
+      view_->QueueDraw();
+      if (!content_changed_)
+        MarkContentChanged();
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
@@ -706,13 +739,6 @@ class BasicElement::Impl : public SmallObject<> {
   void FireOnContentChangedSignal() {
     if (on_content_changed_signal_.HasActiveConnections())
       on_content_changed_signal_();
-
-    // Fire content changed signal of its parents.
-    BasicElement *elm = owner_->GetParentElement();
-    for (; elm; elm = elm->GetParentElement()) {
-      if (elm->impl_->on_content_changed_signal_.HasActiveConnections())
-        elm->impl_->on_content_changed_signal_();
-    }
   }
 
   void PostSizeEvent() {
@@ -1018,6 +1044,8 @@ class BasicElement::Impl : public SmallObject<> {
 
   std::string name_;
   std::string tooltip_;
+
+  ClipRegion clip_region_;
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
@@ -2096,6 +2124,15 @@ EventResult BasicElement::HandleKeyEvent(const KeyboardEvent &event) {
 }
 EventResult BasicElement::HandleOtherEvent(const Event &event) {
   return EVENT_RESULT_UNHANDLED;
+}
+
+void BasicElement::AggregateClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region) {
+  impl_->AggregateClipRegion(boundary, region);
+}
+
+void BasicElement::AggregateMoreClipRegion(const Rectangle &boundary,
+                                           ClipRegion *region) {
 }
 
 } // namespace ggadget

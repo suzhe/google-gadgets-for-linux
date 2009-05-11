@@ -230,6 +230,13 @@ class HtmlFlashElement : public BasicElement {
     return browser_ ? browser_->OnOtherEvent(event) : EVENT_RESULT_UNHANDLED;
   }
 
+  virtual void AggregateMoreClipRegion(const Rectangle &boundary,
+                                       ClipRegion *region) {
+    if (browser_) {
+      browser_->AggregateClipRegion(boundary, region);
+    }
+  }
+
  private:
   Variant GetProperty(const std::string &name) {
     if (movie_object_.Get()) {

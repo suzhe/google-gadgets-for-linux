@@ -64,7 +64,6 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
     : owner_(owner),
       main_loop_(main_loop),
       graphics_(owner->GetView()->GetGraphics()),
-      canvas_(NULL),
       im_context_(NULL),
       cached_layout_(NULL),
       preedit_attrs_(NULL),
@@ -96,18 +95,16 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       content_modified_(false),
       selection_changed_(false),
       cursor_moved_(false),
-      update_canvas_(false),
       background_(new Texture(kDefaultBackgroundColor, 1)),
       text_color_(kDefaultTextColor),
-      align_(CanvasInterface::ALIGN_LEFT) {
+      align_(CanvasInterface::ALIGN_LEFT),
+      content_region_(0.9) {
   ASSERT(main_loop_);
   ASSERT(graphics_);
   InitImContext();
 }
 
 GtkEditImpl::~GtkEditImpl() {
-  if (canvas_)
-    canvas_->Destroy();
   if (im_context_)
     g_object_unref(im_context_);
   delete background_;
@@ -120,27 +117,22 @@ GtkEditImpl::~GtkEditImpl() {
 }
 
 void GtkEditImpl::Draw(CanvasInterface *canvas) {
-  CairoCanvas *edit_canvas = EnsureCanvas();
-
-  if (update_canvas_ || !last_selection_region_.IsEmpty() ||
-      !selection_region_.IsEmpty()) {
-    DrawText(down_cast<CairoCanvas*>(edit_canvas));
+  if (background_) {
+    background_->Draw(canvas, 0, 0, width_, height_);
   }
 
-  if (background_)
-    background_->Draw(canvas, 0, 0, width_, height_);
   canvas->PushState();
   canvas->IntersectRectClipRegion(kInnerBorderX,
                                   kInnerBorderY,
                                   width_- kInnerBorderX,
                                   height_ - kInnerBorderY);
-  canvas->DrawCanvas(0, 0, edit_canvas);
+  DrawText(canvas);
   canvas->PopState();
-  DrawCursor(down_cast<CairoCanvas*>(canvas));
+  DrawCursor(canvas);
 
-  update_canvas_ = false;
   last_selection_region_ = selection_region_;
   last_cursor_region_ = cursor_region_;
+  last_content_region_ = content_region_;
 }
 
 void GtkEditImpl::FocusIn() {
@@ -564,28 +556,32 @@ EventResult GtkEditImpl::OnKeyEvent(const KeyboardEvent &event) {
 
 void GtkEditImpl::QueueDraw() {
   if (content_modified_) {
-    UpdateSelectionRegion();
-    UpdateCursorRegion();
-    owner_->QueueDraw();
+    UpdateContentRegion();
+    if (!last_content_region_.IsEmpty())
+      owner_->QueueDrawRegion(last_content_region_);
+    if (!content_region_.IsEmpty())
+      owner_->QueueDrawRegion(content_region_);
     content_modified_ = false;
-    update_canvas_ = true;
-  } else {
-    if (selection_changed_) {
-      UpdateSelectionRegion();
-      if (!last_selection_region_.IsEmpty())
-        owner_->QueueDrawRegion(last_selection_region_);
-      if (!selection_region_.IsEmpty())
-        owner_->QueueDrawRegion(selection_region_);
-      selection_changed_ = false;
-    }
-    if (cursor_moved_) {
-      UpdateCursorRegion();
-      if (!last_cursor_region_.IsEmpty())
-        owner_->QueueDrawRegion(last_cursor_region_);
-      if (!cursor_region_.IsEmpty())
-        owner_->QueueDrawRegion(cursor_region_);
-      cursor_moved_ = false;
-    }
+    selection_changed_ = true;
+    cursor_moved_ = true;
+  }
+
+  if (selection_changed_) {
+    UpdateSelectionRegion();
+    if (!last_selection_region_.IsEmpty())
+      owner_->QueueDrawRegion(last_selection_region_);
+    if (!selection_region_.IsEmpty())
+      owner_->QueueDrawRegion(selection_region_);
+    selection_changed_ = false;
+  }
+
+  if (cursor_moved_) {
+    UpdateCursorRegion();
+    if (!last_cursor_region_.IsEmpty())
+      owner_->QueueDrawRegion(last_cursor_region_);
+    if (!cursor_region_.IsEmpty())
+      owner_->QueueDrawRegion(cursor_region_);
+    cursor_moved_ = false;
   }
 }
 
@@ -739,22 +735,6 @@ PangoLayout* GtkEditImpl::CreateLayout() {
   }
 
   return layout;
-}
-
-CairoCanvas* GtkEditImpl::EnsureCanvas() {
-  if (canvas_) {
-    if (width_ == static_cast<int>(canvas_->GetWidth()) &&
-        height_ == static_cast<int>(canvas_->GetHeight()))
-      return canvas_;
-    else {
-      DLOG("GtkEdit: Recreate canvas");
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
-  }
-  canvas_ = down_cast<CairoCanvas*>(graphics_->NewCanvas(width_, height_));
-  ASSERT(canvas_);
-  return canvas_;
 }
 
 void GtkEditImpl::AdjustScroll() {
@@ -937,7 +917,7 @@ void GtkEditImpl::HideCursor() {
   }
 }
 
-void GtkEditImpl::DrawCursor(CairoCanvas *canvas) {
+void GtkEditImpl::DrawCursor(CanvasInterface *canvas) {
   if (!cursor_visible_ || !focused_) return;
 
   int strong_x, strong_y, strong_height;
@@ -1042,6 +1022,7 @@ void GtkEditImpl::UpdateSelectionRegion() {
     int *ranges;
     int n_ranges;
     int n_lines = pango_layout_get_line_count(layout);
+    double x, y, w, h;
 
     start_index = TextIndexToLayoutIndex(start_index, false);
     end_index = TextIndexToLayoutIndex(end_index, false);
@@ -1063,44 +1044,67 @@ void GtkEditImpl::UpdateSelectionRegion() {
       pango_layout_line_get_pixel_extents(line, NULL, &line_extents);
       pango_layout_index_to_pos(layout, line->start_index,  &pos);
       for(int i = 0; i < n_ranges; ++i) {
-        selection_region_.AddRectangle(Rectangle(
-            kInnerBorderX + scroll_offset_x_ + PANGO_PIXELS(ranges[i * 2]),
-            kInnerBorderY + scroll_offset_y_ + PANGO_PIXELS(pos.y),
-            PANGO_PIXELS(ranges[i * 2 + 1] - ranges[i * 2]),
-            line_extents.height));
+        x = kInnerBorderX + scroll_offset_x_ + PANGO_PIXELS(ranges[i * 2]);
+        y = kInnerBorderY + scroll_offset_y_ + PANGO_PIXELS(pos.y);
+        w = PANGO_PIXELS(ranges[i * 2 + 1] - ranges[i * 2]);
+        h = line_extents.height;
+        if (x < width_ && x + w > 0 && y < height_ && y + h > 0) {
+          selection_region_.AddRectangle(Rectangle(x, y, w, h));
+        }
       }
       g_free(ranges);
     }
   }
 }
 
-void GtkEditImpl::DrawText(CairoCanvas *canvas) {
+void GtkEditImpl::UpdateContentRegion() {
+  content_region_.Clear();
+
+  PangoLayout *layout = EnsureLayout();
+  PangoRectangle extents;
+  double x, y, w, h;
+
+  PangoLayoutIter *iter = pango_layout_get_iter(layout);
+  do {
+    pango_layout_iter_get_line_extents(iter, NULL, &extents);
+
+#if PANGO_VERSION_CHECK(1,16,0)
+    pango_extents_to_pixels(&extents, NULL);
+#else
+    extents.x = PANGO_PIXELS_FLOOR(extents.x);
+    extents.y = PANGO_PIXELS_FLOOR(extents.y);
+    extents.width = PANGO_PIXELS_CEIL(extents.width);
+    extents.height = PANGO_PIXELS_CEIL(extents.height);
+#endif
+
+    x = kInnerBorderX + scroll_offset_x_ + extents.x;
+    y = kInnerBorderY + scroll_offset_y_ + extents.y;
+    w = extents.width;
+    h = extents.height;
+
+    if (x < width_ && x + w > 0 && y < height_ && y + h > 0) {
+      content_region_.AddRectangle(Rectangle(x, y, w, h));
+    }
+  } while(pango_layout_iter_next_line(iter));
+
+  pango_layout_iter_free(iter);
+}
+
+void GtkEditImpl::DrawText(CanvasInterface *canvas) {
   PangoLayout *layout = EnsureLayout();
 
-  bool redraw_text = false;
-  if (update_canvas_) {
-    canvas->ClearCanvas();
-    canvas->PushState();
-    redraw_text = true;
-  } else if (!last_selection_region_.IsEmpty()) {
-    last_selection_region_.Integerize();
-    canvas->PushState();
-    canvas->IntersectGeneralClipRegion(last_selection_region_);
-    canvas->ClearRect(0, 0, width_, height_);
-    redraw_text = true;
-  }
+  CairoCanvas *cairo_canvas = down_cast<CairoCanvas *>(canvas);
+  cairo_canvas->PushState();
 
-  if (redraw_text) {
-    cairo_set_source_rgb(canvas->GetContext(),
-                         text_color_.red,
-                         text_color_.green,
-                         text_color_.blue);
-    cairo_move_to(canvas->GetContext(),
-                  scroll_offset_x_ + kInnerBorderX,
-                  scroll_offset_y_ + kInnerBorderY);
-    pango_cairo_show_layout(canvas->GetContext(), layout);
-    canvas->PopState();
-  }
+  cairo_set_source_rgb(cairo_canvas->GetContext(),
+                       text_color_.red,
+                       text_color_.green,
+                       text_color_.blue);
+  cairo_move_to(cairo_canvas->GetContext(),
+                scroll_offset_x_ + kInnerBorderX,
+                scroll_offset_y_ + kInnerBorderY);
+  pango_cairo_show_layout(cairo_canvas->GetContext(), layout);
+  cairo_canvas->PopState();
 
   // Draw selection background.
   // Selection in a single line may be not continual, so we use pango to
@@ -1109,25 +1113,25 @@ void GtkEditImpl::DrawText(CairoCanvas *canvas) {
   if (!selection_region_.IsEmpty()) {
     canvas->PushState();
     selection_region_.Integerize();
-    canvas->IntersectGeneralClipRegion(selection_region_);
+    cairo_canvas->IntersectGeneralClipRegion(selection_region_);
 
     Color selection_color = GetSelectionBackgroundColor();
     Color text_color = GetSelectionTextColor();
 
-    cairo_set_source_rgb(canvas->GetContext(),
+    cairo_set_source_rgb(cairo_canvas->GetContext(),
                          selection_color.red,
                          selection_color.green,
                          selection_color.blue);
-    cairo_paint(canvas->GetContext());
+    cairo_paint(cairo_canvas->GetContext());
 
-    cairo_move_to(canvas->GetContext(),
+    cairo_move_to(cairo_canvas->GetContext(),
                   scroll_offset_x_ + kInnerBorderX,
                   scroll_offset_y_ + kInnerBorderY);
-    cairo_set_source_rgb(canvas->GetContext(),
+    cairo_set_source_rgb(cairo_canvas->GetContext(),
                          text_color.red,
                          text_color.green,
                          text_color.blue);
-    pango_cairo_show_layout(canvas->GetContext(), layout);
+    pango_cairo_show_layout(cairo_canvas->GetContext(), layout);
     canvas->PopState();
   }
 }

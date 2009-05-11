@@ -88,13 +88,6 @@ class View : public ViewInterface {
   FileManagerInterface *GetFileManager() const;
 
   /**
-   * Force layout its children.
-   *
-   * It'll only be called by ViewElement to propagate layout request.
-   */
-  void Layout();
-
-  /**
    * Registers all properties of the View instance to specified Scriptable
    * instance./
    */
@@ -138,7 +131,12 @@ class View : public ViewInterface {
                                double *right, double *bottom) const;
   virtual void MarkRedraw();
 
+  virtual void Layout();
+
   virtual void Draw(CanvasInterface *canvas);
+
+  virtual const ClipRegion *GetClipRegion() const;
+  virtual void AddRectangleToClipRegion(const Rectangle &rect);
 
   virtual EventResult OnMouseEvent(const MouseEvent &event);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);
@@ -267,6 +265,8 @@ class View : public ViewInterface {
    * return true and all elements will be drawn when drawing View.
    *
    * It's useful when draw an element into off-screen buffer.
+   *
+   * View's clip region should always be enabled by default.
    */
   void EnableClipRegion(bool enable);
 
@@ -498,6 +498,15 @@ class View : public ViewInterface {
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
   Connection *ConnectOnContextMenuEvent(Slot0<void> *handler);
   Connection *ConnectOnThemeChangedEvent(Slot0<void> *handler);
+
+ public:
+  /**
+   * A special signal which will be called when AddRectangleToClipRegion() is
+   * called, so that ViewElements in this view can add the rectangle to sub
+   * view's clip region.
+   */
+  Connection *ConnectOnAddRectangleToClipRegion(
+      Slot4<void, double, double, double, double> *handler);
 
  public:
   /** For performance testing. */

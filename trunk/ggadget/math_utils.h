@@ -199,10 +199,15 @@ bool IsPointInElement(double x, double y, double width, double height);
 /** A class represents a rectangle. */
 class Rectangle {
  public:
-  Rectangle();
-  Rectangle(double x, double y, double w, double h);
+  Rectangle() : x(0), y(0), w(0), h(0) { }
 
-  bool operator==(const Rectangle &rect) const;
+  Rectangle(double ax, double ay, double aw, double ah)
+    : x(ax), y(ay), w(aw), h(ah) {
+  }
+
+  bool operator==(const Rectangle &rect) const {
+    return x == rect.x && y == rect.y && w == rect.w && h == rect.h;
+  }
 
   /**
    * Calculates the union of two rectangles, and stores the result into this
@@ -220,6 +225,16 @@ class Rectangle {
   bool Intersect(const Rectangle &rect);
 
   /**
+   * Integerize the rectangle region. That means to make the coordinates of the
+   * vertexes be integer. This is useful since clip operation may time wasted
+   * if the region is not integer.
+   *
+   * @param expand if @c true, the method ensures the result rectangle contains
+   *     the original one; otherwise the coordinates are simply rounded.
+   */
+  void Integerize(bool expand);
+
+  /**
    * Checks if two rectangles are overlapped.
    * @param other the other rectangle we are interested in.
    * @return @true if they are overlapped and false otherwise
@@ -231,7 +246,10 @@ class Rectangle {
    * @param other the other rectangle we are interested in.
    * @return @true if this rectangle is inside the other one.
    */
-  bool IsInside(const Rectangle &another) const;
+  bool IsInside(const Rectangle &another) const {
+    return x >= another.x && (x + w) <= (another.x + another.w) &&
+           y >= another.y && (y + h) <= (another.y + another.h);
+  }
 
   /**
    * Judge if a point is in the rectangle.
@@ -239,23 +257,34 @@ class Rectangle {
    * @param y Y-coordinate of the point
    * @return @true if the point is in and false otherwise
    */
-  bool IsPointIn(double x, double y) const;
-
-  /**
-   * Integerize the rectangle region. That means to make the coordinates of the
-   * vertexes be integer. This is useful since clip operation may time wasted
-   * if the region is not integer.
-   *
-   * @param expand if @c true, the method ensures the result rectangle contains
-   *     the original one; otherwise the coordinates are simply rounded.
-   */
-  void Integerize(bool expand);
+  bool IsPointIn(double px, double py) const {
+    return px >= x && py >= y && px < x + w && py < y + h;
+  }
 
   /** Set the rectangle parameters. */
-  void Set(double a_x, double a_y, double a_w, double a_h);
+  void Set(double ax, double ay, double aw, double ah) {
+    x = ax;
+    y = ay;
+    w = aw;
+    h = ah;
+  }
 
   /** Reset the rectangle to all zero state. */
-  void Reset();
+  void Reset() {
+    x = y = w = h = 0;
+  }
+
+  /** Zoom the rectangle by a specified zoom fector. */
+  void Zoom(double zoom) {
+    x *= zoom;
+    y *= zoom;
+    w *= zoom;
+    h *= zoom;
+  }
+
+  bool IsEmpty() const {
+    return w == 0 && h == 0;
+  }
 
  public:
   /**
