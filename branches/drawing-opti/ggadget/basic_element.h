@@ -841,8 +841,8 @@ public: // Other overridable public methods.
   virtual void GetDefaultPosition(double *x, double *y) const;
 
   /**
-   * This function will be called by AggregateMoreClipRegion() to aggregate
-   * additional clip region of inherited objects.
+   * This function will be called by AggregateClipRegion(). Subclasses shall
+   * implement it to call implicit children's AggregateClipRegion() method.
    */
   virtual void AggregateMoreClipRegion(const Rectangle &boundary,
                                        ClipRegion *region);
