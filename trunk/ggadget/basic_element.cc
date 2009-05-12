@@ -652,18 +652,18 @@ class BasicElement::Impl : public SmallObject<> {
 
   void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region) {
     if (region != NULL && !boundary.IsEmpty()) {
-      Rectangle extents = owner_->GetExtentsInView();
-      if (extents.Intersect(boundary)) {
-        size_t count = clip_region_.GetRectangleCount();
-        for (size_t i = 0; i < count; ++i) {
-          Rectangle rect = clip_region_.GetRectangle(i);
-          if (rect.Intersect(extents)) {
-            rect.Integerize(true);
-            region->AddRectangle(rect);
-          }
+      size_t count = clip_region_.GetRectangleCount();
+      for (size_t i = 0; i < count; ++i) {
+        Rectangle rect = clip_region_.GetRectangle(i);
+        if (rect.Intersect(boundary)) {
+          rect.Integerize(true);
+          region->AddRectangle(rect);
         }
+      }
 
-        if (visible_ && opacity_ != 0.0) {
+      if (visible_ && opacity_ != 0.0) {
+        Rectangle extents = owner_->GetExtentsInView();
+        if (extents.Intersect(boundary)) {
           if (children_ && children_->GetCount()) {
             children_->AggregateClipRegion(extents, region);
           }
