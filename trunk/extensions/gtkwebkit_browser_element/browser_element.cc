@@ -18,6 +18,9 @@
 #include <string>
 #include <cstring>
 #include <gtk/gtk.h>
+#include <webkit/webkit.h>
+
+#include "browser_element.h"
 #include <ggadget/element_factory.h>
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
@@ -26,9 +29,8 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/view.h>
-#include <webkit/webkit.h>
-
-#include "browser_element.h"
+#include <ggadget/digest_utils.h>
+#include <ggadget/system_utils.h>
 
 #ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
 #include <ggadget/script_runtime_manager.h>
@@ -67,15 +69,14 @@ using namespace ggadget::webkit;
 namespace ggadget {
 namespace gtkwebkit {
 
+static const char kTempFileName[] = "content.html";
+
 class BrowserElement::Impl {
  public:
   Impl(BrowserElement *owner)
     : content_type_("text/html"),
       owner_(owner),
       web_view_(NULL),
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-      browser_context_(NULL),
-#endif
       minimized_connection_(owner_->GetView()->ConnectOnMinimizeEvent(
           NewSlot(this, &Impl::OnViewMinimized))),
       restored_connection_(owner_->GetView()->ConnectOnRestoreEvent(
@@ -107,11 +108,6 @@ class BrowserElement::Impl {
     dock_connection_->Disconnect();
     undock_connection_->Disconnect();
 
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-    delete browser_context_;
-    browser_context_ = NULL;
-#endif
-
     GtkWidget *web_view = web_view_;
     // To prevent WebViewDestroyed() from destroying it again.
     web_view_ = NULL;
@@ -125,6 +121,10 @@ class BrowserElement::Impl {
 
       g_object_run_dispose(G_OBJECT(web_view));
       g_object_unref(web_view);
+    }
+
+    if (temp_path_.length()) {
+      ggadget::RemoveDirectory(temp_path_.c_str(), true);
     }
   }
 
@@ -174,6 +174,10 @@ class BrowserElement::Impl {
                        G_CALLBACK(WebViewLoadFinished), this);
       g_signal_connect(G_OBJECT(web_view_), "hovering-over-link",
                        G_CALLBACK(WebViewHoveringOverLink), this);
+#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
+      g_signal_connect(G_OBJECT(web_view_), "window-object-cleared",
+                       G_CALLBACK(WebViewWindowObjectCleared), this);
+#endif
 
 #if WEBKIT_CHECK_VERSION(1,0,3)
       WebKitWebWindowFeatures *features =
@@ -228,6 +232,7 @@ class BrowserElement::Impl {
         gtk_fixed_move(GTK_FIXED(container), GTK_WIDGET(web_view_), x, y);
       }
       if (width != width_ || height != height_ || force_layout) {
+        DLOG("Layout: w:%d, h:%d", width, height);
         width_ = width;
         height_ = height;
         gtk_widget_set_size_request(GTK_WIDGET(web_view_), width, height);
@@ -239,38 +244,37 @@ class BrowserElement::Impl {
     }
   }
 
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-  void SetupJavaScriptContext() {
-    JSScriptRuntime *runtime = down_cast<JSScriptRuntime *>(
-        ScriptRuntimeManager::get()->GetScriptRuntime("webkitjs"));
-
-    if (runtime) {
-      WebKitWebFrame *main_frame =
-          webkit_web_view_get_main_frame(WEBKIT_WEB_VIEW(web_view_));
-      ASSERT(main_frame);
-      JSGlobalContextRef js_context =
-          webkit_web_frame_get_global_context(main_frame);
-      ASSERT(js_context);
-
-      if (!browser_context_ || browser_context_->GetContext() != js_context) {
-        delete browser_context_;
-        browser_context_ = runtime->WrapExistingContext(js_context);
-      }
-
-      browser_context_->AssignFromNative(NULL, "", "external",
-                                         Variant(external_object_.Get()));
-    } else {
-      LOGE("webkit-script-runtime is not loaded.");
-    }
-  }
-#endif
-
   void SetContent(const std::string &content) {
-    DLOG("SetContent:\n%s", content.c_str());
+    DLOG("SetContent: %s\n%s", content_type_.c_str(), content.c_str());
     content_ = content;
     if (GTK_IS_WIDGET(web_view_)) {
-      webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(web_view_),
-                                       content.c_str(), "");
+      std::string url;
+      if (content_type_ == "text/html") {
+        // Let the browser load the HTML content from local file, to raise its
+        // privilege so that the content can access local resources.
+        if (!EnsureTempDirectory()) {
+          LOG("Failed to create temporary directory.");
+          return;
+        }
+        url = ggadget::BuildFilePath(temp_path_.c_str(), kTempFileName, NULL);
+        if (!ggadget::WriteFileContents(url.c_str(), content)) {
+          LOG("Failed to write content to file.");
+          return;
+        }
+        url = "file://" + url;
+      } else {
+        std::string data;
+        if (!ggadget::EncodeBase64(content, false, &data)) {
+          LOG("Unable to convert content to base64.");
+          return;
+        }
+        url = std::string("data:");
+        url.append(content_type_);
+        url.append(";base64,");
+        url.append(data);
+      }
+      DLOG("Content URL: %.80s...", url.c_str());
+      webkit_web_view_load_uri(WEBKIT_WEB_VIEW(web_view_), url.c_str());
     }
   }
 
@@ -278,10 +282,10 @@ class BrowserElement::Impl {
     DLOG("SetExternalObject(%p, CLSID=%ju)",
          object, object ? object->GetClassId() : 0);
     external_object_.Reset(object);
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-    if (browser_context_)
-      browser_context_->AssignFromNative(NULL, "", "external", Variant(object));
-#endif
+    // Changing external object after loading the content is not supported.
+    // External object must be set before setting content, so that it can
+    // be injected into webpage's javascript context in window-object-cleared
+    // signal handler.
   }
 
   void OnViewMinimized() {
@@ -344,13 +348,16 @@ class BrowserElement::Impl {
     return result;
   }
 
+  bool EnsureTempDirectory() {
+    if (temp_path_.length()) {
+      return ggadget::EnsureDirectories(temp_path_.c_str());
+    }
+    return ggadget::CreateTempDirectory("browser-element", &temp_path_);
+  }
+
   static void WebViewDestroyed(GtkWidget *widget, Impl *impl) {
     DLOG("WebViewDestroyed(Impl=%p, web_view=%p)", impl, widget);
 
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-    delete impl->browser_context_;
-    impl->browser_context_ = NULL;
-#endif
     if (impl->web_view_) {
       g_object_unref(impl->web_view_);
       impl->web_view_ = NULL;
@@ -373,9 +380,6 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadStarted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-    impl->SetupJavaScriptContext();
-#endif
   }
 
   static void WebViewLoadCommitted(WebKitWebView *web_view,
@@ -385,9 +389,13 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadCommitted(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-    impl->SetupJavaScriptContext();
-#endif
+
+    // It's ok to delete the temporary file here, because the file has been
+    // opened by webkit.
+    if (impl->temp_path_.length()) {
+      ggadget::RemoveDirectory(impl->temp_path_.c_str(), true);
+      impl->temp_path_.clear();
+    }
   }
 
   static void WebViewLoadProgressChanged(WebKitWebView *web_view,
@@ -406,6 +414,15 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewLoadFinished(Impl=%p, web_view=%p, web_frame=%p)",
          impl, web_view, web_frame);
+
+    // Seems that webkit won't fire window.resize event after loading the page,
+    // but GMail gadget depends on this behavior to layout its compose window.
+    static const char kFireWindowResizeEventScript[] =
+        "var evtObj_ = document.createEvent('HTMLEvents');"
+        "evtObj_.initEvent('resize', false, false);"
+        "window.dispatchEvent(evtObj_);";
+
+    webkit_web_view_execute_script(web_view, kFireWindowResizeEventScript);
   }
 
   static void WebViewHoveringOverLink(WebKitWebView *web_view,
@@ -419,6 +436,44 @@ class BrowserElement::Impl {
 
     impl->hovering_over_uri_ = uri ? uri : "";
   }
+
+#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
+  static void DestroyJSScriptContext(gpointer context) {
+    DLOG("DestroyJSScriptContext(%p)", context);
+    delete static_cast<JSScriptContext *>(context);
+  }
+
+  static void WebViewWindowObjectCleared(WebKitWebView *web_view,
+                                         WebKitWebFrame *web_frame,
+                                         JSGlobalContextRef js_context,
+                                         JSObjectRef window_object,
+                                         Impl *impl) {
+    if (!impl->owner_) return;
+    DLOG("WebViewWindowObjectCleared(Impl=%p, web_view=%p, web_frame=%p,"
+         "js_context=%p, window_object=%p", impl, web_view, web_frame,
+         js_context, window_object);
+    JSScriptRuntime *runtime = down_cast<JSScriptRuntime *>(
+        ScriptRuntimeManager::get()->GetScriptRuntime("webkitjs"));
+
+    if (runtime) {
+      ASSERT(webkit_web_frame_get_global_context(web_frame) == js_context);
+
+      JSScriptContext *wrapper = static_cast<JSScriptContext *>(
+          g_object_get_data(G_OBJECT(web_frame), "js-context-wrapper"));
+      if (!wrapper || wrapper->GetContext() != js_context) {
+        wrapper = runtime->WrapExistingContext(js_context);
+        DLOG("Create JSScriptContext wrapper: %p", wrapper);
+        g_object_set_data_full(G_OBJECT(web_frame), "js-context-wrapper",
+                               wrapper, DestroyJSScriptContext);
+      }
+
+      wrapper->AssignFromNative(NULL, "window", "external",
+                                Variant(impl->external_object_.Get()));
+    } else {
+      LOGE("webkit-script-runtime is not loaded.");
+    }
+  }
+#endif
 
 #if WEBKIT_CHECK_VERSION(1,0,3)
   static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
@@ -521,13 +576,10 @@ class BrowserElement::Impl {
   std::string content_;
   std::string hovering_over_uri_;
   std::string loaded_uri_;
+  std::string temp_path_;
 
   BrowserElement *owner_;
   GtkWidget *web_view_;
-
-#ifdef GGL_GTK_WEBKIT_SUPPORT_JSC
-  JSScriptContext *browser_context_;
-#endif
 
   Connection *minimized_connection_;
   Connection *restored_connection_;
