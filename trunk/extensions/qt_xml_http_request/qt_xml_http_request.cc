@@ -23,7 +23,6 @@
 #endif
 #include <QtCore/QUrl>
 #include <QtCore/QRegExp>
-#include <QtNetwork/QHttp>
 #include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QHttpHeader>
 
@@ -99,7 +98,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         http_(NULL),
         request_header_(NULL),
         session_(session),
-        handler_(NULL),
         send_data_(NULL),
         async_(false),
         state_(UNSENT),
@@ -199,11 +197,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     url_ = url;
     host_ = qurl.host().toStdString();
-    delete http_;
-    http_ = new QHttp(qurl.host(), mode);
+    if (http_) http_->deleteLater();
+    http_ = new MyHttp(qurl.host(), mode, this);
     http_->setUser(user_, password_);
-    delete handler_;
-    handler_ = new HttpHandler(this, http_);
 
     std::string path = "/";
     size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
@@ -370,13 +366,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void FreeResource() {
-    delete handler_;
-    handler_ = NULL;
     delete request_header_;
     request_header_ = NULL;
     delete send_data_;
     send_data_ = NULL;
-    delete http_;
+    if (http_) http_->deleteLater();
     http_ = NULL;
 
     response_headers_.clear();
@@ -709,11 +703,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
   QString default_user_agent_;
-  QHttp *http_;
+  MyHttp *http_;
   QHttpRequestHeader *request_header_;
   QHttpResponseHeader response_header_;
   Session *session_;
-  HttpHandler *handler_;
   QByteArray *send_data_;
   Signal0<void> onreadystatechange_signal_;
   Signal1<size_t, const std::string &> ondatareceived_signal_;
@@ -743,11 +736,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   CaseInsensitiveStringMap response_headers_map_;
 };
 
-void HttpHandler::OnResponseHeaderReceived(const QHttpResponseHeader& header) {
+void MyHttp::OnResponseHeaderReceived(const QHttpResponseHeader& header) {
   request_->OnResponseHeaderReceived(header);
 }
 
-void HttpHandler::OnDone(bool error) {
+void MyHttp::OnDone(bool error) {
   request_->OnRequestFinished(0, error);
 }
 
