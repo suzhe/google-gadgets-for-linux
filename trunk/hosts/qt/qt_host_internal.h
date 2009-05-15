@@ -165,7 +165,7 @@ class QtHost::Impl : public QObject {
       return NULL;
     }
 
-    SetupGadgetOpenFeedbackURLHandler(gadget);
+    SetupGadgetGetFeedbackURLHandler(gadget);
 
     gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     gadget->GetMainView()->OnOtherEvent(SimpleEvent(Event::EVENT_UNDOCK));

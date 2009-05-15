@@ -546,6 +546,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     host_->ShowGadgetDebugConsole(owner_);
   }
 
+  void FeedbackMenuCallback(const char *, const std::string &url) {
+    host_->OpenURL(NULL, url.c_str());
+  }
+
   void OnAddCustomMenuItems(MenuInterface *menu) {
     ScriptableMenu *smenu = new ScriptableMenu(owner_, menu);
     smenu->Ref();
@@ -556,6 +560,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       menu->AddItem(GM_("MENU_ITEM_DEBUG_CONSOLE"), 0, 0,
                     NewSlot(this, &Impl::DebugConsoleMenuCallback),
                     MenuInterface::MENU_ITEM_PRI_GADGET);
+    }
+
+    if (ongetfeedbackurl_signal_.HasActiveConnections()) {
+      std::string url = ongetfeedbackurl_signal_();
+      if (url.length()) {
+        menu->AddItem(GM_("MENU_ITEM_FEEDBACK"), 0, 0,
+                      NewSlot(this, &Impl::FeedbackMenuCallback, url),
+                      MenuInterface::MENU_ITEM_PRI_GADGET);
+      }
     }
     // Remove item is added in view decorator.
   }
@@ -1012,7 +1025,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Signal1<void, int> onpluginflagschanged_signal_;
   Signal2<void, LogLevel, const std::string &> log_signal_;
 
-  Signal0<void> onopenfeedbackurl_signal_;
+  Signal0<std::string> ongetfeedbackurl_signal_;
 
   StringMap manifest_info_map_;
   StringMap strings_map_;
@@ -1182,8 +1195,8 @@ Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
   return impl_->onpluginflagschanged_signal_.Connect(handler);
 }
 
-Connection *Gadget::ConnectOnOpenFeedbackURL(Slot0<void> *handler) {
-  return impl_->onopenfeedbackurl_signal_.Connect(handler);
+Connection *Gadget::ConnectOnGetFeedbackURL(Slot0<std::string> *handler) {
+  return impl_->ongetfeedbackurl_signal_.Connect(handler);
 }
 
 XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
@@ -1282,14 +1295,6 @@ void Gadget::ShowAboutDialog() {
 
   ShowXMLOptionsDialog(ViewInterface::OPTIONS_VIEW_FLAG_OK, kGadgetAboutView,
                        NewScriptableMap(params));
-}
-
-bool Gadget::HasFeedbackURL() const {
-  return impl_->onopenfeedbackurl_signal_.HasActiveConnections();
-}
-
-void Gadget::OpenFeedbackURL() {
-  impl_->onopenfeedbackurl_signal_();
 }
 
 // static methods

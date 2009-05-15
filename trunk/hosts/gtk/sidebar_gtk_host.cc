@@ -1327,7 +1327,7 @@ class SideBarGtkHost::Impl {
       return NULL;
     }
 
-    SetupGadgetOpenFeedbackURLHandler(gadget);
+    SetupGadgetGetFeedbackURLHandler(gadget);
 
     if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
       MainViewDecoratorBase *view_decorator =
