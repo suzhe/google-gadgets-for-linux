@@ -110,6 +110,18 @@ const char kInstanceGadgetIdOption[] = "gadget_id";
 const char kGadgetAddedTimeOptionPrefix[] = "added_time.";
 
 /**
+ * The prefix of options keys to record the module_id of a gadget.
+ * Only iGoogle gadgets and RSS gadgets are recorded:
+ *   kIGoogleModuleID
+ *   kRSSModuleID
+ * Addded 2009/05/15. This is mainly for optimization of GetGadgetPath() by
+ * eliminating dependency to gadget metadata. This can speed up program
+ * initialization.
+ * The code should keep backward compatibility if these items doesn't exist.
+ */
+const char kGadgetModuleIdOptionPrefix[] = "module_id.";
+
+/**
  * This option item is empty until the first run, and after each run, it's
  * value will be incremented.
  */

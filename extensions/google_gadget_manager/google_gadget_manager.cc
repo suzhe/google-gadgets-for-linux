@@ -361,8 +361,11 @@ void GoogleGadgetManager::IncreseAndCheckExpirationScores() {
         // The expriation score reaches the threshold, actually remove
         // the instance.
         ActuallyRemoveInstance(i, true);
-        global_options_->Remove((std::string(kGadgetAddedTimeOptionPrefix) +
-                                 GetInstanceGadgetId(i)).c_str());
+        std::string gadget_id = GetInstanceGadgetId(i);
+        global_options_->Remove((kGadgetAddedTimeOptionPrefix +
+            gadget_id).c_str());
+        global_options_->Remove((kGadgetModuleIdOptionPrefix +
+            gadget_id).c_str());
       } else {
         SetInstanceStatus(i, instance_statuses_[i] + 1);
       }
@@ -936,29 +939,51 @@ bool GoogleGadgetManager::SaveGadget(const char *gadget_id,
 
 std::string GoogleGadgetManager::GetGadgetPath(const char *gadget_id) {
   std::string result = GetSystemGadgetPath(gadget_id);
-  if (!result.empty())
+  if (!result.empty()) {
+    // This is a built-in gadget.
     return result;
+  }
 
-  if (GadgetIdIsFileLocation(gadget_id))
+  if (GadgetIdIsFileLocation(gadget_id)) {
+    // This is a gadget added from local gadget file/directory.
     return file_manager_->GetFullPath(gadget_id);
+  }
 
-  const GadgetInfo *info = GetGadgetInfo(gadget_id);
-  if (!info) {
-    // This gadget has no metadata, maybe because it was removed from
-    // plugins.xml, or current plugins.xml is not complete. Still allow it
-    // to be opened.
+  if (!HasValidURLPrefix(gadget_id)) {
+    // This is a normal gadget published in plugins.xml and was downloaded.
     return file_manager_->GetFullPath(
         GetDownloadedGadgetLocation(gadget_id).c_str());
   }
 
-  StringMap::const_iterator module_id = info->attributes.find(kModuleIDAttrib);
-  if (module_id != info->attributes.end()) {
-    if (module_id->second == kRSSModuleID) {
-      return GetSystemGadgetPath(kRSSGadgetName);
-    } else if (module_id->second == kIGoogleModuleID) {
-      return GetSystemGadgetPath(kIGoogleGadgetName);
-    }
+  std::string module_id;
+  std::string key(kGadgetModuleIdOptionPrefix);
+  key += gadget_id;
+  global_options_->GetValue(key.c_str()).ConvertToString(&module_id);
+  if (module_id.empty()) {
+      const GadgetInfo *info = GetGadgetInfo(gadget_id);
+      if (!info) {
+        // This gadget has no metadata, maybe because it was removed from
+        // plugins.xml, or current plugins.xml is not complete. Still allow it
+        // to be opened.
+        return file_manager_->GetFullPath(
+            GetDownloadedGadgetLocation(gadget_id).c_str());
+      }
+    
+      result.clear();
+      StringMap::const_iterator module_id_it = info->attributes.find(kModuleIDAttrib);
+      if (module_id_it != info->attributes.end())
+        module_id = module_id_it->second;
   }
+
+  if (module_id == kRSSModuleID) {
+    global_options_->PutValue(key.c_str(), Variant(module_id));
+    return GetSystemGadgetPath(kRSSGadgetName);
+  }
+  if (module_id == kIGoogleModuleID) {
+    global_options_->PutValue(key.c_str(), Variant(module_id));
+    return GetSystemGadgetPath(kIGoogleGadgetName);
+  }
+
   return file_manager_->GetFullPath(
       GetDownloadedGadgetLocation(gadget_id).c_str());
 }
