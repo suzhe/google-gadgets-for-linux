@@ -81,13 +81,14 @@ bool GtkHostBase::ConfirmGadget(const std::string &path,
                                 const std::string &title,
                                 const std::string &description,
                                 Permissions *permissions) {
-  bool should_save_permissions = true;
-  if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(),
-                                           permissions)) {
-    should_save_permissions = false;
+  // If the permissions was already saved and there is no ungranted permission,
+  // just returns true.
+  if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(), permissions) &&
+      !permissions->HasUngranted()) {
+    return true;
   }
+
   if (permissions->HasUngranted()) {
-    should_save_permissions = true;
     if (!ShowPermissionsConfirmDialog(download_url, title,
                                       description, permissions)) {
       return false;
@@ -96,19 +97,26 @@ bool GtkHostBase::ConfirmGadget(const std::string &path,
     // separately?
     permissions->GrantAllRequired();
   }
-  if (should_save_permissions) {
-    Gadget::SaveGadgetInitialPermissions(options_name.c_str(), *permissions);
-  }
+
+  Gadget::SaveGadgetInitialPermissions(options_name.c_str(), *permissions);
   return true;
 }
 
 bool GtkHostBase::ConfirmManagedGadget(int id, bool grant) {
   GadgetManagerInterface *gadget_manager = GetGadgetManager();
+  std::string options_name = gadget_manager->GetGadgetInstanceOptionsName(id);
+  Permissions permissions;
+
+  // If the permissions was already saved and there is no ungranted permission,
+  // just returns true.
+  if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(),
+                                           &permissions) &&
+      !permissions.HasUngranted()) {
+    return true;
+  }
 
   std::string path = gadget_manager->GetGadgetInstancePath(id);
-  std::string options_name = gadget_manager->GetGadgetInstanceOptionsName(id);
   std::string download_url, title, description;
-  Permissions permissions;
   if (!gadget_manager->GetGadgetInstanceInfo(id, GetSystemLocaleName().c_str(),
                                              NULL, &download_url,
                                              &title, &description) ||
@@ -118,11 +126,21 @@ bool GtkHostBase::ConfirmManagedGadget(int id, bool grant) {
     return false;
   }
 
-  if (grant)
+  if (grant) {
     permissions.GrantAllRequired();
+  }
 
-  return ConfirmGadget(path, options_name, download_url, title,
-                       description, &permissions);
+  if (permissions.HasUngranted()) {
+    if (!ShowPermissionsConfirmDialog(download_url, title,
+                                      description, &permissions)) {
+      // User didn't grant the permissions.
+      return false;
+    }
+    permissions.GrantAllRequired();
+  }
+
+  Gadget::SaveGadgetInitialPermissions(options_name.c_str(), permissions);
+  return true;
 }
 
 int GtkHostBase::FlagsToViewHostFlags(int flags) {
