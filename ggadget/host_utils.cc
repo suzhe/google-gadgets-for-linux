@@ -562,34 +562,36 @@ bool HostArgumentParser::EnumerateRemainedArgs(
 const char HostArgumentParser::kStartSignature[] = "<|START|>";
 const char HostArgumentParser::kFinishSignature[] = "<|FINISH|>";
 
-void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget) {
-  class OpenFeedbackURLSlot : public Slot0<void> {
+void SetupGadgetGetFeedbackURLHandler(Gadget *gadget) {
+  class GetFeedbackURLSlot : public Slot0<std::string> {
    public:
-    OpenFeedbackURLSlot(Gadget *gadget, const std::string &url)
-      : gadget_(gadget), url_(url) {
+    GetFeedbackURLSlot(Gadget *gadget)
+      : gadget_(gadget), url_retrieved_(false) {
     }
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
-      bool old_in_user_interaction = gadget_->SetInUserInteraction(true);
-      gadget_->OpenURL(url_.c_str());
-      gadget_->SetInUserInteraction(old_in_user_interaction);
-      return ResultVariant();
+      if (!url_retrieved_) {
+        GadgetManagerInterface *gadget_manager = GetGadgetManager();
+        if (gadget_ && gadget_manager) {
+          url_ = gadget_manager->GetGadgetInstanceFeedbackURL(
+              gadget_->GetInstanceID());
+        }
+        url_retrieved_ = true;
+      }
+
+      return ResultVariant(Variant(url_));
     }
     virtual bool operator==(const Slot &another) const {
       return false;
     }
    private:
     Gadget *gadget_;
-    std::string url_;
+    mutable std::string url_;
+    mutable bool url_retrieved_;
   };
 
-  GadgetManagerInterface *gadget_manager = GetGadgetManager();
-  if (gadget && gadget_manager) {
-    std::string url =
-        gadget_manager->GetGadgetInstanceFeedbackURL(gadget->GetInstanceID());
-    if (url.length()) {
-      gadget->ConnectOnOpenFeedbackURL(new OpenFeedbackURLSlot(gadget, url));
-    }
+  if (gadget) {
+    gadget->ConnectOnGetFeedbackURL(new GetFeedbackURLSlot(gadget));
   }
 }
 

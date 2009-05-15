@@ -290,15 +290,16 @@ class Gadget {
   Connection *ConnectOnPluginFlagsChanged(Slot1<void, int> *handler);
 
   /**
-   * Connects a slot to the OpenFeedbackURL signal. The specified slot will be
+   * Connects a slot to the GetFeedbackURL signal. The specified slot will be
    * called when user request to open the feedback url of this gadget instance.
-   * If this gadget instance doesn't have feedback url, then don't connect this
-   * signal.
+   *
+   * This slot shall return the feedback url. If this gadget instance doesn't
+   * have feedback url, an empty string shall be returned.
    *
    * Usually, Host shall connect to this signal and decide which feedback url
    * should be opened.
    */
-  Connection *ConnectOnOpenFeedbackURL(Slot0<void> *handler);
+  Connection *ConnectOnGetFeedbackURL(Slot0<std::string> *handler);
 
   /**
    * Creates a new @c XMLHttpRequestInterface instance.
@@ -349,15 +350,6 @@ class Gadget {
 
   /** Shows this gadget's about dialog. */
   void ShowAboutDialog();
-
-  /**
-   * Checks if this gadget instance has feedback url.
-   * This method checks if OpenFeedbackURL signal has active connection.
-   */
-  bool HasFeedbackURL() const;
-
-  /** Opens feedback url of this gadget instance. */
-  void OpenFeedbackURL();
 
  public:
   /**

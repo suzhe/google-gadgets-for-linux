@@ -88,10 +88,9 @@ bool ShowDialogView(HostInterface *host, const char *location, int flags,
                     const LightMap<std::string, Variant> &params);
 
 /**
- * Sets up a default handler to Gadget's OpenFeedbackURL signal.
- * The handler will be set only if the gadget has feedback url.
+ * Sets up a default handler to Gadget's GetFeedbackURL signal.
  */
-void SetupGadgetOpenFeedbackURLHandler(Gadget *gadget);
+void SetupGadgetGetFeedbackURLHandler(Gadget *gadget);
 
 /**
  * Show the About dialog of the application.

@@ -216,7 +216,7 @@ class View::Impl : public SmallObject<> {
       resizable_(RESIZABLE_ZOOM),
       dragover_result_(EVENT_RESULT_UNHANDLED),
       clip_region_enabled_(true),
-      enable_cache_(true),
+      enable_cache_(false),
       show_caption_always_(false),
       draw_queued_(false),
       events_enabled_(true),
