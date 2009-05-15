@@ -766,7 +766,7 @@ static gboolean CheckContentLoaded(gpointer data) {
 static void NewBrowser(int param_count, const char **params, size_t id) {
   if (param_count != 3) {
     SendLog("Incorrect param count for %s: 3 expected, %d given.",
-            kSetContentCommand, param_count);
+            kNewBrowserCommand, param_count);
     return;
   }
 
