@@ -16,27 +16,32 @@
 
 #ifndef GGADGET_QT_XML_HTTP_REQUEST_H__
 #define GGADGET_QT_XML_HTTP_REQUEST_H__
+
+#include <QtNetwork/QHttp>
+
 namespace ggadget {
 namespace qt {
+
 class XMLHttpRequest;
-class HttpHandler : public QObject {
+
+class MyHttp : public QHttp {
   Q_OBJECT
  public:
-  HttpHandler(XMLHttpRequest *request, QHttp *http)
-      : request_(request),
-        http_(http) {
-    connect(http, SIGNAL(responseHeaderReceived(const QHttpResponseHeader&)),
+  MyHttp(const QString& host_name,
+         ConnectionMode mode,
+         XMLHttpRequest* xml_http_request)
+      : QHttp(host_name, mode), request_(xml_http_request) {
+    connect(this, SIGNAL(responseHeaderReceived(const QHttpResponseHeader&)),
             this, SLOT(OnResponseHeaderReceived(const QHttpResponseHeader&)));
-    connect(http, SIGNAL(done(bool)),
-            this, SLOT(OnDone(bool)));
+    connect(this, SIGNAL(done(bool)), this, SLOT(OnDone(bool)));
   }
+
  private slots:
   void OnResponseHeaderReceived(const QHttpResponseHeader& header);
   void OnDone(bool error);
 
  private:
-  XMLHttpRequest *request_;
-  QHttp *http_;
+  XMLHttpRequest* request_;
 };
 
 }
