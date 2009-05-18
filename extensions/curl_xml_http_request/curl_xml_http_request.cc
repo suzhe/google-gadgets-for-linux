@@ -483,7 +483,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     data_size = std::min(data_size, context->request_data.size() -
                                     context->request_offset);
-    memcpy(ptr, context->request_data.c_str(), data_size);
+    memcpy(ptr, context->request_data.c_str() + context->request_offset,
+           data_size);
     context->request_offset += data_size;
     return data_size;
   }
