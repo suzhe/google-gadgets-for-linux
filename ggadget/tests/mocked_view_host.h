@@ -182,6 +182,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
     bool b = draw_queued_;
     draw_queued_ = false;
     ggadget::CanvasInterface *canvas = new MockedCanvas(100, 100);
+    view_->Layout();
     view_->Draw(canvas);
     canvas->Destroy();
     return b;
