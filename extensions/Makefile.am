@@ -37,4 +37,5 @@ SUBDIRS = dbus_script_class \
 	  analytics_usage_collector \
 	  webkit_script_runtime \
 	  gtkwebkit_browser_element \
-	  html_flash_element
+	  html_flash_element \
+	  soup_xml_http_request

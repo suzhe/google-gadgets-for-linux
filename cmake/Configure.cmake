@@ -48,6 +48,9 @@ SET(GGL_OEM_BRAND ""
 SET(GGL_DEFAULT_BROWSER_PLUGINS_DIR "${LIB_INSTALL_DIR}/firefox/plugins"
   CACHE PATH "The directory of browser plugins.")
 
+SET(GGL_DEFAULT_SSL_CA_FILE ""
+  CACHE PATH "The SSL CA certificate file used by soup-xml-http-request")
+
 SET(GGL_ENABLE_XDGMIME 1
   CACHE BOOL "Enable built-in xdgmime support (default is true)")
 
@@ -160,6 +163,9 @@ IF(GGL_DEFAULT_BROWSER_PLUGINS_DIR)
   ADD_DEFINITIONS(-DGGL_DEFAULT_BROWSER_PLUGINS_DIR=\\\"${GGL_DEFAULT_BROWSER_PLUGINS_DIR}\\\")
 ENDIF(GGL_DEFAULT_BROWSER_PLUGINS_DIR)
 
+IF(GGL_DEFAULT_SSL_CA_FILE)
+  ADD_DEFINITIONS(-DGGL_DEFAULT_SSL_CA_FILE=\\\"${GGL_DEFAULT_SSL_CA_FILE\\\")
+ENDIF(GGL_DEFAULT_SSL_CA_FILE)
 
 INCLUDE(CheckCCompilerFlag)
 IF(UNIX)
@@ -207,6 +213,7 @@ SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 1)
 SET(GGL_BUILD_GST_VIDEO_ELEMENT 1)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 1)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 1)
+SET(GGL_BUILD_SOUP_XML_HTTP_REQUEST 1)
 SET(GGL_BUILD_LIBXML2_XML_PARSER 1)
 SET(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK 1)
 SET(GGL_BUILD_WEBKIT_SCRIPT_RUNTIME 1)
@@ -275,6 +282,19 @@ IF(NOT LIBCURL_FOUND)
     SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 0)
   ENDIF(GGL_BUILD_CURL_XML_HTTP_REQUEST)
 ENDIF(NOT LIBCURL_FOUND)
+
+GET_CONFIG(libsoup-2.4 2.26 LIBSOUP LIBSOUP_FOUND)
+IF(NOT LIBSOUP_FOUND)
+  IF(GGL_BUILD_SOUP_XML_HTTP_REQUEST)
+    MESSAGE("Library curl is not available, curl-xml-http-request extension won't be built.")
+    SET(GGL_BUILD_SOUP_XML_HTTP_REQUEST 0)
+  ENDIF(GGL_BUILD_SOUP_XML_HTTP_REQUEST)
+ELSE(NOT LIBSOUP_FOUND)
+  GET_CONFIG(libsoup-gnome-2.4 2.26 LIBSOUP_GNOME LIBSOUP_GNOME_FOUND)
+  IF(LIBSOUP_GNOME_FOUND)
+    LIST(APPEND LIBSOUP_DEFINITIONS "-DHAVE_LIBSOUP_GNOME")
+  ENDIF(LIBSOUP_GNOME_FOUND)
+ENDIF(NOT LIBSOUP_FOUND)
 
 GET_CONFIG(gstreamer-base-0.10 0.10.0 GSTREAMER GSTREAMER_FOUND)
 GET_CONFIG(gstreamer-plugins-base-0.10 0.10.0 GSTREAMER_PLUGINS_BASE GSTREAMER_PLUGINS_BASE_FOUND)
@@ -391,6 +411,8 @@ ENDIF(NETWORK_MANAGER_FOUND)
 #  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
 #  firefox 2.0: firefox2-gtkmozembed and firefox2-js
 #  firefox 1.5: firefox-gtkmozembed and firefox-js
+#  seamonkey 1.1: seamonkey-gtkmozembed seamonkey-js
+#  microb(Maemo): microb-engine and microb-engine-js
 #
 # Add more rules here if your distribution doesn't support above rules.
 MACRO(HASH_PUT _hash _key _value)
@@ -410,6 +432,8 @@ IF(GGL_BUILD_LIBGGADGET_GTK OR GGL_BUILD_SMJS_SCRIPT_RUNTIME)
   HASH_PUT(xul_hash xulrunner-gtkmozembed xulrunner-js)
   HASH_PUT(xul_hash firefox2-gtkmozembed firefox2-js)
   HASH_PUT(xul_hash firefox-gtkmozembed firefox-js)
+  HASH_PUT(xul_hash seamonkey-gtkmozembed seamonkey-js)
+  HASH_PUT(xul_hash microb-engine microb-engine-js)
 
   FOREACH(pkg ${xul_hash})
     IF(NOT GTKMOZEMBED_FOUND)
@@ -529,6 +553,7 @@ Build options:
 
  Extensions:
   Build curl-xml-http-request      ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
+  Build soup-xml-http-request      ${GGL_BUILD_SOUP_XML_HTTP_REQUEST}
   Build dbus-script-class          ${GGL_BUILD_LIBGGADGET_DBUS}
   Build gst-audio-framework        ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
   Build gst-video-element          ${GGL_BUILD_GST_VIDEO_ELEMENT}

@@ -51,11 +51,18 @@
 #define GGL_GTK_HTML_SCRIPT_ENGINE "xulrunner"
 #endif
 
+#ifndef GGL_GTK_XML_HTTP_REQUEST
+#define GGL_GTK_XML_HTTP_REQUEST "curl"
+#endif
+
 using ggadget::Variant;
 
 static const char kOptionsName[] = "gtk-host-options";
 static const char kRunOnceSocketName[] = "ggl-host-socket";
 
+static const char kXHRExtensionSuffix[] = "-xml-http-request";
+
+// xml-http-request extension will be loaded separately.
 static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
 // be overrode.
@@ -70,7 +77,6 @@ static const char *kGlobalExtensions[] = {
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
-  "curl-xml-http-request",
   "analytics-usage-collector",
   "google-gadget-manager",
   NULL
@@ -136,6 +142,10 @@ static const char kHelpString[] =
   "  -hs, --html-script-engine\n"
   "      Specify html/script engine, default: " GGL_GTK_HTML_SCRIPT_ENGINE ".\n"
   "      Available engines: xulrunner, webkit.\n"
+  "  -xhr, --xml-http-request\n"
+  "      Specify xml-http-request extension to load, default: "
+         GGL_GTK_XML_HTTP_REQUEST ".\n"
+  "      Available extensions: curl, soup.\n"
   "  -h, --help\n"
   "      Print this message and exit.\n"
   "\n"
@@ -159,6 +169,7 @@ enum ArgumentID {
   ARG_NO_COLLECTOR,
   ARG_GRANT_PERMISSIONS,
   ARG_HTML_SCRIPT_ENGINE,
+  ARG_XML_HTTP_REQUEST,
   ARG_HELP
 };
 
@@ -179,6 +190,7 @@ static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
   { ARG_NO_COLLECTOR,      Variant::TYPE_BOOL,  "-nc", "--no-collector" },
   { ARG_GRANT_PERMISSIONS, Variant::TYPE_BOOL,  "-gp", "--grant-permissions" },
   { ARG_HTML_SCRIPT_ENGINE,Variant::TYPE_STRING,"-hs", "--html-script-engine" },
+  { ARG_XML_HTTP_REQUEST,  Variant::TYPE_STRING,"-xhr","--xml-http-request" },
   { ARG_HELP,              Variant::TYPE_BOOL,  "-h",  "--help" },
   { -1,                    Variant::TYPE_VOID, NULL, NULL } // End of list
 };
@@ -203,7 +215,8 @@ struct Arguments {
       debug_console(ggadget::Gadget::DEBUG_CONSOLE_DISABLED),
       no_collector(false),
       grant_permissions(false),
-      html_script_engine(GGL_GTK_HTML_SCRIPT_ENGINE) {
+      html_script_engine(GGL_GTK_HTML_SCRIPT_ENGINE),
+      xml_http_request(GGL_GTK_XML_HTTP_REQUEST) {
   }
 
   int debug_mode;
@@ -220,6 +233,7 @@ struct Arguments {
   bool no_collector;
   bool grant_permissions;
   std::string html_script_engine;
+  std::string xml_http_request;
 };
 
 static ggadget::HostArgumentParser g_argument_parser(kArgumentsInfo);
@@ -268,6 +282,9 @@ static void ExtractArgumentsValue() {
     g_arguments.grant_permissions = ggadget::VariantValue<bool>()(arg_value);
   if (g_argument_parser.GetArgumentValue(ARG_HTML_SCRIPT_ENGINE, &arg_value))
     g_arguments.html_script_engine =
+        ggadget::VariantValue<std::string>()(arg_value);
+  if (g_argument_parser.GetArgumentValue(ARG_XML_HTTP_REQUEST, &arg_value))
+    g_arguments.xml_http_request =
         ggadget::VariantValue<std::string>()(arg_value);
 }
 
@@ -481,6 +498,15 @@ int main(int argc, char* argv[]) {
   ggadget::ExtensionManager *ext_manager =
       ggadget::ExtensionManager::CreateExtensionManager();
   ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+
+  // Load xml-http-request extension first.
+  std::string xhr_extension;
+  if (g_arguments.xml_http_request.length()) {
+    xhr_extension = g_arguments.xml_http_request + kXHRExtensionSuffix;
+  } else {
+    xhr_extension = std::string(GGL_GTK_XML_HTTP_REQUEST) + kXHRExtensionSuffix;
+  }
+  ext_manager->LoadExtension(xhr_extension.c_str(), false);
 
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)

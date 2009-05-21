@@ -535,7 +535,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual Connection *ConnectOnDataReceived(
-      Slot1<size_t, const std::string &> *receiver) {
+      Slot2<size_t, const void *, size_t> *receiver) {
     return ondatareceived_signal_.Connect(receiver);
   }
 
@@ -709,7 +709,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   Session *session_;
   QByteArray *send_data_;
   Signal0<void> onreadystatechange_signal_;
-  Signal1<size_t, const std::string &> ondatareceived_signal_;
+  Signal2<size_t, const void *, size_t> ondatareceived_signal_;
 
   std::string url_, host_;
   bool async_;

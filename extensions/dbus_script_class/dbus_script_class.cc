@@ -45,14 +45,14 @@ static ScriptableDBusObject* NewSystemObject(const std::string &name,
                                              const std::string &path,
                                              const std::string &interface) {
   DBusProxy *proxy = DBusProxy::NewSystemProxy(name, path, interface);
-  return new ScriptableDBusObject(proxy);
+  return proxy ? new ScriptableDBusObject(proxy) : NULL;
 }
 
 static ScriptableDBusObject* NewSessionObject(const std::string &name,
                                               const std::string &path,
                                               const std::string &interface) {
   DBusProxy *proxy = DBusProxy::NewSessionProxy(name, path, interface);
-  return new ScriptableDBusObject(proxy);
+  return proxy ? new ScriptableDBusObject(proxy) : NULL;
 }
 
 extern "C" {

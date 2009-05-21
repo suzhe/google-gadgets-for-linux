@@ -110,7 +110,7 @@ class Plugin::Impl : public SmallObject<> {
         std::string content;
         if (ReadFileContents(url_or_file_.c_str(), &content) &&
             NewStream(content.size()) &&
-            WriteStream(content) == content.size()) {
+            WriteStream(content.c_str(), content.size()) == content.size()) {
           Done(NPRES_DONE);
         } else {
           Done(NPRES_NETWORK_ERR);
@@ -151,11 +151,10 @@ class Plugin::Impl : public SmallObject<> {
       return err == NPERR_NO_ERROR && stream_type == NP_NORMAL;
     }
 
-    size_t WriteStream(const std::string &data) {
+    size_t WriteStream(const void *data, size_t size) {
       ASSERT(stream_);
       size_t data_offset = 0;
       int idle_count = 0;
-      size_t size = data.size();
       while (data_offset < size) {
         int32 len = plugin_funcs_->writeready(&owner_->instance_, stream_);
         if (len <= 0) {
@@ -172,7 +171,7 @@ class Plugin::Impl : public SmallObject<> {
             &owner_->instance_, stream_,
             static_cast<int32>(stream_offset_), len,
             // This gets a non-const pointer.
-            const_cast<char *>(data.c_str()));
+            const_cast<void *>(data));
         // Error occurs.
         if (consumed < 0)
           return data_offset;
@@ -205,7 +204,7 @@ class Plugin::Impl : public SmallObject<> {
       return result;
     }
 
-    size_t OnDataReceived(const std::string &data) {
+    size_t OnDataReceived(const void *data, size_t size) {
       unsigned short status = 0;
       http_request_->GetStatus(&status);
       if (status == 200) {
@@ -233,13 +232,13 @@ class Plugin::Impl : public SmallObject<> {
           }
         }
 
-        size_t written = WriteStream(data);
-        if (written != data.size()) {
+        size_t written = WriteStream(data, size);
+        if (written != size) {
           Done(NPRES_NETWORK_ERR);
           return 0;
         }
       }
-      return data.size();
+      return size;
     }
 
     void OnStateChange() {

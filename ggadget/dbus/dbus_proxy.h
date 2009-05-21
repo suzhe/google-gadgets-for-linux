@@ -313,6 +313,12 @@ class DBusProxy : public SmallObject<> {
    */
   bool EnumerateInterfaces(Slot1<bool, const std::string &> *callback);
 
+  /**
+   * A signal which will be emitted when the proxy has been reset,
+   * because remote object owner has been changed.
+   */
+  Connection *ConnectOnReset(Slot0<void> *callback);
+
  public:
   /**
    * Creates a proxy for an object on system bus.

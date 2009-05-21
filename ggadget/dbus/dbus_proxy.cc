@@ -73,24 +73,44 @@ class DBusProxy::Impl : public SmallObject<> {
   // Class to hold owner<->names mapping information.
   class OwnerNamesCache {
    public:
+    ~OwnerNamesCache() {
+      Clear();
+    }
+
     bool IsNameMonitored(const std::string &name) const {
       return names_info_.find(name) != names_info_.end();
     }
-    void MonitorName(const std::string &name) {
-      if (!name.empty()) names_info_[name].refcount++;
+    Connection *MonitorName(const std::string &name, Slot0<void> *callback) {
+      if (!name.empty()) {
+        NameInfo *info = &names_info_[name];
+        info->refcount++;
+        if (callback) {
+          if (!info->on_name_owner_changed) {
+            info->on_name_owner_changed = new Signal0<void>();
+          }
+          return info->on_name_owner_changed->Connect(callback);
+        }
+      }
+      return NULL;
     }
-    void UnmonitorName(const std::string &name) {
+    void UnmonitorName(const std::string &name, Connection *connection) {
       NamesInfoMap::iterator it = names_info_.find(name);
       if (it != names_info_.end()) {
         -- it->second.refcount;
         if (it->second.refcount <= 0) {
-          if (!it->second.owner.empty())
+          if (!it->second.owner.empty()) {
             RemoveOwnerName(it->second.owner, name);
+          }
+          delete it->second.on_name_owner_changed;
           names_info_.erase(it);
+        } else if (connection) {
+          ASSERT(it->second.on_name_owner_changed);
+          it->second.on_name_owner_changed->Disconnect(connection);
         }
       }
     }
-    void SetNameOwner(const std::string &name, const std::string &owner) {
+    void SetNameOwner(const std::string &name, const std::string &owner,
+                      bool emit) {
       NamesInfoMap::iterator it = names_info_.find(name);
       if (it != names_info_.end()) {
         if (!it->second.owner.empty())
@@ -98,6 +118,9 @@ class DBusProxy::Impl : public SmallObject<> {
         if (!owner.empty())
           AddOwnerName(owner, name);
         it->second.owner = owner;
+        if (emit && it->second.on_name_owner_changed) {
+          (*it->second.on_name_owner_changed)();
+        }
       }
     }
     void GetOwnerNames(const std::string &owner,
@@ -109,6 +132,11 @@ class DBusProxy::Impl : public SmallObject<> {
       }
     }
     void Clear() {
+      NamesInfoMap::iterator it = names_info_.begin();
+      NamesInfoMap::iterator end = names_info_.end();
+      for (; it != end; ++it) {
+        delete it->second.on_name_owner_changed;
+      }
       owner_names_.clear();
       names_info_.clear();
     }
@@ -141,9 +169,10 @@ class DBusProxy::Impl : public SmallObject<> {
     }
 
     struct NameInfo {
-      NameInfo() : refcount(0) { }
+      NameInfo() : refcount(0), on_name_owner_changed(NULL) { }
       int refcount;
       std::string owner;
+      Signal0<void> *on_name_owner_changed;
     };
 
     // first: owner, second: names
@@ -219,7 +248,7 @@ class DBusProxy::Impl : public SmallObject<> {
           Impl *impl = new Impl(this, name, path, interface);
           if (impl->Initialize()) {
             proxies_[tri_name] = impl;
-            MonitorImplName(name);
+            MonitorImplName(impl);
             std::string match_rule = impl->GetMatchRule();
 #ifdef DBUS_VERBOSE_LOG
             DLOG("Add Match to %s bus: %s", GetTypeName(), match_rule.c_str());
@@ -251,7 +280,7 @@ class DBusProxy::Impl : public SmallObject<> {
 #endif
             dbus_bus_remove_match(bus_, match_rule.c_str(), NULL);
           }
-          UnmonitorImplName(impl->GetName());
+          UnmonitorImplName(impl);
           delete impl;
           proxies_.erase(it);
           if (proxies_.size() == 0) {
@@ -300,7 +329,7 @@ class DBusProxy::Impl : public SmallObject<> {
         if (proxies_.size()) {
           ProxyMap::iterator it = proxies_.begin();
           for(; it != proxies_.end(); ++it)
-            MonitorImplName(it->second->GetName());
+            MonitorImplName(it->second);
         }
       }
       return bus_ != NULL && !destroying_;
@@ -323,10 +352,13 @@ class DBusProxy::Impl : public SmallObject<> {
                               "',member='NameOwnerChanged'",
                               NULL);
 
-        // Cancel all pending calls.
         ProxyMap::iterator it = proxies_.begin();
-        for(; it != proxies_.end(); ++it)
+        for(; it != proxies_.end(); ++it) {
+          // no need to disconnect it, as owner_names_ will be cleared.
+          it->second->on_name_owner_changed_connection_ = NULL;
+          // Cancel all pending calls.
           it->second->CancelAllPendingCalls();
+        }
 
         // Clears all monitored names, without destroying existing proxies.
         // Existing proxies can be reused when dbus connection is
@@ -370,23 +402,28 @@ class DBusProxy::Impl : public SmallObject<> {
 #ifdef DBUS_VERBOSE_LOG
           DLOG("The owner of name %s is %s", name.c_str(), owner.c_str());
 #endif
-          owner_names_.SetNameOwner(name, owner);
+          owner_names_.SetNameOwner(name, owner, false);
         }
       }
       // One owner is enough.
       return false;
     }
 
-    void MonitorImplName(const std::string &name) {
+    void MonitorImplName(Impl *impl) {
+      ASSERT(!impl->on_name_owner_changed_connection_);
+      std::string name = impl->GetName();
       // Don't monitor owner names.
       if (name[0] == ':') return;
+      Slot0<void> *callback = NewSlot(impl, &Impl::OnNameOwnerChanged);
       if (owner_names_.IsNameMonitored(name)) {
         // If the name is already monitored, just increate its refcount
         // by calling MonitorName() again.
-        owner_names_.MonitorName(name);
+        impl->on_name_owner_changed_connection_ =
+            owner_names_.MonitorName(name, callback);
       } else {
         // Otherwise monitor the name and then try to fetch the name's owner.
-        owner_names_.MonitorName(name);
+        impl->on_name_owner_changed_connection_ =
+            owner_names_.MonitorName(name, callback);
         Impl *proxy = GetBusProxy();
         if (proxy) {
           Arguments in_args;
@@ -399,19 +436,23 @@ class DBusProxy::Impl : public SmallObject<> {
       }
     }
 
-    void UnmonitorImplName(const std::string &name) {
+    void UnmonitorImplName(Impl *impl) {
+      std::string name = impl->GetName();
       // Don't monitor owner names.
       if (name[0] == ':') return;
-      owner_names_.UnmonitorName(name);
+      owner_names_.UnmonitorName(name, impl->on_name_owner_changed_connection_);
     }
 
     void NameOwnerChanged(const char *name, const char *old_owner,
                           const char *new_owner) {
       // Don't monitor owner names.
       if (name[0] == ':') return;
+#ifdef DBUS_VERBOSE_LOG
+      DLOG("NameOwnerChanged %s: %s -> %s", name, old_owner, new_owner);
+#endif
       // Just set the name's owner to the new one.
       // If the name is not monitored, nothing will be done.
-      owner_names_.SetNameOwner(name, new_owner);
+      owner_names_.SetNameOwner(name, new_owner, true);
     }
 
     void EmitSignalMessage(DBusMessage *message) {
@@ -533,6 +574,7 @@ class DBusProxy::Impl : public SmallObject<> {
       name_(name),
       path_(path),
       interface_(interface),
+      on_name_owner_changed_connection_(NULL),
       refcount_(1),
       call_id_counter_(1) {
   }
@@ -569,6 +611,11 @@ class DBusProxy::Impl : public SmallObject<> {
   void DetachFromManager() {
     // The manager has been destroyed.
     manager_ = NULL;
+  }
+
+  void OnNameOwnerChanged() {
+    Initialize();
+    on_reset_();
   }
 
   bool Initialize() {
@@ -948,6 +995,10 @@ class DBusProxy::Impl : public SmallObject<> {
     } else {
       DLOG("Failed to demarshal args of signal %s", member);
     }
+  }
+
+  Connection *ConnectOnReset(Slot0<void> *callback) {
+    return on_reset_.Connect(callback);
   }
 
  public:
@@ -1533,6 +1584,7 @@ class DBusProxy::Impl : public SmallObject<> {
   std::string name_;
   std::string path_;
   std::string interface_;
+  Connection *on_name_owner_changed_connection_;
 
   int refcount_;
   int call_id_counter_;
@@ -1546,6 +1598,8 @@ class DBusProxy::Impl : public SmallObject<> {
 
   Signal3<void, const std::string &, int, const Variant *>
       on_signal_emit_signal_;
+
+  Signal0<void> on_reset_;
 
  private:
   static Manager *system_bus_;
@@ -1643,6 +1697,10 @@ bool DBusProxy::EnumerateInterfaces(
     Slot1<bool, const std::string &> *callback) {
   return impl_->EnumerateInterfaces(callback);
 }
+Connection* DBusProxy::ConnectOnReset(Slot0<void> *callback) {
+  return impl_->ConnectOnReset(callback);
+}
+
 DBusProxy* DBusProxy::NewSystemProxy(const std::string &name,
                                      const std::string &path,
                                      const std::string &interface) {
