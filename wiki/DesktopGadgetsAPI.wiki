@@ -149,4 +149,4 @@ Besides properties, methods and signals exported by remote DBus object, DBusSess
 
 === Special signals ===
  * *$onReset*
- This signal will be emitted when remote object is reset, which might occur when remote service is started or stop.
+ This signal will be emitted when remote object is reset, which might occur when remote service is started or stopped.
