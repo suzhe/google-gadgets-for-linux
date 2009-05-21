@@ -126,7 +126,7 @@ class XMLHttpRequestInterface : public ScriptableInterface {
    * bytes written.
    */
   virtual Connection *ConnectOnDataReceived(
-      Slot1<size_t, const std::string &> *receiver) = 0;
+      Slot2<size_t, const void *, size_t> *receiver) = 0;
 
   class XMLHttpRequestException : public ScriptableHelperDefault {
    public:

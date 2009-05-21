@@ -235,15 +235,13 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
   Impl(ScriptableDBusObject *owner, DBusProxy* proxy)
     : owner_(owner),
       proxy_(proxy),
-      timeout_(-1),
-      on_signal_emit_connection_(NULL) {
+      timeout_(-1) {
     ASSERT(proxy);
-    on_signal_emit_connection_ =
-        proxy->ConnectOnSignalEmit(NewSlot(this, &Impl::EmitSignal));
+    proxy->ConnectOnSignalEmit(NewSlot(this, &Impl::EmitSignal));
+    proxy->ConnectOnReset(NewSlot(this, &Impl::Reset));
   }
 
   ~Impl() {
-    on_signal_emit_connection_->Disconnect();
     delete proxy_;
     for (SignalMap::iterator it = signals_.begin(); it != signals_.end(); ++it)
       delete it->second;
@@ -414,6 +412,15 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
     }
   }
 
+  void Reset() {
+    DLOG("DBusProxy(%s:%s:%s) has been reset.", proxy_->GetName().c_str(),
+         proxy_->GetPath().c_str(), proxy_->GetInterface().c_str());
+    for (SignalMap::iterator it = signals_.begin(); it != signals_.end(); ++it)
+      delete it->second;
+    signals_.clear();
+    on_reset_();
+  }
+
  public:
   static DBusProxy *GetProxy(ScriptableDBusObject *obj) {
     return obj->impl_->proxy_;
@@ -427,13 +434,15 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
   ScriptableDBusObject *owner_;
   DBusProxy *proxy_;
   int timeout_;
-  Connection *on_signal_emit_connection_;
   typedef LightMap<std::string, DBusSignal *> SignalMap;
   SignalMap signals_;
+
+ public:
+  Signal0<void> on_reset_;
 };
 
 ScriptableDBusObject::ScriptableDBusObject(DBusProxy *proxy)
-  : impl_(proxy ? new Impl(this, proxy) : NULL) {
+  : impl_(new Impl(this, proxy)) {
 }
 
 ScriptableDBusObject::~ScriptableDBusObject() {
@@ -442,19 +451,11 @@ ScriptableDBusObject::~ScriptableDBusObject() {
 }
 
 void ScriptableDBusObject::DoRegister() {
-  if (!impl_) {
-    DLOG("Invalid ScriptableDBusObject object.");
-    return;
-  }
   SetDynamicPropertyHandler(NewSlot(impl_, &Impl::DynamicGetter),
                             NewSlot(impl_, &Impl::DynamicSetter));
 }
 
 void ScriptableDBusObject::DoClassRegister() {
-  if (!impl_) {
-    DLOG("Invalid ScriptableDBusObject object.");
-    return;
-  }
   RegisterProperty("$name",
                    NewSlot(&DBusProxy::GetName, Impl::GetConstProxy),
                    NULL);
@@ -497,6 +498,9 @@ void ScriptableDBusObject::DoClassRegister() {
                  NewSlot(&Impl::GetChild, &ScriptableDBusObject::impl_));
   RegisterMethod("$getInterface",
                  NewSlot(&Impl::GetInterface, &ScriptableDBusObject::impl_));
+
+  RegisterClassSignal("$onReset", &Impl::on_reset_,
+                      &ScriptableDBusObject::impl_);
 }
 
 }  // namespace dbus

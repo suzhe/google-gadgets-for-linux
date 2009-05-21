@@ -423,6 +423,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual ExceptionCode Send(const DOMDocumentInterface *data) {
+    if (request_headers_map_.find("Content-Type") ==
+        request_headers_map_.end()) {
+      // Set content type if it's not set yet.
+      request_headers_map_["Content-Type"] = "application/xml;charset=UTF-8";
+    }
     return Send(data ? data->GetXML() : std::string());
   }
 
@@ -677,7 +682,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     // Streamed mode.
     if (ondatareceived_signal_.HasActiveConnections())
-      return ondatareceived_signal_(data);
+      return ondatareceived_signal_(data.c_str(), size);
 
     // Normal mode.
     if (CheckSize(response_body_.length(), size, 1)) {
@@ -893,7 +898,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual Connection *ConnectOnDataReceived(
-      Slot1<size_t, const std::string &> *receiver) {
+      Slot2<size_t, const void *, size_t> *receiver) {
     return ondatareceived_signal_.Connect(receiver);
   }
 
@@ -991,7 +996,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   CaseInsensitiveStringMap request_headers_map_;
   CaseInsensitiveStringMap response_headers_map_;
   Signal0<void> onreadystatechange_signal_;
-  Signal1<size_t, const std::string &> ondatareceived_signal_;
+  Signal2<size_t, const void *, size_t> ondatareceived_signal_;
 
   std::string url_;
   std::string host_;

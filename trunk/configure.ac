@@ -157,6 +157,7 @@ build_qtwebkit_browser_element=yes
 build_smjs_script_runtime=yes
 build_webkit_script_runtime=yes
 build_gtkwebkit_browser_element=yes
+build_soup_xml_http_request=yes
 
 #================ compile options ==============
 AC_ARG_ENABLE([debug],
@@ -205,7 +206,7 @@ AC_ARG_WITH([browser-plugins-dir],
 
 AC_ARG_WITH([gtkmozembed],
             AC_HELP_STRING(
-                [--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox@:>@],
+                [--with-gtkmozembed=@<:@libxul|xulrunner|firefox2|firefox|seamonkey@:>@],
                 [Selects with gecko engine to build against, it affects the
                  search rule of spidermonkey library (libmozjs) as well.]),
             [with_gtkmozembed=$withval],
@@ -218,6 +219,16 @@ AC_ARG_WITH([mozjs-libname],
                  xulrunner library which supports XPCOM_GLUE.]),
             [with_mozjs_libname=$withval],
             [with_mozjs_libname=libmozjs.so])
+
+AC_ARG_WITH([ssl-ca-file],
+            AS_HELP_STRING([--with-ssl-ca-file=/etc/ssl/certs/ca-certificates.crt],
+                [Specifiy CA certificates file used by soup-xml-http-request
+                 extension. If it's set to empty, then SSL certificate won't be
+                 checked when accessing https:// sites. CAUTION: it should
+                 always be set to a valid CA file, otherwise there will be
+                 serious security issue.]),
+            [default_ssl_ca_file=$withval],
+            [default_ssl_ca_file=""])
 
 #=================== host options =================
 AC_ARG_ENABLE([gtk-host],
@@ -263,6 +274,12 @@ AC_ARG_ENABLE([curl-xml-http-request],
                              [don't build curl-xml-http-request]),
               [build_curl_xml_http_request=$enableval],
               [build_curl_xml_http_request=yes])
+
+AC_ARG_ENABLE([soup-xml-http-request],
+              AS_HELP_STRING([--disable-soup-xml-http-request],
+                             [don't build soup-xml-http-request]),
+              [build_soup_xml_http_request=$enableval],
+              [build_soup_xml_http_request=yes])
 
 AC_ARG_ENABLE([dbus-script-class],
               AS_HELP_STRING([--disable-dbus-script-class],
@@ -795,6 +812,26 @@ if test x$build_curl_xml_http_request = xyes; then
   fi
 fi
 
+# Check libsoup.
+has_libsoup=no
+has_libsoup_gnome=no
+if test x$build_soup_xml_http_request = xyes; then
+  PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.26],
+                    [has_libsoup=yes], [has_libsoup=no])
+
+  if test x$has_libsoup = xyes; then
+    PKG_CHECK_MODULES(LIBSOUP_GNOME, [libsoup-gnome-2.4 >= 2.26],
+                      [has_libsoup_gnome=yes], [has_libsoup_gnome=no])
+    if test x$has_libsoup_gnome = xyes; then
+      LIBSOUP_CFLAGS="$LIBSOUP_CFLAGS $LIBSOUP_GNOME_CFLAGS -DHAVE_LIBSOUP_GNOME"
+      LIBSOUP_LIBS="$LIBSOUP_LIBS $LIBSOUP_GNOME_LIBS"
+    fi
+  else
+    AC_MSG_WARN([libsoup-2.4 >= 2.26 is required by soup-xml-http-request.])
+    build_soup_xml_http_request=no
+  fi
+fi
+
 # Check libxml2.
 has_libxml2=no
 if test x$build_libxml2_xml_parser = xyes; then
@@ -873,6 +910,7 @@ fi
 #  xulrunner 1.8: xulrunner-gtkmozembed and xulrunner-js
 #  firefox 2.0: firefox2-gtkmozembed and firefox2-js
 #  firefox 1.5: firefox-gtkmozembed and firefox-js
+#  seamonkey 1.1: seamonkey-gtkmozembed seamonkey-js
 #  microb(Maemo): microb-engine and microb-engine-js
 #
 # Add more rules here if your distribution doesn't support above rules.
@@ -887,6 +925,7 @@ if test x$build_smjs_script_runtime = xyes -o \
                       xulrunner-gtkmozembed \
                       firefox2-gtkmozembed \
                       firefox-gtkmozembed \
+                      seamonkey-gtkmozembed \
                       microb-engine"
   else
     case $with_gtkmozembed in
@@ -901,6 +940,9 @@ if test x$build_smjs_script_runtime = xyes -o \
         ;;
       firefox)
         gtkmozembed_list="firefox-gtkmozembed"
+        ;;
+      seamonkey)
+        gtkmozembed_list="seamonkey-gtkmozembed"
         ;;
       microb)
         gtkmozembed_list="microb-engine"
@@ -931,18 +973,21 @@ if test x$build_smjs_script_runtime = xyes -o \
     xulrunner-gtkmozembed)
       libmozjs_list="xulrunner-js"
       ;;
-    firefox2)
+    firefox2-gtkmozembed)
       libmozjs_list="firefox2-js"
       ;;
-    firefox)
+    firefox-gtkmozembed)
       libmozjs_list="firefox-js"
+      ;;
+    seamonkey-gtkmozembed)
+      libmozjs_list="seamonkey-js"
       ;;
     microb-engine)
       libmozjs_list="microb-engine-js"
       ;;
     *)
       libmozjs_list="mozilla-js xulrunner-js firefox2-js \
-                    firefox-js microb-engine-js"
+                    firefox-js seamonkey-js microb-engine-js"
       ;;
   esac
 
@@ -1175,7 +1220,12 @@ if test x$build_gtk_host = xyes; then
           x$build_webkit_script_runtime = xyes; then
     has_gtk_script_engine=yes
   fi
-  if test x$build_curl_xml_http_request != xyes -o \
+  has_gtk_xml_http_request=no
+  if test x$build_curl_xml_http_request = xyes -o \
+          x$build_soup_xml_http_request = xyes; then
+    has_gtk_xml_http_request=yes
+  fi
+  if test x$has_gtk_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
           x$has_gtk_script_engine != xyes; then
     AC_MSG_WARN([gtk host won't work because of missing dependencies])
@@ -1198,15 +1248,21 @@ if test x$build_qt_host = xyes; then
 fi
 
 #Gstreamer audiosink
-if test x$default_gst_audio_sink != x; then
+if test "x$default_gst_audio_sink" != "x"; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS \
                      -DGGL_DEFAULT_GST_AUDIO_SINK=\\\"$default_gst_audio_sink\\\""
 fi
 
 #Browser plugins directory
-if test x$default_browser_plugins_dir != x; then
+if test "x$default_browser_plugins_dir" != "x"; then
   PREDEFINED_MACROS="$PREDEFINED_MACROS \
                      -DGGL_DEFAULT_BROWSER_PLUGINS_DIR=\\\"$default_browser_plugins_dir\\\""
+fi
+
+#ssl ca file for soup-xml-http-request
+if test "x$default_ssl_ca_file" != "x" -a "x$default_ssl_ca_file" != "xno"; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \
+                     -DGGL_DEFAULT_SSL_CA_FILE=\\\"$default_ssl_ca_file\\\""
 fi
 
 #xdgmime
@@ -1224,6 +1280,15 @@ elif test x$build_webkit_script_runtime = xyes -a \
 fi
 
 PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_HTML_SCRIPT_ENGINE=\\\"$GGL_GTK_HTML_SCRIPT_ENGINE\\\""
+
+GGL_GTK_XML_HTTP_REQUEST=soup
+if test x$build_soup_xml_http_request = xyes; then
+  GGL_GTK_XML_HTTP_REQUEST=soup
+elif test x$build_curl_xml_http_request = xyes; then
+  GGL_GTK_XML_HTTP_REQUEST=curl
+fi
+
+PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_XML_HTTP_REQUEST=\\\"$GGL_GTK_XML_HTTP_REQUEST\\\""
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_HOST],
@@ -1252,6 +1317,10 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_CURL_XML_HTTP_REQUEST],
   [test x$build_curl_xml_http_request = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_SOUP_XML_HTTP_REQUEST],
+  [test x$build_soup_xml_http_request = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_DBUS_SCRIPT_CLASS],
@@ -1397,6 +1466,8 @@ AC_CONFIG_FILES([Makefile
                  extensions/webkit_script_runtime/tests/Makefile
                  extensions/gtkwebkit_browser_element/Makefile
                  extensions/html_flash_element/Makefile
+                 extensions/soup_xml_http_request/Makefile
+                 extensions/soup_xml_http_request/tests/Makefile
                  gadgets/Makefile
                  gadgets/analog_clock/Makefile
                  gadgets/designer/Makefile
@@ -1464,6 +1535,7 @@ Build options:
 
  Extensions:
   Build curl-xml-http-request     $build_curl_xml_http_request
+  Build soup-xml-http-request     $build_soup_xml_http_request
   Build dbus-script-class         $build_dbus_script_class
   Build gst-audio-framework       $build_gst_audio_framework
   Build gst-video-element         $build_gst_video_element
@@ -1489,6 +1561,7 @@ Build options:
   Built-in xdgmime support        $enable_xdgmime
   Browser plugins directory       $default_browser_plugins_dir
   Default gstreamer audio sink    $default_gst_audio_sink
+  SSL CA certificate file         $default_ssl_ca_file
   Memory check command            $memcheck_command
 
  Hosts:
