@@ -103,7 +103,7 @@ Following code connects a callback function to `hal`'s DeviceAdded signal:
   hal.DeviceAdded = OnDeviceAdded;
 }}}
 
-Besides properties, methods and signals exported by remote DBus object, DBusSessionObject and DBusSystemObject also provide following special properties and methods:
+Besides properties, methods and signals exported by remote DBus object, DBusSessionObject and DBusSystemObject also provide following special properties, methods and signals:
 
 === Special properties ===
 || *Property name* || *Description*                                      || *Type* || *Access*   ||
@@ -146,3 +146,7 @@ Besides properties, methods and signals exported by remote DBus object, DBusSess
 
  * *Object $getInterface(String _interface_);*
  Gets another interface supported by remote object. _interface_ must be in object's *$interface* list.
+
+=== Special signals ===
+ * *$onReset*
+ This signal will be emitted when remote object is reset, which might occur when remote service is started or stop.
