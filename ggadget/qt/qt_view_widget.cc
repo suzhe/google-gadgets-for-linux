@@ -124,13 +124,20 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   QPainter p(this);
   view_->Layout();
 
-  if (old_width_ != width() || old_height_ != height()) {
+  DLOG("paint: %p, ow:%d, oh:%d, w:%d, h:%d, vw:%f, vh:%f, uw:%d, uh:%d",
+       view_, old_width_, old_height_, width(), height(),
+       view_->GetWidth(), view_->GetHeight(),
+       event->rect().width(), event->rect().height());
+
+  if (old_width_ != width() || old_height_ != height() ||
+      rect() != event->rect()) {
     view_->AddRectangleToClipRegion(
         Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
     old_width_ = width();
     old_height_ = height();
     delete offscreen_pixmap_;
     offscreen_pixmap_ = NULL;
+    p.setClipRect(rect());
   }
 
   uint64_t current_time = GetGlobalMainLoop()->GetCurrentTime();
@@ -147,23 +154,31 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
 
     QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
     QPainter poff(offscreen_pixmap_);
-    poff.setClipRegion(clip_region, Qt::IntersectClip);
+    poff.setClipRegion(clip_region);
     poff.setCompositionMode(QPainter::CompositionMode_Clear);
-    poff.fillRect(rect(), Qt::transparent);
+    if (composite_) {
+      poff.fillRect(rect(), Qt::transparent);
+    } else {
+      poff.fillRect(rect(), palette().window());
+    }
     poff.scale(zoom_, zoom_);
 
     QtCanvas canvas(width(), height(), &poff);
     view_->Draw(&canvas);
     SetInputMask(offscreen_pixmap_);
 
-    p.setClipRegion(clip_region, Qt::IntersectClip);
+    p.setClipRegion(clip_region, Qt::UniteClip);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.drawPixmap(0, 0, *offscreen_pixmap_);
   } else {
     QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
-    p.setClipRegion(clip_region, Qt::IntersectClip);
-    p.setCompositionMode(QPainter::CompositionMode_Clear);
-    p.fillRect(rect(), Qt::transparent);
+    p.setClipRegion(clip_region, Qt::UniteClip);
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    if (composite_) {
+      p.fillRect(rect(), Qt::transparent);
+    } else {
+      p.fillRect(rect(), palette().window());
+    }
     p.scale(zoom_, zoom_);
     QtCanvas canvas(width(), height(), &p);
     view_->Draw(&canvas);
