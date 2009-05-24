@@ -125,6 +125,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		todo_sm.jpg \
 		weather_sm.jpg \
 		en/strings.xml \
+		fr/strings.xml \
 		zh-CN/strings.xml
 
 EXTRA_DIST=$(RESOURCE_FILES)

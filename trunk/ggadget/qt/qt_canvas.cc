@@ -51,6 +51,7 @@ static void MakeImageTransparent(QImage *img) {
 static void SetupPainter(QPainter *p) {
   p->setCompositionMode(QPainter::CompositionMode_SourceOver);
   p->setRenderHint(QPainter::SmoothPixmapTransform, true);
+  p->setRenderHint(QPainter::Antialiasing, true);
   p->setBackground(Qt::transparent);
 }
 
@@ -305,9 +306,7 @@ class QtCanvas::Impl {
   bool IntersectRectClipRegion(double x, double y,
                                double w, double h) {
     if (w <= 0.0 || h <= 0.0) return false;
-    QPainter *p = painter_;
-    p->setClipping(true);
-    p->setClipRect(QRectF(x, y, w, h), Qt::IntersectClip);
+    painter_->setClipRect(QRectF(x, y, w, h), Qt::IntersectClip);
     return true;
   }
 
@@ -320,13 +319,9 @@ class QtCanvas::Impl {
   bool IntersectGeneralClipRegion(const ClipRegion &region) {
     QRegion qregion;
     region_ = &qregion;
-    QPainter *p = painter_;
 
     if (region.EnumerateRectangles(NewSlot(this, &Impl::IntersectRectangle))) {
-      p->setClipping(true);
-      p->setClipRegion(qregion);
-    } else {
-      p->setClipping(false);
+      painter_->setClipRegion(qregion, Qt::IntersectClip);
     }
     return true;
   }

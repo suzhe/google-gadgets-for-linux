@@ -216,7 +216,7 @@ class View::Impl : public SmallObject<> {
       resizable_(RESIZABLE_ZOOM),
       dragover_result_(EVENT_RESULT_UNHANDLED),
       clip_region_enabled_(true),
-      enable_cache_(false),
+      enable_cache_(true),
       show_caption_always_(false),
       draw_queued_(false),
       events_enabled_(true),
@@ -1145,7 +1145,10 @@ class View::Impl : public SmallObject<> {
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
-    FirePostedSizeEvents();
+    // If Event isn't enabled then postpone these events.
+    if (events_enabled_) {
+      FirePostedSizeEvents();
+    }
 
     if (theme_changed_) {
       SimpleEvent event(Event::EVENT_THEME_CHANGED);
@@ -2028,6 +2031,10 @@ void View::AddElementToClipRegion(BasicElement *element,
 
 void View::EnableClipRegion(bool enable) {
   impl_->clip_region_enabled_ = enable;
+}
+
+bool View::IsClipRegionEnabled() const {
+  return impl_->clip_region_enabled_;
 }
 
 void View::AddRectangleToClipRegion(const Rectangle &rect) {

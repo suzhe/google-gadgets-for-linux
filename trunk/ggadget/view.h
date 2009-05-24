@@ -270,6 +270,9 @@ class View : public ViewInterface {
    */
   void EnableClipRegion(bool enable);
 
+  /** Checks if view's clip region is enabled or not. */
+  bool IsClipRegionEnabled() const;
+
  public: // Timer, interval and animation functions.
   /**
    * Starts an animation timer. The @a slot is called periodically during

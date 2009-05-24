@@ -55,6 +55,9 @@ static const double kDragThreshold = 3;
 static const uint64_t kFPSCountDuration = 5000;
 #endif
 
+// Update input shape mask once per second.
+static const uint64_t kUpdateMaskInterval = 1000;
+
 class ViewWidgetBinder::Impl : public SmallObject<> {
  public:
   Impl(ViewInterface *view,
@@ -65,6 +68,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       widget_(widget),
 #if GTK_CHECK_VERSION(2,10,0)
       input_shape_mask_(NULL),
+      last_mask_time_(0),
 #endif
       handlers_(new gulong[kEventHandlersNum]),
       current_drag_event_(NULL),
@@ -183,12 +187,17 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean ButtonPressHandler(GtkWidget *widget, GdkEventButton *event,
                                      gpointer user_data) {
-    DLOG("ButtonPressHandler.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    DLOG("ButtonPressHandler: widget: %p, view: %p, focused: %d, child: %p",
+         widget, impl->view_, impl->focused_,
+         gtk_window_get_focus(GTK_WINDOW(gtk_widget_get_toplevel(widget))));
+
     EventResult result = EVENT_RESULT_UNHANDLED;
 
     // Clicking on this widget removes any native child widget focus.
-    gtk_window_set_focus(GTK_WINDOW(widget), NULL);
+    if (GTK_IS_WINDOW(widget)) {
+      gtk_window_set_focus(GTK_WINDOW(widget), NULL);
+    }
 
     impl->button_pressed_ = true;
     impl->host_->ShowTooltip("");
@@ -198,8 +207,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       SimpleEvent e(Event::EVENT_FOCUS_IN);
       // Ignore the result.
       impl->view_->OnOtherEvent(e);
-      if (!gtk_widget_is_focus(widget))
-        gdk_window_focus(impl->widget_->window, event->time);
+      if (!gtk_widget_is_focus(widget)) {
+        gtk_widget_grab_focus(widget);
+      }
     }
 
     int mod = ConvertGdkModifierToModifier(event->state);
@@ -432,10 +442,14 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
         impl->view_->GetClipRegion(), width, height,
         last_width, last_height, impl->zoom_);
 
+    uint64_t current_time = GetCurrentTime();
 #if GTK_CHECK_VERSION(2,10,0)
+    bool update_input_shape_mask = impl->enable_input_shape_mask_ &&
+        (current_time - impl->last_mask_time_ > kUpdateMaskInterval) &&
+        impl->no_background_ && impl->composited_;
+
     // We need set input shape mask if there is no background.
-    if (impl->no_background_ && impl->composited_ &&
-        impl->enable_input_shape_mask_) {
+    if (update_input_shape_mask) {
       if (impl->input_shape_mask_) {
         gint mask_width, mask_height;
         gdk_drawable_get_size(GDK_DRAWABLE(impl->input_shape_mask_),
@@ -507,8 +521,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
 #if GTK_CHECK_VERSION(2,10,0)
     // We need set input shape mask if there is no background.
-    if (impl->no_background_ && impl->composited_ &&
-        impl->enable_input_shape_mask_ && impl->input_shape_mask_) {
+    if (update_input_shape_mask && impl->input_shape_mask_) {
       cairo_t *mask_cr = gdk_cairo_create(impl->input_shape_mask_);
       gdk_cairo_region(mask_cr, region);
       cairo_clip(mask_cr);
@@ -520,6 +533,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       cairo_destroy(mask_cr);
       gdk_window_input_shape_combine_mask(widget->window,
                                           impl->input_shape_mask_, 0, 0);
+      impl->last_mask_time_ = current_time;
     }
 #endif
 
@@ -529,7 +543,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
 #ifdef _DEBUG
     ++impl->draw_count_;
-    uint64_t current_time = GetCurrentTime();
     uint64_t duration = current_time - impl->last_fps_time_;
     if (duration >= kFPSCountDuration) {
       impl->last_fps_time_ = current_time;
@@ -691,6 +704,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
                                  gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    DLOG("FocusInHandler: widget: %p, view: %p, focused: %d, child: %p",
+         widget, impl->view_, impl->focused_,
+         gtk_window_get_focus(GTK_WINDOW(gtk_widget_get_toplevel(widget))));
     if (!impl->focused_) {
       impl->focused_ = true;
       SimpleEvent e(Event::EVENT_FOCUS_IN);
@@ -702,6 +718,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   static gboolean FocusOutHandler(GtkWidget *widget, GdkEventFocus *event,
                                   gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    DLOG("FocusOutHandler: widget: %p, view: %p, focused: %d, child: %p",
+         widget, impl->view_, impl->focused_,
+         gtk_window_get_focus(GTK_WINDOW(gtk_widget_get_toplevel(widget))));
     if (impl->focused_) {
       impl->focused_ = false;
       SimpleEvent e(Event::EVENT_FOCUS_OUT);
@@ -900,6 +919,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   GtkWidget *widget_;
 #if GTK_CHECK_VERSION(2,10,0)
   GdkBitmap *input_shape_mask_;
+  uint64_t last_mask_time_;
 #endif
   gulong *handlers_;
   DragEvent *current_drag_event_;

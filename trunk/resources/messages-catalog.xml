@@ -17,5 +17,6 @@
 
 <messages>
   <en>en/strings.xml</en>
+  <fr>fr/strings.xml</fr>
   <zh-CN>zh-CN/strings.xml</zh-CN>
 </messages>

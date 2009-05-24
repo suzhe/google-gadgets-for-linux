@@ -14,6 +14,7 @@
 # limitations under the License.
 
 RSS_GADGET_FILES= en/strings.xml \
+		  fr/strings.xml \
 		  zh-CN/strings.xml \
 		  gadget.gmanifest \
 		  main.js \

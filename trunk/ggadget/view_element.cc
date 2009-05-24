@@ -362,7 +362,10 @@ void ViewElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->child_view_) {
     if (impl_->scale_ != 1)
       canvas->ScaleCoordinates(impl_->scale_, impl_->scale_);
+    bool clip_enabled = GetView()->IsClipRegionEnabled();
+    impl_->child_view_->EnableClipRegion(clip_enabled);
     impl_->child_view_->Draw(canvas);
+    impl_->child_view_->EnableClipRegion(clip_enabled);
   }
 }
 

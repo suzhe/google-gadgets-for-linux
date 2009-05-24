@@ -247,6 +247,7 @@ class SingleViewHost::Impl {
 
     gtk_widget_realize(fixed_);
     gtk_widget_realize(window_);
+    DLOG("Window created: %p, fixed: %p", window_, fixed_);
     on_view_changed_signal_();
   }
 
@@ -1063,6 +1064,8 @@ class SingleViewHost::Impl {
                                         GtkWidget *widget,
                                         gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    DLOG("FixedSetFocusChildHandler widget: %p, view: %p, child: %p",
+         container, impl->view_, widget);
     if (widget) {
       // Send fake MOUSE_DOWN/MOUSE_UP events to update the focus chain
       // from the hosted view down to the element containing the native
@@ -1077,7 +1080,6 @@ class SingleViewHost::Impl {
       MouseEvent up_event(Event::EVENT_MOUSE_UP, view_x, view_y,
                           0, 0, MouseEvent::BUTTON_LEFT, 0);
       impl->view_->OnMouseEvent(up_event);
-      // gtk_widget_grab_focus(widget);
     }
   }
 

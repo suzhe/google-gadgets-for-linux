@@ -294,9 +294,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     send_flag_ = true;
     if (async_) {
-      // Add an internal reference when this request is working to prevent
-      // this object from being GC'ed.
-      Ref();
       // Do backoff checking to avoid DDOS attack to the server.
       if (!IsXHRBackoffRequestOK(main_loop_->GetCurrentTime(),
                                  host_.c_str())) {
@@ -305,6 +302,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         // this kind of exception.
         return NO_ERR;
       }
+      // Add an internal reference when this request is working to prevent
+      // this object from being GC'ed.
+      Ref();
       if (session_)
         session_->RestoreCookie(request_header_);
 

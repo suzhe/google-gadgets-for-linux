@@ -47,6 +47,7 @@ SET(SMJS_LIST
   xulrunner-js
   firefox2-js
   firefox-js
+  seamonkey-js
   )
 FOREACH(js ${SMJS_LIST})
   IF(NOT SMJS_FOUND)

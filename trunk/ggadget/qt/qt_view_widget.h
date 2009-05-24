@@ -90,9 +90,15 @@ class QtViewWidget : public QWidget {
   bool mouse_drag_moved_;
   QWidget *child_;
   double zoom_;
+  uint64_t last_mask_time_;
+#ifdef _DEBUG
+  uint64_t last_fps_time_;
+  int draw_count_;
+#endif
   ViewInterface::HitTest mouse_down_hittest_;
   bool resize_drag_;
   QRect origi_geometry_;
+  int old_width_, old_height_;
   // used as coefficient of mouse move in window resize
   int top_, bottom_, left_, right_;
 

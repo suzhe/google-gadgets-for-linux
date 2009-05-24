@@ -205,9 +205,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                      G_CALLBACK(WroteHeadersCallback), this);
     g_signal_connect(G_OBJECT(message_), "wrote-informational",
                      G_CALLBACK(WroteInformationalCallback), this);
-#endif
-
     g_object_weak_ref(G_OBJECT(message_), MessageDestroyed, this);
+#endif
 
     g_object_set_data(G_OBJECT(message_), kSoupMessageXHRKey, this);
 
@@ -301,18 +300,21 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     send_flag_ = true;
+    // Add an internal reference when this request is working to prevent
+    // this object from being GC'ed during the request.
+    Ref();
     if (async_) {
-      // Add an internal reference when this request is working to prevent
-      // this object from being GC'ed during the request.
-      Ref();
       soup_session_queue_message(session_, message_,
                                  MessageCompleteCallback, this);
       // message_ will be destroyed automatically after calling
-      // MessageCompleteCallback()
+      // MessageCompleteCallback(), where this->Unref() will be called.
     } else {
       guint result = soup_session_send_message(session_, message_);
-      send_flag_ = false;
       g_object_unref(message_);
+      send_flag_ = false;
+      message_ = NULL;
+      // Remove internal reference.
+      Unref();
 
       if (result == SOUP_STATUS_CANCELLED) {
         return ABORT_ERR;
@@ -797,23 +799,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     ASSERT(request->message_ == msg);
     ASSERT(request->send_flag_);
 
+    // message will be destroyed automatically after calling this callback.
+    request->message_ = NULL;
     request->send_flag_ = false;
     // Remove the internal reference that was added when the request was
     // started.
     request->Unref();
   }
 
-  static void MessageDestroyed(gpointer data, GObject *message) {
 #ifdef SOUP_XHR_VERBOSE
+  static void MessageDestroyed(gpointer data, GObject *message) {
     DLOG("MessageDestroyed:%p", message);
-#endif
-    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(data);
-    ASSERT(static_cast<void *>(request->message_) ==
-           static_cast<void *>(message));
-    request->message_ = NULL;
   }
 
-#ifdef SOUP_XHR_VERBOSE
   static void GotBodyCallback(SoupMessage *msg, gpointer user_data) {
     PrintMessageInfo("GotBodyCallback", msg, NULL);
   }

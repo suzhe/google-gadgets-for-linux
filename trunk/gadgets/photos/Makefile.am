@@ -14,6 +14,7 @@
 # limitations under the License.
 
 PHOTOS_GADGET_FILES= en/strings.xml \
+		     fr/strings.xml \
 		     zh_CN/strings.xml \
 		     images/bkgnd-b.png \
 		     images/bkgnd-t.png \
