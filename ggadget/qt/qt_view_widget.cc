@@ -17,11 +17,14 @@
 
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopWidget>
+#include <QtGui/QPalette>
 #include <QtGui/QPainter>
 #include <QtGui/QLayout>
 #include <QtGui/QMouseEvent>
 #include <ggadget/graphics_interface.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/gadget.h>
+#include <ggadget/clip_region.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/qt/qt_canvas.h>
@@ -41,6 +44,12 @@ namespace ggadget {
 namespace qt {
 
 static const double kDragThreshold = 3;
+#ifdef _DEBUG
+static const uint64_t kFPSCountDuration = 5000;
+#endif
+
+// update input mask once per second.
+static const uint64_t kUpdateMaskInterval = 1000;
 
 QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     : view_(view),
@@ -55,8 +64,15 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
       mouse_drag_moved_(false),
       child_(NULL),
       zoom_(view->GetGraphics()->GetZoom()),
+      last_mask_time_(0),
+#ifdef _DEBUG
+      last_fps_time_(0),
+      draw_count_(0),
+#endif
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
-      resize_drag_(false) {
+      resize_drag_(false),
+      old_width_(0),
+      old_height_(0) {
   setMouseTracking(true);
   setAcceptDrops(true);
   AdjustToViewSize();
@@ -65,6 +81,9 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     SetUndecoratedWMProperties();
   }
   setAttribute(Qt::WA_InputMethodEnabled);
+  setAttribute(Qt::WA_OpaquePaintEvent);
+  setAttribute(Qt::WA_NoSystemBackground);
+  setAutoFillBackground(false);
 }
 
 QtViewWidget::~QtViewWidget() {
@@ -78,45 +97,89 @@ QtViewWidget::~QtViewWidget() {
   if (drag_urls_) delete [] drag_urls_;
 }
 
+static QRegion CreateClipRegion(const ClipRegion *view_region, double zoom) {
+  QRegion qregion;
+  QRect qrect;
+  size_t count = view_region->GetRectangleCount();
+  if (count) {
+    Rectangle rect;
+    for (size_t i = 0; i < count; ++i) {
+      rect = view_region->GetRectangle(i);
+      if (zoom != 1.0) {
+        rect.Zoom(zoom);
+        rect.Integerize(true);
+      }
+      qrect.setX(static_cast<int>(rect.x));
+      qrect.setY(static_cast<int>(rect.y));
+      qrect.setWidth(static_cast<int>(rect.w));
+      qrect.setHeight(static_cast<int>(rect.h));
+      qregion += qrect;
+    }
+  }
+  return qregion;
+}
+
 void QtViewWidget::paintEvent(QPaintEvent *event) {
   if (!view_) return;
   QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
-  p.setClipRect(event->rect());
+  view_->Layout();
 
-  if (composite_) {
-    p.save();
-    p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(rect(), Qt::transparent);
-    p.restore();
+  if (old_width_ != width() || old_height_ != height()) {
+    view_->AddRectangleToClipRegion(
+        Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
+    old_width_ = width();
+    old_height_ = height();
+    delete offscreen_pixmap_;
+    offscreen_pixmap_ = NULL;
   }
 
-  // FIXME: support clip region.
-  view_->Layout();
-  view_->AddRectangleToClipRegion(
-      Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
-
-  if (enable_input_mask_) {
-    if (!offscreen_pixmap_
-        || offscreen_pixmap_->width() != width()
-        || offscreen_pixmap_->height() != height()) {
-      if (offscreen_pixmap_) delete offscreen_pixmap_;
+  uint64_t current_time = GetGlobalMainLoop()->GetCurrentTime();
+  if (enable_input_mask_ &&
+      (current_time - last_mask_time_ > kUpdateMaskInterval)) {
+    last_mask_time_ = current_time;
+    // Only update input mask once per second.
+    if (!offscreen_pixmap_) {
       offscreen_pixmap_ = new QPixmap(width(), height());
+      offscreen_pixmap_->fill(Qt::transparent);
+      view_->AddRectangleToClipRegion(
+          Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
     }
-    // Draw view on offscreen pixmap
+
+    QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
     QPainter poff(offscreen_pixmap_);
+    poff.setClipRegion(clip_region, Qt::IntersectClip);
+    poff.setCompositionMode(QPainter::CompositionMode_Clear);
+    poff.fillRect(rect(), Qt::transparent);
     poff.scale(zoom_, zoom_);
-    poff.setCompositionMode(QPainter::CompositionMode_Source);
-    poff.fillRect(offscreen_pixmap_->rect(), Qt::transparent);
+
     QtCanvas canvas(width(), height(), &poff);
     view_->Draw(&canvas);
     SetInputMask(offscreen_pixmap_);
+
+    p.setClipRegion(clip_region, Qt::IntersectClip);
+    p.setCompositionMode(QPainter::CompositionMode_Source);
     p.drawPixmap(0, 0, *offscreen_pixmap_);
   } else {
-    // Draw directly on widget
+    QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
+    p.setClipRegion(clip_region, Qt::IntersectClip);
+    p.setCompositionMode(QPainter::CompositionMode_Clear);
+    p.fillRect(rect(), Qt::transparent);
+    p.scale(zoom_, zoom_);
     QtCanvas canvas(width(), height(), &p);
     view_->Draw(&canvas);
   }
+
+#ifdef _DEBUG
+  ++draw_count_;
+  uint64_t duration = current_time - last_fps_time_;
+  if (duration >= kFPSCountDuration) {
+    last_fps_time_ = current_time;
+    DLOG("FPS of View %s: %f", view_->GetCaption().c_str(),
+         static_cast<double>(draw_count_ * 1000) /
+         static_cast<double>(duration));
+    draw_count_ = 0;
+  }
+#endif
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
@@ -492,7 +555,11 @@ void QtViewWidget::EnableInputShapeMask(bool enable) {
   if (!support_input_mask_) return;
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;
-    if (!enable) SetInputMask(NULL);
+    if (!enable) {
+      SetInputMask(NULL);
+      delete offscreen_pixmap_;
+      offscreen_pixmap_ = NULL;
+    }
   }
 }
 

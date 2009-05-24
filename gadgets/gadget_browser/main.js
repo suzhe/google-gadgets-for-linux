@@ -21,14 +21,15 @@ var kPluginBoxHeight = 124;
 var kDefaultPluginRows = 3;
 var kDefaultPluginColumns = 4;
 var kCategoryGap = 15;
-var kFixedExtraWidth = 178;
+var kFixedExtraWidth = 142;
 var kFixedExtraHeight = 183;
 var kBorderMarginH = 12;
 var kBorderMarginV = 30;
+var kWindowMarginH = 12;
+var kCategoryItemWidth = 140;
+
 var kMinWidth = kFixedExtraWidth + 3 * kPluginBoxWidth + kBorderMarginH;
 var kMinHeight = kFixedExtraHeight + kPluginBoxHeight + kBorderMarginV;
-var kMaxWidth = kFixedExtraWidth + 5 * kPluginBoxWidth + kBorderMarginH;
-var kMaxHeight = kFixedExtraHeight + 4 * kPluginBoxHeight + kBorderMarginV;
 
 // Default layout: 714x555.
 var gPluginRows = kDefaultPluginRows;
@@ -53,10 +54,39 @@ function init() {
   UpdateLanguageBox();
 }
 
+function init_layout() {
+  var category_width = 0;
+  for (var i in kTopCategories) {
+    var category = kTopCategories[i];
+    category_item_ruler.value = GetDisplayCategory(category);
+    var width = category_item_ruler.idealBoundingRect.width;
+    category_width = Math.max(category_width, width);
+  }
+  for (var i in kBottomCategories) {
+    var category = kBottomCategories[i];
+    category_item_ruler.value = GetDisplayCategory(category);
+    var width = category_item_ruler.idealBoundingRect.width;
+    category_width = Math.max(category_width, width);
+  }
+  kCategoryItemWidth = category_width;
+  category_width = category_width + 20;
+  if (category_width > categories_div.offsetWidth) {
+    categories_div.width = category_width;
+    plugins_div.x = categories_div.offsetX + category_width + 10;
+    plugin_info_div.x = plugins_div.offsetX;
+    kFixedExtraWidth = category_width + kWindowMarginH + 10;
+    kMinWidth = kFixedExtraWidth + 3 * kPluginBoxWidth + kBorderMarginH;
+    debug.trace("category_width:" + category_width);
+    debug.trace("kFixedExtraWidth:" + kFixedExtraWidth);
+  }
+  view.removeElement(category_item_ruler);
+}
+
 function view_onopen() {
   var screen_width = system.screen.size.width;
   var screen_height = system.screen.size.height;
   var width, height;
+  init_layout();
   if (screen_width >= 1024) {
     width = kFixedExtraWidth + 4 * kPluginBoxWidth + kBorderMarginH;
   } else if (screen_width >= 800) {
@@ -92,13 +122,9 @@ function view_oncontextmenu() {
 function view_onsizing() {
   if (event.width < kMinWidth) {
     event.width = kMinWidth;
-//  } else if (event.width > kMaxWidth) {
-//    event.width = kMaxWidth;
   }
   if (event.height < kMinHeight) {
     event.height = kMinHeight;
-//  } else if (event.height > kMaxHeight) {
-//    event.height = kMaxHeight;
   }
 }
 
@@ -247,11 +273,12 @@ function SelectLanguage(language) {
 
 function AddCategoryButton(category, y) {
   categories_div.appendElement(
-    "<label x='5%' width='90%' height='" + kCategoryButtonHeight + "' y='" + y +
+    "<label x='10' width='" + kCategoryItemWidth + "' height='" +
+    kCategoryButtonHeight + "' y='" + y +
     "' align='left' vAlign='middle' enabled='true' color='#FFFFFF' name='" +
     category + "' size='10' trimming='character-ellipsis'" +
     " onmouseover='category_onmouseover()' onmouseout='category_onmouseout()'" +
-    " onclick='SelectCategory(\"" + category + "\")'>&#160;" +
+    " onclick='SelectCategory(\"" + category + "\")'>" +
     GetDisplayCategory(category) + "</label>");
 }
 

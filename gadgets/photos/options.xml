@@ -16,20 +16,20 @@
   -->
 
 <view height="350" width="500" onopen="optionOpen()" onok="optionOk()">
-  <label width="500" height="50" wordWrap="true" size="9">&OPTIONS_MESSAGE_ADD;</label>
-  <button name="add_folder_button" width="100" height="22" x="400" y="55"
+  <label width="500" height="60" wordWrap="true" size="9">&OPTIONS_MESSAGE_ADD;</label>
+  <button name="add_folder_button" width="100" height="22" x="400" y="65"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
           enabled="true"
           onclick="onBrowseLocal()" caption="&OPTIONS_ADD_FOLDER;" size="8" />
-  <div background="#000000" x="0" y="80" width="350" height="20">
+  <div background="#000000" x="0" y="90" width="350" height="20">
     <edit name="urleditor" width="348" x="1" y="1" height="18" enabled="true"
           onchange="urladdor.enabled = urleditor.value ? true: false;"
           onmouseover="urleditor.focus()"/>
   </div>
-  <button enabled="false" name="urladdor" x="400" y="80" width="100" height="22"
+  <button enabled="false" name="urladdor" x="400" y="90" width="100" height="22"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
           onclick="onAddUrl()" caption="&OPTIONS_ADD_URL;" size="8" />
-  <div background="#000000" x="0" y="110" width="100%" height="140">
+  <div background="#000000" x="0" y="120" width="100%" height="140">
     <listbox name="urlitems" x="1" y="1" width="498" height="138"
              enabled="true" multiSelect="true"
              itemHeight="22" itemWidth="496" itemSelectedColor="#66aabbff"
@@ -38,11 +38,11 @@
              onkeypress="urlitemsKeypress()" />
   </div>
 
-  <button enabled="false" name="urlremover" height="22"  width="100" x="400" y="255"
+  <button enabled="false" name="urlremover" height="22"  width="100" x="400" y="265"
           image="images/lbutton_up.png" downImage="images/lbutton_down.png" overImage="images/lbutton_over.png"
           onclick="onRemoveUrl()" caption="&OPTIONS_REMOVE;" size="8" />
 
-  <div name="feedurls_wrap" width="500" height="200" y="50" background="#000000" visible="false">
+  <div name="feedurls_wrap" width="500" height="200" y="60" background="#000000" visible="false">
     <edit name="feedurls" x="1" y="1" width="498" height="198" multiline="true" />
   </div>
 

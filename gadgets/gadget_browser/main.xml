@@ -15,9 +15,11 @@
   limitations under the License.
 -->
 
-<view width="726" height="585" resizable="true" onopen="view_onopen()"
+<view width="700" height="585" resizable="true" onopen="view_onopen()"
   onclose="view_onclose()" oncontextmenu="view_oncontextmenu()"
   onsizing="view_onsizing()" onsize="view_onsize()">
+  <edit name="category_item_ruler" visible="false" multiline="false"
+    wordWrap="false" readonly="true" size="10"/>
 
   <img name="bg_top_left" src="images/bg_top_left.png"/>
   <div name="bg_top_middle" background="images/bg_top_middle.png"
@@ -34,11 +36,11 @@
   <img name="bg_bottom_left" src="images/bg_bottom_left.png"
     pinY="100%" y="100%"/>
   <div name="bg_bottom_middle" background="images/bg_bottom_middle.png"
-    pinY="100%" y="100%" x="12" width="702" height="120"/>
+    pinY="100%" y="100%" x="12" width="676" height="120"/>
   <img name="bg_bottom_right" src="images/bg_bottom_right.png"
     pinX="100%" x="100%" pinY="100%" y="100%"/>
 
-  <div name="window_body" x="6" y="24" width="714" height="555"
+  <div name="window_body" x="6" y="24" width="688" height="555"
     onsize="window_onsize()">
     <label name="language_label" x="10" y="19" size="10" color="#FFFFFF"
       vAlign="middle" onsize="language_label_onsize()">
@@ -51,35 +53,35 @@
         type="droplist" background="#FFFFFF" itemWidth="100%" itemHeight="19"
         maxDroplistItems="30" onchange="language_box_onchange()"/>
     </div>
-    <div name="search_div" width="207" height="50" x="100%" pinX="100%">
-      <div width="158" height="23" y="17">
+    <div name="search_div" width="215" height="50" x="100%" pinX="100%">
+      <div width="166" height="23" y="17">
         <img width="100%" height="100%" src="images/control_border.png"
           stretchMiddle="true"/>
-        <edit name="search_box" width="152" height="19" x="3" y="2"
+        <edit name="search_box" width="160" height="19" x="3" y="2"
           value="&SEARCH_GADGETS;" color="#808080" size="10"
           onchange="search_box_onchange()" onfocusin="search_box_onfocusin()"
           onfocusout="search_box_onfocusout()"/>
       </div>
-      <button name="search_button" x="156" y="8"
+      <button name="search_button" x="164" y="8"
          image="images/search_lens_default.png"
         downImage="images/search_lens_down.png"
         overImage="images/search_lens_hover.png"
         onclick="DoSearch()"/>
     </div>
-    <div name="categories_div" width="147" height="400" x="6" y="83"
+    <div name="categories_div" width="120" height="400" x="6" y="83"
       autoscroll="true" scrollbar.lineStep="23"
       scrollbar.leftImage="x" scrollbar.rightImage="x"
       scrollbar.background="images/scrollbar_track.png"
       scrollbar.thumbImage="images/scrollbar_thumb.png"
       scrollbar.thumbOverImage="images/scrollbar_thumb.png"
       scrollbar.thumbDownImage="images/scrollbar_thumb.png">
-       <img name="category_hover_img" opacity="55" width="135" height="23"
-         visible="false" src="images/category_hover.png" stretchMiddle="true"/>
-       <img name="category_active_img" height="23" width="135" visible="false"
-         src="images/category_active.png" stretchMiddle="true"/>
+      <img name="category_hover_img" opacity="55" width="100%" height="23"
+        visible="false" src="images/category_hover.png" stretchMiddle="true"/>
+      <img name="category_active_img" height="23" width="100%" visible="false"
+        src="images/category_active.png" stretchMiddle="true"/>
     </div>
-    <div name="plugins_div" width="536" height="372" x="162" y="62"/>
-    <div name="plugin_info_div" width="530" height="113" x="162"
+    <div name="plugins_div" width="536" height="372" x="136" y="62"/>
+    <div name="plugin_info_div" width="536" height="113" x="136"
       y="100%" pinY="100%">
       <label name="plugin_title" width="100%" color="#FFFFFF" size="9"
         trimming="character-ellipsis"/>

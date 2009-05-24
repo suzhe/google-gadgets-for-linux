@@ -15,6 +15,7 @@
 
 GADGET_BROWSER_FILES= \
 		en/strings.xml \
+		fr/strings.xml \
 		zh-CN/strings.xml \
 		gadget.gmanifest \
 		images/add_button_default.png \

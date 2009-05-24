@@ -551,6 +551,7 @@ class BasicElement::Impl : public SmallObject<> {
       if (indirect_draw) {
         if (cache_) {
           target = cache_;
+          target->PushState();
         } else {
           target = view_->GetGraphics()->NewCanvas(width, height);
           force_draw = true;
@@ -593,6 +594,8 @@ class BasicElement::Impl : public SmallObject<> {
         // Don't destroy canvas cache.
         if (cache_ != target)
           target->Destroy();
+        else
+          target->PopState();
       }
 
       canvas->PopState();
