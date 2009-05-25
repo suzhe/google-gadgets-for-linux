@@ -173,17 +173,23 @@ class QtCanvas::Impl {
     QPainter *p = painter_;
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
     const QtCanvas *m = reinterpret_cast<const QtCanvas*>(mask);
-    QImage simg = *s->GetImage();
-    simg.setAlphaChannel(*m->GetImage());
-    Impl *impl = s->impl_;
+    QImage *simg = s->GetImage();
+    // FIXME: the content of img will be changed. but hopefully it's ok
+    // in current drawing model, where DrawCanvasWithMask() is only used in
+    // BasicElement's Draw() method and img is a temporary buffer.
+    QPainter *spainter = s->GetQPainter();
+    spainter->setCompositionMode(QPainter::CompositionMode_DestinationIn);
+    spainter->drawImage(0, 0, *m->GetImage());
+    spainter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+    Impl *simpl = s->impl_;
     double sx, sy;
-    if (impl->GetScale(&sx, &sy) && image_) {
+    if (simpl->GetScale(&sx, &sy) && image_) {
       p->save();
       p->scale(sx, sy);
-      p->drawImage(QPointF(x / sx, y / sy), simg);
+      p->drawImage(QPointF(x / sx, y / sy), *simg);
       p->restore();
     } else {
-      p->drawImage(QPointF(x, y), simg);
+      p->drawImage(QPointF(x, y), *simg);
     }
     return true;
   }
@@ -559,7 +565,7 @@ QImage* QtCanvas::GetImage() const {
   return impl_->image_;
 }
 
-QPainter* QtCanvas::GetQPainter() {
+QPainter* QtCanvas::GetQPainter() const {
   return impl_->painter_;
 }
 

@@ -137,13 +137,15 @@ static QRegion CreateClipRegion(const ClipRegion *view_region, double zoom) {
 }
 
 void QtViewWidget::QueueDraw() {
-  draw_queued_ = true;
+  if (isVisible() && updatesEnabled()) {
+    draw_queued_ = true;
 
-  if (!redraw_timer_) {
-    // Can't call view's GetCaption() here, because at this point, view might
-    // not be fully initialized yet.
-    DLOG("Install queue draw timer of view: %p", view_);
-    redraw_timer_ = startTimer(kQueueDrawInterval);
+    if (!redraw_timer_) {
+      // Can't call view's GetCaption() here, because at this point, view might
+      // not be fully initialized yet.
+      DLOG("Install queue draw timer of view: %p", view_);
+      redraw_timer_ = startTimer(kQueueDrawInterval);
+    }
   }
 }
 
@@ -151,12 +153,13 @@ void QtViewWidget::timerEvent(QTimerEvent *event) {
   uint64_t current_time = GetGlobalMainLoop()->GetCurrentTime();
   if (draw_queued_) {
     draw_queued_ = false;
-    view_->Layout();
-    QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
-    if (!clip_region.isEmpty()) {
-      self_redraw_ = true;
-      repaint(clip_region);
-      self_redraw_ = false;
+    if (isVisible() && updatesEnabled()) {
+      view_->Layout();
+      QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
+      if (!clip_region.isEmpty()) {
+        self_redraw_ = true;
+        repaint(clip_region);
+      }
     }
     last_redraw_time_ = current_time;
   }
@@ -184,6 +187,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     view_->AddRectangleToClipRegion(
         Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
   }
+  self_redraw_ = false;
 
   if (old_width_ != width() || old_height_ != height()) {
     view_->AddRectangleToClipRegion(

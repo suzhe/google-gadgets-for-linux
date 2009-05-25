@@ -105,7 +105,7 @@ class QtCanvas : public CanvasInterface {
   bool IsValid() const;
 
   QImage* GetImage() const;
-  QPainter *GetQPainter();
+  QPainter *GetQPainter() const;
 
  private:
   class Impl;
