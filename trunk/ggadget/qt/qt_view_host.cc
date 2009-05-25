@@ -100,7 +100,7 @@ void QtViewHost::NativeWidgetCoordToViewCoord(
 
 void QtViewHost::QueueDraw() {
   if (impl_->widget_)
-    impl_->widget_->update();
+    impl_->widget_->QueueDraw();
 }
 
 void QtViewHost::QueueResize() {

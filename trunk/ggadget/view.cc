@@ -1219,16 +1219,22 @@ class View::Impl : public SmallObject<> {
     clip_region_.PrintLog();
 #endif
 
+    bool reset_clip_region = false;
     if (enable_cache_ && !canvas_cache_ && graphics_) {
       canvas_cache_ = graphics_->NewCanvas(width_, height_);
+      // If need_redraw_ was false, then clip region needs resetting.
+      reset_clip_region = !need_redraw_;
       need_redraw_ = true;
     }
 
-    if (need_redraw_) {
+    if (reset_clip_region) {
       // Add whole view into clip region, so that all elements will be redrawn
       // correctly.
       clip_region_.Clear();
       clip_region_.AddRectangle(Rectangle(0, 0, width_, height_));
+      if (on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+        on_add_rectangle_to_clip_region_(0, 0, width_, height_);
+      }
     }
 
     CanvasInterface *target;
@@ -2038,13 +2044,15 @@ bool View::IsClipRegionEnabled() const {
 }
 
 void View::AddRectangleToClipRegion(const Rectangle &rect) {
-  Rectangle view_rect(0, 0, impl_->width_, impl_->height_);
-  if (view_rect.Intersect(rect)) {
-    view_rect.Integerize(true);
-    impl_->clip_region_.AddRectangle(view_rect);
-    if (impl_->on_add_rectangle_to_clip_region_.HasActiveConnections()) {
-      impl_->on_add_rectangle_to_clip_region_(
-          view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+  if (!impl_->enable_cache_) {
+    Rectangle view_rect(0, 0, impl_->width_, impl_->height_);
+    if (view_rect.Intersect(rect)) {
+      view_rect.Integerize(true);
+      impl_->clip_region_.AddRectangle(view_rect);
+      if (impl_->on_add_rectangle_to_clip_region_.HasActiveConnections()) {
+        impl_->on_add_rectangle_to_clip_region_(
+            view_rect.x, view_rect.y, view_rect.w, view_rect.h);
+      }
     }
   }
 }
