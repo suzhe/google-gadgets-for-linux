@@ -56,6 +56,8 @@ class QtViewWidget : public QWidget {
   void SetView(ViewInterface *view);
   virtual QSize sizeHint () const;
 
+  void QueueDraw();
+
  protected:
   virtual void paintEvent(QPaintEvent *event);
   virtual void mouseDoubleClickEvent(QMouseEvent *event);
@@ -75,7 +77,10 @@ class QtViewWidget : public QWidget {
   virtual void resizeEvent(QResizeEvent *event);
   virtual void focusInEvent(QFocusEvent *event);
   virtual void focusOutEvent(QFocusEvent *event);
+  virtual void timerEvent(QTimerEvent *event);
+
   void SetInputMask(QPixmap *pixmap);
+
   ViewInterface *view_;
   const char **drag_files_;
   const char **drag_urls_;
@@ -101,6 +106,11 @@ class QtViewWidget : public QWidget {
   int old_width_, old_height_;
   // used as coefficient of mouse move in window resize
   int top_, bottom_, left_, right_;
+
+  uint64_t last_redraw_time_;
+  int redraw_timer_;
+  bool draw_queued_;
+  bool self_redraw_;
 
  signals:
   void moved(int x, int y);

@@ -51,6 +51,12 @@ static const uint64_t kFPSCountDuration = 5000;
 // update input mask once per second.
 static const uint64_t kUpdateMaskInterval = 1000;
 
+// Minimal interval between queue draws.
+static const unsigned int kQueueDrawInterval = 40;
+
+// Maximum live duration of queue draw timer.
+static const uint64_t kQueueDrawTimerDuration = 1000;
+
 QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     : view_(view),
       drag_files_(NULL),
@@ -72,7 +78,11 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
       resize_drag_(false),
       old_width_(0),
-      old_height_(0) {
+      old_height_(0),
+      last_redraw_time_(0),
+      redraw_timer_(0),
+      draw_queued_(false),
+      self_redraw_(false) {
   setMouseTracking(true);
   setAcceptDrops(true);
   AdjustToViewSize();
@@ -80,10 +90,16 @@ QtViewWidget::QtViewWidget(ViewInterface *view, QtViewWidget::Flags flags)
     setWindowFlags(Qt::FramelessWindowHint);
     SetUndecoratedWMProperties();
   }
-  setAttribute(Qt::WA_InputMethodEnabled);
-  setAttribute(Qt::WA_OpaquePaintEvent);
-  setAttribute(Qt::WA_NoSystemBackground);
   setAutoFillBackground(false);
+  setAttribute(Qt::WA_InputMethodEnabled);
+
+  if (composite_) {
+    setAttribute(Qt::WA_OpaquePaintEvent);
+    setAttribute(Qt::WA_NoSystemBackground);
+#if QT_VERSION >= QT_VERSION_CHECK(4,5,0)
+    setAttribute(Qt::WA_TranslucentBackground);
+#endif
+  }
 }
 
 QtViewWidget::~QtViewWidget() {
@@ -92,6 +108,7 @@ QtViewWidget::~QtViewWidget() {
     // Because I don't own child_, just let it go
     child_->setParent(NULL);
   }
+  if (redraw_timer_) killTimer(redraw_timer_);
   if (offscreen_pixmap_) delete offscreen_pixmap_;
   if (drag_files_) delete [] drag_files_;
   if (drag_urls_) delete [] drag_urls_;
@@ -119,25 +136,62 @@ static QRegion CreateClipRegion(const ClipRegion *view_region, double zoom) {
   return qregion;
 }
 
+void QtViewWidget::QueueDraw() {
+  draw_queued_ = true;
+
+  if (!redraw_timer_) {
+    // Can't call view's GetCaption() here, because at this point, view might
+    // not be fully initialized yet.
+    DLOG("Install queue draw timer of view: %p", view_);
+    redraw_timer_ = startTimer(kQueueDrawInterval);
+  }
+}
+
+void QtViewWidget::timerEvent(QTimerEvent *event) {
+  uint64_t current_time = GetGlobalMainLoop()->GetCurrentTime();
+  if (draw_queued_) {
+    draw_queued_ = false;
+    view_->Layout();
+    QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
+    if (!clip_region.isEmpty()) {
+      self_redraw_ = true;
+      repaint(clip_region);
+      self_redraw_ = false;
+    }
+    last_redraw_time_ = current_time;
+  }
+
+  if (current_time - last_redraw_time_ > kQueueDrawTimerDuration) {
+    DLOG("Remove queue draw timer of view: %p (%s)", view_,
+         view_->GetCaption().c_str());
+    killTimer(redraw_timer_);
+    redraw_timer_ = 0;
+  }
+}
+
 void QtViewWidget::paintEvent(QPaintEvent *event) {
   if (!view_) return;
   QPainter p(this);
-  view_->Layout();
+  p.setClipRegion(event->region());
 
-  DLOG("paint: %p, ow:%d, oh:%d, w:%d, h:%d, vw:%f, vh:%f, uw:%d, uh:%d",
-       view_, old_width_, old_height_, width(), height(),
+  DLOG("paint %p: s:%d, ow:%d, oh:%d, w:%d, h:%d, vw:%f, vh:%f, uw:%d, uh:%d",
+       view_, self_redraw_, old_width_, old_height_, width(), height(),
        view_->GetWidth(), view_->GetHeight(),
        event->rect().width(), event->rect().height());
 
-  if (old_width_ != width() || old_height_ != height() ||
-      rect() != event->rect()) {
+  if (!self_redraw_) {
+    view_->Layout();
+    view_->AddRectangleToClipRegion(
+        Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
+  }
+
+  if (old_width_ != width() || old_height_ != height()) {
     view_->AddRectangleToClipRegion(
         Rectangle(0, 0, view_->GetWidth(), view_->GetHeight()));
     old_width_ = width();
     old_height_ = height();
     delete offscreen_pixmap_;
     offscreen_pixmap_ = NULL;
-    p.setClipRect(rect());
   }
 
   uint64_t current_time = GetGlobalMainLoop()->GetCurrentTime();
@@ -156,28 +210,19 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     QPainter poff(offscreen_pixmap_);
     poff.setClipRegion(clip_region);
     poff.setCompositionMode(QPainter::CompositionMode_Clear);
-    if (composite_) {
-      poff.fillRect(rect(), Qt::transparent);
-    } else {
-      poff.fillRect(rect(), palette().window());
-    }
+    poff.fillRect(rect(), Qt::transparent);
     poff.scale(zoom_, zoom_);
 
     QtCanvas canvas(width(), height(), &poff);
     view_->Draw(&canvas);
     SetInputMask(offscreen_pixmap_);
 
-    p.setClipRegion(clip_region, Qt::UniteClip);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.drawPixmap(0, 0, *offscreen_pixmap_);
   } else {
-    QRegion clip_region = CreateClipRegion(view_->GetClipRegion(), zoom_);
-    p.setClipRegion(clip_region, Qt::UniteClip);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
     if (composite_) {
+      p.setCompositionMode(QPainter::CompositionMode_Source);
       p.fillRect(rect(), Qt::transparent);
-    } else {
-      p.fillRect(rect(), palette().window());
     }
     p.scale(zoom_, zoom_);
     QtCanvas canvas(width(), height(), &p);
