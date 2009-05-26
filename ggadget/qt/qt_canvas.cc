@@ -51,7 +51,7 @@ static void MakeImageTransparent(QImage *img) {
 static void SetupPainter(QPainter *p) {
   p->setCompositionMode(QPainter::CompositionMode_SourceOver);
   p->setRenderHint(QPainter::SmoothPixmapTransform, true);
-  p->setRenderHint(QPainter::Antialiasing, true);
+  p->setRenderHint(QPainter::Antialiasing, false);
   p->setBackground(Qt::transparent);
 }
 
