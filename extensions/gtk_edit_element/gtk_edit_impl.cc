@@ -146,7 +146,7 @@ void GtkEditImpl::FocusIn() {
     selection_changed_ = true;
     cursor_moved_ = true;
     // Don't adjust scroll.
-    QueueRefresh(false, false);
+    QueueRefresh(false, NO_SCROLL);
   }
 }
 
@@ -160,7 +160,7 @@ void GtkEditImpl::FocusOut() {
     selection_changed_ = true;
     cursor_moved_ = true;
     // Don't adjust scroll.
-    QueueRefresh(false, false);
+    QueueRefresh(false, NO_SCROLL);
   }
 }
 
@@ -169,7 +169,7 @@ void GtkEditImpl::SetWidth(int width) {
     width_ = width;
     if (width_ <= kInnerBorderX * 2)
       width_ = kInnerBorderX * 2 + 1;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -182,7 +182,7 @@ void GtkEditImpl::SetHeight(int height) {
     height_ = height;
     if (height_ <= kInnerBorderY * 2)
       height_ = kInnerBorderY * 2 + 1;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -211,7 +211,7 @@ void GtkEditImpl::GetSizeRequest(int *width, int *height) {
 void GtkEditImpl::SetBold(bool bold) {
   if (bold_ != bold) {
     bold_ = bold;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -222,7 +222,7 @@ bool GtkEditImpl::IsBold() {
 void GtkEditImpl::SetItalic(bool italic) {
   if (italic_ != italic) {
     italic_ = italic;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -233,7 +233,7 @@ bool GtkEditImpl::IsItalic() {
 void GtkEditImpl::SetStrikeout(bool strikeout) {
   if (strikeout_ != strikeout) {
     strikeout_ = strikeout;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -244,7 +244,7 @@ bool GtkEditImpl::IsStrikeout() {
 void GtkEditImpl::SetUnderline(bool underline) {
   if (underline_ != underline) {
     underline_ = underline;
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
   }
 }
 
@@ -257,7 +257,7 @@ void GtkEditImpl::SetMultiline(bool multiline) {
     multiline_ = multiline;
     if (!multiline_)
       SetText(CleanupLineBreaks(text_.c_str()).c_str());
-    QueueRefresh(true, true);
+    QueueRefresh(true, CENTER_CURSOR);
   }
 }
 
@@ -268,7 +268,7 @@ bool GtkEditImpl::IsMultiline() {
 void GtkEditImpl::SetWordWrap(bool wrap) {
   if (wrap_ != wrap) {
     wrap_ = wrap;
-    QueueRefresh(true, true);
+    QueueRefresh(true, CENTER_CURSOR);
   }
 }
 
@@ -294,7 +294,7 @@ void GtkEditImpl::SetReadOnly(bool readonly) {
         gtk_im_context_focus_in(im_context_);
     }
   }
-  QueueRefresh(false, false);
+  QueueRefresh(false, NO_SCROLL);
 }
 
 bool GtkEditImpl::IsReadOnly() {
@@ -314,7 +314,7 @@ void GtkEditImpl::SetText(const char* text) {
   selection_bound_ = 0;
   need_im_reset_ = true;
   ResetImContext();
-  QueueRefresh(true, true);
+  QueueRefresh(true, MINIMAL_ADJUST);
   owner_->FireOnChangeEvent();
 }
 
@@ -326,7 +326,7 @@ void GtkEditImpl::SetBackground(Texture *background) {
   if (background_)
     delete background_;
   background_ = background;
-  QueueRefresh(false, false);
+  QueueRefresh(false, NO_SCROLL);
 }
 
 const Texture *GtkEditImpl::GetBackground() {
@@ -336,7 +336,7 @@ const Texture *GtkEditImpl::GetBackground() {
 void GtkEditImpl::SetTextColor(const Color &color) {
   text_color_ = color;
   content_modified_ = true;
-  QueueRefresh(false, false);
+  QueueRefresh(false, NO_SCROLL);
 }
 
 Color GtkEditImpl::GetTextColor() {
@@ -345,7 +345,7 @@ Color GtkEditImpl::GetTextColor() {
 
 void GtkEditImpl::SetFontFamily(const char *font) {
   if (AssignIfDiffer(font, &font_family_))
-    QueueRefresh(true, true);
+    QueueRefresh(true, MINIMAL_ADJUST);
 }
 
 std::string GtkEditImpl::GetFontFamily() {
@@ -353,7 +353,7 @@ std::string GtkEditImpl::GetFontFamily() {
 }
 
 void GtkEditImpl::OnFontSizeChange() {
-  QueueRefresh(true, true);
+  QueueRefresh(true, MINIMAL_ADJUST);
 }
 
 void GtkEditImpl::SetPasswordChar(const char *c) {
@@ -364,7 +364,7 @@ void GtkEditImpl::SetPasswordChar(const char *c) {
     SetVisibility(false);
     password_char_.assign(c, GetUTF8CharLength(c));
   }
-  QueueRefresh(true, true);
+  QueueRefresh(true, CENTER_CURSOR);
 }
 
 std::string GtkEditImpl::GetPasswordChar() {
@@ -419,13 +419,13 @@ void GtkEditImpl::ScrollTo(int position) {
 
     scroll_offset_y_ = -position;
     content_modified_ = true;
-    QueueRefresh(false, false);
+    QueueRefresh(false, NO_SCROLL);
   }
 }
 
 void GtkEditImpl::MarkRedraw() {
   content_modified_ = true;
-  QueueRefresh(false, false);
+  QueueRefresh(false, NO_SCROLL);
 }
 
 EventResult GtkEditImpl::OnMouseEvent(const MouseEvent &event) {
@@ -467,7 +467,7 @@ EventResult GtkEditImpl::OnMouseEvent(const MouseEvent &event) {
   } else if (type == Event::EVENT_MOUSE_MOVE) {
     SetSelectionBounds(selection_bound_, index);
   }
-  QueueRefresh(false, true);
+  QueueRefresh(false, MINIMAL_ADJUST);
   return EVENT_RESULT_HANDLED;
 }
 
@@ -482,7 +482,7 @@ EventResult GtkEditImpl::OnKeyEvent(const KeyboardEvent &event) {
   if (!readonly_ && im_context_ && type != Event::EVENT_KEY_PRESS &&
       gtk_im_context_filter_keypress(im_context_, gdk_event)) {
     need_im_reset_ = true;
-    QueueRefresh(false, true);
+    QueueRefresh(false, MINIMAL_ADJUST);
     return EVENT_RESULT_HANDLED;
   }
 
@@ -548,7 +548,7 @@ EventResult GtkEditImpl::OnKeyEvent(const KeyboardEvent &event) {
     }
   }
 
-  QueueRefresh(false, true);
+  QueueRefresh(false, CENTER_CURSOR);
   return EVENT_RESULT_HANDLED;
 }
 
@@ -737,7 +737,9 @@ PangoLayout* GtkEditImpl::CreateLayout() {
   return layout;
 }
 
-void GtkEditImpl::AdjustScroll() {
+void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
+  if (policy == NO_SCROLL) return;
+
   int old_offset_x = scroll_offset_x_;
   int old_offset_y = scroll_offset_y_;
   int display_width = width_ - kInnerBorderX * 2;
@@ -761,10 +763,20 @@ void GtkEditImpl::AdjustScroll() {
     else
       scroll_offset_x_ = 0;
   } else {
-    if (scroll_offset_x_ + strong_x < 0)
-      scroll_offset_x_ = -strong_x;
-    else if (scroll_offset_x_ + strong_x > display_width)
-      scroll_offset_x_ = display_width - strong_x;
+    if (scroll_offset_x_ + strong_x < 0) {
+      if (policy == CENTER_CURSOR) {
+        scroll_offset_x_ = std::min(0, display_width / 2 - strong_x);
+      } else {
+        scroll_offset_x_ = -strong_x;
+      }
+    } else if (scroll_offset_x_ + strong_x > display_width) {
+      if (policy == CENTER_CURSOR) {
+        scroll_offset_x_ = std::max(display_width - text_width,
+                                    display_width / 2 - strong_x);
+      } else {
+        scroll_offset_x_ = display_width - strong_x;
+      }
+    }
 
     if (std::abs(weak_x - strong_x) < display_width) {
       if (scroll_offset_x_ + weak_x < 0)
@@ -787,13 +799,13 @@ void GtkEditImpl::AdjustScroll() {
     content_modified_ = true;
 }
 
-void GtkEditImpl::QueueRefresh(bool relayout, bool adjust_scroll) {
-  // DLOG("GtkEditImpl::QueueRefresh(%d,%d)", relayout, adjust_scroll);
+void GtkEditImpl::QueueRefresh(bool relayout, AdjustScrollPolicy policy) {
+  // DLOG("GtkEditImpl::QueueRefresh(%d,%d)", relayout, policy);
   if (relayout)
     ResetLayout();
 
-  if (adjust_scroll)
-    AdjustScroll();
+  if (policy != NO_SCROLL)
+    AdjustScroll(policy);
 
   QueueDraw();
   QueueCursorBlink();
@@ -1170,8 +1182,6 @@ void GtkEditImpl::MoveCursor(MovementStep step, int count, bool extend_selection
     SetSelectionBounds(selection_bound_, new_cursor);
   else
     SetCursor(new_cursor);
-
-  QueueRefresh(false, true);
 }
 
 int GtkEditImpl::MoveVisually(int current_index, int count) {
@@ -1609,12 +1619,12 @@ void GtkEditImpl::Select(int start, int end) {
   start = Clamp(start, 0, text_length);
   end = Clamp(end, 0, text_length);
   SetSelectionBounds(start, end);
-  QueueRefresh(false, true);
+  QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 void GtkEditImpl::SelectAll() {
   SetSelectionBounds(0, static_cast<int>(text_.length()));
-  QueueRefresh(false, true);
+  QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 CanvasInterface::Alignment GtkEditImpl::GetAlign() const {
@@ -1623,7 +1633,7 @@ CanvasInterface::Alignment GtkEditImpl::GetAlign() const {
 
 void GtkEditImpl::SetAlign(CanvasInterface::Alignment align) {
   align_ = align;
-  QueueRefresh(true, true);
+  QueueRefresh(true, CENTER_CURSOR);
 }
 
 void GtkEditImpl::DeleteSelection() {
@@ -1784,7 +1794,7 @@ void GtkEditImpl::UpdateIMCursorLocation() {
 void GtkEditImpl::CommitCallback(GtkIMContext *context, const char *str,
                                  void *gg) {
   reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
-  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, true);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 gboolean GtkEditImpl::RetrieveSurroundingCallback(GtkIMContext *context,
@@ -1812,14 +1822,14 @@ gboolean GtkEditImpl::DeleteSurroundingCallback(GtkIMContext *context, int offse
     if (end_ptr < text) end_ptr = text;
     int end_index = static_cast<int>(end_ptr - text);
     edit->DeleteText(start_index, end_index);
-    edit->QueueRefresh(false, true);
+    edit->QueueRefresh(false, CENTER_CURSOR);
   }
   return TRUE;
 }
 
 void GtkEditImpl::PreeditStartCallback(GtkIMContext *context, void *gg) {
   reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
-  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, true);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
   reinterpret_cast<GtkEditImpl*>(gg)->UpdateIMCursorLocation();
 }
 
@@ -1835,20 +1845,20 @@ void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
       static_cast<int>(g_utf8_offset_to_pointer(str, cursor_pos) - str);
   edit->preedit_.assign(str);
   g_free(str);
-  edit->QueueRefresh(true, true);
+  edit->QueueRefresh(true, MINIMAL_ADJUST);
   edit->need_im_reset_ = true;
   edit->content_modified_ = true;
 }
 
 void GtkEditImpl::PreeditEndCallback(GtkIMContext *context, void *gg) {
   reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
-  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, true);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 void GtkEditImpl::PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg) {
   reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
-  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, true);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 } // namespace gtk

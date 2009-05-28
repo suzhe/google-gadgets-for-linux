@@ -110,6 +110,12 @@ class GtkEditImpl {
     BUFFER
   };
 
+  enum AdjustScrollPolicy {
+    NO_SCROLL,
+    CENTER_CURSOR,
+    MINIMAL_ADJUST
+  };
+
   void QueueDraw();
   /** Remove the cached layout. */
   void ResetLayout();
@@ -122,13 +128,13 @@ class GtkEditImpl {
   PangoLayout* CreateLayout();
 
   /** Adjust the scroll information */
-  void AdjustScroll();
+  void AdjustScroll(AdjustScrollPolicy policy);
   /**
    * Send out a request to refresh all informations of the edit control
    * and queue a draw request.
    * If @c relayout is true then the layout will be regenerated.
    * */
-  void QueueRefresh(bool relayout, bool adjust_scroll);
+  void QueueRefresh(bool relayout, AdjustScrollPolicy policy);
   /** Reset the input method context */
   void ResetImContext();
   /** Reset preedit text */
