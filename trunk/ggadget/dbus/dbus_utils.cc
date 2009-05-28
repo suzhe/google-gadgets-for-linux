@@ -965,7 +965,8 @@ class DBusDemarshaller::Impl {
     delete iter_;
   }
   bool HasMoreItem() {
-    return dbus_message_iter_get_arg_type(iter_) != DBUS_TYPE_INVALID;
+    return dbus_message_iter_has_next(iter_) &&
+        dbus_message_iter_get_arg_type(iter_) != DBUS_TYPE_INVALID;
   }
   bool MoveToNextItem() {
     return dbus_message_iter_next(iter_);
@@ -1075,21 +1076,23 @@ class DBusDemarshaller::Impl {
               return false;
             Impl dict(iter_);
             ScriptableDBusContainerHolder obj(new ScriptableDBusContainer());
-            bool ret = false;
-            do {
-              Impl sub(dict.iter_);
-              Argument key(sig_list[0]);
-              Argument value(sig_list[1]);
-              ret = sub.GetArgument(&key) && sub.MoveToNextItem()
-                  && sub.GetArgument(&value);
-              if (!ret) break;
-              std::string name;
-              if (!key.value.v().ConvertToString(&name)) {
-                ret = false;
-                break;
-              }
-              obj.Get()->AddProperty(name, value.value.v());
-            } while(dict.MoveToNextItem());
+            bool ret = true;
+            if (dict.HasMoreItem()) {
+              do {
+                Impl sub(dict.iter_);
+                Argument key(sig_list[0]);
+                Argument value(sig_list[1]);
+                ret = sub.GetArgument(&key) && sub.MoveToNextItem()
+                    && sub.GetArgument(&value);
+                if (!ret) break;
+                std::string name;
+                if (!key.value.v().ConvertToString(&name)) {
+                  ret = false;
+                  break;
+                }
+                obj.Get()->AddProperty(name, value.value.v());
+              } while(dict.MoveToNextItem());
+            }
             if (!ret) {
               DLOG("Failed to demarshal dictionary: %s", dict_sig.c_str());
               return false;
@@ -1099,14 +1102,16 @@ class DBusDemarshaller::Impl {
           } else {
             std::string sub_type = GetElementType(index + 1);
             Impl sub(iter_);
-            bool ret;
+            bool ret = true;
             ScriptableHolder<ScriptableArray> array(new ScriptableArray());
-            do {
-              Argument arg(sub_type);
-              ret = sub.GetArgument(&arg);
-              if (ret)
-                array.Get()->Append(arg.value.v());
-            } while (ret && sub.MoveToNextItem());
+            if (sub.HasMoreItem()) {
+              do {
+                Argument arg(sub_type);
+                ret = sub.GetArgument(&arg);
+                if (ret)
+                  array.Get()->Append(arg.value.v());
+              } while (ret && sub.MoveToNextItem());
+            }
             if (!ret) {
               DLOG("Failed to demarshal array: %s", sub_type.c_str());
               return false;
