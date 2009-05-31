@@ -21,7 +21,7 @@
 #  Version
 #  Bug report address
 AC_INIT([google-gadgets-for-linux],
-        [0.10.5],
+        [0.11.0],
         [google-gadgets-for-linux-dev@googlegroups.com])
 
 # Requires autoconf version >= 2.50
@@ -49,8 +49,8 @@ ggl_save_LDFLAGS=$LDFLAGS
 
 # Version numbers of Google Gadgets for Linux package.
 GGL_MAJOR_VERSION=0
-GGL_MINOR_VERSION=10
-GGL_MICRO_VERSION=5
+GGL_MINOR_VERSION=11
+GGL_MICRO_VERSION=0
 
 GGL_VERSION_UNQUOTED="$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION"
 GGL_VERSION="\"$GGL_VERSION_UNQUOTED\""
@@ -93,7 +93,7 @@ AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
 # This string is used in auto update request. It should be updated to the
 # time of a release build is made. Its format is yymmdd-HHMMSS.
-GGL_VERSION_TIMESTAMP="\"090108-000000\""
+GGL_VERSION_TIMESTAMP="\"090528-000000\""
 AC_SUBST(GGL_VERSION_TIMESTAMP)
 
 # Define the version of Google Desktop Gadget API that this release supports.
@@ -221,12 +221,12 @@ AC_ARG_WITH([mozjs-libname],
             [with_mozjs_libname=libmozjs.so])
 
 AC_ARG_WITH([ssl-ca-file],
-            AS_HELP_STRING([--with-ssl-ca-file=/etc/ssl/certs/ca-certificates.crt],
+            AS_HELP_STRING([--with-ssl-ca-file=/path/to/ca-certificates.crt],
                 [Specifiy CA certificates file used by soup-xml-http-request
                  extension. If it's set to empty, then SSL certificate won't be
                  checked when accessing https:// sites. CAUTION: it should
                  always be set to a valid CA file, otherwise there will be
-                 serious security issue.]),
+                 serious security issue. It's not set by default.]),
             [default_ssl_ca_file=$withval],
             [default_ssl_ca_file=""])
 
