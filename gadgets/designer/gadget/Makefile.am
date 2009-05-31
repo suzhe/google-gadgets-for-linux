@@ -15,6 +15,7 @@
 
 DESIGNER_FILES= \
 		en/strings.xml \
+		fr/strings.xml \
 		images/border_bottom_left.png \
 		images/border_bottom_middle.png \
 		images/border_bottom_right.png \

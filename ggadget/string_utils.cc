@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstring>
+#include <clocale>
 #include <ctype.h>
 #include "gadget_consts.h"
 #include "string_utils.h"
@@ -104,6 +105,13 @@ void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
   backup_ap = ap;
 #endif
 
+  // Save current locale setting.
+  std::string old_locale(setlocale(LC_NUMERIC, NULL));
+
+  // Use built-in C locale to make sure the number will be converted in current
+  // format.
+  setlocale(LC_NUMERIC, "C");
+
   int result = vsnprintf(space, sizeof(space), format, backup_ap);
   va_end(backup_ap);
 
@@ -141,6 +149,8 @@ void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
       delete[] buf;
     }
   }
+
+  setlocale(LC_NUMERIC, old_locale.c_str());
 }
 
 std::string StringPrintf(const char *format, ...) {
