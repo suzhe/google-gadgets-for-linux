@@ -29,6 +29,8 @@
 #include "../converter.h"
 #include "../json.h"
 using namespace ggadget::qt;
+ggadget::qt::QtMainLoop g_main_loop;
+
 // The exception value thrown by Assert function.
 const int kAssertExceptionMagic = 135792468;
 
@@ -166,7 +168,6 @@ void DestroyCustomObjects(JSScriptContext *context);
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   QCoreApplication app(argc, argv);
-  ggadget::qt::QtMainLoop g_main_loop;
   ggadget::SetGlobalMainLoop(&g_main_loop);
 
   JSScriptRuntime *runtime = new JSScriptRuntime();
