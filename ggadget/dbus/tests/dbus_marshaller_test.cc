@@ -454,6 +454,8 @@ void TestContainerDemarshal() {
   ResultVariant dict = GenerateVariantDict(10, 123, 3, 256, 9);
   TestBasicDemarshal("a{yu}", "a{yu}", dict.v());
   TestBasicDemarshal("v", "v", dict.v());
+  ResultVariant empty_dict = GenerateVariantDict(0, 0, 0, 0, 0);
+  TestBasicDemarshal("a{sv}", "a{sv}", empty_dict.v());
 }
 
 template <typename T>

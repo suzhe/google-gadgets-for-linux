@@ -22,7 +22,7 @@
 # Commom part
 #############################################################################
 Name:           google-gadgets
-Version:        0.10.5
+Version:        0.11.0
 Release:        1
 License:        Apache License Version 2.0
 Group:          Productivity/Networking/Web/Utilities
@@ -419,7 +419,10 @@ Authors:
 # autoreconf
 %configure \
   --disable-werror \
-  --with-browser-plugins-dir=%{_libdir}/browser-plugins
+  --with-browser-plugins-dir=%{_libdir}/browser-plugins \
+  --disable-soup-xml-http-request \
+  --disable-webkit-script-runtime \
+  --disable-gtkwebkit-browser-element
 make %{?jobs:-j%jobs}
 %endif
 
@@ -427,7 +430,10 @@ make %{?jobs:-j%jobs}
 autoreconf
 %configure \
   --disable-werror \
-  --with-browser-plugins-dir=%{_libdir}/mozilla/plugins
+  --with-browser-plugins-dir=%{_libdir}/mozilla/plugins \
+  --disable-soup-xml-http-request \
+  --disable-webkit-script-runtime \
+  --disable-gtkwebkit-browser-element
 make %{?_smp_mflags}
 %endif
 
@@ -492,6 +498,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/modules/libxml2*.so
 %{_libdir}/google-gadgets/modules/curl*.so
 %{_libdir}/google-gadgets/modules/dbus*.so
+%{_libdir}/google-gadgets/modules/html*.so
 %dir %{_datadir}/google-gadgets/
 %{_datadir}/google-gadgets/*.gg
 %{_datadir}/mime/packages/*.xml
@@ -587,6 +594,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/google-gadgets/gtkmoz-browser-child
 
 %changelog
+* Sun May 31 2009 James Su <james.su@gmail.com>
+- Updates to version 0.11.0
+
 * Thu Jan 08 2009 James Su <james.su@gmail.com>
 - Updates to version 0.10.5
 
