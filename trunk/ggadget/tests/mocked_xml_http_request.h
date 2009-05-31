@@ -98,7 +98,10 @@ public:
   virtual std::string GetEffectiveUrl() { return requested_url_; }
   virtual std::string GetResponseContentType() { return ""; }
   virtual ggadget::Connection *ConnectOnDataReceived(
-      ggadget::Slot1<size_t, const std::string &> *receiver) { return NULL; }
+      ggadget::Slot2<size_t, const void *, size_t> *receiver) {
+    delete receiver;
+    return NULL;
+  }
 
   State state_;
   unsigned short return_status_;

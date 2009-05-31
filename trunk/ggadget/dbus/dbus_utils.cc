@@ -965,8 +965,7 @@ class DBusDemarshaller::Impl {
     delete iter_;
   }
   bool HasMoreItem() {
-    return dbus_message_iter_has_next(iter_) &&
-        dbus_message_iter_get_arg_type(iter_) != DBUS_TYPE_INVALID;
+    return dbus_message_iter_get_arg_type(iter_) != DBUS_TYPE_INVALID;
   }
   bool MoveToNextItem() {
     return dbus_message_iter_next(iter_);
