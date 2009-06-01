@@ -3,6 +3,17 @@
 This page is dedicated for recording notable changes of each release.
 
 = History =
+  * 0.11.0 - Jun 1st 2009
+    * Many reported issues have been fixed, including: 132, 151, 190, 244, 265, 276, 280, 284, 285,  286, 294, 297, 300, 306, etc.
+    * Performance has been improved dramatically.
+    * Memory consumption has been reduced notably.
+    * A new script runtime based on WebKit/JavaScriptCore has been added.
+    * A new browser element based on WebKit/Gtk has been added.
+    * A new xml http request extension based on libsoup has been added.
+    * A new flash element based on browser element has been added (mainly used with webkit browser element).
+    * French translation provided by Pierre Slamich has been added.
+    * Lots of other bugfixes.
+
   * 0.10.5 - Jan 7th 2009
     * Following reported issues have been fixed: 257, 258, 260, 261, 262, 263
     * Some nasty bugs in libggadget, libggadget-gtk and qt host have been fixed.
