@@ -930,7 +930,7 @@ if test x$build_smjs_script_runtime = xyes -o \
   else
     case $with_gtkmozembed in
       libxul)
-        gtkmozembed_list="libxul-embedding-unstable libxu-embedding"
+        gtkmozembed_list="libxul-embedding-unstable libxul-embedding"
         ;;
       xulrunner)
         gtkmozembed_list="xulrunner-gtkmozembed"
