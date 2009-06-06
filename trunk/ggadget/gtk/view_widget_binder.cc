@@ -209,6 +209,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       impl->view_->OnOtherEvent(e);
       if (!gtk_widget_is_focus(widget)) {
         gtk_widget_grab_focus(widget);
+        gdk_window_focus(impl->widget_->window, event->time);
       }
     }
 

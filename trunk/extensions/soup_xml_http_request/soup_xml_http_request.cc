@@ -246,9 +246,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
+    if (!value || !*value) return NO_ERR;
+
     SoupMessageHeaders *headers = message_->request_headers;
     if (strcasecmp("Content-Type", header) == 0) {
       soup_message_headers_set_content_type(headers, value, NULL);
+    } else if (strcasecmp("Cookie", header) == 0) {
+      cookies_.push_back(value);
     } else {
       soup_message_headers_append(headers, header, value);
     }
@@ -340,6 +344,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     ClearResponse();
     request_data_.clear();
     status_text_.clear();
+    cookies_.clear();
     status_ = 0;
     redirect_count_ = 0;
     succeeded_ = false;
@@ -586,6 +591,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void Authenticate(SoupAuth *auth) {
     if (user_.length() || password_.length()) {
       soup_auth_authenticate(auth, user_.c_str(), password_.c_str());
+    }
+  }
+
+  void SetupCookie() {
+    for (StringVector::iterator it = cookies_.begin();
+         it != cookies_.end(); ++it) {
+      // Keep the same behavior as Windows and curl-xml-http-request.
+      if (strcasecmp(it->c_str(), "none") == 0) {
+        soup_message_headers_remove(message_->request_headers, "Cookie");
+      } else {
+        soup_message_headers_append(message_->request_headers,
+                                    "Cookie", it->c_str());
+      }
     }
   }
 
@@ -870,6 +888,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_text_;
 
   std::string status_text_;
+  StringVector cookies_;
 
   int redirect_count_;
 
@@ -985,11 +1004,11 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
 
       g_signal_connect(G_OBJECT(session), "authenticate",
                        G_CALLBACK(AuthenticateCallback), this);
+      g_signal_connect(G_OBJECT(session), "request-started",
+                       G_CALLBACK(RequestStartedCallback), this);
 #ifdef SOUP_XHR_VERBOSE
       g_signal_connect(G_OBJECT(session), "request-queued",
                        G_CALLBACK(RequestQueuedCallback), this);
-      g_signal_connect(G_OBJECT(session), "request-started",
-                       G_CALLBACK(RequestStartedCallback), this);
       g_signal_connect(G_OBJECT(session), "request-unqueued",
                        G_CALLBACK(RequestUnqueuedCallback), this);
 #endif
@@ -1025,18 +1044,24 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
     }
   }
 
+  static void RequestStartedCallback(SoupSession *session,
+                                     SoupMessage *msg,
+                                     SoupSocket *socket,
+                                     gpointer user_data) {
+#ifdef SOUP_XHR_VERBOSE
+    XMLHttpRequest::PrintMessageInfo("RequestStartedCallback", msg, NULL);
+#endif
+    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
+        g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
+    ASSERT(request);
+    request->SetupCookie();
+  }
+
 #ifdef SOUP_XHR_VERBOSE
   static void RequestQueuedCallback(SoupSession *session,
                                     SoupMessage *msg,
                                     gpointer user_data) {
     XMLHttpRequest::PrintMessageInfo("RequestQueuedCallback", msg, NULL);
-  }
-
-  static void RequestStartedCallback(SoupSession *session,
-                                     SoupMessage *msg,
-                                     SoupSocket *socket,
-                                     gpointer user_data) {
-    XMLHttpRequest::PrintMessageInfo("RequestStartedCallback", msg, NULL);
   }
 
   static void RequestUnqueuedCallback(SoupSession *session,
