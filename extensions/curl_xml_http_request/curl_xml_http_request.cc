@@ -278,6 +278,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
+    if (strcasecmp(header, "Cookie") == 0 &&
+        value && strcasecmp(value, "none") == 0) {
+      // Microsoft XHR hidden feature: setRequestHeader('Cookie', 'none')
+      // clears all cookies. Some gadgets (e.g. reader) use this.
+      curl_easy_setopt(curl_, CURLOPT_COOKIELIST, "ALL");
+      return NO_ERR;
+    }
+
     std::string header_str(header);
     CaseInsensitiveStringMap::iterator it =
         request_headers_map_.find(header_str);
