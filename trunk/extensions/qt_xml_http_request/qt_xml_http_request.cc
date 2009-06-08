@@ -78,10 +78,14 @@ class Session {
       cookies_ += cookies;
     }
   }
+  void ClearCookie() {
+    cookies_.clear();
+  }
   QList<QNetworkCookie> cookies_;
 #else
   void RestoreCookie(QHttpRequestHeader *header) {}
   void SaveCookie(const QHttpResponseHeader& header) {}
+  void ClearCookie() {}
 #endif
 };
 
@@ -266,6 +270,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     if (IsForbiddenHeader(header)) {
       DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
+      return NO_ERR;
+    }
+
+    if (strcasecmp(header, "Cookie") == 0 &&
+        value && strcasecmp(value, "none") == 0) {
+      // Microsoft XHR hidden feature: setRequestHeader('Cookie', 'none')
+      // clears all cookies. Some gadgets (e.g. reader) use this.
+      session_->ClearCookie();
       return NO_ERR;
     }
 

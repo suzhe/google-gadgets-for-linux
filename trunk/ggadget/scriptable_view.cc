@@ -220,15 +220,19 @@ class ScriptableView::Impl : public SmallObject<> {
     std::string src = GetAttributeGadgetCase(xml_element, kSrcAttr);
 
     if (!src.empty()) {
-      if (view_->GetFileManager()->ReadFile(src.c_str(), &script)) {
-        filename = src.c_str();
-        lineno = 1;
-        std::string temp;
-        if (DetectAndConvertStreamToUTF8(script, &temp, NULL))
-          script = temp;
-      } else {
+      if (strncmp(kGlobalResourcePrefix, src.c_str(),
+                  sizeof(kGlobalResourcePrefix) - 1) == 0) {
+        if (!GetGlobalFileManager()->ReadFile(src.c_str(), &script))
+          return false;
+      } else if (!view_->GetFileManager()->ReadFile(src.c_str(), &script)) {
         return false;
       }
+        
+      filename = src.c_str();
+      lineno = 1;
+      std::string temp;
+      if (DetectAndConvertStreamToUTF8(script, &temp, NULL))
+        script = temp;
     } else {
       // Uses the Windows version convention, that inline scripts should be
       // quoted in comments.
