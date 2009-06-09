@@ -781,10 +781,14 @@ class BasicElement::Impl : public SmallObject<> {
     QueueDraw();
   }
 
-  bool IsReallyVisible() {
-    return visible_ && opacity_ != 0.0 &&
+  // clip: whether the visible status effected by clipping. If clip is true
+  // and the element is out of parent's visible area, this method returns
+  // false.
+  bool IsReallyVisible(bool clip) {
+    return visible_ && opacity_ != 0.0 && width_ > 0 && height_ > 0 &&
         (!parent_ ||
-         (parent_->IsReallyVisible() && parent_->IsChildInVisibleArea(owner_)));
+         (parent_->impl_->IsReallyVisible(clip) &&
+          (!clip || parent_->IsChildInVisibleArea(owner_))));
   }
 
   ViewInterface::HitTest GetHitTest() {
@@ -1012,9 +1016,17 @@ class BasicElement::Impl : public SmallObject<> {
          name_.c_str(), tag_name_);
 #endif
 
-    // TODO: focus logic.
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
+        if (parent_) {
+          double left, top, right, bottom;
+          GetChildRectExtentInParent(x_, y_, pin_x_, pin_y_,
+                                     DegreesToRadians(rotation_),
+                                     0, 0, width_, height_,
+                                     &left, &top, &right, &bottom);
+          parent_->EnsureAreaVisible(
+              Rectangle(left, top, right - left, bottom - top), owner_);
+        }
         view_->FireEvent(&scriptable_event, onfocusin_event_);
         break;
       case Event::EVENT_FOCUS_OUT:
@@ -1649,11 +1661,11 @@ void BasicElement::SetVisible(bool visible) {
 }
 
 bool BasicElement::IsReallyVisible() const {
-  return impl_->IsReallyVisible();
+  return impl_->IsReallyVisible(true);
 }
 
 bool BasicElement::IsReallyEnabled() const {
-  return impl_->enabled_ && IsReallyVisible();
+  return impl_->enabled_ && impl_->IsReallyVisible(false);
 }
 
 bool BasicElement::IsFullyOpaque() const {
@@ -2032,7 +2044,15 @@ bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
 }
 
 bool BasicElement::IsChildInVisibleArea(const BasicElement *child) const {
-  return true;
+  double min_x, min_y, max_x, max_y;
+  GetChildRectExtentInParent(child->GetPixelX(), child->GetPixelY(),
+                             child->GetPixelPinX(), child->GetPixelPinY(),
+                             DegreesToRadians(child->GetRotation()),
+                             0, 0,
+                             child->GetPixelWidth(), child->GetPixelHeight(),
+                             &min_x, &min_y, &max_x, &max_y);
+  return max_x > 0 && max_y > 0 &&
+         min_x < GetPixelWidth() && min_y < GetPixelHeight();
 }
 
 bool BasicElement::HasOpaqueBackground() const {
@@ -2136,6 +2156,23 @@ void BasicElement::AggregateClipRegion(const Rectangle &boundary,
 
 void BasicElement::AggregateMoreClipRegion(const Rectangle &boundary,
                                            ClipRegion *region) {
+}
+
+void BasicElement::EnsureAreaVisible(const Rectangle &rect,
+                                     const BasicElement *source) {
+  // First test if the rectangle is visible in this element.
+  if (impl_->parent_ && rect.x + rect.w > 0 && rect.y + rect.h > 0 &&
+      rect.x < GetPixelWidth() && rect.y < GetPixelHeight()) {
+    double left, top, right, bottom;
+    GetChildRectExtentInParent(GetPixelX(), GetPixelY(),
+                               GetPixelPinX(), GetPixelPinY(),
+                               DegreesToRadians(GetRotation()),
+                               rect.x, rect.y,
+                               rect.x + rect.w, rect.y + rect.h,
+                               &left, &top, &right, &bottom);
+    impl_->parent_->EnsureAreaVisible(
+        Rectangle(left, top, right - left, bottom - top), this);
+  }
 }
 
 } // namespace ggadget

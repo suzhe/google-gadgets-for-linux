@@ -331,6 +331,7 @@ ListBoxElement::ListBoxElement(View *view,
     : DivElement(view, tag_name, name),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
+  SetXScrollable(false);
 }
 
 void ListBoxElement::DoClassRegister() {
