@@ -32,7 +32,8 @@ class ScrollingElement::Impl : public SmallObject<> {
       : owner_(owner),
         scroll_pos_x_(0), scroll_pos_y_(0),
         scroll_range_x_(0), scroll_range_y_(0),
-        scrollbar_(NULL) {
+        scrollbar_(NULL),
+        x_scrollable_(true), y_scrollable_(true) {
   }
   ~Impl() {
     // Inform the view of this scrollbar to let the view handle mouse grabbing
@@ -87,20 +88,24 @@ class ScrollingElement::Impl : public SmallObject<> {
   }
 
   void ScrollX(int distance) {
-    int old_pos = scroll_pos_x_;
-    scroll_pos_x_ += distance;
-    scroll_pos_x_ = std::min(scroll_range_x_, std::max(0, scroll_pos_x_));
-    if (old_pos != scroll_pos_x_) {
-      owner_->QueueDraw();
+    if (x_scrollable_) {
+      int old_pos = scroll_pos_x_;
+      scroll_pos_x_ += distance;
+      scroll_pos_x_ = std::min(scroll_range_x_, std::max(0, scroll_pos_x_));
+      if (old_pos != scroll_pos_x_) {
+        owner_->QueueDraw();
+      }
     }
   }
 
   void ScrollY(int distance) {
-    int old_pos = scroll_pos_y_;
-    scroll_pos_y_ += distance;
-    scroll_pos_y_ = std::min(scroll_range_y_, std::max(0, scroll_pos_y_));
-    if (old_pos != scroll_pos_y_) {
-      scrollbar_->SetValue(scroll_pos_y_); // Will trigger OnScrollBarChange()
+    if (y_scrollable_) {
+      int old_pos = scroll_pos_y_;
+      scroll_pos_y_ += distance;
+      scroll_pos_y_ = std::min(scroll_range_y_, std::max(0, scroll_pos_y_));
+      if (old_pos != scroll_pos_y_ && scrollbar_) {
+        scrollbar_->SetValue(scroll_pos_y_); // Will trigger OnScrollBarChange()
+      }
     }
   }
 
@@ -120,6 +125,8 @@ class ScrollingElement::Impl : public SmallObject<> {
   int scroll_range_x_, scroll_range_y_;
   ScrollBarElement *scrollbar_; // NULL if and only if autoscroll=false
   EventSignal on_scrolled_event_;
+  bool x_scrollable_:1;
+  bool y_scrollable_:1;
 };
 
 ScrollingElement::ScrollingElement(View *view, const char *tag_name,
@@ -154,7 +161,7 @@ bool ScrollingElement::IsAutoscroll() const {
 }
 
 void ScrollingElement::SetAutoscroll(bool autoscroll) {
-  if ((impl_->scrollbar_ != NULL) != autoscroll) {
+  if (impl_->y_scrollable_ && (impl_->scrollbar_ != NULL) != autoscroll) {
     if (autoscroll) {
       impl_->CreateScrollBar();
     } else {
@@ -169,14 +176,28 @@ void ScrollingElement::SetAutoscroll(bool autoscroll) {
   }
 }
 
+bool ScrollingElement::IsXScrollable() {
+  return impl_->x_scrollable_;
+}
+
+void ScrollingElement::SetXScrollable(bool x_scrollable) {
+  impl_->x_scrollable_ = x_scrollable;
+}
+
+bool ScrollingElement::IsYScrollable() {
+  return impl_->y_scrollable_;
+}
+
+void ScrollingElement::SetYScrollable(bool y_scrollable) {
+  impl_->y_scrollable_ = y_scrollable;
+}
+
 void ScrollingElement::ScrollX(int distance) {
   impl_->ScrollX(distance);
 }
 
 void ScrollingElement::ScrollY(int distance) {
-  if (impl_->scrollbar_) {
-    impl_->ScrollY(distance);
-  }
+  impl_->ScrollY(distance);
 }
 
 int ScrollingElement::GetScrollXPosition() const {
@@ -192,9 +213,7 @@ void ScrollingElement::SetScrollXPosition(int pos) {
 }
 
 void ScrollingElement::SetScrollYPosition(int pos) {
-  if (impl_->scrollbar_) {
-    impl_->ScrollY(pos - impl_->scroll_pos_y_);
-  }
+  impl_->ScrollY(pos - impl_->scroll_pos_y_);
 }
 
 int ScrollingElement::GetXPageStep() const {
@@ -335,6 +354,76 @@ void ScrollingElement::AggregateMoreClipRegion(const Rectangle &boundary,
                                                ClipRegion *region) {
   if (impl_->scrollbar_)
     impl_->scrollbar_->AggregateClipRegion(boundary, region);
+}
+
+bool ScrollingElement::IsChildInVisibleArea(const BasicElement *child) const {
+  double min_x, min_y, max_x, max_y;
+  GetChildRectExtentInParent(child->GetPixelX(), child->GetPixelY(),
+                             child->GetPixelPinX(), child->GetPixelPinY(),
+                             DegreesToRadians(child->GetRotation()),
+                             0, 0,
+                             child->GetPixelWidth(), child->GetPixelHeight(),
+                             &min_x, &min_y, &max_x, &max_y);
+  min_x -= impl_->scroll_pos_x_;
+  max_x -= impl_->scroll_pos_x_;
+  min_y -= impl_->scroll_pos_y_;
+  max_y -= impl_->scroll_pos_y_;
+  return max_x > 0 && max_y > 0 &&
+         min_x < GetPixelWidth() && min_y < GetPixelHeight();
+}
+
+void ScrollingElement::EnsureAreaVisible(const Rectangle &rect,
+                                         const BasicElement *source) {
+  if (source == impl_->scrollbar_) {
+    // The coordinates of the scroll bar have no offset.
+    BasicElement::EnsureAreaVisible(rect, source);
+  } else {
+    double left = rect.x - impl_->scroll_pos_x_;
+    double top = rect.y - impl_->scroll_pos_y_;
+    if (!IsAutoscroll()) {
+      BasicElement::EnsureAreaVisible(
+          Rectangle(left, top, rect.w, rect.h), source);
+    } else {
+      int min_x = static_cast<int>(floor(left));
+      int min_y = static_cast<int>(floor(top));
+      int max_x = static_cast<int>(ceil(left + rect.w));
+      int max_y = static_cast<int>(ceil(top + rect.h));
+
+      if (min_x < 0) {
+        int old_scroll_x = impl_->scroll_pos_x_;
+        impl_->ScrollX(min_x);
+        int diff = old_scroll_x - impl_->scroll_pos_x_;
+        min_x += diff;
+        max_x += diff;
+      }
+      if (min_y < 0) {
+        int old_scroll_y = impl_->scroll_pos_y_;
+        impl_->ScrollY(min_y);
+        int diff = old_scroll_y - impl_->scroll_pos_y_;
+        min_y += diff;
+        max_y += diff;
+      }
+      int width = static_cast<int>(ceil(GetPixelWidth()));
+      if (min_x > 0 && max_x > width) {
+        int old_scroll_x = impl_->scroll_pos_x_;
+        impl_->ScrollX(max_x - width);
+        int diff = old_scroll_x - impl_->scroll_pos_x_;
+        min_x += diff;
+        max_x += diff;
+      }
+      int height = static_cast<int>(ceil(GetPixelHeight()));
+      if (min_y > 0 && max_y > height) {
+        int old_scroll_y = impl_->scroll_pos_y_;
+        impl_->ScrollY(max_y - height);
+        int diff = old_scroll_y - impl_->scroll_pos_y_;
+        min_y += diff;
+        max_y += diff;
+      }
+
+      BasicElement::EnsureAreaVisible(
+          Rectangle(min_x, min_y, max_x - min_x, max_y - min_y), source);
+    }
+  }
 }
 
 } // namespace ggadget

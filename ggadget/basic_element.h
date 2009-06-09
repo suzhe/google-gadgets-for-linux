@@ -347,6 +347,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /**
    * Checks whether this element is really visible considering transparency
    * and visibility or the ancestors.
+   * In fact, this method should be named "IsPossiblyVisible" instead.
    */
   bool IsReallyVisible() const;
 
@@ -846,6 +847,16 @@ public: // Other overridable public methods.
    */
   virtual void AggregateMoreClipRegion(const Rectangle &boundary,
                                        ClipRegion *region);
+
+  /**
+   * Ensures an area is visible in this element. The implementation can take
+   * appropriate action to make the area visible. For example, a @c DivElement
+   * will try to do a scroll. This method doesn't ensure success.
+   * @param rect the rectangle area in the coordinates of this element.
+   * @param source the source element of this call.
+   */
+  virtual void EnsureAreaVisible(const Rectangle &rect,
+                                 const BasicElement *source);
 
  private:
   class Impl;

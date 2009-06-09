@@ -65,44 +65,117 @@ void GetChildExtentInParent(double child_x_pos, double child_y_pos,
                             double child_pin_x, double child_pin_y,
                             double child_width, double child_height,
                             double rotation_radians,
-                            double *extent_width, double *extent_height) {
+                            double *extent_right, double *extent_bottom) {
   rotation_radians = remainder(rotation_radians, 2 * M_PI);
-  double sample_width_x, sample_width_y, sample_height_x, sample_height_y;
+  double sample_right_x, sample_right_y, sample_bottom_x, sample_bottom_y;
   if (rotation_radians < -M_PI_2) {
     // The bottom-left corner is the right most.
-    sample_width_x = 0;
-    sample_width_y = child_height;
+    sample_right_x = 0;
+    sample_right_y = child_height;
     // The top-left corner is the lowest.
-    sample_height_x = 0;
-    sample_height_y = 0;
+    sample_bottom_x = 0;
+    sample_bottom_y = 0;
   } else if (rotation_radians < 0) {
     // The bottom-right corner is the right most.
-    sample_width_x = child_width;
-    sample_width_y = child_height;
+    sample_right_x = child_width;
+    sample_right_y = child_height;
     // The bottom-left corner is the lowest.
-    sample_height_x = 0;
-    sample_height_y = child_height;
+    sample_bottom_x = 0;
+    sample_bottom_y = child_height;
   } else if (rotation_radians < M_PI_2) {
     // The top-right corner is the right most.
-    sample_width_x = child_width;
-    sample_width_y = 0;
+    sample_right_x = child_width;
+    sample_right_y = 0;
     // The bottom-right corner is the lowest.
-    sample_height_x = child_width;
-    sample_height_y = child_height;
+    sample_bottom_x = child_width;
+    sample_bottom_y = child_height;
   } else {
     // The top-left corner is the right most.
-    sample_width_x = 0;
-    sample_width_y = 0;
+    sample_right_x = 0;
+    sample_right_y = 0;
     // The top-right corner is the lowest.
-    sample_height_x = child_width;
-    sample_height_y = 0;
+    sample_bottom_x = child_width;
+    sample_bottom_y = 0;
   }
 
   ParentCoordCalculator calculator(child_x_pos, child_y_pos,
                                    child_pin_x, child_pin_y,
                                    rotation_radians);
-  *extent_width = calculator.GetParentX(sample_width_x, sample_width_y);
-  *extent_height = calculator.GetParentY(sample_height_x, sample_height_y);
+  *extent_right = calculator.GetParentX(sample_right_x, sample_right_y);
+  *extent_bottom = calculator.GetParentY(sample_bottom_x, sample_bottom_y);
+}
+
+void GetChildRectExtentInParent(double child_x_pos, double child_y_pos,
+                                double child_pin_x, double child_pin_y,
+                                double rotation_radians,
+                                double left_in_child, double top_in_child,
+                                double right_in_child, double bottom_in_child,
+                                double *extent_left, double *extent_top,
+                                double *extent_right, double *extent_bottom) {
+  rotation_radians = remainder(rotation_radians, 2 * M_PI);
+  double sample_right_x, sample_right_y, sample_bottom_x, sample_bottom_y;
+  double sample_left_x, sample_left_y, sample_top_x, sample_top_y;
+  if (rotation_radians < -M_PI_2) {
+    // The top-right corner is the left most.
+    sample_left_x = right_in_child;
+    sample_left_y = top_in_child;
+    // The bottom-right corner is the highest.
+    sample_top_x = right_in_child;
+    sample_top_y = bottom_in_child;
+    // The bottom-left corner is the right most.
+    sample_right_x = left_in_child;
+    sample_right_y = bottom_in_child;
+    // The top-left corner is the lowest.
+    sample_bottom_x = left_in_child;
+    sample_bottom_y = top_in_child;
+  } else if (rotation_radians < 0) {
+    // The top-left corner is the left most.
+    sample_left_x = left_in_child;
+    sample_left_y = top_in_child;
+    // The top-right corner is the highest.
+    sample_top_x = right_in_child;
+    sample_top_y = top_in_child;
+    // The bottom-right corner is the right most.
+    sample_right_x = right_in_child;
+    sample_right_y = bottom_in_child;
+    // The bottom-left corner is the lowest.
+    sample_bottom_x = left_in_child;
+    sample_bottom_y = bottom_in_child;
+  } else if (rotation_radians < M_PI_2) {
+    // The bottom-left corner is the left most.
+    sample_left_x = left_in_child;
+    sample_left_y = bottom_in_child;
+    // The top-left corner is the highest.
+    sample_top_x = left_in_child;
+    sample_top_y = top_in_child;
+    // The top-right corner is the right most.
+    sample_right_x = right_in_child;
+    sample_right_y = top_in_child;
+    // The bottom-right corner is the lowest.
+    sample_bottom_x = right_in_child;
+    sample_bottom_y = bottom_in_child;
+  } else {
+    // The bottom-right corner is the left most.
+    sample_left_x = right_in_child;
+    sample_left_y = bottom_in_child;
+    // The bottom-left corner is the highest.
+    sample_top_x = left_in_child;
+    sample_top_y = bottom_in_child;
+    // The top-left corner is the right most.
+    sample_right_x = left_in_child;
+    sample_right_y = top_in_child;
+    // The top-right corner is the lowest.
+    sample_bottom_x = right_in_child;
+    sample_bottom_y = top_in_child;
+  }
+
+  ParentCoordCalculator calculator(child_x_pos, child_y_pos,
+                                   child_pin_x, child_pin_y,
+                                   rotation_radians);
+  *extent_left = calculator.GetParentX(sample_left_x, sample_left_y);
+  *extent_top = calculator.GetParentY(sample_top_x, sample_top_y);
+  *extent_right = calculator.GetParentX(sample_right_x, sample_right_y);
+  *extent_bottom = calculator.GetParentY(sample_bottom_x, sample_bottom_y);
 }
 
 void ChildCoordCalculator::Convert(double parent_x, double parent_y,

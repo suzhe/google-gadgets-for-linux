@@ -41,8 +41,12 @@ class ScrollingElement : public BasicElement {
 
   virtual void AggregateMoreClipRegion(const Rectangle &boundary,
                                        ClipRegion *region);
+
  public:
   virtual void MarkRedraw();
+  virtual bool IsChildInVisibleArea(const BasicElement *child) const;
+  virtual void EnsureAreaVisible(const Rectangle &rect,
+                                 const BasicElement *source);
 
  public:
   /** Gets the autoscroll property. */
@@ -51,8 +55,14 @@ class ScrollingElement : public BasicElement {
    * Sets the autoscroll property.
    * @c true if the div automatically shows scrollbars if necessary; @c false
    * if it doesn't show scrollbars. Default is @c false.
+   * For now only vertical scrollbar is supported.
    */
   void SetAutoscroll(bool autoscroll);
+
+  bool IsXScrollable();
+  void SetXScrollable(bool x_scrollable);
+  bool IsYScrollable();
+  void SetYScrollable(bool y_scrollable);
 
   /** Scroll horizontally. */
   void ScrollX(int distance);

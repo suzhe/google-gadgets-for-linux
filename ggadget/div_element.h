@@ -72,7 +72,6 @@ class DivElement : public ScrollingElement {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
  public:
-  virtual bool IsChildInVisibleArea(const BasicElement *child) const;
   virtual bool HasOpaqueBackground() const;
 
  private:

@@ -197,40 +197,6 @@ EventResult DivElement::HandleKeyEvent(const KeyboardEvent &event) {
   return result;
 }
 
-bool DivElement::IsChildInVisibleArea(const BasicElement *child) const {
-  ASSERT(child && child->GetParentElement() == this);
-
-  double min_x, min_y, max_x, max_y;
-  double x, y;
-  double width = child->GetPixelWidth();
-  double height = child->GetPixelHeight();
-
-  struct Vertex {
-    double x, y;
-  } vertexes[] = {
-    { 0, height },
-    { width, height },
-    { width, 0 }
-  };
-
-  ChildCoordToSelfCoord(child, 0, 0, &min_x, &min_y);
-  ChildCoordToSelfCoord(child, 0, 0, &max_x, &max_y);
-
-  for (size_t i = 0; i < 3; ++i) {
-    ChildCoordToSelfCoord(child, vertexes[i].x, vertexes[i].y, &x, &y);
-    min_x = std::min(x, min_x);
-    min_y = std::min(y, min_y);
-    max_x = std::max(x, max_x);
-    max_y = std::max(y, max_y);
-  }
-
-  if (max_x < 0 || max_y < 0 ||
-      min_x > GetPixelWidth() || min_y > GetPixelHeight())
-    return false;
-
-  return true;
-}
-
 bool DivElement::HasOpaqueBackground() const {
   return impl_->background_texture_ ?
          impl_->background_texture_->IsFullyOpaque() :

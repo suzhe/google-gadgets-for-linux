@@ -71,16 +71,28 @@ void ChildCoordToParentCoord(double child_x, double child_y,
  * @param child_width
  * @param child_height
  * @param rotation_radians The rotation of the child element in radians.
- * @param[out] extent_width The maximum X-coordinate of the child rect
+ * @param[out] extent_right The maximum X-coordinate of the child rect
  *     in parent space.
- * @param[out] extent_height The maximum Y-coordinate of the child rect
+ * @param[out] extent_bottom The maximum Y-coordinate of the child rect
  *     in parent space.
  */
 void GetChildExtentInParent(double child_x_pos, double child_y_pos,
                             double child_pin_x, double child_pin_y,
                             double child_width, double child_height,
                             double rotation_radians,
-                            double *extent_width, double *extent_height);
+                            double *extent_right, double *extent_bottom);
+
+/**
+ * Extended version of the above function. Calculate the extent rectangle
+ * in parent for a rectangle in child.
+ */
+void GetChildRectExtentInParent(double child_x_pos, double child_y_pos,
+                                double child_pin_x, double child_pin_y,
+                                double rotation_radians,
+                                double left_in_child, double top_in_child,
+                                double right_in_child, double bottom_in_child,
+                                double *extent_left, double *extent_top,
+                                double *extent_right, double *extent_bottom);
 
 /**
  * Calculator object used to convert a parent element's coordinate space to
