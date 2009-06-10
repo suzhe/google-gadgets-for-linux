@@ -251,7 +251,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     SoupMessageHeaders *headers = message_->request_headers;
     if (strcasecmp("Content-Type", header) == 0) {
       soup_message_headers_set_content_type(headers, value, NULL);
-    } else if (strcasecmp("Cookie", header) == 0) {
+    } else if (strcmp("Cookie", header) == 0) {
+      // strcasecmp shall be used, but it'll break gmail gadget.
       cookies_.push_back(value);
     } else {
       soup_message_headers_append(headers, header, value);
@@ -595,14 +596,38 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void SetupCookie() {
-    for (StringVector::iterator it = cookies_.begin();
-         it != cookies_.end(); ++it) {
-      // Keep the same behavior as Windows and curl-xml-http-request.
-      if (strcasecmp(it->c_str(), "none") == 0) {
-        soup_message_headers_remove(message_->request_headers, "Cookie");
+    if (cookies_.size()) {
+      const char *old_cookie_p =
+          soup_message_headers_get_one(message_->request_headers, "Cookie");
+      std::string old_cookie(old_cookie_p ? old_cookie_p : "");
+
+      std::string new_cookie;
+      for (StringVector::iterator it = cookies_.begin();
+           it != cookies_.end(); ++it) {
+        // Keep the same behavior as Windows and curl-xml-http-request.
+        if (strcasecmp(it->c_str(), "none") == 0) {
+          new_cookie.clear();
+          old_cookie.clear();
+        } else {
+          if (new_cookie.length()) {
+            new_cookie.append("; ");
+          }
+          new_cookie.append(*it);
+        }
+      }
+
+      if (old_cookie.length()) {
+        if (new_cookie.length()) {
+            new_cookie.append("; ");
+        }
+        new_cookie.append(old_cookie);
+      }
+
+      if (new_cookie.length()) {
+        soup_message_headers_replace(message_->request_headers,
+                                     "Cookie", new_cookie.c_str());
       } else {
-        soup_message_headers_append(message_->request_headers,
-                                    "Cookie", it->c_str());
+        soup_message_headers_remove(message_->request_headers, "Cookie");
       }
     }
   }
@@ -854,6 +879,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static void WroteHeadersCallback(SoupMessage *msg, gpointer user_data) {
     PrintMessageInfo("WroteHeadersCallback", msg, NULL);
+    soup_message_headers_foreach(msg->request_headers, PrintHeaderItem, NULL);
   }
 
   static void WroteInformationalCallback(SoupMessage *msg, gpointer user_data) {
@@ -1053,8 +1079,11 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
 #endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
         g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
-    ASSERT(request);
-    request->SetupCookie();
+    // msg might be an additional message created by soup internally,
+    // in this case, request will be null.
+    if (request) {
+      request->SetupCookie();
+    }
   }
 
 #ifdef SOUP_XHR_VERBOSE

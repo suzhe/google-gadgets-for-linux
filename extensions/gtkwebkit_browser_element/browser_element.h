@@ -51,6 +51,14 @@ class BrowserElement : public BasicElement {
    */
   void SetExternalObject(ScriptableInterface *object);
 
+  /**
+   * Gets and sets whether always open a new browser window for each OpenURL
+   * request. It's true by default. If set to false, only links with target
+   * other than the current window will open a new browser window.
+   */
+  bool IsAlwaysOpenNewWindow() const;
+  void SetAlwaysOpenNewWindow(bool always_open_new_window);
+
  public:
   static BasicElement *CreateInstance(View *view, const char *name);
 

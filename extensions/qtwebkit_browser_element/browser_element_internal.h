@@ -76,8 +76,6 @@ class BrowserElement::Impl {
       parent_(NULL),
       child_(new WebView(this)),
       content_type_("text/html"),
-      minimized_(false),
-      popped_out_(false),
       minimized_connection_(owner->GetView()->ConnectOnMinimizeEvent(
           NewSlot(this, &Impl::OnViewMinimized))),
       restored_connection_(owner->GetView()->ConnectOnRestoreEvent(
@@ -89,7 +87,10 @@ class BrowserElement::Impl {
       dock_connection_(owner->GetView()->ConnectOnDockEvent(
           NewSlot(this, &Impl::OnViewChanged))),
       undock_connection_(owner->GetView()->ConnectOnUndockEvent(
-          NewSlot(this, &Impl::OnViewChanged))) {
+          NewSlot(this, &Impl::OnViewChanged))),
+      minimized_(false),
+      popped_out_(false),
+      always_open_new_window_(true) {
   }
 
   ~Impl() {
@@ -192,18 +193,30 @@ class BrowserElement::Impl {
     }
   }
 
+  void SetAlwaysOpenNewWindow(bool value) {
+    always_open_new_window_ = value;
+#if QT_VERSION >= 0x040400
+    if (always_open_new_window_) {
+      child_->page()->setLinkDelegationPolicy(QWebPage::DelegateExternalLinks);
+    } else {
+      child_->page()->setLinkDelegationPolicy(QWebPage::DontDelegateLinks);
+    }
+#endif
+  }
+
  public:
   BrowserElement *owner_;
   QtViewWidget *parent_;
   QWebView *child_;
   std::string content_type_;
-  bool minimized_;
-  bool popped_out_;
   std::string content_;
   ScriptableHolder<ScriptableInterface> external_object_;
   Connection *minimized_connection_, *restored_connection_,
              *popout_connection_, *popin_connection_,
              *dock_connection_, *undock_connection_;
+  bool minimized_ : 1;
+  bool popped_out_ : 1;
+  bool always_open_new_window_ : 1;
 };
 
 QWebPage *WebPage::createWindow(

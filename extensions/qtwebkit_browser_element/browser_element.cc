@@ -58,6 +58,9 @@ void BrowserElement::DoClassRegister() {
                    NewSlot(&BrowserElement::SetContent));
   RegisterProperty("external", NULL,
                    NewSlot(&BrowserElement::SetExternalObject));
+  RegisterProperty("alwaysOpenNewWindow",
+                   NewSlot(&BrowserElement::IsAlwaysOpenNewWindow),
+                   NewSlot(&BrowserElement::SetAlwaysOpenNewWindow));
 }
 
 BrowserElement::~BrowserElement() {
@@ -80,6 +83,14 @@ void BrowserElement::SetContent(const std::string &content) {
 
 void BrowserElement::SetExternalObject(ScriptableInterface *object) {
   impl_->external_object_.Reset(object);
+}
+
+bool BrowserElement::IsAlwaysOpenNewWindow() const {
+  return impl_->always_open_new_window_;
+}
+
+void BrowserElement::SetAlwaysOpenNewWindow(bool always_open_new_window) {
+  impl_->SetAlwaysOpenNewWindow(always_open_new_window);
 }
 
 void BrowserElement::Layout() {
