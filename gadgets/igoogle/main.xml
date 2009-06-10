@@ -37,7 +37,8 @@
     <button name="loadButton" x="50%" y="100%" pinX="50%" pinY="36" size="12"
       caption="&LOAD_GADGET;" defaultRendering="true" onclick="OnLoadGadget()"/>
   </div>
-  <_browser name="browser" x="6" y="11" width="188" height="183"/>
+  <_browser name="browser" x="6" y="11" width="188" height="183"
+    alwaysOpenNewWindow="false"/>
   <script src="shared.js"/>
   <script src="main.js"/>
 </view>
