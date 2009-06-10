@@ -113,12 +113,16 @@ class HostObjectWrapper;
 typedef LightMap<size_t, HostObjectWrapper *> HostObjectMap;
 
 struct BrowserInfo {
-  BrowserInfo() : embed(NULL), browser_id(0), check_load_timer(0) { }
+  BrowserInfo()
+      : embed(NULL), browser_id(0), check_load_timer(0),
+        always_open_new_window(true) {
+  }
   GtkMozEmbed *embed;
   size_t browser_id;
   BrowserObjectMap browser_objects;
   HostObjectMap host_objects;
   int check_load_timer;
+  bool always_open_new_window;
 };
 
 static size_t g_browser_object_seq = 0;
@@ -582,7 +586,7 @@ class ContentPolicy : public nsIContentPolicy {
                         PRInt16 *retval) {
     NS_ENSURE_ARG_POINTER(content_location);
     NS_ENSURE_ARG_POINTER(retval);
-    nsCString url_spec, origin_spec, url_scheme;
+    nsCString url_spec, origin_spec;
     content_location->GetSpec(url_spec);
     if (content_type == TYPE_DOCUMENT && g_embed_for_new_window) {
       // Handle a new window request.
@@ -602,16 +606,15 @@ class ContentPolicy : public nsIContentPolicy {
     }
 
     *retval = ACCEPT;
-    content_location->GetScheme(url_scheme);
+    PRBool is_loading = PR_FALSE;
+    BrowserInfo *browser_info = FindBrowserByContentPolicyContext(
+        context, &is_loading);
+    if (!browser_info || !browser_info->always_open_new_window)
+      return NS_OK;
+
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       if (request_origin)
         request_origin->GetSpec(origin_spec);
-
-      PRBool is_loading = PR_FALSE;
-      BrowserInfo *browser_info = FindBrowserByContentPolicyContext(
-          context, &is_loading);
-      if (!browser_info)
-        return NS_OK;
 
       SendLog("ShouldLoad: is_loading=%d\n"
               " origin: %s\n"
@@ -630,6 +633,8 @@ class ContentPolicy : public nsIContentPolicy {
         return NS_OK;
       }
 
+      nsCString url_scheme;
+      content_location->GetScheme(url_scheme);
       if (url_scheme.Equals(nsCString("javascript"))) {
         // Also let javascript URLs handled in place.
         return NS_OK;
@@ -990,6 +995,21 @@ static std::string CallBrowserObject(BrowserInfo *browser_info,
                                info.object_id);
 }
 
+static void SetAlwaysOpenNewWindow(int param_count, const char **params,
+                                   size_t id) {
+  if (param_count != 3) {
+    SendLog("Incorrect param count for %s: 3 expected, %d given.",
+            kSetAlwaysOpenNewWindowCommand, param_count);
+    return;
+  }
+
+  BrowserInfo *info = GetBrowserInfo(id);
+  if (!info)
+    return;
+
+  info->always_open_new_window = (params[2][0] == '1');
+}
+
 static void ProcessCommand(int param_count, const char **params) {
   std::string result(kReplyPrefix);
   if (strcmp(params[0], kQuitCommand) == 0) {
@@ -1016,6 +1036,8 @@ static void ProcessCommand(int param_count, const char **params) {
           OpenURL(param_count, params, id);
         } else if (strcmp(params[0], kCloseBrowserCommand) == 0) {
           RemoveBrowser(id);
+        } else if (strcmp(params[0], kSetAlwaysOpenNewWindowCommand) == 0) {
+          SetAlwaysOpenNewWindow(param_count, params, id);
         } else if (param_count < 3) {
           SendLog("No enough command parameters or invalid command: %s\n",
                   params[0]);

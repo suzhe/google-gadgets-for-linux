@@ -142,6 +142,22 @@ const char kCallCommand[] = "CALL";
 const char kUnrefCommand[] = "UNREF";
 
 /**
+ * The controller sets the always_open_new_window flag.
+ * See @c BrowserElement::SetAlwaysOpenNewWindow() for details.
+ *
+ * Message format:
+ * <code>
+ * AONW\n
+ * Browser ID (size_t)\n
+ * 1|0
+ * """EOM"""\n
+ * </code>
+ *
+ * The browser must immediately reply a message containing only kReplyPrefix.
+ */
+const char kSetAlwaysOpenNewWindowCommand[] = "AONW";
+
+/**
  * The controller wants the child browser to quit.
  *
  * Message format:

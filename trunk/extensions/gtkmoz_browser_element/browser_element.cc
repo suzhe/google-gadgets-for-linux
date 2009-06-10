@@ -607,10 +607,11 @@ class BrowserElementImpl {
         controller_(BrowserController::get()),
         browser_id_(0),
         content_type_("text/html"),
-        content_updated_(false),
         socket_(NULL),
         x_(0), y_(0), width_(0), height_(0),
+        content_updated_(false),
         minimized_(false), popped_out_(false),
+        always_open_new_window_(true),
         minimized_connection_(owner->GetView()->ConnectOnMinimizeEvent(
             NewSlot(this, &BrowserElementImpl::OnViewMinimized))),
         restored_connection_(owner->GetView()->ConnectOnRestoreEvent(
@@ -711,6 +712,10 @@ class BrowserElementImpl {
       impl->controller_->SendCommand(kNewBrowserCommand, impl->browser_id_,
                                      socket_id_str.c_str(), NULL);
       impl->UpdateChildContent();
+      impl->controller_->SendCommand(kSetAlwaysOpenNewWindowCommand,
+                                     impl->browser_id_,
+                                     impl->always_open_new_window_ ? "1" : "0",
+                                     NULL);
     }
   }
 
@@ -1090,6 +1095,16 @@ class BrowserElementImpl {
     return result;
   }
 
+  void SetAlwaysOpenNewWindow(bool always_open_new_window) {
+    if (always_open_new_window_ != always_open_new_window) {
+      always_open_new_window_ = always_open_new_window;
+      if (browser_id_) {
+        controller_->SendCommand(kSetAlwaysOpenNewWindowCommand, browser_id_,
+                                 always_open_new_window ? "1" : "0", NULL);
+      }
+    }
+  }
+
   typedef LightMap<size_t, ScriptableHolder<ScriptableInterface> >
       HostObjectMap;
   typedef LightMap<size_t, BrowserObjectWrapper *> BrowserObjectMap;
@@ -1103,11 +1118,12 @@ class BrowserElementImpl {
 
   std::string content_type_;
   std::string content_;
-  bool content_updated_;
   GtkWidget *socket_;
   gint x_, y_, width_, height_;
-  bool minimized_;
-  bool popped_out_;
+  bool content_updated_ : 1;
+  bool minimized_ : 1;
+  bool popped_out_ : 1;
+  bool always_open_new_window_ : 1;
   ScriptableHolder<ScriptableInterface> external_object_;
   Connection *minimized_connection_, *restored_connection_,
              *popout_connection_, *popin_connection_,
@@ -1168,6 +1184,9 @@ void BrowserElement::DoClassRegister() {
                    NewSlot(&BrowserElement::SetContent));
   RegisterProperty("external", NULL,
                    NewSlot(&BrowserElement::SetExternalObject));
+  RegisterProperty("alwaysOpenNewWindow",
+                   NewSlot(&BrowserElement::IsAlwaysOpenNewWindow),
+                   NewSlot(&BrowserElement::SetAlwaysOpenNewWindow));
 }
 
 BrowserElement::~BrowserElement() {
@@ -1202,6 +1221,14 @@ void BrowserElement::DoDraw(CanvasInterface *canvas) {
 
 BasicElement *BrowserElement::CreateInstance(View *view, const char *name) {
   return new BrowserElement(view, name);
+}
+
+bool BrowserElement::IsAlwaysOpenNewWindow() const {
+  return impl_->always_open_new_window_;
+}
+
+void BrowserElement::SetAlwaysOpenNewWindow(bool always_open_new_window) {
+  impl_->SetAlwaysOpenNewWindow(always_open_new_window);
 }
 
 } // namespace gtkmoz
