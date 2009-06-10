@@ -89,12 +89,13 @@ class BrowserElement::Impl {
           NewSlot(this, &Impl::OnViewDockUndock))),
       undock_connection_(owner_->GetView()->ConnectOnUndockEvent(
           NewSlot(this, &Impl::OnViewDockUndock))),
-      popped_out_(false),
-      minimized_(false),
       x_(0),
       y_(0),
       width_(0),
-      height_(0) {
+      height_(0),
+      popped_out_(false),
+      minimized_(false),
+      always_open_new_window_(true) {
   }
 
   ~Impl() {
@@ -333,17 +334,19 @@ class BrowserElement::Impl {
 
   bool HandleNavigationRequest(const char *old_uri, const char *new_uri) {
     bool result = false;
-    size_t new_len = strlen(new_uri);
-    size_t old_len = strlen(old_uri);
-    const char *new_end = strrchr(new_uri, '#');
-    if (new_end)
-      new_len = new_end - new_uri;
-    const char *old_end = strrchr(old_uri, '#');
-    if (old_end)
-      old_len = old_end - old_uri;
-    // Treats urls with the same base url but different refs as equal.
-    if (new_len != old_len || strncmp(new_uri, old_uri, new_len) != 0) {
-      result = OpenURL(new_uri);
+    if (always_open_new_window_) {
+      size_t new_len = strlen(new_uri);
+      size_t old_len = strlen(old_uri);
+      const char *new_end = strrchr(new_uri, '#');
+      if (new_end)
+        new_len = new_end - new_uri;
+      const char *old_end = strrchr(old_uri, '#');
+      if (old_end)
+        old_len = old_end - old_uri;
+      // Treats urls with the same base url but different refs as equal.
+      if (new_len != old_len || strncmp(new_uri, old_uri, new_len) != 0) {
+        result = OpenURL(new_uri);
+      }
     }
     return result;
   }
@@ -590,13 +593,14 @@ class BrowserElement::Impl {
 
   ScriptableHolder<ScriptableInterface> external_object_;
 
-  bool popped_out_;
-  bool minimized_;
-
   gint x_;
   gint y_;
   gint width_;
   gint height_;
+
+  bool popped_out_ : 1;
+  bool minimized_ : 1;
+  bool always_open_new_window_ : 1;
 };
 
 BrowserElement::BrowserElement(View *view, const char *name)
@@ -626,6 +630,14 @@ void BrowserElement::SetExternalObject(ScriptableInterface *object) {
   impl_->SetExternalObject(object);
 }
 
+bool BrowserElement::IsAlwaysOpenNewWindow() const {
+  return impl_->always_open_new_window_;
+}
+
+void BrowserElement::SetAlwaysOpenNewWindow(bool always_open_new_window) {
+  impl_->always_open_new_window_ = always_open_new_window;
+}
+
 void BrowserElement::Layout() {
   BasicElement::Layout();
   impl_->Layout();
@@ -647,6 +659,9 @@ void BrowserElement::DoClassRegister() {
                    NewSlot(&BrowserElement::SetContent));
   RegisterProperty("external", NULL,
                    NewSlot(&BrowserElement::SetExternalObject));
+  RegisterProperty("alwaysOpenNewWindow",
+                   NewSlot(&BrowserElement::IsAlwaysOpenNewWindow),
+                   NewSlot(&BrowserElement::SetAlwaysOpenNewWindow));
 }
 
 } // namespace gtkwebkit
