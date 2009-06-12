@@ -598,7 +598,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void SetupCookie() {
     if (cookies_.size()) {
       const char *old_cookie_p =
+#ifdef HAVE_SOUP_MESSAGE_HEADERS_GET_ONE
           soup_message_headers_get_one(message_->request_headers, "Cookie");
+#else
+          soup_message_headers_get(message_->request_headers, "Cookie");
+#endif
+
       std::string old_cookie(old_cookie_p ? old_cookie_p : "");
 
       std::string new_cookie;
@@ -655,7 +660,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         if (SOUP_STATUS_IS_TRANSPORT_ERROR(message_->status_code)) {
           status_ = 0;
         } else {
-          status_ = message_->status_code;
+          status_ = static_cast<unsigned short>(message_->status_code);
         }
         status_text_ = message_->reason_phrase ? message_->reason_phrase : "";
       }
