@@ -816,18 +816,25 @@ fi
 has_libsoup=no
 has_libsoup_gnome=no
 if test x$build_soup_xml_http_request = xyes; then
-  PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.26],
+  PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.26.0],
                     [has_libsoup=yes], [has_libsoup=no])
 
   if test x$has_libsoup = xyes; then
-    PKG_CHECK_MODULES(LIBSOUP_GNOME, [libsoup-gnome-2.4 >= 2.26],
+    PKG_CHECK_MODULES(LIBSOUP_GNOME, [libsoup-gnome-2.4 >= 2.26.0],
                       [has_libsoup_gnome=yes], [has_libsoup_gnome=no])
     if test x$has_libsoup_gnome = xyes; then
       LIBSOUP_CFLAGS="$LIBSOUP_CFLAGS $LIBSOUP_GNOME_CFLAGS -DHAVE_LIBSOUP_GNOME"
       LIBSOUP_LIBS="$LIBSOUP_LIBS $LIBSOUP_GNOME_LIBS"
     fi
+    LDFLAGS="$LIBSOUP_LIBS"
+    AC_CHECK_FUNC(soup_message_headers_get_one,
+                  [has_soup_message_headers_get_one=yes])
+    if test x$has_soup_message_headers_get_one = xyes; then
+      LIBSOUP_CFLAGS="$LIBSOUP_CFLAGS -DHAVE_SOUP_MESSAGE_HEADERS_GET_ONE"
+    fi
+    LDFLAGS=$ggl_save_LDFLAGS
   else
-    AC_MSG_WARN([libsoup-2.4 >= 2.26 is required by soup-xml-http-request.])
+    AC_MSG_WARN([libsoup-2.4 >= 2.26.0 is required by soup-xml-http-request.])
     build_soup_xml_http_request=no
   fi
 fi

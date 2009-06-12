@@ -1006,9 +1006,6 @@ class BasicElement::Impl : public SmallObject<> {
   }
 
   EventResult OnOtherEvent(const Event &event) {
-    if (!enabled_)
-      return EVENT_RESULT_UNHANDLED;
-
     ElementHolder this_element_holder(owner_);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
@@ -1018,6 +1015,7 @@ class BasicElement::Impl : public SmallObject<> {
 
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
+        if (!enabled_) return EVENT_RESULT_UNHANDLED;
         if (parent_) {
           double left, top, right, bottom;
           GetChildRectExtentInParent(x_, y_, pin_x_, pin_y_,

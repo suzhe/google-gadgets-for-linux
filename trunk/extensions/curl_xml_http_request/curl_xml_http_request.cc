@@ -278,7 +278,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
-    if (strcasecmp(header, "Cookie") == 0 &&
+    // strcasecmp shall be used, but it'll break gmail gadget.
+    // Microsoft XHR is also case sensitive.
+    if (strcmp(header, "Cookie") == 0 &&
         value && strcasecmp(value, "none") == 0) {
       // Microsoft XHR hidden feature: setRequestHeader('Cookie', 'none')
       // clears all cookies. Some gadgets (e.g. reader) use this.
