@@ -800,8 +800,11 @@ class SideBarGtkHost::Impl {
                           reinterpret_cast<guchar *>(&struts), 12);
     } else {
       has_strut_ = false;
-      gdk_property_delete(sidebar_window_->window, net_wm_strut_);
-      gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
+      if (net_wm_strut_ != GDK_NONE)
+        gdk_property_delete(sidebar_window_->window, net_wm_strut_);
+      if (net_wm_strut_partial_ != GDK_NONE)
+        gdk_property_delete(sidebar_window_->window, net_wm_strut_partial_);
+
       sidebar_host_->SetWindowType((flags_ & MATCHBOX_WORKAROUND) ?
                                    GDK_WINDOW_TYPE_HINT_DIALOG :
                                    GDK_WINDOW_TYPE_HINT_NORMAL);
