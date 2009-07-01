@@ -414,8 +414,8 @@ void GtkEditImpl::ScrollTo(int position) {
   if (request_height > real_height) {
     if (position < 0)
       position = 0;
-    else if (position >= request_height - real_height)
-      position = request_height - real_height - 1;
+    else if (position > request_height - real_height)
+      position = request_height - real_height;
 
     scroll_offset_y_ = -position;
     content_modified_ = true;
@@ -754,7 +754,7 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
   GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
                             &weak_x, &weak_y, &weak_height);
 
-  if (!wrap_ && display_width > text_width) {
+  if (!wrap_ && display_width >= text_width) {
     PangoAlignment align = pango_layout_get_alignment(layout);
     if (align == PANGO_ALIGN_RIGHT)
       scroll_offset_x_ = display_width - text_width;
@@ -776,6 +776,8 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
       } else {
         scroll_offset_x_ = display_width - strong_x;
       }
+    } else if (!wrap_ && scroll_offset_x_ + text_width < display_width) {
+      scroll_offset_x_ = display_width - text_width;
     }
 
     if (std::abs(weak_x - strong_x) < display_width) {
@@ -786,13 +788,15 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
     }
   }
 
-  if (display_height > text_height) {
+  if (display_height >= text_height) {
     scroll_offset_y_ = 0;
   } else {
     if (scroll_offset_y_ + strong_y + strong_height > display_height)
       scroll_offset_y_ = display_height - strong_y - strong_height;
-    if (scroll_offset_y_ + strong_y < 0)
+    else if (scroll_offset_y_ + strong_y < 0)
       scroll_offset_y_ = -strong_y;
+    else if (scroll_offset_y_ + text_height < display_height)
+      scroll_offset_y_ = display_height - text_height;
   }
 
   if (old_offset_x != scroll_offset_x_ || old_offset_y != scroll_offset_y_)
