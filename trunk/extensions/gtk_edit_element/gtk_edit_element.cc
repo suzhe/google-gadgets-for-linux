@@ -24,6 +24,7 @@
 #include <ggadget/view.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/element_factory.h>
+#include <ggadget/scrollbar_element.h>
 #include "gtk_edit_element.h"
 #include "gtk_edit_impl.h"
 
@@ -81,17 +82,25 @@ void GtkEditElement::Layout() {
   impl_->SetHeight(static_cast<int>(ceil(GetClientHeight())));
   impl_->GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);
 
+  bool changed = UpdateScrollBar(0, range);
   SetScrollYPosition(cur_pos);
   SetYLineStep(line_step);
   SetYPageStep(page_step);
 
   // See DivElement::Layout() impl for the reason of recurse_depth.
-  if (UpdateScrollBar(0, range) && (range > 0 || recurse_depth < 2)) {
+  if (changed && (range > 0 || recurse_depth < 2)) {
     recurse_depth++;
     // If the scrollbar display state was changed, then call Layout()
     // recursively to redo Layout.
     Layout();
     recurse_depth--;
+  } else {
+    // Call scrollbar's Layout() forcely, because scrollbar's position might be
+    // updated afer calling UpdateScrollBar(), which is in charge of calling
+    // scrollbar's Layout().
+    ScrollBarElement *scrollbar = GetScrollBar();
+    if (scrollbar)
+      scrollbar->Layout();
   }
 }
 
