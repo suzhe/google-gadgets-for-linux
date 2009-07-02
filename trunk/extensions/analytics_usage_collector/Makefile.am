@@ -33,5 +33,6 @@ analytics_usage_collector_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 analytics_usage_collector_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module

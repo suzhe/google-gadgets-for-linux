@@ -39,6 +39,7 @@ soup_xml_http_request_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 soup_xml_http_request_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

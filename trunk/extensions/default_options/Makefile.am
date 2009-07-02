@@ -37,6 +37,7 @@ default_options_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 default_options_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

@@ -1297,6 +1297,15 @@ fi
 
 PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_GTK_XML_HTTP_REQUEST=\\\"$GGL_GTK_XML_HTTP_REQUEST\\\""
 
+GGL_QT_SCRIPT_ENGINE=smjs
+if test x$build_smjs_script_runtime = xyes; then
+  GGL_QT_SCRIPT_ENGINE=smjs
+elif test x$build_qt_script_runtime = xyes; then
+  GGL_QT_SCRIPT_ENGINE=qt
+fi
+
+PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_QT_SCRIPT_ENGINE=\\\"$GGL_QT_SCRIPT_ENGINE\\\""
+
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_HOST],
   [test x$build_gtk_host = xyes])

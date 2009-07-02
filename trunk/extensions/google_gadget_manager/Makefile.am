@@ -41,5 +41,6 @@ google_gadget_manager_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 google_gadget_manager_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module

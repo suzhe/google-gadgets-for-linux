@@ -51,6 +51,7 @@ libggadget_npapi@GGL_EPOCH@_la_LIBADD = \
 
 libggadget_npapi@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
+			  -no-undefined \
 			  -export-dynamic
 
 pkgconfigdir= $(libdir)/pkgconfig

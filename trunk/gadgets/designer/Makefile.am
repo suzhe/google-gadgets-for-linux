@@ -37,6 +37,7 @@ designer_script_utils_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 designer_script_utils_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

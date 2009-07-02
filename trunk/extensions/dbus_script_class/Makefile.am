@@ -42,6 +42,7 @@ dbus_script_class_la_LIBADD = \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
 dbus_script_class_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 endif

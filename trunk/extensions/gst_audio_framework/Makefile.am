@@ -37,6 +37,7 @@ gst_audio_framework_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_audio_framework_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

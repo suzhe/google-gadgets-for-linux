@@ -50,6 +50,7 @@ endif
 
 libggadget_xdg@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
+			  -no-undefined \
 			  -export-dynamic
 
 pkgconfigdir = $(libdir)/pkgconfig

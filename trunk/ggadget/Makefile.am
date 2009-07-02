@@ -257,6 +257,7 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
+			  -no-undefined \
 			  -export-dynamic \
 			  $(LIBLTDL)
 

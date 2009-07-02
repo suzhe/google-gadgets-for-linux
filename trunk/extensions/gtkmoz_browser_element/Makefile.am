@@ -42,6 +42,7 @@ gtkmoz_browser_element_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gtkmoz_browser_element_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

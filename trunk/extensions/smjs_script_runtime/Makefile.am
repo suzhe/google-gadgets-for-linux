@@ -77,6 +77,7 @@ smjs_script_runtime_la_LIBADD = \
 
 smjs_script_runtime_la_LDFLAGS = \
 			  $(LIBMOZJS_LDFLAGS) \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 endif

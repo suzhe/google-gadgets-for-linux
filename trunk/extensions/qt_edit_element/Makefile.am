@@ -41,6 +41,7 @@ qt_edit_element_la_LIBADD = \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
 qt_edit_element_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 endif

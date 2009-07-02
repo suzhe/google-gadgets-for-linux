@@ -34,13 +34,13 @@ noinst_SCRIPTS=intl-desktop-file.sh
 .PHONY: intl-desktop-file.sh
 
 if GGL_CROSS_COMPILING
-intl-desktop-file.sh: intl-desktop-file
+intl-desktop-file.sh: intl-desktop-file$(EXEEXT)
 	@echo '#!/bin/sh' > $@; \
 	 echo 'echo intl-desktop-file can not work in cross-compiling mode.' >> $@; \
 	 echo 'cp $$@' >> $@; \
 	 chmod 0755 $@
 else
-intl-desktop-file.sh: intl-desktop-file
+intl-desktop-file.sh: intl-desktop-file$(EXEEXT)
 	@echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
 	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \

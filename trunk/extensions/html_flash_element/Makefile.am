@@ -29,4 +29,4 @@ html_flash_element_la_CPPFLAGS = $(PREDEFINED_MACROS)
 
 html_flash_element_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-html_flash_element_la_LDFLAGS = -avoid-version -module
+html_flash_element_la_LDFLAGS = -no-undefined -avoid-version -module

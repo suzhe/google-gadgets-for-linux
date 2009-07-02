@@ -38,6 +38,7 @@ qt_system_framework_la_LIBADD = \
 			  $(top_builddir)/ggadget/xdg/libggadget-xdg@GGL_EPOCH@.la
 
 qt_system_framework_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

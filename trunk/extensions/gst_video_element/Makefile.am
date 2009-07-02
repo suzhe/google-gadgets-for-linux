@@ -40,6 +40,7 @@ gst_video_element_la_LIBADD = $(GSTREAMER_LIBS) \
 			      $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_video_element_la_LDFLAGS = -avoid-version \
+			       -no-undefined \
 			       -module
 
 endif

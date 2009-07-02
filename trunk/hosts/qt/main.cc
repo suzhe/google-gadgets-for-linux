@@ -53,6 +53,10 @@
 #include <X11/extensions/Xrender.h>
 #endif
 
+#ifndef GGL_QT_SCRIPT_ENGINE
+#define GGL_QT_SCRIPT_ENGINE "smjs"
+#endif
+
 using ggadget::Variant;
 
 static ggadget::qt::QtMainLoop *g_main_loop;
@@ -93,7 +97,7 @@ static const char kHelpString[] =
 #endif
 #if QT_VERSION >= 0x040400
   "  -s script_runtime, --script-runtime script_runtime\n"
-  "      Specify which script runtime to use\n"
+  "      Specify which script runtime to use, default: " GGL_QT_SCRIPT_ENGINE "\n"
   "      smjs - spidermonkey js runtime\n"
   "      qt   - QtScript js runtime(experimental)\n"
 #endif
@@ -186,7 +190,7 @@ static void ExtractArgumentsValue() {
       g_arguments.script_runtime == "qt-script-runtime") {
     kGlobalExtensions[0] = "qt-script-runtime";
   } else {
-    kGlobalExtensions[0] = "smjs-script-runtime";
+    kGlobalExtensions[0] = GGL_QT_SCRIPT_ENGINE "-script-runtime";
   }
 
   if (g_argument_parser.GetArgumentValue(ARG_BACKGROUND, &arg_value))

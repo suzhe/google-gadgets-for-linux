@@ -116,7 +116,7 @@ noinst_SCRIPTS=ggl-gtk.sh
 
 .PHONY: ggl-gtk.sh
 
-ggl-gtk.sh: ggl-gtk
+ggl-gtk.sh: ggl-gtk$(EXEEXT)
 	(echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
 	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \

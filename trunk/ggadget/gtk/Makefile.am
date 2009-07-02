@@ -72,6 +72,7 @@ libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
+			  -no-undefined \
 			  -export-dynamic
 
 if GTK2_TARGET_X11
