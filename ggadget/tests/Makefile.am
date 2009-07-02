@@ -116,6 +116,7 @@ foo_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 foo_module_la_LIBADD		= $(top_builddir)/unittest/libgtest.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 foo_module_la_LDFLAGS		= -avoid-version \
+				  -no-undefined \
 				  -rpath ${abs_builddir} \
 				  -module
 
@@ -127,6 +128,7 @@ bar_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 bar_module_la_LIBADD		= $(top_builddir)/unittest/libgtest.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 bar_module_la_LDFLAGS		= -avoid-version \
+				  -no-undefined \
 				  -rpath ${abs_builddir} \
 				  -module
 

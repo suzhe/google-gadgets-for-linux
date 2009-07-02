@@ -103,6 +103,7 @@ linux_system_framework_la_LIBADD += \
 endif
 
 linux_system_framework_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

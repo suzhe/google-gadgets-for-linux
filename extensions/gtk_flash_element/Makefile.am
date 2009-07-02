@@ -34,6 +34,7 @@ gtk_flash_element_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			      $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
 gtk_flash_element_la_LDFLAGS = -avoid-version \
+			       -no-undefined \
 			       -module
 
 endif

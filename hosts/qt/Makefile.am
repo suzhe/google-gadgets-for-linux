@@ -100,7 +100,7 @@ noinst_SCRIPTS=ggl-qt.sh
 
 .PHONY: ggl-qt.sh
 
-ggl-qt.sh: ggl-qt
+ggl-qt.sh: ggl-qt$(EXEEXT)
 	(echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
 	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \

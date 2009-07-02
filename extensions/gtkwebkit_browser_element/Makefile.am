@@ -41,6 +41,7 @@ gtkwebkit_browser_element_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gtkwebkit_browser_element_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

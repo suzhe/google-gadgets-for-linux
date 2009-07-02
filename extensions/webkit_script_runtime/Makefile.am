@@ -48,6 +48,11 @@ libggadget_webkitjs@GGL_EPOCH@_la_LIBADD = \
 				$(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 				$(top_builddir)/ggadget/js/libggadget-js@GGL_EPOCH@.la
 
+libggadget_webkitjs@GGL_EPOCH@_la_LDFLAGS = \
+				-version-info $(LIBGGADGET_VERSION) \
+				-no-undefined \
+				-export-dynamic
+
 extension_LTLIBRARIES = webkit-script-runtime.la
 extensiondir = $(GGL_MODULE_DIR)
 
@@ -67,6 +72,7 @@ webkit_script_runtime_la_LIBADD = \
 				libggadget-webkitjs@GGL_EPOCH@.la
 
 webkit_script_runtime_la_LDFLAGS = \
+				-no-undefined \
 				-avoid-version \
 				-module
 

@@ -45,6 +45,7 @@ qtwebkit_browser_element_la_LIBADD = \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
 qtwebkit_browser_element_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 BUILT_SOURCES		= $(MOC_FILES)

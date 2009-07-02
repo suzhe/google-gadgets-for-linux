@@ -71,6 +71,7 @@ qt_script_runtime_la_LIBADD = \
 			  libggadget-qtjs.la
 
 qt_script_runtime_la_LDFLAGS = \
+			  -no-undefined \
 			  -avoid-version \
 			  -module
 

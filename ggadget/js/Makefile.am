@@ -43,6 +43,7 @@ libggadget_js@GGL_EPOCH@_la_LIBADD = \
 
 libggadget_js@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_VERSION) \
+			  -no-undefined \
 			  -export-dynamic
 
 jscript_massager.cc : jscript_massager.l
