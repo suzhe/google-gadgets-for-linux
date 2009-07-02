@@ -23,6 +23,7 @@
 #include "graphics_interface.h"
 #include "file_manager_factory.h"
 #include "small_object.h"
+#include "system_utils.h"
 
 #ifdef _DEBUG
 // #define DEBUG_IMAGE_CACHE
@@ -203,10 +204,18 @@ class ImageCache::Impl : public SmallObject<> {
       num_new_global_images_++;
 #endif
     } else {
-      // Still return a SharedImage because the gadget wants the src of an
-      // image even if the image can't be loaded.
-      key = "Invalid:" + filename;
+      // Use the local key to let later requests to this file get the blank
+      // image directly.
+      key = local_key;
       DLOG("Failed to load image %s.", filename.c_str());
+      // Continue. May still return a SharedImage because the gadget wants
+      // the src of an image even if the image can't be loaded.
+    }
+
+    if (IsAbsolutePath(filename.c_str())) {
+      // Don't cache files loaded with absolute file path, because the gadget
+      // might want to load the new file when the file changes.
+      return img ? img : new SharedImage(key, filename, NULL, NULL);
     }
 
     SharedImage *shared_img = new SharedImage(key, filename, image_map, img);
