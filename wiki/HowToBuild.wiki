@@ -267,6 +267,9 @@ Besides "--prefix" parameter, there are some other parameters you might want to 
   * --enable-debug
  It enables debug build, which will generate slower and larger binary but suitable for debugging. This option is not recommended for normal users.
 
+  * --disable-werror
+ Disable -Werror compile option, which is enabled by default and may cause problem on some platforms, eg. Fedora 11.
+
   * --with-browser-plugins-dir
  Since 0.10.3, Google Gadgets for Linux support [http://code.google.com/apis/desktop/docs/releasenotes-v58.html new APIs] introduced in Google Desktop for Windows 5.8. The most important one is the "Full support for Flash", that is, a desktop gadget can play a .swf file from the internet directly. On Linux, it requires adobe flash browser plugin.
  This option specifies the directory where the flash plugin can be found. The directory might be different on different Linux distributions, for example:
@@ -307,6 +310,8 @@ $ make DESTDIR=/tmp/ggl-root install
 }}}
 
 Then you can pack all things in /tmp/ggl-root into binary package.
+
+If you encounter any problem when building, try to use --disable-werror option when execute configure script. There is a known issue which will cause build problem on Fedora 11, if this option is not specified.
 
 == Build with cmake ==
 
