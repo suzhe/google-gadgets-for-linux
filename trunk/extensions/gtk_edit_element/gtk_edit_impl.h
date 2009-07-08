@@ -171,6 +171,8 @@ class GtkEditImpl {
   void MoveCursor(MovementStep step, int count, bool extend_selection);
   /** Move cursor visually, meaning left or right */
   int MoveVisually(int current_pos, int count);
+  /** Move cursor logically, meaning towards head or end of the text. */
+  int MoveLogically(int current_pos, int count);
   /** Move cursor in words */
   int MoveWords(int current_pos, int count);
   /** Move cursor in display lines */
@@ -241,8 +243,7 @@ class GtkEditImpl {
   /**
    * Gets the cursor location in pango layout. The unit is pixel.
    */
-  void GetCursorLocationInLayout(int *strong_x, int *strong_y, int *strong_height,
-                                 int *weak_x, int *weak_y, int *weak_height);
+  void GetCursorLocationInLayout(PangoRectangle *strong, PangoRectangle *weak);
 
   /**
    * Updates the cursor location of input method context.
@@ -385,6 +386,15 @@ class GtkEditImpl {
   Color text_color_;
 
   CanvasInterface::Alignment align_;
+
+  /**
+   * Cursor index in layout, which shall be reset to -1 when resetting
+   * layout or moving cursor so that it'll be recalculated.
+   */
+  int cursor_index_in_layout_;
+
+  PangoRectangle strong_cursor_pos_;
+  PangoRectangle weak_cursor_pos_;
 
   ClipRegion last_selection_region_;
   ClipRegion selection_region_;
