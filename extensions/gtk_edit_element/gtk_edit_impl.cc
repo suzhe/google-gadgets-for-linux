@@ -28,6 +28,7 @@
 #include <ggadget/math_utils.h>
 #include <ggadget/logger.h>
 #include <ggadget/texture.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/view.h>
 #include <ggadget/gtk/cairo_graphics.h>
@@ -46,12 +47,13 @@ namespace gtk {
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 static const int kCursorBlinkTimeout = 400;
-static const double kStrongCursorLineWidth = 1.2;
-static const double kStrongCursorBarWidth = 1.2;
-static const double kWeakCursorLineWidth = 3;
-static const double kWeakCursorBarWidth = 3;
+static const double kStrongCursorBarWidth = 2;
+static const double kStrongCursorBarHeight = 1;
+static const double kWeakCursorBarWidth = 2;
+static const double kWeakCursorBarHeight = 1;
 static const Color kStrongCursorColor(0, 0, 0);
 static const Color kWeakCursorColor(0.5, 0.5, 0.5);
+static const Color kTextUnderCursorColor(1, 1, 1);
 static const Color kDefaultTextColor(0, 0, 0);
 static const Color kDefaultBackgroundColor(1, 1, 1);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
@@ -98,6 +100,7 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       background_(new Texture(kDefaultBackgroundColor, 1)),
       text_color_(kDefaultTextColor),
       align_(CanvasInterface::ALIGN_LEFT),
+      cursor_index_in_layout_(-1),
       content_region_(0.9) {
   ASSERT(main_loop_);
   ASSERT(graphics_);
@@ -590,6 +593,7 @@ void GtkEditImpl::ResetLayout() {
     g_object_unref(cached_layout_);
     cached_layout_ = NULL;
     content_modified_ = true;
+    cursor_index_in_layout_ = -1;
   }
 }
 
@@ -618,38 +622,26 @@ PangoLayout* GtkEditImpl::CreateLayout() {
 
   pango_layout_set_single_paragraph_mode(layout, !multiline_);
 
-  if (preedit_.length()) {
+  if (visible_) {
     size_t cursor_index = static_cast<size_t>(cursor_);
-    size_t text_length = text_.length();
     size_t preedit_length = preedit_.length();
-    if (visible_) {
-      tmp_string = text_;
+    tmp_string = text_;
+
+    if (preedit_length) {
       tmp_string.insert(cursor_index, preedit_);
-    } else {
-      size_t nchars = g_utf8_strlen(text_.c_str(), text_length);
-      size_t preedit_nchars = g_utf8_strlen(preedit_.c_str(), preedit_length);
-      nchars += preedit_nchars;
-      tmp_string.reserve(password_char_.length() * nchars);
-      for (size_t i = 0; i < nchars; ++i)
-        tmp_string.append(password_char_);
-      size_t cursor_offset =
-          g_utf8_pointer_to_offset(text_.c_str(), text_.c_str() + cursor_index);
-      /* Fix cursor index and preedit_length */
-      cursor_index = cursor_offset * password_char_.length();
-      preedit_length = preedit_nchars * password_char_.length();
+      if (preedit_attrs_) {
+        pango_attr_list_splice(tmp_attrs, preedit_attrs_,
+                               static_cast<int>(cursor_index),
+                               static_cast<int>(preedit_length));
+      }
     }
-    if (preedit_attrs_)
-      pango_attr_list_splice(tmp_attrs, preedit_attrs_,
-                             static_cast<int>(cursor_index),
-                             static_cast<int>(preedit_length));
   } else {
-    if(visible_) {
-      tmp_string = text_;
-    } else {
-      size_t nchars = g_utf8_strlen(text_.c_str(), text_.length());
-      tmp_string.reserve(password_char_.length() * nchars);
-      for (size_t i = 0; i < nchars; ++i)
-        tmp_string.append(password_char_);
+    // Invisible mode doesn't support preedit string.
+    ASSERT(preedit_.length() == 0);
+    size_t nchars = g_utf8_strlen(text_.c_str(), text_.length());
+    tmp_string.reserve(password_char_.length() * nchars);
+    for (size_t i = 0; i < nchars; ++i) {
+      tmp_string.append(password_char_);
     }
   }
 
@@ -695,11 +687,12 @@ PangoLayout* GtkEditImpl::CreateLayout() {
   if (!wrap_ && pango_layout_get_line_count(layout) <= 1 &&
       align_ != CanvasInterface::ALIGN_CENTER) {
     PangoDirection dir;
-    if (visible_)
+    if (visible_) {
       dir = pango_find_base_dir(tmp_string.c_str(),
                                 static_cast<int>(tmp_string.length()));
-    else
+    } else {
       dir = PANGO_DIRECTION_NEUTRAL;
+    }
 
     if (dir == PANGO_DIRECTION_NEUTRAL) {
       GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
@@ -749,10 +742,9 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
   int text_width, text_height;
   pango_layout_get_pixel_size(layout, &text_width, &text_height);
 
-  int strong_x, strong_y, strong_height;
-  int weak_x, weak_y, weak_height;
-  GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
-                            &weak_x, &weak_y, &weak_height);
+  PangoRectangle strong;
+  PangoRectangle weak;
+  GetCursorLocationInLayout(&strong, &weak);
 
   if (!wrap_ && display_width >= text_width) {
     PangoAlignment align = pango_layout_get_alignment(layout);
@@ -763,40 +755,44 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
     else
       scroll_offset_x_ = 0;
   } else {
-    if (scroll_offset_x_ + strong_x < 0) {
-      if (policy == CENTER_CURSOR) {
-        scroll_offset_x_ = std::min(0, display_width / 2 - strong_x);
-      } else {
-        scroll_offset_x_ = -strong_x;
-      }
-    } else if (scroll_offset_x_ + strong_x > display_width) {
+    if (scroll_offset_x_ + strong.x > display_width) {
       if (policy == CENTER_CURSOR) {
         scroll_offset_x_ = std::max(display_width - text_width,
-                                    display_width / 2 - strong_x);
+                                    display_width / 2 - strong.x);
       } else {
-        scroll_offset_x_ = display_width - strong_x;
+        scroll_offset_x_ = display_width - strong.x;
       }
-    } else if (!wrap_ && scroll_offset_x_ + text_width < display_width) {
+    }
+    if (!wrap_ && scroll_offset_x_ + text_width < display_width) {
       scroll_offset_x_ = display_width - text_width;
     }
+    if (scroll_offset_x_ + strong.x < 0) {
+      if (policy == CENTER_CURSOR) {
+        scroll_offset_x_ = std::min(0, display_width / 2 - strong.x);
+      } else {
+        scroll_offset_x_ = -strong.x;
+      }
+    }
 
-    if (std::abs(weak_x - strong_x) < display_width) {
-      if (scroll_offset_x_ + weak_x < 0)
-        scroll_offset_x_ = - weak_x;
-      else if (scroll_offset_x_ + weak_x > display_width)
-        scroll_offset_x_ = display_width - weak_x;
+    if (std::abs(weak.x - strong.x) < display_width) {
+      if (scroll_offset_x_ + weak.x < 0)
+        scroll_offset_x_ = - weak.x;
+      else if (scroll_offset_x_ + weak.x > display_width)
+        scroll_offset_x_ = display_width - weak.x;
     }
   }
 
   if (display_height >= text_height) {
     scroll_offset_y_ = 0;
   } else {
-    if (scroll_offset_y_ + strong_y + strong_height > display_height)
-      scroll_offset_y_ = display_height - strong_y - strong_height;
-    else if (scroll_offset_y_ + strong_y < 0)
-      scroll_offset_y_ = -strong_y;
-    else if (scroll_offset_y_ + text_height < display_height)
+    if (scroll_offset_y_ + strong.y + strong.height > display_height)
+      scroll_offset_y_ = display_height - strong.y - strong.height;
+
+    if (scroll_offset_y_ + text_height < display_height)
       scroll_offset_y_ = display_height - text_height;
+
+    if (scroll_offset_y_ + strong.y < 0)
+      scroll_offset_y_ = -strong.y;
   }
 
   if (old_offset_x != scroll_offset_x_ || old_offset_y != scroll_offset_y_)
@@ -841,25 +837,27 @@ void GtkEditImpl::InitImContext() {
   if (im_context_)
     g_object_unref(im_context_);
 
-  if (visible_)
-    im_context_ = gtk_im_multicontext_new();
-  else
-    im_context_ = gtk_im_context_simple_new();
-
-  gtk_im_context_set_use_preedit(im_context_, TRUE);
+  im_context_ = gtk_im_multicontext_new();
 
   g_signal_connect(im_context_, "commit",
       G_CALLBACK(CommitCallback), this);
-  g_signal_connect(im_context_, "retrieve-surrounding",
-      G_CALLBACK(RetrieveSurroundingCallback), this);
-  g_signal_connect(im_context_, "delete-surrounding",
-      G_CALLBACK(DeleteSurroundingCallback), this);
-  g_signal_connect(im_context_, "preedit-start",
-      G_CALLBACK(PreeditStartCallback), this);
-  g_signal_connect(im_context_, "preedit-changed",
-      G_CALLBACK(PreeditChangedCallback), this);
-  g_signal_connect(im_context_, "preedit-end",
-      G_CALLBACK(PreeditEndCallback), this);
+
+  if (visible_) {
+    gtk_im_context_set_use_preedit(im_context_, TRUE);
+
+    g_signal_connect(im_context_, "retrieve-surrounding",
+        G_CALLBACK(RetrieveSurroundingCallback), this);
+    g_signal_connect(im_context_, "delete-surrounding",
+        G_CALLBACK(DeleteSurroundingCallback), this);
+    g_signal_connect(im_context_, "preedit-start",
+        G_CALLBACK(PreeditStartCallback), this);
+    g_signal_connect(im_context_, "preedit-changed",
+        G_CALLBACK(PreeditChangedCallback), this);
+    g_signal_connect(im_context_, "preedit-end",
+        G_CALLBACK(PreeditEndCallback), this);
+  } else {
+    gtk_im_context_set_use_preedit(im_context_, FALSE);
+  }
 }
 
 void GtkEditImpl::SetVisibility(bool visible) {
@@ -936,79 +934,80 @@ void GtkEditImpl::HideCursor() {
 void GtkEditImpl::DrawCursor(CanvasInterface *canvas) {
   if (!cursor_visible_ || !focused_) return;
 
-  int strong_x, strong_y, strong_height;
-  int weak_x, weak_y, weak_height;
-  GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
-                            &weak_x, &weak_y, &weak_height);
+  PangoRectangle strong;
+  PangoRectangle weak;
+  GetCursorLocationInLayout(&strong, &weak);
+  canvas->PushState();
+  canvas->TranslateCoordinates(kInnerBorderX + scroll_offset_x_,
+                               kInnerBorderY + scroll_offset_y_);
 
   // Draw strong cursor.
   // TODO: Is the color ok?
-  canvas->DrawLine(strong_x + kInnerBorderX + scroll_offset_x_,
-                   strong_y + kInnerBorderY + scroll_offset_y_,
-                   strong_x + kInnerBorderX + scroll_offset_x_,
-                   strong_y + strong_height + kInnerBorderY + scroll_offset_y_,
-                   kStrongCursorLineWidth, kStrongCursorColor);
-  // Draw a small arror towards weak cursor
-  if (strong_x > weak_x) {
-    canvas->DrawLine(
-        strong_x + kInnerBorderX + scroll_offset_x_ - kStrongCursorBarWidth,
-        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorLineWidth,
-        strong_x + kInnerBorderX + scroll_offset_x_,
-        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorLineWidth,
-        kStrongCursorLineWidth, kStrongCursorColor);
-  } else if (strong_x < weak_x) {
-    canvas->DrawLine(
-        strong_x + kInnerBorderX + scroll_offset_x_,
-        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorLineWidth,
-        strong_x + kInnerBorderX + scroll_offset_x_ + kStrongCursorBarWidth,
-        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorLineWidth,
-        kStrongCursorLineWidth, kStrongCursorColor);
-  }
+  canvas->DrawFilledRect(strong.x, strong.y, strong.width, strong.height,
+                         kStrongCursorColor);
 
-  if (strong_x != weak_x ) {
-    // Draw weak cursor.
-    // TODO: Is the color ok?
-    canvas->DrawLine(weak_x + kInnerBorderX + scroll_offset_x_,
-                     weak_y + kInnerBorderY + scroll_offset_y_,
-                     weak_x + kInnerBorderX + scroll_offset_x_,
-                     weak_y + weak_height + kInnerBorderY + scroll_offset_y_,
-                     kWeakCursorLineWidth, kWeakCursorColor);
-    // Draw a small arror towards strong cursor
-    if (weak_x > strong_x) {
-      canvas->DrawLine(
-          weak_x + kInnerBorderX + scroll_offset_x_ - kWeakCursorBarWidth,
-          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorLineWidth,
-          weak_x + kInnerBorderX + scroll_offset_x_,
-          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorLineWidth,
-          kWeakCursorLineWidth, kWeakCursorColor);
-    } else {
-      canvas->DrawLine(
-          weak_x + kInnerBorderX + scroll_offset_x_,
-          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorLineWidth,
-          weak_x + kInnerBorderX + scroll_offset_x_ + kWeakCursorBarWidth,
-          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorLineWidth,
-          kWeakCursorLineWidth, kWeakCursorColor);
+  if (strong.width > 1) {
+    // Block cursor, ignore weak cursor.
+    PangoLayout *layout = EnsureLayout();
+    CairoCanvas *cairo_canvas = down_cast<CairoCanvas *>(canvas);
+    cairo_t *cr = cairo_canvas->GetContext();
+    cairo_rectangle(cr, strong.x, strong.y, strong.width, strong.height);
+    cairo_clip(cr);
+    cairo_set_source_rgb(cr,
+                         kTextUnderCursorColor.red,
+                         kTextUnderCursorColor.green,
+                         kTextUnderCursorColor.blue);
+    pango_cairo_show_layout(cr, layout);
+  } else {
+    // Draw a small arror towards weak cursor
+    if (strong.x > weak.x) {
+      canvas->DrawFilledRect(strong.x - kStrongCursorBarWidth, strong.y,
+                             kStrongCursorBarWidth, kStrongCursorBarHeight,
+                             kStrongCursorColor);
+    } else if (strong.x < weak.x) {
+      canvas->DrawFilledRect(strong.x + strong.width, strong.y,
+                             kStrongCursorBarWidth, kStrongCursorBarHeight,
+                             kStrongCursorColor);
+    }
+
+    if (strong.x != weak.x ) {
+      // Draw weak cursor.
+      // TODO: Is the color ok?
+      canvas->DrawFilledRect(weak.x, weak.y, weak.width, weak.height,
+                             kWeakCursorColor);
+      // Draw a small arror towards strong cursor
+      if (weak.x > strong.x) {
+        canvas->DrawFilledRect(weak.x - kWeakCursorBarWidth, weak.y,
+                               kWeakCursorBarWidth, kWeakCursorBarHeight,
+                               kWeakCursorColor);
+      } else {
+        canvas->DrawFilledRect(weak.x + weak.width, weak.y,
+                               kWeakCursorBarWidth, kWeakCursorBarHeight,
+                               kWeakCursorColor);
+      }
     }
   }
+
+  canvas->PopState();
 }
 
 void GtkEditImpl::GetCursorRects(Rectangle *strong, Rectangle *weak) {
-  int strong_x, strong_y, strong_height;
-  int weak_x, weak_y, weak_height;
-  GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
-                            &weak_x, &weak_y, &weak_height);
+  PangoRectangle strong_pos;
+  PangoRectangle weak_pos;
+  GetCursorLocationInLayout(&strong_pos, &weak_pos);
 
   strong->x =
-      strong_x + kInnerBorderX + scroll_offset_x_ - kStrongCursorBarWidth;
-  strong->w = kStrongCursorBarWidth * 2;
-  strong->y = strong_y + kInnerBorderY + scroll_offset_y_;
-  strong->h = strong_height;
+      strong_pos.x + kInnerBorderX + scroll_offset_x_ - kStrongCursorBarWidth;
+  strong->w = kStrongCursorBarWidth * 2 + strong_pos.width;
+  strong->y = strong_pos.y + kInnerBorderY + scroll_offset_y_ - 1;
+  strong->h = strong_pos.height + 2;
 
-  if (weak_x != strong_x) {
-    weak->x = weak_x+ kInnerBorderX + scroll_offset_x_ - kWeakCursorBarWidth;
-    weak->w = kWeakCursorBarWidth * 2;
-    weak->y = weak_y+ kInnerBorderY + scroll_offset_y_;
-    weak->h = weak_height;
+  if (weak_pos.x != strong_pos.x) {
+    weak->x =
+        weak_pos.x + kInnerBorderX + scroll_offset_x_ - kWeakCursorBarWidth;
+    weak->w = kWeakCursorBarWidth * 2 + weak_pos.width;
+    weak->y = weak_pos.y+ kInnerBorderY + scroll_offset_y_ - 1;
+    weak->h = weak_pos.height + 2;
   } else {
     *weak = *strong;
   }
@@ -1192,7 +1191,6 @@ int GtkEditImpl::MoveVisually(int current_index, int count) {
   ASSERT(current_index >= 0 &&
          current_index <= static_cast<int>(text_.length()));
   ASSERT(count);
-  ASSERT(preedit_.length() == 0);
 
   PangoLayout *layout = EnsureLayout();
   const char *text = pango_layout_get_text(layout);
@@ -1209,12 +1207,57 @@ int GtkEditImpl::MoveVisually(int current_index, int count) {
       pango_layout_move_cursor_visually(layout, true, index, 0, -1,
                                         &new_index, &new_trailing);
     }
-    index = new_index;
-    if (index < 0 || index == G_MAXINT)
-      return current_index;
+
+    if (new_index < 0 || new_index == G_MAXINT)
+      break;
+
     index = static_cast<int>(
-        g_utf8_offset_to_pointer(text + index, new_trailing) - text);
+        g_utf8_offset_to_pointer(text + new_index, new_trailing) - text);
   }
+  return LayoutIndexToTextIndex(index);
+}
+
+int GtkEditImpl::MoveLogically(int current_index, int count) {
+  ASSERT(current_index >= 0 &&
+         current_index <= static_cast<int>(text_.length()));
+  ASSERT(count);
+
+  PangoLayout *layout = EnsureLayout();
+  const char *text = pango_layout_get_text(layout);
+  int index = TextIndexToLayoutIndex(current_index, false);
+
+  if (visible_) {
+    PangoLogAttr *log_attrs;
+    gint n_attrs;
+    pango_layout_get_log_attrs(layout, &log_attrs, &n_attrs);
+    const char *ptr = text + index;
+    const char *end = text + text_.length() + preedit_.length();
+    int offset = static_cast<int>(g_utf8_pointer_to_offset(text, ptr));
+
+    while (count > 0 && ptr < end) {
+      do {
+        ptr = g_utf8_find_next_char(ptr, NULL);
+        ++offset;
+      } while (ptr && *ptr && !log_attrs[offset].is_cursor_position);
+      --count;
+      if (!ptr) ptr = end;
+    }
+    while(count < 0 && ptr > text) {
+      do {
+        ptr = g_utf8_find_prev_char(text, ptr);
+        --offset;
+      } while (ptr && *ptr && !log_attrs[offset].is_cursor_position);
+      ++count;
+      if (!ptr) ptr = text;
+    }
+    index = static_cast<int>(ptr - text);
+    g_free(log_attrs);
+  } else {
+    int password_char_length = static_cast<int>(password_char_.length());
+    int text_len = static_cast<int>(strlen(text));
+    index = Clamp(index + count * password_char_length, 0, text_len);
+  }
+
   return LayoutIndexToTextIndex(index);
 }
 
@@ -1222,20 +1265,15 @@ int GtkEditImpl::MoveWords(int current_index, int count) {
   ASSERT(current_index >= 0 &&
          current_index <= static_cast<int>(text_.length()));
   ASSERT(count);
-  ASSERT(preedit_.length() == 0);
 
   if (!visible_) {
-    return static_cast<int>(count > 0 ? text_.length() : 0);
+    return (count > 0 ? static_cast<int>(text_.length()) : 0);
   }
 
-  // The cursor movement direction shall be determined by the direction of
-  // current text line.
   PangoLayout *layout = EnsureLayout();
-  int n_log_attrs;
-  PangoLogAttr *log_attrs;
-  pango_layout_get_log_attrs (layout, &log_attrs, &n_log_attrs);
   const char *text = pango_layout_get_text(layout);
   int index = TextIndexToLayoutIndex(current_index, false);
+
   int line_index;
   pango_layout_index_to_line_x(layout, index, FALSE, &line_index, NULL);
 
@@ -1250,36 +1288,43 @@ int GtkEditImpl::MoveWords(int current_index, int count) {
 #else
   PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
 #endif
-  bool rtl = (line->resolved_dir == PANGO_DIRECTION_RTL);
-  const char *ptr = text + index;
-  int offset = static_cast<int>(g_utf8_pointer_to_offset(text, ptr));
-  while (count != 0) {
-    if (((rtl && count < 0) || (!rtl && count > 0)) && *ptr) {
-      while (ptr && *ptr) {
-        ptr = g_utf8_find_next_char(ptr, NULL);
-        ++offset;
-        if (log_attrs[offset].is_word_start || log_attrs[offset].is_word_end)
-          break;
-      }
-      if (!ptr) {
-        ptr = text;
-        while (*ptr) ++ptr;
-      }
-    } else if (((rtl && count > 0) || (!rtl && count < 0)) && ptr > text) {
-      while (ptr && *ptr) {
-        ptr = g_utf8_find_prev_char(text, ptr);
-        --offset;
-        if (log_attrs[offset].is_word_start || log_attrs[offset].is_word_end)
-          break;
-      }
-      if (!ptr) ptr = text;
-    } else {
-      break;
-    }
-    if (count > 0) --count;
-    else ++count;
+  // The cursor movement direction shall be determined by the direction of
+  // current text line.
+  if (line->resolved_dir == PANGO_DIRECTION_RTL) {
+    count = -count;
   }
-  return LayoutIndexToTextIndex(static_cast<int>(ptr - text));
+
+  const char *ptr = text + index;
+  const char *end = text + text_.length() + preedit_.length();
+  int offset = static_cast<int>(g_utf8_pointer_to_offset(text, ptr));
+
+  PangoLogAttr *log_attrs;
+  gint n_attrs;
+  pango_layout_get_log_attrs (layout, &log_attrs, &n_attrs);
+  while (count > 0 && ptr < end) {
+    do {
+      ptr = g_utf8_find_next_char(ptr, NULL);
+      ++offset;
+    } while (ptr && *ptr && !log_attrs[offset].is_word_start &&
+             !log_attrs[offset].is_word_end &&
+             !log_attrs[offset].is_sentence_boundary);
+    --count;
+    if (!ptr) ptr = end;
+  }
+  while(count < 0 && ptr > text) {
+    do {
+      ptr = g_utf8_find_prev_char(text, ptr);
+      --offset;
+    } while (ptr && *ptr && !log_attrs[offset].is_word_start &&
+             !log_attrs[offset].is_word_end &&
+             !log_attrs[offset].is_sentence_boundary);
+    ++count;
+    if (!ptr) ptr = text;
+  }
+  index = static_cast<int>(ptr - text);
+  g_free(log_attrs);
+
+  return LayoutIndexToTextIndex(index);
 }
 
 int GtkEditImpl::MoveDisplayLines(int current_index, int count) {
@@ -1315,23 +1360,26 @@ int GtkEditImpl::MoveDisplayLines(int current_index, int count) {
     return static_cast<int>(text_.length());
   }
 
-  int trailing;
 #if PANGO_VERSION_CHECK(1,16,0)
   PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
 #else
   PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
 #endif
+
   // Find out the cursor x offset related to the new line position.
+  pango_layout_index_to_pos(layout, line->start_index, &rect);
+
   if (line->resolved_dir == PANGO_DIRECTION_RTL) {
-    pango_layout_get_cursor_pos(layout, line->start_index + line->length,
-                                &rect, NULL);
-  } else {
-    pango_layout_get_cursor_pos(layout, line->start_index, &rect, NULL);
+    PangoRectangle extents;
+    pango_layout_line_get_extents(line, NULL, &extents);
+    rect.x -= extents.width;
   }
 
   // rect.x is the left edge position of the line in the layout
   x_off -= rect.x;
   if (x_off < 0) x_off = 0;
+
+  int trailing;
   pango_layout_line_x_to_index(line, x_off, &index, &trailing);
 
   index = static_cast<int>(
@@ -1359,9 +1407,13 @@ int GtkEditImpl::MoveLineEnds(int current_index, int count) {
   ASSERT(current_index >= 0 &&
          current_index <= static_cast<int>(text_.length()));
   ASSERT(count);
-  ASSERT(preedit_.length() == 0);
+
+  if (!visible_) {
+    return (count > 0 ? static_cast<int>(text_.length()) : 0);
+  }
 
   PangoLayout *layout = EnsureLayout();
+  const char *text = pango_layout_get_text(layout);
   int index = TextIndexToLayoutIndex(current_index, false);
   int line_index = 0;
 
@@ -1383,12 +1435,38 @@ int GtkEditImpl::MoveLineEnds(int current_index, int count) {
   if (line->length == 0)
     return current_index;
 
-  if ((line->resolved_dir == PANGO_DIRECTION_RTL && count < 0) ||
-      (line->resolved_dir != PANGO_DIRECTION_RTL && count > 0)) {
-    index = line->start_index + line->length;
+  if (line->resolved_dir == PANGO_DIRECTION_RTL) {
+    count = -count;
+  }
+
+  if (count > 0) {
+    const char *start = text + line->start_index;
+    const char *end = start + line->length;
+    const char *ptr = end;
+    PangoLogAttr *log_attrs;
+    gint n_attrs;
+    pango_layout_get_log_attrs (layout, &log_attrs, &n_attrs);
+    int offset = static_cast<int>(g_utf8_pointer_to_offset(text, ptr));
+
+    if (line_index == line_count - 1 || *ptr == 0 ||
+        log_attrs[offset].is_mandatory_break ||
+        log_attrs[offset].is_sentence_boundary ||
+        log_attrs[offset].is_sentence_end) {
+      // Real line break.
+      index = line->start_index + line->length;
+    } else {
+      // Line wrap,
+      do {
+        ptr = g_utf8_find_prev_char(start, ptr);
+        --offset;
+      } while(ptr && *ptr && !log_attrs[offset].is_cursor_position);
+      index = static_cast<int>(ptr ? ptr - text : end - text);
+    }
+    g_free(log_attrs);
   } else {
     index = line->start_index;
   }
+
   return LayoutIndexToTextIndex(index);
 }
 
@@ -1402,6 +1480,9 @@ void GtkEditImpl::SetCursor(int cursor) {
     cursor_ = cursor;
     selection_bound_ = cursor;
     cursor_moved_ = true;
+
+    // Force recalculate the cursor position.
+    cursor_index_in_layout_ = -1;
   }
 }
 
@@ -1454,6 +1535,9 @@ void GtkEditImpl::SetSelectionBounds(int selection_bound, int cursor) {
     if (cursor_ != cursor) {
       cursor_ = cursor;
       cursor_moved_ = true;
+
+      // Force recalculate the cursor position.
+      cursor_index_in_layout_ = -1;
     }
     ResetImContext();
   }
@@ -1471,28 +1555,13 @@ int GtkEditImpl::TextIndexToLayoutIndex(int text_index,
     return text_index + static_cast<int>(preedit_.length());
   }
 
+  // Invisibile mode doesn't support preedit.
   const char *text = text_.c_str();
   int offset = static_cast<int>(
       g_utf8_pointer_to_offset(text, text + text_index));
-  int preedit_offset = 0;
-  int preedit_chars = 0;
-  if (preedit_.length()) {
-    const char *preedit_text = preedit_.c_str();
-    preedit_offset = static_cast<int>(g_utf8_pointer_to_offset(
-        preedit_text, preedit_text + preedit_cursor_));
-    preedit_chars = static_cast<int>(g_utf8_strlen(
-        preedit_text, preedit_.length()));
-  }
-
   int password_char_length = static_cast<int>(password_char_.length());
 
-  if (text_index < cursor_)
-    return offset * password_char_length;
-
-  if (text_index == cursor_ && consider_preedit_cursor)
-    return (offset + preedit_offset) * password_char_length;
-
-  return (offset + preedit_chars) * password_char_length;
+  return offset * password_char_length;
 }
 
 int GtkEditImpl::LayoutIndexToTextIndex(int layout_index) {
@@ -1507,25 +1576,14 @@ int GtkEditImpl::LayoutIndexToTextIndex(int layout_index) {
     return cursor_;
   }
 
+  // Invisibile mode doesn't support preedit.
   int password_char_length = static_cast<int>(password_char_.length());
   ASSERT(layout_index % password_char_length == 0);
 
   int offset = layout_index / password_char_length;
-
   const char *text = text_.c_str();
-  int cursor_offset = static_cast<int>(
-      g_utf8_pointer_to_offset(text, text + cursor_));
-  int preedit_chars = static_cast<int>(
-      g_utf8_strlen(preedit_.c_str(), preedit_.length()));
 
-  if (offset < cursor_offset)
-    return static_cast<int>(g_utf8_offset_to_pointer(text, offset) - text);
-
-  if (offset >= cursor_offset + preedit_chars)
-    return static_cast<int>(
-        g_utf8_offset_to_pointer(text, offset - preedit_chars) - text);
-
-  return cursor_;
+  return static_cast<int>(g_utf8_offset_to_pointer(text, offset) - text);
 }
 
 int GtkEditImpl::GetCharLength(int index) {
@@ -1549,7 +1607,7 @@ void GtkEditImpl::EnterText(const char *str) {
   if (GetSelectionBounds(NULL, NULL)) {
     DeleteSelection();
   } else if (overwrite_ && cursor_ != static_cast<int>(text_.length())) {
-    DeleteText(cursor_, cursor_ + GetCharLength(cursor_));
+    DeleteText(cursor_, MoveLogically(cursor_, 1));
   }
 
   std::string tmp_text;
@@ -1689,7 +1747,7 @@ void GtkEditImpl::BackSpace() {
     DeleteSelection();
   } else {
     if (cursor_ == 0) return;
-    DeleteText(cursor_ - GetPrevCharLength(cursor_), cursor_);
+    DeleteText(MoveLogically(cursor_, -1), cursor_);
   }
 }
 
@@ -1698,12 +1756,17 @@ void GtkEditImpl::Delete() {
     DeleteSelection();
   } else {
     if (cursor_ == static_cast<int>(text_.length())) return;
-    DeleteText(cursor_, cursor_ + GetCharLength(cursor_));
+    DeleteText(cursor_, MoveLogically(cursor_, 1));
   }
 }
 
 void GtkEditImpl::ToggleOverwrite() {
   overwrite_ = !overwrite_;
+
+  // Force recalculate the cursor position.
+  cursor_index_in_layout_ = -1;
+  cursor_moved_ = true;
+  QueueRefresh(false, NO_SCROLL);
 }
 
 Color GtkEditImpl::GetSelectionBackgroundColor() {
@@ -1739,16 +1802,16 @@ Color GtkEditImpl::GetSelectionTextColor() {
 GtkWidget *GtkEditImpl::GetWidgetAndCursorLocation(GdkRectangle *cur) {
   GtkWidget *widget = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
   if (widget && cur) {
-    int cur_x, cur_y, cur_height;
+    PangoRectangle strong;
     int display_width = width_ - kInnerBorderX * 2;
     int display_height = height_ - kInnerBorderY * 2;
-    GetCursorLocationInLayout(&cur_x, &cur_y, &cur_height, NULL, NULL, NULL);
-    cur_x = Clamp(cur_x + scroll_offset_x_, 0, display_width);
-    cur_y = Clamp(cur_y + scroll_offset_y_, 0, display_height);
+    GetCursorLocationInLayout(&strong, NULL);
+    strong.x = Clamp(strong.x + scroll_offset_x_, 0, display_width);
+    strong.y = Clamp(strong.y + scroll_offset_y_, 0, display_height);
     double x, y, height;
-    owner_->GetView()->ViewCoordToNativeWidgetCoord(0, cur_height,
+    owner_->GetView()->ViewCoordToNativeWidgetCoord(0, strong.height,
                                                     &x, &height);
-    owner_->SelfCoordToViewCoord(cur_x, cur_y, &x, &y);
+    owner_->SelfCoordToViewCoord(strong.x, strong.y, &x, &y);
     owner_->GetView()->ViewCoordToNativeWidgetCoord(x, y, &x, &y);
     cur->x = int(x);
     cur->y = int(y);
@@ -1758,28 +1821,45 @@ GtkWidget *GtkEditImpl::GetWidgetAndCursorLocation(GdkRectangle *cur) {
   return widget;
 }
 
-void GtkEditImpl::GetCursorLocationInLayout(int *strong_x, int *strong_y,
-                                            int *strong_height,
-                                            int *weak_x, int *weak_y,
-                                            int *weak_height) {
-  PangoLayout *layout = EnsureLayout();
-  int cursor_index = TextIndexToLayoutIndex(cursor_, true);
+void GtkEditImpl::GetCursorLocationInLayout(PangoRectangle *strong,
+                                            PangoRectangle *weak) {
+  if (cursor_index_in_layout_ < 0) {
+    // Recalculate cursor position.
+    PangoLayout *layout = EnsureLayout();
+    int index = TextIndexToLayoutIndex(cursor_, true);
+    cursor_index_in_layout_ = index;
 
-  PangoRectangle strong, weak;
-  pango_layout_get_cursor_pos(layout, cursor_index, &strong, &weak);
+    pango_layout_get_cursor_pos(layout, index, &strong_cursor_pos_,
+                                &weak_cursor_pos_);
+    strong_cursor_pos_.width = PANGO_SCALE;
+    weak_cursor_pos_.width = PANGO_SCALE;
 
-  if (strong_x)
-    *strong_x = PANGO_PIXELS(strong.x);
-  if (strong_y)
-    *strong_y = PANGO_PIXELS(strong.y);
-  if (strong_height)
-    *strong_height = PANGO_PIXELS(strong.height);
-  if (weak_x)
-    *weak_x = PANGO_PIXELS(weak.x);
-  if (weak_y)
-    *weak_y = PANGO_PIXELS(weak.y);
-  if (weak_height)
-    *weak_height = PANGO_PIXELS(weak.height);
+    if (overwrite_) {
+      PangoRectangle pos;
+      pango_layout_index_to_pos(layout, index, &pos);
+      if (pos.width != 0) {
+        if (pos.width < 0) {
+          pos.x += pos.width;
+          pos.width = -pos.width;
+        }
+        strong_cursor_pos_ = pos;
+      }
+      weak_cursor_pos_ = strong_cursor_pos_;
+    }
+  }
+
+  if (strong) {
+    strong->x = PANGO_PIXELS(strong_cursor_pos_.x);
+    strong->y = PANGO_PIXELS(strong_cursor_pos_.y);
+    strong->width = PANGO_PIXELS(strong_cursor_pos_.width);
+    strong->height = PANGO_PIXELS(strong_cursor_pos_.height);
+  }
+  if (weak) {
+    weak->x = PANGO_PIXELS(weak_cursor_pos_.x);
+    weak->y = PANGO_PIXELS(weak_cursor_pos_.y);
+    weak->width = PANGO_PIXELS(weak_cursor_pos_.width);
+    weak->height = PANGO_PIXELS(weak_cursor_pos_.height);
+  }
 }
 
 void GtkEditImpl::UpdateIMCursorLocation() {
@@ -1852,6 +1932,9 @@ void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
   edit->QueueRefresh(true, MINIMAL_ADJUST);
   edit->need_im_reset_ = true;
   edit->content_modified_ = true;
+
+  // Force recalculate the cursor position.
+  edit->cursor_index_in_layout_ = -1;
 }
 
 void GtkEditImpl::PreeditEndCallback(GtkIMContext *context, void *gg) {
