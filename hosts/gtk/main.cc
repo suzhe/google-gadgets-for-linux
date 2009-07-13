@@ -110,6 +110,9 @@ static const char kHelpString[] =
   "      1 - Draw bounding boxes around container elements.\n"
   "      2 - Draw bounding boxes around all elements.\n"
   "      4 - Draw bounding boxes around clip region.\n"
+  "  -pp, --private-profile\n"
+  "      Uses a private profile to start " GGL_APP_NAME ", so that\n"
+  "      multiple application instances can be started at the same time.\n"
 #endif
   "  -b, --border\n"
   "      Draw window border for Main View.\n"
@@ -156,6 +159,7 @@ static const char kHelpString[] =
 
 enum ArgumentID {
   ARG_DEBUG = 1,
+  ARG_PRIVATE_PROFILE,
   ARG_BORDER,
   ARG_NO_TRANSPARENT,
   ARG_NO_DECORATOR,
@@ -176,6 +180,7 @@ enum ArgumentID {
 static const ggadget::HostArgumentInfo kArgumentsInfo[] = {
 #ifdef _DEBUG
   { ARG_DEBUG,             Variant::TYPE_INT64, "-d",  "--debug" },
+  { ARG_PRIVATE_PROFILE,   Variant::TYPE_BOOL,  "-pp", "--private-profile" },
 #endif
   { ARG_BORDER,            Variant::TYPE_BOOL,  "-b",  "--border" },
   { ARG_NO_TRANSPARENT,    Variant::TYPE_BOOL,  "-nt", "--no-transparent" },
@@ -442,17 +447,6 @@ int main(int argc, char* argv[]) {
   // object lives longer than any other objects, including the static objects.
   ggadget::SetGlobalMainLoop(new ggadget::gtk::MainLoop());
 
-  std::string profile_dir =
-      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
-                             ggadget::kDefaultProfileDirectory, NULL);
-  ggadget::EnsureDirectories(profile_dir.c_str());
-
-  ggadget::RunOnce run_once(
-      ggadget::BuildFilePath(profile_dir.c_str(),
-                             kRunOnceSocketName,
-                             NULL).c_str());
-  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
-
   // Parse command line.
   if (argc > 1) {
     g_argument_parser.Start();
@@ -468,6 +462,24 @@ int main(int argc, char* argv[]) {
     printf("%s", kHelpString);
     return 0;
   }
+
+  std::string profile_dir =
+      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
+                             ggadget::kDefaultProfileDirectory, NULL);
+#ifdef _DEBUG
+  // Check --private-profile argument.
+  if (g_argument_parser.GetArgumentValue(ARG_PRIVATE_PROFILE, NULL)) {
+    profile_dir = ggadget::StringPrintf("%s-%u", profile_dir.c_str(), getpid());
+  }
+#endif
+
+  ggadget::EnsureDirectories(profile_dir.c_str());
+
+  ggadget::RunOnce run_once(
+      ggadget::BuildFilePath(profile_dir.c_str(),
+                             kRunOnceSocketName,
+                             NULL).c_str());
+  run_once.ConnectOnMessage(ggadget::NewSlot(OnClientMessage));
 
   // If another instance is already running, then send all arguments to it.
   if (run_once.IsRunning()) {
