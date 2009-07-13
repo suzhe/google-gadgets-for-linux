@@ -20,6 +20,8 @@
 #include <ctime>
 #include <string>
 #include <map>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "dir_file_manager.h"
 #include "element_factory.h"
@@ -258,7 +260,11 @@ void ShowAboutDialog(HostInterface *host) {
   LightMap<std::string, Variant> params;
   params["title"] = Variant(GMS_("GOOGLE_GADGETS"));
   params["version"] = Variant(std::string(GGL_VERSION) + " " +
-      StringPrintf(GM_("API_VERSION"), GGL_API_VERSION));
+      StringPrintf(GM_("API_VERSION"), GGL_API_VERSION)
+#ifdef _DEBUG
+      + StringPrintf("\npid: %u", getpid())
+#endif
+      );
   params["copyright"] = Variant(GMS_("GGL_COPYRIGHT"));
   params["description"] = Variant(GMS_("GGL_DESCRIPTION"));
   // AnchorElement's OpenURL() doesn't work because the view is run without
