@@ -79,38 +79,6 @@ class QtViewWidget : public QWidget {
   virtual void focusOutEvent(QFocusEvent *event);
   virtual void timerEvent(QTimerEvent *event);
 
-  void SetInputMask(QPixmap *pixmap);
-
-  ViewInterface *view_;
-  const char **drag_files_;
-  const char **drag_urls_;
-  std::string drag_text_;
-  std::vector<std::string> drag_files_and_urls_;
-  bool composite_;
-  bool movable_;
-  bool enable_input_mask_;
-  bool support_input_mask_;
-  QPixmap *offscreen_pixmap_;
-  QPoint mouse_pos_;
-  bool mouse_drag_moved_;
-  QWidget *child_;
-  double zoom_;
-  uint64_t last_mask_time_;
-#ifdef _DEBUG
-  uint64_t last_fps_time_;
-  int draw_count_;
-#endif
-  ViewInterface::HitTest mouse_down_hittest_;
-  bool resize_drag_;
-  QRect origi_geometry_;
-  int old_width_, old_height_;
-  // used as coefficient of mouse move in window resize
-  int top_, bottom_, left_, right_;
-
-  uint64_t last_redraw_time_;
-  int redraw_timer_;
-  bool draw_queued_;
-  bool self_redraw_;
 
  signals:
   void moved(int x, int y);
@@ -118,6 +86,10 @@ class QtViewWidget : public QWidget {
 
  public slots:
   void UnsetMinimumSizeHint();
+
+ private:
+  class Impl;
+  Impl* impl_;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(QtViewWidget);
