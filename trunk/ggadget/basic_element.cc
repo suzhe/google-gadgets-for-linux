@@ -218,6 +218,9 @@ class BasicElement::Impl : public SmallObject<> {
 
   void SetOpacity(double opacity) {
     if (opacity != opacity_) {
+      // Assumes the visibility is changed if opacity is changed from/to 0.
+      if (opacity == 0 || opacity_ == 0)
+        visibility_changed_ = true;
       opacity_ = opacity;
       QueueDraw();
     }
