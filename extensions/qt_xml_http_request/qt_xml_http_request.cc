@@ -28,6 +28,7 @@
 
 #if QT_VERSION >= 0x040400
 #include <QtNetwork/QNetworkCookie>
+#include <QtNetwork/QNetworkCookieJar>
 #endif
 
 #include <ggadget/gadget_consts.h>
@@ -58,52 +59,54 @@ static const Variant kOpenDefaultArgs[] = {
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
 
-class Session {
- public:
 #if QT_VERSION >= 0x040400
-  void RestoreCookie(QHttpRequestHeader *header) {
-    QString str;
-    for (int i = 0; i < cookies_.size(); i++) {
-      str += cookies_[i].toRawForm(QNetworkCookie::NameAndValueOnly);
-      if (i < cookies_.size() - 1) str += "; ";
-    }
-    if (!str.isEmpty()) header->setValue("Cookie", str);
-    DLOG("Cookie:%s", str.toStdString().c_str());
-  }
-  void SaveCookie(const QHttpResponseHeader& header) {
-    QStringList list = header.allValues("Set-Cookie");
-    if (list.size() != 0) DLOG("Get Cookie Line: %d", list.size());
-    for (int i = 0; i < list.size(); i++) {
-      QList<QNetworkCookie> cookies = QNetworkCookie::parseCookies(list[i].toAscii());
-      cookies_ += cookies;
-    }
-  }
-  void ClearCookie() {
-    cookies_.clear();
-  }
-  QList<QNetworkCookie> cookies_;
-#else
-  void RestoreCookie(QHttpRequestHeader *header) {}
-  void SaveCookie(const QHttpResponseHeader& header) {}
-  void ClearCookie() {}
-#endif
-};
+// Cookie support is incomplete. Cookies are not persistent after application
+// exits.
+static QNetworkCookieJar* cookie_jar = NULL;
 
-class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
+static void RestoreCookie(const QUrl& url, QHttpRequestHeader *header) {
+  QList<QNetworkCookie> list = cookie_jar->cookiesForUrl(url);
+  QStringList value;
+  foreach (QNetworkCookie cookie, list) {
+    value << cookie.toRawForm(QNetworkCookie::NameAndValueOnly);
+  }
+  if (!value.isEmpty()) {
+    header->setValue("Cookie", value.join("; "));
+    DLOG("Cookie:%s", value.join("; ").toStdString().c_str());
+  }
+}
+
+static void SaveCookie(const QUrl& url, const QHttpResponseHeader& header) {
+  QStringList list = header.allValues("Set-Cookie");
+  if (list.size() != 0) DLOG("Get Cookie Line: %d", list.size());
+  foreach (QString item, list) {
+    QList<QNetworkCookie> cookies =
+        QNetworkCookie::parseCookies(item.toAscii());
+    cookie_jar->setCookiesFromUrl(cookies, url);
+  }
+}
+#else
+static void RestoreCookie(const QUrl& url, QHttpRequestHeader *header);
+static void SaveCookie(const QUrl& url, const QHttpResponseHeader& header);
+#endif
+
+class XMLHttpRequest : public QObject,
+                       public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xa34d00e04d0acfbb, XMLHttpRequestInterface);
 
-  XMLHttpRequest(Session *session, MainLoopInterface *main_loop,
+  XMLHttpRequest(QObject *parent, MainLoopInterface *main_loop,
                  XMLParserInterface *xml_parser,
                  const QString &default_user_agent)
-      : main_loop_(main_loop),
+      : QObject(parent),
+        main_loop_(main_loop),
         xml_parser_(xml_parser),
         default_user_agent_(default_user_agent),
         http_(NULL),
         request_header_(NULL),
-        session_(session),
         send_data_(NULL),
         async_(false),
+        no_cookie_(false),
         state_(UNSENT),
         send_flag_(false),
         redirected_times_(0),
@@ -277,7 +280,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         value && strcasecmp(value, "none") == 0) {
       // Microsoft XHR hidden feature: setRequestHeader('Cookie', 'none')
       // clears all cookies. Some gadgets (e.g. reader) use this.
-      session_->ClearCookie();
+      no_cookie_ = true;
       return NO_ERR;
     }
 
@@ -317,8 +320,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed.
       Ref();
-      if (session_)
-        session_->RestoreCookie(request_header_);
+      if (!no_cookie_)
+        RestoreCookie(QUrl(url_.c_str()), request_header_);
 
       if (data.size()) {
         send_data_ = new QByteArray(data.c_str(),
@@ -662,8 +665,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (ChangeState(HEADERS_RECEIVED))
         ChangeState(LOADING);
     }
-    if (session_)
-      session_->SaveCookie(header);
+    SaveCookie(QUrl(url_.c_str()), header);
   }
 
   void OnRequestFinished(int id, bool error) {
@@ -702,8 +704,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       Done(false, false);
     } else {
       redirected_times_++;
-      if (session_)
-        session_->RestoreCookie(request_header_);
+      // FIXME(idlecat): What is the right behavior when redirected?
+      if (no_cookie_)
+        RestoreCookie(QUrl(url_.c_str()), request_header_);
 
       if (send_data_)
         http_->request(*request_header_, *send_data_);
@@ -718,13 +721,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   MyHttp *http_;
   QHttpRequestHeader *request_header_;
   QHttpResponseHeader response_header_;
-  Session *session_;
   QByteArray *send_data_;
   Signal0<void> onreadystatechange_signal_;
   Signal2<size_t, const void *, size_t> ondatareceived_signal_;
 
   std::string url_, host_;
   bool async_;
+  bool no_cookie_;
 
   State state_;
   // Required by the specification.
@@ -756,21 +759,28 @@ void MyHttp::OnDone(bool error) {
   request_->OnRequestFinished(0, error);
 }
 
+static size_t kMaxSessionNumber = 100000;   // An arbitary number
 class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
  public:
   XMLHttpRequestFactory() : next_session_id_(1) {
   }
 
   virtual int CreateSession() {
-    int result = next_session_id_++;
-    sessions_[result] = new Session();
-    return result;
+    if (kMaxSessionNumber < sessions_.size()) return -1;
+    while (1) {
+      int result = next_session_id_++;
+      if (result < 0) result = next_session_id_ = 1;
+      if (sessions_.find(result) == sessions_.end()) {
+        sessions_[result] = new QObject();
+        return result;
+      }
+    }
   }
 
   virtual void DestroySession(int session_id) {
     Sessions::iterator it = sessions_.find(session_id);
     if (it != sessions_.end()) {
-      Session *session = it->second;
+      QObject *session = it->second;
       delete session;
       sessions_.erase(it);
     } else {
@@ -801,7 +811,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   }
 
  private:
-  typedef LightMap<int, Session*> Sessions;
+  typedef LightMap<int, QObject*> Sessions;
   Sessions sessions_;
   int next_session_id_;
   QString default_user_agent_;
@@ -856,6 +866,7 @@ extern "C" {
         break;
       }
     }
+    ggadget::qt::cookie_jar = new QNetworkCookieJar;
     return ggadget::SetXMLHttpRequestFactory(&gFactory);
   }
 
