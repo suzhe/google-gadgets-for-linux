@@ -129,10 +129,12 @@ class QtViewWidget::Impl {
     int w = owner_->width();
     int h = owner_->height();
 
+#if 0
     DLOG("paint %p: s:%d, ow:%d, oh:%d, w:%d, h:%d, vw:%f, vh:%f, uw:%d, uh:%d",
          view_, self_redraw_, old_width_, old_height_, w, h,
          view_->GetWidth(), view_->GetHeight(),
          event->rect().width(), event->rect().height());
+#endif
 
     if (!self_redraw_) {
       view_->Layout();
