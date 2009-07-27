@@ -199,7 +199,7 @@ bool LibmozjsGlueStartup() {
 
   static const GREVersionRange kGREVersion = {
     "1.9a", PR_TRUE,
-    "1.9.1", PR_TRUE
+    "1.9.2", PR_FALSE,
   };
 
   rv = GRE_GetGREPathWithProperties(&kGREVersion, 1, nsnull, 0,
