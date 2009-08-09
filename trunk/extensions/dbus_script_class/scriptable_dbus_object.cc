@@ -178,7 +178,8 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       virtual ResultVariant Call(ScriptableInterface *object,
                                  int argc, const Variant argv[]) const {
         bool result = true;
-        callback_->Call(object, argc, argv).v().ConvertToBool(&result);
+        if (callback_)
+          callback_->Call(object, argc, argv).v().ConvertToBool(&result);
         return ResultVariant(Variant(result));
       }
       virtual bool operator==(const Slot &another) const {
@@ -318,9 +319,19 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       return ResultVariant(Variant(sig_it->second->GetDefaultSlot()));
     }
 
-    // Method has the highest priority.
+    // Try signal first.
     int argc = 0;
     Variant::Type *arg_types = NULL;
+    if (proxy_->GetSignalInfo(name, &argc, &arg_types)) {
+      DBusSignal *signal = new DBusSignal(argc, arg_types);
+      signals_[name] = signal;
+      if (get_info) {
+        return ResultVariant(Variant(signal->GetPrototypeSlot()));
+      }
+      return ResultVariant(Variant(signal->GetDefaultSlot()));
+    }
+
+    // Then try method.
     int retc = 0;
     Variant::Type *ret_types = NULL;
     if (proxy_->GetMethodInfo(name, &argc, &arg_types, &retc, &ret_types)) {
@@ -329,16 +340,6 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
                              argc, arg_types, retc, ret_types);
       // it's the only way to support dynamic function.
       return ResultVariant(Variant(new ScriptableFunction(slot)));
-    }
-
-    // Then try signal.
-    if (proxy_->GetSignalInfo(name, &argc, &arg_types)) {
-      DBusSignal *signal = new DBusSignal(argc, arg_types);
-      signals_[name] = signal;
-      if (get_info) {
-        return ResultVariant(Variant(signal->GetPrototypeSlot()));
-      }
-      return ResultVariant(Variant(signal->GetDefaultSlot()));
     }
 
     // Then try property.
