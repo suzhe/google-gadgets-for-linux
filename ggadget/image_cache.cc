@@ -40,7 +40,6 @@ class ImageCache::Impl : public SmallObject<> {
     SharedImage(const std::string &key, const std::string &tag,
                 ImageMap *owner, ImageInterface *image)
         : key_(key), tag_(tag), owner_(owner), image_(image), ref_(1) {
-      ASSERT(owner_);
     }
     virtual ~SharedImage() {
 #ifdef DEBUG_IMAGE_CACHE
