@@ -254,6 +254,20 @@ TEST("Test dynamic properties", function() {
     scriptable2["d" + i] = "v" + i;
   for (i = 0; i < 10; i++)
     ASSERT(EQ("Value:v" + i, scriptable2["d" + i]));
+
+  var slot_called = false;
+  var slot = function() { slot_called = true; };
+  scriptable2["s"] = slot;
+  scriptable2.FireDynamicSignal();
+  ASSERT(TRUE(slot_called));
+
+  /* following test is only supported by webkit_script_runtime.
+  ASSERT(NULL(scriptable2["s"]));
+  scriptable2["s"] = slot;
+  ASSERT(EQ(slot, scriptable2["s"]));
+  scriptable2["s"] = null;
+  ASSERT(NULL(scriptable2["s"]));
+  */
 });
 
 TEST("Test scriptables", function() {

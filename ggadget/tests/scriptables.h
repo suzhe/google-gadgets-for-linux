@@ -160,19 +160,33 @@ class ExtScriptable : public BaseScriptable {
     return false;
   }
 
-  Variant GetDynamicProperty(const char *name) {
+  Variant GetDynamicProperty(const char *name, bool get_info) {
     if (name[0] == 'd')
       return Variant(dynamic_properties_[name]);
+    if (name[0] == 's') {
+      if (get_info)
+        return Variant(&dynamic_signal_prototype_);
+      return Variant(dynamic_signal_.GetDefaultSlot());
+    }
     return Variant();
   }
 
-  bool SetDynamicProperty(const char *name, const char *value) {
+  bool SetDynamicProperty(const char *name, const Variant& value) {
     if (name[0] == 'd') {
       // Distinguish from JavaScript builtin logic.
-      dynamic_properties_[name] = std::string("Value:") + value;
+      dynamic_properties_[name] =
+          std::string("Value:") + VariantValue<const std::string&>()(value);
+      return true;
+    }
+    if (name[0] == 's') {
+      dynamic_signal_.SetDefaultSlot(VariantValue<Slot *>()(value));
       return true;
     }
     return false;
+  }
+
+  void FireDynamicSignal() {
+    dynamic_signal_();
   }
 
   ExtScriptable *GetSelf() { return this; }
@@ -257,6 +271,8 @@ class ExtScriptable : public BaseScriptable {
   std::map<std::string, std::string> dynamic_properties_;
   Slot *callback_;
   Inner inner_;
+  Signal0<void> dynamic_signal_;
+  SignalSlot dynamic_signal_prototype_;
 };
 
 extern const Variant kNewObjectDefaultArgs[];

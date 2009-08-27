@@ -163,7 +163,8 @@ ExtScriptable::ExtScriptable(bool native_owned, bool strict,
                              bool register_class)
     : BaseScriptable(native_owned, register_class),
       strict_(strict), callback_(NULL),
-      inner_(this) {
+      inner_(this),
+      dynamic_signal_prototype_(&dynamic_signal_) {
 }
 
 void ExtScriptable::DoRegister() {
@@ -238,6 +239,8 @@ void ExtScriptable::DoClassRegister() {
     RegisterMethod("FireComplexSignal",
                    NewSlot(&Inner::FireComplexSignal, GetInner));
     RegisterMethod("", NewSlot(&ExtScriptable::ObjectMethod));
+    RegisterMethod("FireDynamicSignal",
+                   NewSlot(&ExtScriptable::FireDynamicSignal));
   }
 }
 

@@ -347,6 +347,17 @@ TEST(scriptable_helper, TestDynamicProperty) {
     ASSERT_EQ(Variant(value), scriptable->GetProperty(name).v());
   }
 
+  // Test dynamic signal.
+  Slot0<void> *slot = NewSlot(reinterpret_cast<void (*)()>(NULL));
+  Variant prototype;
+  ASSERT_EQ(ScriptableInterface::PROPERTY_DYNAMIC,
+            scriptable->GetPropertyInfo("s", &prototype));
+  ASSERT_EQ(Variant::TYPE_SLOT, prototype.type());
+  ASSERT_TRUE(scriptable->SetProperty("s", Variant(slot)));
+  ResultVariant result = scriptable->GetProperty("s");
+  ASSERT_EQ(Variant::TYPE_SLOT, result.v().type());
+  ASSERT_EQ(slot, VariantValue<Slot *>()(result.v()));
+
   ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
             scriptable->GetPropertyInfo("not_supported", NULL));
   ASSERT_EQ(Variant::TYPE_VOID,
