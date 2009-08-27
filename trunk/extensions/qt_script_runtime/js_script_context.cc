@@ -510,15 +510,16 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
     DLOG("setPropertyByIndex:%s=%s", sname.c_str(), val.Print().c_str());
   } else {
     Variant proto;
-    if (object_->GetPropertyInfo(sname.c_str(), &proto)
-        == ScriptableInterface::PROPERTY_DYNAMIC) {
-      ConvertJSToNativeVariant(engine(), value, &val);
-    } else {
+    ScriptableInterface::PropertyType prop_type =
+        ScriptableInterface::PROPERTY_NOT_EXIST;
+    prop_type = object_->GetPropertyInfo(sname.c_str(), &proto);
+    if (prop_type == ScriptableInterface::PROPERTY_NORMAL ||
+        prop_type == ScriptableInterface::PROPERTY_DYNAMIC) {
       ConvertJSToNative(engine(), proto, value, &val);
+      DLOG("setProperty:proto:%s", proto.Print().c_str());
+      object_->SetProperty(sname.c_str(), val);
+      DLOG("setProperty:%s=%s", sname.c_str(), val.Print().c_str());
     }
-    DLOG("setProperty:proto:%s", proto.Print().c_str());
-    object_->SetProperty(sname.c_str(), val);
-    DLOG("setProperty:%s=%s", sname.c_str(), val.Print().c_str());
   }
   CheckException(engine()->currentContext(), object_, NULL);
 }
