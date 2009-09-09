@@ -1,3 +1,20 @@
+* 0.11.1 - Sep 9th 2009
+  o Many reported issues have been fixed, including: 311, 313, 314, 315, 316,
+    320, 321, 323, 324, 326, 327, 328, 329, 331, 332, 333, etc.
+
+* 0.11.0 - Jun 1st 2009
+  o Many reported issues have been fixed, including: 132, 151, 190, 244, 265,
+    276, 280, 284, 285, 286, 294, 297, 300, 306, etc.
+  o Performance has been improved dramatically.
+  o Memory consumption has been reduced notably.
+  o A new script runtime based on WebKit/JavaScriptCore has been added.
+  o A new browser element based on WebKit/Gtk has been added.
+  o A new xml http request extension based on libsoup has been added.
+  o A new flash element based on browser element has been added (mainly used
+    with webkit browser element).
+  o French translation provided by Pierre Slamich has been added.
+  o Lots of other bugfixes.
+
 * 0.10.5 - Jan 7th 2009
   o Following reported issues have been fixed: 257, 258, 260, 261, 262, 263
   o Some nasty bugs in libggadget, libggadget-gtk and qt host have been fixed.
