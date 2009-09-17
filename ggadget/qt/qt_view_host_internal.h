@@ -193,8 +193,8 @@ class QtViewHost::Impl : public QObject {
       if (type_ == ViewHostInterface::VIEW_HOST_MAIN) {
         widget_->EnableInputShapeMask(input_shape_mask_);
       }
-      widget_->connect(widget_, SIGNAL(destroyed(QObject*)),
-                       this, SLOT(OnViewWidgetClose(QObject*)));
+      widget_->connect(widget_, SIGNAL(closeBySystem()),
+                       this, SLOT(OnViewWidgetClose()));
       window_->show();
     }
     return true;
@@ -249,7 +249,11 @@ class QtViewHost::Impl : public QObject {
   }
 
   void SetVisibility(bool flag) {
-    if (!window_) return;
+    // Only applies to main view.
+    if (!window_) {
+      if (flag) ShowView(false, 0, feedback_handler_);
+      return;
+    }
     if (flag) {
       widget_->hide();
       widget_->show();
@@ -283,6 +287,15 @@ class QtViewHost::Impl : public QObject {
       resizable_mode_ = mode;
       ApplyResizable();
     }
+  }
+
+  void CloseView() {
+    if (window_) {
+      SaveWindowStates();
+      delete window_;
+      window_ = widget_ = NULL;
+    }
+    ASSERT(!widget_);
   }
 
   QtViewHost *owner_;
@@ -319,19 +332,11 @@ class QtViewHost::Impl : public QObject {
     HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
   }
 
-  void OnViewWidgetClose(QObject*) {
+  void OnViewWidgetClose() {
     if (type_ == ViewHostInterface::VIEW_HOST_DETAILS)
-      HandleDetailsViewClose();
-    window_ = NULL;
-    // Quick and dirty hack:
-    // user can close a view through close button provided by gadget or through
-    // ways provided by windows system. The latter will come here without
-    // calling CloseView. So call it here manually.
-    // owner_->widget_ is NULL if we come here through CloseView
-    if (widget_) {
-      widget_ = NULL;
-      owner_->CloseView();
-    }
+      view_->GetGadget()->CloseDetailsView();
+    else  // main view
+      CloseView();
   }
 
   void OnShow(bool flag, Gadget *gadget) {

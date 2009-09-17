@@ -34,6 +34,7 @@ class QtHost::Impl : public QObject {
     ~GadgetInfo() {
       delete menu_item;
       delete debug_console;
+      if (gadget) gadget->CloseMainView();
       delete gadget;
     }
     Gadget *gadget;
@@ -58,16 +59,6 @@ class QtHost::Impl : public QObject {
     // FIXME: Supports customizable global permissions.
     global_permissions_.SetGranted(Permissions::ALL_ACCESS, true);
     SetupUI();
-  }
-
-  ~Impl() {
-    DLOG("Going to free %zd gadgets", gadgets_.size());
-    for (GadgetsMap::iterator it = gadgets_.begin();
-         it != gadgets_.end(); ++it) {
-      DLOG("Close Gadget: %s",
-           it->second.gadget->GetManifestInfo(kManifestName).c_str());
-      it->second.gadget->CloseMainView();  // TODO: Save window state. A little hacky!
-    }
   }
 
   void SetupUI() {
@@ -274,10 +265,7 @@ class QtHost::Impl : public QObject {
     ViewInterface *child = decorated->GetView();
     Gadget *gadget = child ? child->GetGadget() : NULL;
 
-    if (gadget) {
-      gadget->CloseMainView();  // TODO: Save window state. A little hacky!
-      gadget->RemoveMe(true);
-    }
+    if (gadget) gadget->RemoveMe(true);
   }
 
   void OnClosePopOutViewHandler(DecoratedViewHost *decorated) {
