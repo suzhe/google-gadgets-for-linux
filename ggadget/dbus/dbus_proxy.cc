@@ -246,7 +246,11 @@ class DBusProxy::Impl : public SmallObject<> {
         } else {
           // Initial refcount is 1.
           Impl *impl = new Impl(this, name, path, interface);
-          if (impl->Initialize()) {
+          // Try to run Introspect() in sync mode first, it may fail if the
+          // remote service is not ready yet. Then try to run Introspect() in
+          // async mode again to make sure we can get the introspect data after
+          // the service is ready.
+          if (impl->Introspect(true) || impl->Introspect(false)) {
             proxies_[tri_name] = impl;
             MonitorImplName(impl);
             std::string match_rule = impl->GetMatchRule();
@@ -382,7 +386,8 @@ class DBusProxy::Impl : public SmallObject<> {
         if (!bus_proxy_) {
           bus_proxy_ = new Impl(this, DBUS_SERVICE_DBUS, DBUS_PATH_DBUS,
                                 DBUS_INTERFACE_DBUS);
-          if (!bus_proxy_->Initialize()) {
+          // bus_proxy_ must be introspected synchronously.
+          if (!bus_proxy_->Introspect(true)) {
             DLOG("Failed to create bus proxy.");
             delete bus_proxy_;
             bus_proxy_ = NULL;
@@ -614,24 +619,8 @@ class DBusProxy::Impl : public SmallObject<> {
   }
 
   void OnNameOwnerChanged() {
-    Initialize();
-    on_reset_();
-  }
-
-  bool Initialize() {
-    methods_.clear();
-    signals_.clear();
-    properties_.clear();
-    interfaces_.clear();
-    children_.clear();
     CancelAllPendingCalls();
-
-    DBusConnection *bus = GetBus();
-    if (bus) {
-      Introspect(bus);
-      return true;
-    }
-    return false;
+    Introspect(false);
   }
 
   void CancelAllPendingCalls() {
@@ -1319,30 +1308,82 @@ class DBusProxy::Impl : public SmallObject<> {
                           in_args, NULL, kDefaultDBusTimeout);
   }
 
+  void ClearIntrospectData() {
+    methods_.clear();
+    signals_.clear();
+    properties_.clear();
+    interfaces_.clear();
+    children_.clear();
+  }
+
   // See:
   // http://dbus.freedesktop.org/doc/dbus-specification.html
   // Section: Introspection Data Format
-  bool Introspect(DBusConnection *bus) {
+  bool Introspect(bool sync) {
 #ifdef DBUS_VERBOSE_LOG
-    DLOG("Introspect dbus object: %s|%s", name_.c_str(), path_.c_str());
+    DLOG("Introspect dbus object %s: %s|%s", (sync ? "sync" : "async"),
+         name_.c_str(), path_.c_str());
 #endif
-    XMLParserInterface *xml_parser = GetXMLParser();
-    ASSERT(xml_parser);
+    DBusConnection* bus = GetBus();
+    ASSERT(bus);
+
+    if (!bus)
+      return false;
 
     Arguments in_args;
-    Arguments out_args;
-    if (!CallMethodSync(bus, DBUS_INTERFACE_INTROSPECTABLE, "Introspect",
-                       in_args, &out_args, kDefaultDBusTimeout)) {
-      DLOG("Failed to get introspect xml from %s|%s",
-           name_.c_str(), path_.c_str());
-      return false;
+    if (sync) {
+      Arguments out_args;
+      if (!CallMethodSync(bus, DBUS_INTERFACE_INTROSPECTABLE, "Introspect",
+                          in_args, &out_args, kDefaultDBusTimeout)) {
+        DLOG("Failed to get introspect xml from %s|%s",
+             name_.c_str(), path_.c_str());
+        return false;
+      }
+      std::string xml;
+      if (out_args.size() < 1 || !out_args[0].value.v().ConvertToString(&xml)) {
+        DLOG("Invalid introspect xml data got from %s|%s",
+             name_.c_str(), path_.c_str());
+        return false;
+      }
+      if (!ParseIntrospectResult(xml)) {
+        ClearIntrospectData();
+        return false;
+      }
+      return true;
+    } else {
+      int call_id =
+          CallMethodAsync(bus, DBUS_INTERFACE_INTROSPECTABLE,
+                          "Introspect", in_args,
+                          NewSlot(this, &Impl::IntrospectResultReceiver),
+                          -1);
+      if (call_id == 0) {
+        ClearIntrospectData();
+        // IntrospectResultReceiver() won't be called if CallMethodAsync()
+        // failed, so we need emit on_reset_ signal here.
+        on_reset_();
+        return false;
+      }
+      return true;
     }
+  }
+
+  bool IntrospectResultReceiver(int index, const Variant& result) {
+#ifdef DBUS_VERBOSE_LOG
+    DLOG("Introspect data received: %s|%s", name_.c_str(), path_.c_str());
+#endif
+    ClearIntrospectData();
     std::string xml;
-    if (out_args.size() < 1 || !out_args[0].value.v().ConvertToString(&xml)) {
-      DLOG("Invalid introspect xml data got from %s|%s",
-           name_.c_str(), path_.c_str());
-      return false;
+    if (index == 0 && result.ConvertToString(&xml)) {
+      if (!ParseIntrospectResult(xml))
+        ClearIntrospectData();
     }
+    on_reset_();
+    return false;
+  }
+
+  bool ParseIntrospectResult(const std::string& xml) {
+    XMLParserInterface *xml_parser = GetXMLParser();
+    ASSERT(xml_parser);
 
     DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
     domdoc->Ref();
