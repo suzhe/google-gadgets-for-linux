@@ -166,14 +166,7 @@ bool QtViewHost::ShowView(bool modal, int flags,
 }
 
 void QtViewHost::CloseView() {
-  if (impl_->window_) {
-    impl_->SaveWindowStates();
-    // must set widget_ to NULL before delete window_
-    impl_->widget_ = NULL;
-    delete impl_->window_;
-    impl_->window_ = NULL;
-  }
-  ASSERT(!impl_->widget_);
+  impl_->CloseView();
 }
 
 bool QtViewHost::ShowContextMenu(int button) {

@@ -572,6 +572,11 @@ void QtViewWidget::timerEvent(QTimerEvent *event) {
   }
 }
 
+void QtViewWidget::closeEvent(QCloseEvent *event) {
+  emit closeBySystem();
+  event->ignore();
+}
+
 void QtViewWidget::paintEvent(QPaintEvent *event) {
   impl_->paintEvent(event);
 }

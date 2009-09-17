@@ -78,11 +78,12 @@ class QtViewWidget : public QWidget {
   virtual void focusInEvent(QFocusEvent *event);
   virtual void focusOutEvent(QFocusEvent *event);
   virtual void timerEvent(QTimerEvent *event);
-
+  virtual void closeEvent(QCloseEvent *event);
 
  signals:
   void moved(int x, int y);
   void geometryChanged(int dleft, int dtop, int dw, int dh);
+  void closeBySystem();
 
  public slots:
   void UnsetMinimumSizeHint();
