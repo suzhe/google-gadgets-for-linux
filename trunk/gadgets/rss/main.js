@@ -122,6 +122,7 @@ function ProcessRequest(xml_request, feed) {
   }
 
   var readystate = xml_request.readyState;
+
   if (4 == readystate) { // complete
     if (200 == xml_request.status) {
       ParseDocument(xml_request, feed);
@@ -138,8 +139,13 @@ function ProcessRequest(xml_request, feed) {
 function ParseDocument(xml_request, feed) {
   var xml = xml_request.responseXML;
   if (xml == null) {
-    UpdateCaption(strings.GADGET_UNKNOWN);
-    return;
+    // Some sites may return the content as text/html format.
+    // We try to parse it as XML here.
+    xml = new DOMDocument();
+    if (!xml.loadXML(xml_request.responseText)) {
+      UpdateCaption(strings.GADGET_UNKNOWN);
+      return;
+    }
   }
 
   // Try various formats
