@@ -161,4 +161,12 @@ void RemoveLogContext(void *context) {
   }
 }
 
+void FinalizeLogger() {
+  if (!g_log_destroyed) {
+    g_log.context_signals.clear();
+    g_log.context_stack.clear();
+    g_log_destroyed = true;
+  }
+}
+
 } // namespace ggadget

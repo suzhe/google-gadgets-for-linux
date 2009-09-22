@@ -256,6 +256,10 @@ class ExtensionManager::Impl : public SmallObject<> {
 
  public:
   static void ExitHandler() {
+    // Inform the logger not to use contexts any more, because the destruction
+    // of the global manager will unload the module that log contexts might
+    // depend on.
+    FinalizeLogger();
     if (global_manager_) {
       DLOG("Destroy global extension manager.");
       delete global_manager_;
