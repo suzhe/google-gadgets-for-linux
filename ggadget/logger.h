@@ -167,6 +167,13 @@ Connection *ConnectContextLogListener(void *context, LogListener *listener);
  */
 void RemoveLogContext(void *context);
 
+/**
+ * Force to finalize the logger. The logger will clear its internal states,
+ * in order to ensure not to use any freed contexts.
+ * Logs after this call will be printed directly onto the standard output.
+ */
+void FinalizeLogger();
+
 /** @} */
 
 } // namespace ggadget
