@@ -100,6 +100,7 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       background_(new Texture(kDefaultBackgroundColor, 1)),
       text_color_(kDefaultTextColor),
       align_(CanvasInterface::ALIGN_LEFT),
+      valign_(CanvasInterface::VALIGN_TOP),
       cursor_index_in_layout_(-1),
       content_region_(0.9) {
   ASSERT(main_loop_);
@@ -783,7 +784,12 @@ void GtkEditImpl::AdjustScroll(AdjustScrollPolicy policy) {
   }
 
   if (display_height >= text_height) {
-    scroll_offset_y_ = 0;
+    if (valign_ == CanvasInterface::VALIGN_TOP)
+      scroll_offset_y_ = 0;
+    else if (valign_ == CanvasInterface::VALIGN_MIDDLE)
+      scroll_offset_y_ = (display_height - text_height) / 2;
+    else
+      scroll_offset_y_ = display_height - text_height;
   } else {
     if (scroll_offset_y_ + strong.y + strong.height > display_height)
       scroll_offset_y_ = display_height - strong.y - strong.height;
@@ -1695,6 +1701,15 @@ CanvasInterface::Alignment GtkEditImpl::GetAlign() const {
 
 void GtkEditImpl::SetAlign(CanvasInterface::Alignment align) {
   align_ = align;
+  QueueRefresh(true, CENTER_CURSOR);
+}
+
+CanvasInterface::VAlignment GtkEditImpl::GetVAlign() const {
+  return valign_;
+}
+
+void GtkEditImpl::SetVAlign(CanvasInterface::VAlignment valign) {
+  valign_ = valign;
   QueueRefresh(true, CENTER_CURSOR);
 }
 

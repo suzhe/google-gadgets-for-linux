@@ -360,6 +360,15 @@ void QtEditElement::SetAlign(CanvasInterface::Alignment align) {
   // TODO
 }
 
+CanvasInterface::VAlignment QtEditElement::GetVAlign() const {
+  // TODO
+  return CanvasInterface::VALIGN_TOP;
+}
+
+void QtEditElement::SetVAlign(CanvasInterface::VAlignment valign) {
+  // TODO
+}
+
 static QRectF GetRectForPosition(QTextDocument *doc, int position) {
   const QTextBlock block = doc->findBlock(position);
   if (!block.isValid()) return QRectF();

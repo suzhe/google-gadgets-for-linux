@@ -30,6 +30,9 @@ namespace ggadget {
 static const char *kAlignNames[] = {
   "left", "center", "right", "justify"
 };
+static const char *kVAlignNames[] = {
+  "top", "middle", "bottom"
+};
 
 class EditElementBase::Impl : public SmallObject<> {
  public:
@@ -127,6 +130,11 @@ void EditElementBase::DoClassRegister() {
                              NewSlot(&EditElementBase::GetAlign),
                              NewSlot(&EditElementBase::SetAlign),
                              kAlignNames, arraysize(kAlignNames));
+
+  RegisterStringEnumProperty("vAlign",
+                             NewSlot(&EditElementBase::GetVAlign),
+                             NewSlot(&EditElementBase::SetVAlign),
+                             kVAlignNames, arraysize(kVAlignNames));
 }
 
 EditElementBase::~EditElementBase() {

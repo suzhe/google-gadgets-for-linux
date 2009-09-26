@@ -71,6 +71,8 @@ class QtEditElement : public EditElementBase {
   virtual void SelectAll();
   virtual CanvasInterface::Alignment GetAlign() const;
   virtual void SetAlign(CanvasInterface::Alignment align);
+  virtual CanvasInterface::VAlignment GetVAlign() const;
+  virtual void SetVAlign(CanvasInterface::VAlignment valign);
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

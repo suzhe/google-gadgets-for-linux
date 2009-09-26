@@ -97,6 +97,9 @@ class GtkEditImpl {
   CanvasInterface::Alignment GetAlign() const;
   void SetAlign(CanvasInterface::Alignment align);
 
+  CanvasInterface::VAlignment GetVAlign() const;
+  void SetVAlign(CanvasInterface::VAlignment valign);
+
  private:
   /**
    * Enum used to specify different motion types.
@@ -386,6 +389,8 @@ class GtkEditImpl {
   Color text_color_;
 
   CanvasInterface::Alignment align_;
+
+  CanvasInterface::VAlignment valign_;
 
   /**
    * Cursor index in layout, which shall be reset to -1 when resetting
