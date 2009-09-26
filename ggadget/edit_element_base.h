@@ -174,6 +174,12 @@ class EditElementBase : public ScrollingElement {
   /** Sets the text horizontal alignment setting. */
   virtual void SetAlign(CanvasInterface::Alignment align) = 0;
 
+  /** Gets the text vertical alignment setting. */
+  virtual CanvasInterface::VAlignment GetVAlign() const = 0;
+
+  /** Sets the text vertical alignment setting. */
+  virtual void SetVAlign(CanvasInterface::VAlignment valign) = 0;
+
  public:
   /**
    * Derived class shall call this method if the value is changed.

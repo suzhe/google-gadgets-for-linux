@@ -250,6 +250,14 @@ void GtkEditElement::SetAlign(CanvasInterface::Alignment align) {
   impl_->SetAlign(align);
 }
 
+CanvasInterface::VAlignment GtkEditElement::GetVAlign() const {
+  return impl_->GetVAlign();
+}
+
+void GtkEditElement::SetVAlign(CanvasInterface::VAlignment valign) {
+  impl_->SetVAlign(valign);
+}
+
 void GtkEditElement::DoDraw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
   DrawScrollbar(canvas);
