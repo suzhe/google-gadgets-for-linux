@@ -37,6 +37,8 @@
 #include "permissions.h"
 #include "gadget.h"
 #include "small_object.h"
+#include "canvas_utils.h"
+#include "gadget_consts.h"
 
 namespace ggadget {
 
@@ -51,6 +53,7 @@ class BasicElement::Impl : public SmallObject<> {
                   NULL),
         view_(view),
         mask_image_(NULL),
+        focus_overlay_(NULL),
         cache_(NULL),
         tag_name_(tag_name),
         index_(kInvalidIndex), // Invalid until set by Elements.
@@ -81,7 +84,11 @@ class BasicElement::Impl : public SmallObject<> {
         cache_enabled_(false),
         content_changed_(false),
         draw_queued_(false),
-        designer_mode_(false) {
+        designer_mode_(false),
+        show_focus_overlay_(false),
+        show_focus_overlay_set_(false),
+        tab_stop_(false),
+        tab_stop_set_(false) {
   }
 
   ~Impl() {
@@ -98,6 +105,14 @@ class BasicElement::Impl : public SmallObject<> {
 
   const CanvasInterface *GetMaskCanvas() {
     return mask_image_ ? mask_image_->GetCanvas() : NULL;
+  }
+
+  void SetFocusOverlay(const Variant &image) {
+    DestroyImage(focus_overlay_);
+    focus_overlay_ = view_->LoadImage(image, false);
+    if (view_->IsFocused() && view_->GetFocusedElement() == owner_) {
+      QueueDraw();
+    }
   }
 
   void SetPixelWidth(double width) {
@@ -574,6 +589,17 @@ class BasicElement::Impl : public SmallObject<> {
 
         owner_->DoDraw(target);
 
+        if (view_->IsFocused() && view_->GetFocusedElement() == owner_ &&
+            IsShowFocusOverlay()) {
+          if (!focus_overlay_) {
+            focus_overlay_ = view_->LoadImage(Variant(kDefaultFocusOverlay),
+                                              false);
+          }
+          ASSERT(focus_overlay_);
+          StretchMiddleDrawImage(focus_overlay_, target, 0, 0, width, height,
+                                 -1, -1, -1, -1);
+        }
+
         if (cache_enabled_)
           view_->EnableClipRegion(true);
       }
@@ -1029,9 +1055,15 @@ class BasicElement::Impl : public SmallObject<> {
               Rectangle(left, top, right - left, bottom - top), owner_);
         }
         view_->FireEvent(&scriptable_event, onfocusin_event_);
+        if (owner_->IsShowFocusOverlay()) {
+          QueueDraw();
+        }
         break;
       case Event::EVENT_FOCUS_OUT:
         view_->FireEvent(&scriptable_event, onfocusout_event_);
+        if (IsShowFocusOverlay()) {
+          QueueDraw();
+        }
         break;
       default:
         ASSERT(false);
@@ -1042,12 +1074,28 @@ class BasicElement::Impl : public SmallObject<> {
     return result;
   }
 
+  bool IsShowFocusOverlay() {
+    return (!show_focus_overlay_set_ && focus_overlay_) || show_focus_overlay_;
+  }
+
+  void SetShowFocusOverlay(bool show_focus_overlay) {
+    if (!show_focus_overlay_set_ ||
+        show_focus_overlay_ != show_focus_overlay) {
+      show_focus_overlay_set_ = true;
+      show_focus_overlay_ = show_focus_overlay;
+      if (view_->IsFocused() && view_->GetFocusedElement() == owner_) {
+        QueueDraw();
+      }
+    }
+  }
+
  public:
   BasicElement *parent_;
   BasicElement *owner_;
   Elements *children_;
   View *view_;
   ImageInterface *mask_image_;
+  ImageInterface *focus_overlay_;
   CanvasInterface *cache_;
   const char *tag_name_;
   size_t index_;
@@ -1120,6 +1168,10 @@ class BasicElement::Impl : public SmallObject<> {
   bool content_changed_         : 1;
   bool draw_queued_             : 1;
   bool designer_mode_           : 1;
+  bool show_focus_overlay_      : 1;
+  bool show_focus_overlay_set_  : 1;
+  bool tab_stop_                : 1;
+  bool tab_stop_set_            : 1;
 };
 
 #ifdef _DEBUG
@@ -1273,6 +1325,18 @@ void BasicElement::DoClassRegister() {
                              kFlipNames, arraysize(kFlipNames));
   // Note: don't use 'index' property until it is in the public API.
   RegisterProperty("index", NewSlot(&BasicElement::GetIndex), NULL);
+  // Note: don't use 'showFocusOverlay' property until it is in the public API.
+  RegisterProperty("showFocusOverlay",
+                   NewSlot(&BasicElement::IsShowFocusOverlay),
+                   NewSlot(&BasicElement::SetShowFocusOverlay));
+  // Note: don't use 'focusOverlay' property until it is in the public API.
+  RegisterProperty("focusOverlay",
+                   NewSlot(&BasicElement::GetFocusOverlay),
+                   NewSlot(&BasicElement::SetFocusOverlay));
+  // Note: don't use 'tabStop' property until it is in the public API.
+  RegisterProperty("tabStop",
+                   NewSlot(&BasicElement::IsTabStop),
+                   NewSlot(&BasicElement::SetTabStop));
 
   RegisterMethod("focus", NewSlot(&BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(&BasicElement::KillFocus));
@@ -1738,6 +1802,33 @@ void BasicElement::SetFlip(FlipMode flip) {
   }
 }
 
+Variant BasicElement::GetFocusOverlay() const {
+  return Variant(GetImageTag(impl_->focus_overlay_));
+}
+
+void BasicElement::SetFocusOverlay(const Variant &image) {
+  if (image != GetFocusOverlay()) {
+    impl_->SetFocusOverlay(image);
+  }
+}
+
+bool BasicElement::IsShowFocusOverlay() const {
+  return impl_->IsShowFocusOverlay();
+}
+
+void BasicElement::SetShowFocusOverlay(bool show_focus_overlay) {
+  impl_->SetShowFocusOverlay(show_focus_overlay);
+}
+
+bool BasicElement::IsTabStop() const {
+  return impl_->tab_stop_set_ ? impl_->tab_stop_ : IsTabStopDefault();
+}
+
+void BasicElement::SetTabStop(bool tab_stop) {
+  impl_->tab_stop_ = tab_stop;
+  impl_->tab_stop_set_ = true;
+}
+
 void BasicElement::Focus() {
   impl_->view_->SetFocus(this);
 }
@@ -1746,7 +1837,7 @@ void BasicElement::KillFocus() {
   impl_->view_->SetFocus(NULL);
 }
 
-bool BasicElement::IsTabStop() const {
+bool BasicElement::IsTabStopDefault() const {
   return false;
 }
 

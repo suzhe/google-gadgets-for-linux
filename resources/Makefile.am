@@ -28,6 +28,7 @@ RESOURCE_FILES= builtin_gadgets.xml \
 		combo_arrow_down.png \
 		combo_arrow_over.png \
 		common.js \
+		focus_overlay.png \
 		gadget_about.xml \
 		ggl_about.xml \
 		google-gadgets.png \

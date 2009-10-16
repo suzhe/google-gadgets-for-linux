@@ -141,8 +141,8 @@ EditElementBase::~EditElementBase() {
   delete impl_;
 }
 
-bool EditElementBase::IsTabStop() const {
-  return IsReallyEnabled();
+bool EditElementBase::IsTabStopDefault() const {
+  return true;
 }
 
 void EditElementBase::Layout() {

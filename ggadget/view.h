@@ -472,6 +472,9 @@ class View : public ViewInterface {
    */
   int GetDefaultFontSize() const;
 
+  /** Checks if the view itself is focused. */
+  bool IsFocused() const;
+
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);
   Connection *ConnectOnClickEvent(Slot0<void> *handler);

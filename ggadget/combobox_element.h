@@ -118,7 +118,7 @@ class ComboBoxElement : public BasicElement {
 
   virtual double GetPixelHeight() const;
 
-  virtual bool IsTabStop() const;
+  virtual bool IsTabStopDefault() const;
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

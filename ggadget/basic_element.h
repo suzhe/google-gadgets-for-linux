@@ -344,6 +344,35 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void SetFlip(FlipMode flip);
   //@}
 
+  //@{
+  /**
+   * Gets and sets the image to be displayed over the element when this
+   * element is focused. Setting a valid focus overlay image will automatically
+   * enable focus overlay (IsShowFocusOverlay() returns true).
+   */
+  Variant GetFocusOverlay() const;
+  void SetFocusOverlay(const Variant &image);
+  //@}
+
+  //@{
+  /**
+   * Gets and sets whether to show focus overlay when focused.
+   * If set true without setting SetFocusOverlay(), a default focus overlay
+   * image will be used.
+   */
+  bool IsShowFocusOverlay() const;
+  void SetShowFocusOverlay(bool show_focus_overlay);
+  //@}
+
+  //@{
+  /**
+   * Gets and sets whether this element is in the focus chain by pressing the
+   * tab key. It has no effect when the element is disabled.
+   */
+  bool IsTabStop() const;
+  void SetTabStop(bool tab_stop);
+  //@}
+
   /**
    * Checks whether this element is really visible considering transparency
    * and visibility or the ancestors.
@@ -383,8 +412,11 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void KillFocus();
   /**
    * Checks if the element can be focused with the Tab key.
+   * This method (previously named IsTabStop()) is kept for
+   * backward-compatibility. Any value set by SetTabStop()
+   * will override the value returned from this method.
    */
-  virtual bool IsTabStop() const;
+  virtual bool IsTabStopDefault() const;
 
  public:
   //@{
