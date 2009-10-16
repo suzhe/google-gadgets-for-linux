@@ -824,7 +824,7 @@ Connection *ComboBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }
 
-bool ComboBoxElement::IsTabStop() const {
+bool ComboBoxElement::IsTabStopDefault() const {
   return impl_->edit_ != NULL;
 }
 

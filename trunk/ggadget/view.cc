@@ -685,7 +685,7 @@ class View::Impl : public SmallObject<> {
   void SetFocusToFirstElement() {
     if (children_.GetCount()) {
       BasicElement *first = children_.GetItemByIndex(0);
-      if (!first->IsTabStop())
+      if (!first->IsReallyEnabled() || !first->IsTabStop())
         first = GetNextFocusElement(first);
       SetFocus(first);
     }
@@ -695,7 +695,7 @@ class View::Impl : public SmallObject<> {
     size_t count = children_.GetCount();
     if (count) {
       BasicElement *last = children_.GetItemByIndex(count - 1);
-      if (!last->IsTabStop())
+      if (!last->IsReallyEnabled() || !last->IsTabStop())
         last = GetPreviousFocusElement(last);
       SetFocus(last);
     }
@@ -785,7 +785,8 @@ class View::Impl : public SmallObject<> {
   }
 
   BasicElement *GetFirstFocusInTree(BasicElement *current) {
-    return current->IsTabStop() ? current : GetFirstFocusInSubTrees(current);
+    return current->IsReallyEnabled() && current->IsTabStop() ?
+           current : GetFirstFocusInSubTrees(current);
   }
 
   BasicElement *GetFirstFocusInSubTrees(BasicElement *current) {
@@ -808,7 +809,7 @@ class View::Impl : public SmallObject<> {
     BasicElement *result = GetLastFocusInSubTrees(current);
     if (result)
       return result;
-    return current->IsTabStop() ? current : NULL;
+    return current->IsReallyEnabled() && current->IsTabStop() ? current : NULL;
   }
 
   BasicElement *GetLastFocusInSubTrees(BasicElement *current) {
@@ -2248,6 +2249,10 @@ void View::CloseView() {
 int View::GetDefaultFontSize() const {
   return impl_->gadget_ ?
          impl_->gadget_->GetDefaultFontSize() : kDefaultFontSize;
+}
+
+bool View::IsFocused() const {
+  return impl_->view_focused_;
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

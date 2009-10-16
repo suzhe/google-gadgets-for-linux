@@ -47,7 +47,7 @@ class EditElementBase : public ScrollingElement {
   virtual void DoClassRegister();
 
  public:
-  virtual bool IsTabStop() const;
+  virtual bool IsTabStopDefault() const;
   virtual void Layout();
 
   /**
