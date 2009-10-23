@@ -66,6 +66,15 @@ Besides pixel based basicElement.pinX and pinY, GGL also supports percentage val
 == basicElement.flip ==
 It's a new string enum property of basicElement, which controls if the element will be flipped or not. Possible values are "none", "horizontal", "vertical", "both". Default value is "none".
 
+== Tabbing through elements ==
+By default, only edit elements and edit mode combo box elements can be focused by pressing the Tab key. To support more flexible tabbing and focusing, the following properties are added:
+ * showFocusOverlay
+  Controls whether to show focus overlay when focused. If set true without setting focusOverlay, a default focus overlay image (an orange rectangle) will be used.
+ * focusOverlay
+  Customizes the image to be displayed over the element when the element is focused. Setting a valid focus overlay image will automatically enable focus overlay.
+ * tabStop
+  Controls whether this element is in the focus chain by pressing the tab key. It has no effect when the element is disabled. By default tabStop is true for edit elements and edit mode combo box elements, and is false for other elements.
+
 == new properties of button element ==
 Following new properties are supported by button element:
  * iconImage
