@@ -58,6 +58,9 @@ static const uint64_t kFPSCountDuration = 5000;
 // Update input shape mask once per second.
 static const uint64_t kUpdateMaskInterval = 1000;
 
+// Minimal interval between self draws.
+static const unsigned int kSelfDrawInterval = 40;
+
 class ViewWidgetBinder::Impl : public SmallObject<> {
  public:
   Impl(ViewInterface *view,
@@ -69,6 +72,8 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #if GTK_CHECK_VERSION(2,10,0)
       input_shape_mask_(NULL),
       last_mask_time_(0),
+      should_update_input_shape_mask_(false),
+      enable_input_shape_mask_(false),
 #endif
       handlers_(new gulong[kEventHandlersNum]),
       current_drag_event_(NULL),
@@ -76,7 +81,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       dbl_click_(false),
       composited_(false),
       no_background_(no_background),
-      enable_input_shape_mask_(false),
       focused_(false),
       button_pressed_(false),
 #ifdef GRAB_POINTER_EXPLICITLY
@@ -91,7 +95,11 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       mouse_down_y_(-1),
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
       last_width_(0),
-      last_height_(0) {
+      last_height_(0),
+      self_draw_(false),
+      self_draw_timer_(0),
+      last_self_draw_time_(0),
+      sys_clip_region_(NULL) {
     ASSERT(view);
     ASSERT(host);
     ASSERT(GTK_IS_WIDGET(widget));
@@ -145,6 +153,16 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   ~Impl() {
     view_ = NULL;
 
+    if (self_draw_timer_) {
+      g_source_remove(self_draw_timer_);
+      self_draw_timer_ = 0;
+    }
+
+    if (sys_clip_region_) {
+      gdk_region_destroy(sys_clip_region_);
+      sys_clip_region_ = NULL;
+    }
+
     for (size_t i = 0; i < kEventHandlersNum; ++i) {
       if (handlers_[i] > 0)
         g_signal_handler_disconnect(G_OBJECT(widget_), handlers_[i]);
@@ -183,6 +201,148 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     if (no_background_) {
       composited_ = DisableWidgetBackground(widget_);
     }
+  }
+
+  GdkRegion *CreateExposeRegionFromViewClipRegion() {
+    GdkRegion *region = gdk_region_new();
+    const ClipRegion *view_region = view_->GetClipRegion();
+    size_t count = view_region->GetRectangleCount();
+    if (count) {
+      Rectangle rect;
+      GdkRectangle gdk_rect;
+      for (size_t i = 0; i < count; ++i) {
+        rect = view_region->GetRectangle(i);
+        if (zoom_ != 1.0) {
+          rect.Zoom(zoom_);
+          rect.Integerize(true);
+        }
+        gdk_rect.x = static_cast<int>(rect.x);
+        gdk_rect.y = static_cast<int>(rect.y);
+        gdk_rect.width = static_cast<int>(rect.w);
+        gdk_rect.height = static_cast<int>(rect.h);
+        gdk_region_union_with_rect(region, &gdk_rect);
+      }
+    }
+    return region;
+  }
+
+  void AddGdkRectToSystemClipRegion(GdkRectangle *rect) {
+    if (!sys_clip_region_)
+      sys_clip_region_ = gdk_region_new();
+    gdk_region_union_with_rect(sys_clip_region_, rect);
+  }
+
+  void AddGdkRegionToSystemClipRegion(GdkRegion *region) {
+    if (!sys_clip_region_)
+      sys_clip_region_ = gdk_region_new();
+    gdk_region_union(sys_clip_region_, region);
+  }
+
+  void AddExtendedWindowAreaToSystemClipRegion(int width, int height) {
+    GdkRectangle gdk_rect;
+    if (width > last_width_) {
+      gdk_rect.x = last_width_;
+      gdk_rect.y = 0;
+      gdk_rect.width = width - last_width_;
+      gdk_rect.height = height;
+      AddGdkRectToSystemClipRegion(&gdk_rect);
+    }
+    if (height > last_height_) {
+      gdk_rect.x = 0;
+      gdk_rect.y = last_height_;
+      gdk_rect.width = width;
+      gdk_rect.height = height - last_height_;
+      AddGdkRectToSystemClipRegion(&gdk_rect);
+    }
+
+    last_width_ = width;
+    last_height_ = height;
+  }
+
+  void AddGdkRectToViewClipRegion(const GdkRectangle &gdk_rect) {
+    Rectangle rect(gdk_rect.x, gdk_rect.y, gdk_rect.width, gdk_rect.height);
+    rect.Zoom(1.0 / zoom_);
+    rect.Integerize(true);
+    view_->AddRectangleToClipRegion(rect);
+  }
+
+  void AddGdkRegionToViewClipRegion(GdkRegion *region) {
+    if (!gdk_region_empty(region)) {
+      GdkRectangle *rects;
+      gint n_rects;
+      gdk_region_get_rectangles(region, &rects, &n_rects);
+      for (gint i = 0; i < n_rects; ++i) {
+        AddGdkRectToViewClipRegion(rects[i]);
+      }
+      g_free(rects);
+    }
+  }
+
+#if GTK_CHECK_VERSION(2,10,0)
+  bool ShouldUpdateInputShapeMask(int width, int height) {
+    bool update_input_shape_mask = enable_input_shape_mask_ &&
+        (GetCurrentTime() - last_mask_time_ > kUpdateMaskInterval) &&
+        no_background_ && composited_;
+
+    // We need set input shape mask if there is no background.
+    if (update_input_shape_mask) {
+      if (input_shape_mask_) {
+        gint mask_width, mask_height;
+        gdk_drawable_get_size(GDK_DRAWABLE(input_shape_mask_),
+                              &mask_width, &mask_height);
+        if (mask_width != width || mask_height != height) {
+          // input shape mask needs recreate.
+          g_object_unref(G_OBJECT(input_shape_mask_));
+          input_shape_mask_ = NULL;
+        }
+      }
+
+      if (input_shape_mask_ == NULL) {
+        GdkRectangle rect;
+        rect.x = 0;
+        rect.y = 0;
+        rect.width = width;
+        rect.height = height;
+        input_shape_mask_ = gdk_pixmap_new(NULL, width, height, 1);
+
+        // Redraw whole view.
+        AddGdkRectToSystemClipRegion(&rect);
+      }
+    }
+
+    return update_input_shape_mask;
+  }
+#endif
+
+  GdkRegion *GetInvalidateRegion() {
+    gint width, height;
+    gdk_drawable_get_size(widget_->window, &width, &height);
+    view_->Layout();
+#if GTK_CHECK_VERSION(2,10,0)
+    should_update_input_shape_mask_ = ShouldUpdateInputShapeMask(width, height);
+#endif
+    AddExtendedWindowAreaToSystemClipRegion(width, height);
+    GdkRegion *region = CreateExposeRegionFromViewClipRegion();
+    if (sys_clip_region_) {
+      AddGdkRegionToViewClipRegion(sys_clip_region_);
+      gdk_region_union(region, sys_clip_region_);
+      gdk_region_destroy(sys_clip_region_);
+      sys_clip_region_ = NULL;
+    }
+    return region;
+  }
+
+  void SelfDraw() {
+    if (!widget_->window || !gdk_window_is_visible(widget_->window))
+      return;
+
+    self_draw_ = true;
+    GdkRegion *region = GetInvalidateRegion();
+    gdk_window_invalidate_region(widget_->window, region, TRUE);
+    gdk_region_destroy(region);
+    gdk_window_process_updates(widget_->window, TRUE);
+    last_self_draw_time_ = GetCurrentTime();
+    self_draw_ = false;
   }
 
   static gboolean ButtonPressHandler(GtkWidget *widget, GdkEventButton *event,
@@ -364,137 +524,29 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     return result != EVENT_RESULT_UNHANDLED;
   }
 
-  static GdkRegion *CreateExposeRegion(const ClipRegion *view_region,
-                                       int width, int height,
-                                       int last_width, int last_height,
-                                       double zoom) {
-    GdkRegion *region = gdk_region_new();
-    size_t count = view_region->GetRectangleCount();
-    GdkRectangle gdk_rect;
-    if (count) {
-      Rectangle rect;
-      for (size_t i = 0; i < count; ++i) {
-        rect = view_region->GetRectangle(i);
-        if (zoom != 1.0) {
-          rect.Zoom(zoom);
-          rect.Integerize(true);
-        }
-        gdk_rect.x = static_cast<int>(rect.x);
-        gdk_rect.y = static_cast<int>(rect.y);
-        gdk_rect.width = static_cast<int>(rect.w);
-        gdk_rect.height = static_cast<int>(rect.h);
-        gdk_region_union_with_rect(region, &gdk_rect);
-      }
-    }
-    if (width > last_width) {
-      gdk_rect.x = last_width;
-      gdk_rect.y = 0;
-      gdk_rect.width = width - last_width;
-      gdk_rect.height = height;
-      gdk_region_union_with_rect(region, &gdk_rect);
-    }
-    if (height > last_height) {
-      gdk_rect.x = 0;
-      gdk_rect.y = last_height;
-      gdk_rect.width = width;
-      gdk_rect.height = height - last_height;
-      gdk_region_union_with_rect(region, &gdk_rect);
-    }
-    return region;
-  }
-
-  static void AddGdkRectangleToViewClipRegion(ViewInterface *view,
-                                              const GdkRectangle &gdk_rect,
-                                              bool zoom) {
-    Rectangle rect(gdk_rect.x, gdk_rect.y, gdk_rect.width, gdk_rect.height);
-    rect.Zoom(1.0 / zoom);
-    rect.Integerize(true);
-    view->AddRectangleToClipRegion(rect);
-  }
-
-  static void AddGdkRegionToViewClipRegion(ViewInterface *view,
-                                           GdkRegion *region,
-                                           bool zoom) {
-    if (!gdk_region_empty(region)) {
-      GdkRectangle *rects;
-      gint n_rects;
-      gdk_region_get_rectangles(region, &rects, &n_rects);
-      for (gint i = 0; i < n_rects; ++i) {
-        AddGdkRectangleToViewClipRegion(view, rects[i], zoom);
-      }
-      g_free(rects);
-    }
-  }
-
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    gint last_width = impl->last_width_;
-    gint last_height = impl->last_height_;
-    gint width, height;
-    gdk_drawable_get_size(widget->window, &width, &height);
 
-    impl->last_width_ = width;
-    impl->last_height_ = height;
+    if (!impl->self_draw_) {
+      impl->AddGdkRegionToSystemClipRegion(event->region);
+      GdkRegion *invalidate_region = impl->GetInvalidateRegion();
 
-    impl->view_->Layout();
-
-    GdkRegion *region = CreateExposeRegion(
-        impl->view_->GetClipRegion(), width, height,
-        last_width, last_height, impl->zoom_);
-
-    uint64_t current_time = GetCurrentTime();
-#if GTK_CHECK_VERSION(2,10,0)
-    bool update_input_shape_mask = impl->enable_input_shape_mask_ &&
-        (current_time - impl->last_mask_time_ > kUpdateMaskInterval) &&
-        impl->no_background_ && impl->composited_;
-
-    // We need set input shape mask if there is no background.
-    if (update_input_shape_mask) {
-      if (impl->input_shape_mask_) {
-        gint mask_width, mask_height;
-        gdk_drawable_get_size(GDK_DRAWABLE(impl->input_shape_mask_),
-                              &mask_width, &mask_height);
-        if (mask_width != width || mask_height != height) {
-          // input shape mask needs recreate.
-          g_object_unref(G_OBJECT(impl->input_shape_mask_));
-          impl->input_shape_mask_ = NULL;
+      // We can't update the region outside event->region, so update them in a
+      // new self draw request.
+      gdk_region_subtract(invalidate_region, event->region);
+      if (!gdk_region_empty(invalidate_region)) {
+        impl->AddGdkRegionToSystemClipRegion(invalidate_region);
+        if (!impl->self_draw_timer_) {
+          impl->self_draw_timer_ =
+              g_idle_add_full(GDK_PRIORITY_REDRAW, Impl::SelfDrawHandler,
+                              impl, NULL);
         }
       }
-
-      if (impl->input_shape_mask_ == NULL) {
-        DLOG("View(%p): need (re)create input shape mask.", impl->view_);
-        GdkRectangle rect;
-        rect.x = 0;
-        rect.y = 0;
-        rect.width = width;
-        rect.height = height;
-        gdk_region_union_with_rect(region, &rect);
-        impl->input_shape_mask_ = gdk_pixmap_new(NULL, width, height, 1);
-
-        // Redraw whole view.
-        AddGdkRectangleToViewClipRegion(impl->view_, rect, impl->zoom_);
-      }
+      gdk_region_destroy(invalidate_region);
     }
-#endif
 
-    if (event->area.x == 0 && event->area.y == 0 &&
-        event->area.width == 1 && event->area.height == 1) {
-      //DLOG("View(%p): self queue draw.", impl->view_);
-      if (gdk_region_empty(region)) {
-        DLOG("View(%p) has pending queue draw, but doesn't have clip region.",
-             impl->view_);
-        gdk_region_destroy(region);
-        // No need to redraw.
-        return TRUE;
-      }
-      gdk_window_begin_paint_region(widget->window, region);
-    } else {
-      //DLOG("System requires redraw view(%p)", impl->view_);
-      gdk_region_union(region, event->region);
-      AddGdkRegionToViewClipRegion(impl->view_, event->region, impl->zoom_);
-      gdk_window_begin_paint_region(widget->window, region);
-    }
+    gdk_window_begin_paint_region(widget->window, event->region);
 
     cairo_t *cr = gdk_cairo_create(widget->window);
 
@@ -522,9 +574,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
 #if GTK_CHECK_VERSION(2,10,0)
     // We need set input shape mask if there is no background.
-    if (update_input_shape_mask && impl->input_shape_mask_) {
+    if (impl->should_update_input_shape_mask_ && impl->input_shape_mask_) {
       cairo_t *mask_cr = gdk_cairo_create(impl->input_shape_mask_);
-      gdk_cairo_region(mask_cr, region);
+      gdk_cairo_region(mask_cr, event->region);
       cairo_clip(mask_cr);
       cairo_set_operator(mask_cr, CAIRO_OPERATOR_CLEAR);
       cairo_paint(mask_cr);
@@ -534,16 +586,16 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       cairo_destroy(mask_cr);
       gdk_window_input_shape_combine_mask(widget->window,
                                           impl->input_shape_mask_, 0, 0);
-      impl->last_mask_time_ = current_time;
+      impl->last_mask_time_ = GetCurrentTime();
     }
 #endif
 
     // Copy off-screen buffer to screen.
     gdk_window_end_paint(widget->window);
-    gdk_region_destroy(region);
 
 #ifdef _DEBUG
     ++impl->draw_count_;
+    uint64_t current_time = GetCurrentTime();
     uint64_t duration = current_time - impl->last_fps_time_;
     if (duration >= kFPSCountDuration) {
       impl->last_fps_time_ = current_time;
@@ -915,12 +967,21 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     return FALSE;
   }
 
+  static gboolean SelfDrawHandler(gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->self_draw_timer_ = 0;
+    impl->SelfDraw();
+    return FALSE;
+  }
+
   ViewInterface *view_;
   ViewHostInterface *host_;
   GtkWidget *widget_;
 #if GTK_CHECK_VERSION(2,10,0)
   GdkBitmap *input_shape_mask_;
   uint64_t last_mask_time_;
+  bool should_update_input_shape_mask_;
+  bool enable_input_shape_mask_;
 #endif
   gulong *handlers_;
   DragEvent *current_drag_event_;
@@ -928,7 +989,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   bool dbl_click_;
   bool composited_;
   bool no_background_;
-  bool enable_input_shape_mask_;
   bool focused_;
   bool button_pressed_;
 #ifdef GRAB_POINTER_EXPLICITLY
@@ -945,6 +1005,11 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   int last_width_;
   int last_height_;
+
+  bool self_draw_;
+  guint self_draw_timer_;
+  uint64_t last_self_draw_time_;
+  GdkRegion *sys_clip_region_;
 
   struct EventHandlerInfo {
     const char *event;
@@ -991,9 +1056,9 @@ ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
 }
 
 void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
+#if GTK_CHECK_VERSION(2,10,0)
   if (impl_->enable_input_shape_mask_ != enable) {
     impl_->enable_input_shape_mask_ = enable;
-#if GTK_CHECK_VERSION(2,10,0)
     if (impl_->widget_ && impl_->no_background_ &&
         impl_->composited_ && !enable) {
       if (impl_->widget_->window) {
@@ -1004,6 +1069,7 @@ void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
         impl_->input_shape_mask_ = NULL;
       }
     }
+    gtk_widget_queue_draw(impl_->widget_);
   }
 #endif
 }
@@ -1011,6 +1077,35 @@ void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
 ViewWidgetBinder::~ViewWidgetBinder() {
   delete impl_;
   impl_ = NULL;
+}
+
+void ViewWidgetBinder::QueueDraw() {
+  if (!impl_->self_draw_timer_) {
+    uint64_t current_time = GetCurrentTime();
+    if (current_time - impl_->last_self_draw_time_ >= kSelfDrawInterval) {
+      impl_->self_draw_timer_ =
+          g_idle_add_full(GDK_PRIORITY_REDRAW, Impl::SelfDrawHandler,
+                          impl_, NULL);
+    } else {
+      impl_->self_draw_timer_ =
+          g_timeout_add(kSelfDrawInterval -
+                        (current_time - impl_->last_self_draw_time_),
+                        Impl::SelfDrawHandler, impl_);
+    }
+  }
+}
+
+void ViewWidgetBinder::DrawImmediately() {
+  // Remove pending queue draw, as we don't need it anymore.
+  if (impl_->self_draw_timer_) {
+    g_source_remove(impl_->self_draw_timer_);
+    impl_->self_draw_timer_ = 0;
+  }
+  impl_->SelfDraw();
+}
+
+bool ViewWidgetBinder::DrawQueued() {
+  return impl_->self_draw_timer_ != 0;
 }
 
 } // namespace gtk
