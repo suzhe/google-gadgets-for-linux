@@ -54,6 +54,15 @@ class ViewWidgetBinder {
    */
   void EnableInputShapeMask(bool enable);
 
+  /** Called by ViewHost to queue a redraw request. */
+  void QueueDraw();
+
+  /** Checks if a redraw request has been queued. */
+  bool DrawQueued();
+
+  /** Redraws the gadget immediately. */
+  void DrawImmediately();
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ViewWidgetBinder);
   class Impl;

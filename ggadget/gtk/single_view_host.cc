@@ -47,12 +47,6 @@ static const double kMaximumZoom = 2.0;
 static const int kStopMoveDragTimeout = 200;
 static const char kMainViewWindowRole[] = "Google-Gadgets";
 
-// Minimal interval between queue draws.
-static const unsigned int kQueueDrawInterval = 40;
-
-// Maximum live duration of queue draw timer.
-static const uint64_t kQueueDrawTimerDuration = 1000;
-
 class SingleViewHost::Impl {
  public:
   Impl(SingleViewHost *owner, ViewHostInterface::Type type,
@@ -92,13 +86,9 @@ class SingleViewHost::Impl {
       is_keep_above_(false),
       move_dragging_(false),
       enable_signals_(true),
-      draw_queued_(false),
-      draw_finished_(true),
-      queue_draw_timer_(0),
-      last_queue_draw_time_(0),
       queue_resize_timer_(0),
-      last_allocated_width_(0),
-      last_allocated_height_(0),
+      fixed_width_from_view_(0),
+      fixed_height_from_view_(0),
       feedback_handler_(NULL),
       can_close_dialog_(false) {
     ASSERT(owner);
@@ -114,10 +104,6 @@ class SingleViewHost::Impl {
   void Detach() {
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
-
-    if (queue_draw_timer_)
-      g_source_remove(queue_draw_timer_);
-    queue_draw_timer_ = 0;
 
     if (queue_resize_timer_)
       g_source_remove(queue_resize_timer_);
@@ -234,9 +220,6 @@ class SingleViewHost::Impl {
     g_signal_connect(G_OBJECT(fixed_), "size-allocate",
                      G_CALLBACK(FixedSizeAllocateHandler), this);
 
-    g_signal_connect(G_OBJECT(widget_), "expose-event",
-                     G_CALLBACK(ExposeHandler), this);
-
     g_signal_connect(G_OBJECT(fixed_), "set-focus-child",
                      G_CALLBACK(FixedSetFocusChildHandler), this);
 
@@ -275,6 +258,11 @@ class SingleViewHost::Impl {
     int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
     int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
+    // Stores the expected size of the GtkFixed widget, which will be used in
+    // FixedSizeAllocateHandler().
+    fixed_width_from_view_ = width;
+    fixed_height_from_view_ = height;
+
     GtkRequisition req;
     gtk_widget_set_size_request(widget_, width, height);
     gtk_widget_size_request(window_, &req);
@@ -293,8 +281,6 @@ class SingleViewHost::Impl {
       win_width_ = req.width;
       win_height_ = req.height;
     }
-
-    DLOG("New window size: %d %d", req.width, req.height);
   }
 
   void QueueResize() {
@@ -311,33 +297,13 @@ class SingleViewHost::Impl {
       DLOG("SingleViewHost::EnableInputShapeMask(%s)",
            enable ? "true" : "false");
       binder_->EnableInputShapeMask(enable);
-      QueueDraw();
     }
   }
 
   void QueueDraw() {
     ASSERT(GTK_IS_WIDGET(widget_));
-    draw_finished_ = false;
-    if (queue_draw_timer_) {
-      draw_queued_ = true;
-      return;
-    }
-
-    uint64_t current_time = GetCurrentTime();
-    if (current_time - last_queue_draw_time_ >= kQueueDrawInterval) {
-      gtk_widget_queue_draw(widget_);
-      draw_queued_ = false;
-      last_queue_draw_time_ = current_time;
-    } else {
-      draw_queued_ = true;
-    }
-
-    // Can't call view's GetCaption() here, because at this point, view might
-    // not be fully initialized yet.
-    DLOG("Install queue draw timer of view: %p", view_);
-    queue_draw_timer_ = g_timeout_add(kQueueDrawInterval,
-                                      QueueDrawTimeoutHandler,
-                                      this);
+    if (binder_)
+      binder_->QueueDraw();
   }
 
   void SetResizable(ViewInterface::ResizableMode mode) {
@@ -861,7 +827,7 @@ class SingleViewHost::Impl {
 #endif
       }
 
-      if (impl->draw_queued_ || !impl->draw_finished_)
+      if (impl->binder_ && impl->binder_->DrawQueued())
         return TRUE;
 
       int button = ConvertGdkModifierToButton(event->state);
@@ -881,7 +847,6 @@ class SingleViewHost::Impl {
           double view_width = new_width / impl->resize_view_zoom_;
           double view_height = new_height / impl->resize_view_zoom_;
           if (impl->view_->OnSizing(&view_width, &view_height)) {
-            DLOG("Resize view to: %lf %lf", view_width, view_height);
             impl->view_->SetSize(view_width, view_height);
             width = impl->view_->GetWidth() * impl->resize_view_zoom_;
             height = impl->view_->GetHeight() * impl->resize_view_zoom_;
@@ -891,7 +856,6 @@ class SingleViewHost::Impl {
           double yzoom = new_height / impl->resize_view_height_;
           double zoom = std::min(xzoom, yzoom);
           zoom = Clamp(zoom, kMinimumZoom, kMaximumZoom);
-          DLOG("Zoom view to: %lf", zoom);
           impl->view_->GetGraphics()->SetZoom(zoom);
           impl->view_->MarkRedraw();
           width = impl->resize_view_width_ * zoom;
@@ -910,9 +874,6 @@ class SingleViewHost::Impl {
           int win_width = impl->resize_win_width_ + int(delta_x);
           int win_height = impl->resize_win_height_ + int(delta_y);
           gdk_window_move_resize(widget->window, x, y, win_width, win_height);
-          gdk_window_process_updates(widget->window, TRUE);
-          DLOG("Move resize window: x:%d, y:%d, w:%d, h:%d", x, y,
-               win_width, win_height);
         }
 
         return TRUE;
@@ -965,16 +926,12 @@ class SingleViewHost::Impl {
                                        GtkAllocation *allocation,
                                        gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    DLOG("Size allocate(%d, %d)", allocation->width, allocation->height);
     if (GTK_WIDGET_VISIBLE(impl->window_) &&
         !impl->resize_width_mode_ && !impl->resize_height_mode_ &&
         !impl->queue_resize_timer_ &&
         allocation->width >= 1 && allocation->height >= 1 &&
-        (impl->last_allocated_width_ != allocation->width ||
-         impl->last_allocated_height_ != allocation->height)) {
-      impl->last_allocated_width_ = allocation->width;
-      impl->last_allocated_height_ = allocation->height;
-
+        (impl->fixed_width_from_view_ != allocation->width ||
+         impl->fixed_height_from_view_ != allocation->height)) {
       double old_width = impl->view_->GetWidth();
       double old_height = impl->view_->GetHeight();
       double old_zoom = impl->view_->GetGraphics()->GetZoom();
@@ -984,7 +941,6 @@ class SingleViewHost::Impl {
         double new_height = allocation->height / old_zoom;
         if (impl->view_->OnSizing(&new_width, &new_height) &&
             (new_width != old_width || new_height != old_height)) {
-          DLOG("Resize view to: %lf %lf", new_width, new_height);
           impl->view_->SetSize(new_width, new_height);
         }
       } else if (impl->resizable_mode_ == ViewInterface::RESIZABLE_ZOOM &&
@@ -994,7 +950,6 @@ class SingleViewHost::Impl {
         double new_zoom = Clamp(std::min(xzoom, yzoom),
                                 kMinimumZoom, kMaximumZoom);
         if (old_zoom != new_zoom) {
-          DLOG("Zoom view to: %lf", new_zoom);
           impl->view_->GetGraphics()->SetZoom(new_zoom);
           impl->view_->MarkRedraw();
         }
@@ -1021,40 +976,11 @@ class SingleViewHost::Impl {
     return FALSE;
   }
 
-  static gboolean QueueDrawTimeoutHandler(gpointer data) {
-    Impl *impl = reinterpret_cast<Impl *>(data);
-    uint64_t current_time = GetCurrentTime();
-    if (impl->draw_queued_) {
-      ASSERT(GTK_IS_WIDGET(impl->widget_));
-      // Special hack to inform ViewWidgetBinder this queue draw request is
-      // generated by us instead of system.
-      gtk_widget_queue_draw_area(impl->widget_, 0, 0, 1, 1);
-      impl->draw_queued_ = false;
-      impl->last_queue_draw_time_ = current_time;
-    }
-
-    if (current_time - impl->last_queue_draw_time_ > kQueueDrawTimerDuration) {
-      DLOG("Remove queue draw timer of view: %p (%s)", impl->view_,
-           impl->view_->GetCaption().c_str());
-      impl->queue_draw_timer_ = 0;
-      return FALSE;
-    }
-    return TRUE;
-  }
-
   static gboolean QueueResizeTimeoutHandler(gpointer data) {
     Impl *impl = reinterpret_cast<Impl *>(data);
     impl->AdjustWindowSize();
     impl->queue_resize_timer_ = 0;
     return false;
-  }
-
-  static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
-                                gpointer data) {
-    Impl *impl = reinterpret_cast<Impl *>(data);
-    impl->draw_finished_ = true;
-    // Make sure view widget binder can receive this event.
-    return FALSE;
   }
 
   // Some elements may create gtk native widgets under this widget. When such
@@ -1136,14 +1062,9 @@ class SingleViewHost::Impl {
   bool move_dragging_;
   bool enable_signals_;
 
-  bool draw_queued_;
-  bool draw_finished_;
-  guint queue_draw_timer_;
-  uint64_t last_queue_draw_time_;
-
   guint queue_resize_timer_;
-  gint last_allocated_width_;
-  gint last_allocated_height_;
+  int fixed_width_from_view_;
+  int fixed_height_from_view_;
 
   Slot1<bool, int> *feedback_handler_;
   bool can_close_dialog_; // Only useful when a model dialog is running.
