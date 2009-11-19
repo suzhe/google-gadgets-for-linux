@@ -63,6 +63,8 @@
 #include <nsIGenericFactory.h>
 #include <nsIInterfaceRequestor.h>
 #include <nsIInterfaceRequestorUtils.h>
+#include <nsIPrefBranch.h>
+#include <nsIPrefService.h>
 #include <nsIScriptExternalNameSet.h>
 #include <nsIScriptGlobalObject.h>
 #include <nsIScriptNameSpaceManager.h>
@@ -1300,6 +1302,13 @@ int main(int argc, char **argv) {
 
   gtk_moz_embed_push_startup();
   InitCustomComponents();
+
+  nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  if (prefs) {
+    // To let mozilla display appropriate error messages on network errors.
+    prefs->SetBoolPref("browser.xul.error_pages.enabled", PR_TRUE);
+  }
+
   if (g_down_fd != 0) {
     // Only start ping timer in actual environment to ease testing.
     // Use high priority to ensure the callback is called even if the main
