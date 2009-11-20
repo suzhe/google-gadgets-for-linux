@@ -47,7 +47,11 @@ function ViewOnOpen() {
     }
   };
 
-  browser.onerror = OnBrowserError;
+  try {
+    browser.onerror = OnBrowserError;
+  } catch (e) {
+  }
+
   plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
   SetUpCommonParams();
   LoadGadget();
