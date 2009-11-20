@@ -559,6 +559,9 @@ static BrowserInfo *FindBrowserByContentPolicyContext(nsISupports *context,
     window = do_QueryInterface(view);
   }
 
+  nsCOMPtr<nsIDOMWindow> top_window;
+  window->GetTop(getter_AddRefs(top_window));
+
   *is_loading = PR_FALSE;
   for (BrowserMap::iterator it = g_browsers.begin(); it != g_browsers.end();
        ++it) {
@@ -567,7 +570,7 @@ static BrowserInfo *FindBrowserByContentPolicyContext(nsISupports *context,
     nsCOMPtr<nsIDOMWindow> window1;
     rv = browser->GetContentDOMWindow(getter_AddRefs(window1));
     NS_ENSURE_SUCCESS(rv, NULL);
-    if (window == window1) {
+    if (window == window1 || top_window == window1) {
       nsCOMPtr<nsIWebProgress> progress(do_GetInterface(browser));
       if (progress)
         progress->GetIsLoadingDocument(is_loading);
@@ -611,10 +614,21 @@ class ContentPolicy : public nsIContentPolicy {
     PRBool is_loading = PR_FALSE;
     BrowserInfo *browser_info = FindBrowserByContentPolicyContext(
         context, &is_loading);
-    if (!browser_info || !browser_info->always_open_new_window)
+    if (!browser_info) {
       return NS_OK;
+    }
 
-    if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
+    if (strncmp(url_spec.get(), "about:neterror", 14) == 0) {
+      std::string r = SendFeedback(browser_info->browser_id,
+                                   kNetErrorFeedback, url_spec.get(),
+                                   NULL);
+      if (r[0] != '0')
+        *retval = REJECT_OTHER;
+      return NS_OK;
+    }
+
+    if (!browser_info->always_open_new_window &&
+        (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT)) {
       if (request_origin)
         request_origin->GetSpec(origin_spec);
 
