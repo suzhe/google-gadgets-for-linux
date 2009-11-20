@@ -23,6 +23,8 @@
 namespace ggadget {
 namespace gtkmoz {
 
+class BrowserElementImpl;
+
 class BrowserElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xa4fae95864ae4d89, BasicElement);
@@ -69,8 +71,7 @@ class BrowserElement : public BasicElement {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(BrowserElement);
 
-  class Impl;
-  Impl *impl_;
+  BrowserElementImpl *impl_;
 };
 
 } // namespace gtkmoz

@@ -47,6 +47,7 @@ function ViewOnOpen() {
     }
   };
 
+  browser.onerror = OnBrowserError;
   plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
   SetUpCommonParams();
   LoadGadget();
@@ -60,6 +61,13 @@ function OnAddCustomMenuItems(menu) {
   menu.AddItem(strings.GADGET_REFRESH, refresh_flags, RefreshMenuHandler);
   var unload_flags = addGadgetUI.visible ? gddMenuItemFlagGrayed : 0;
   menu.AddItem(strings.GADGET_UNLOAD, unload_flags, UnloadMenuHandler);
+}
+
+function OnBrowserError(url) {
+  view.setTimeout(function() {
+    DisplayMessage(strings.GADGET_ERROR);
+  }, 100);
+  return true;
 }
 
 function RefreshMenuHandler(item_text) {

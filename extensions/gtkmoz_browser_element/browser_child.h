@@ -247,7 +247,7 @@ const char kUnrefFeedback[] = "UNREF";
  * The browser child tells the controller that the browser is about to open
  * an URL.
  *
- * Messsage format:
+ * Message format:
  * <code>
  * OPEN\n
  * Browser ID (size_t)\n
@@ -255,9 +255,29 @@ const char kUnrefFeedback[] = "UNREF";
  * """EOM"""\n
  * </code>
  *
- * The controller must immediately reply a message containing only kReplyPrefix.
+ * The controller must immediately reply a message containing kReplyPrefix and
+ * the return value "1" or "0" indicating if the URL has been/will be opened or
+ * not opened by the controller respectively.
  */
 const char kOpenURLFeedback[] = "OPEN";
+
+/**
+ * The browser child tells the controller that the browser has encountered a
+ * network error.
+ *
+ * Message format:
+ * <code>
+ * NETERR\n
+ * Browser ID (size_t)\n
+ * Error URL (normal string, about:neterror?...)\n
+ * """EOM"""\n
+ *
+ * The controller must immediately reply a message containing kReplyPrefix and
+ * the return value "1" or "0" indicating if the error has been/will be handled
+ * or not handled by the controller respectively.
+ * </code>
+ */
+const char kNetErrorFeedback[] = "ERR";
 
 /**
  * The browser child periodically pings the controller to check if the
