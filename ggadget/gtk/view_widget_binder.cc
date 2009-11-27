@@ -94,8 +94,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
       mouse_down_x_(-1),
       mouse_down_y_(-1),
       mouse_down_hittest_(ViewInterface::HT_CLIENT),
-      last_width_(0),
-      last_height_(0),
       self_draw_(false),
       self_draw_timer_(0),
       last_self_draw_time_(0),
@@ -238,25 +236,16 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
     gdk_region_union(sys_clip_region_, region);
   }
 
-  void AddExtendedWindowAreaToSystemClipRegion(int width, int height) {
-    GdkRectangle gdk_rect;
-    if (width > last_width_) {
-      gdk_rect.x = last_width_;
-      gdk_rect.y = 0;
-      gdk_rect.width = width - last_width_;
-      gdk_rect.height = height;
-      AddGdkRectToSystemClipRegion(&gdk_rect);
+  void AddWindowUpdateAreaToSystemClipRegion() {
+    GdkRegion *region = gdk_window_get_update_area(widget_->window);
+    if (region) {
+      if (!sys_clip_region_) {
+        sys_clip_region_ = region;
+      } else {
+        gdk_region_union(sys_clip_region_, region);
+        gdk_region_destroy(region);
+      }
     }
-    if (height > last_height_) {
-      gdk_rect.x = 0;
-      gdk_rect.y = last_height_;
-      gdk_rect.width = width;
-      gdk_rect.height = height - last_height_;
-      AddGdkRectToSystemClipRegion(&gdk_rect);
-    }
-
-    last_width_ = width;
-    last_height_ = height;
   }
 
   void AddGdkRectToViewClipRegion(const GdkRectangle &gdk_rect) {
@@ -279,7 +268,10 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   }
 
 #if GTK_CHECK_VERSION(2,10,0)
-  bool ShouldUpdateInputShapeMask(int width, int height) {
+  bool ShouldUpdateInputShapeMask() {
+    gint width, height;
+    gdk_drawable_get_size(widget_->window, &width, &height);
+
     bool update_input_shape_mask = enable_input_shape_mask_ &&
         (GetCurrentTime() - last_mask_time_ > kUpdateMaskInterval) &&
         no_background_ && composited_;
@@ -315,13 +307,11 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #endif
 
   GdkRegion *GetInvalidateRegion() {
-    gint width, height;
-    gdk_drawable_get_size(widget_->window, &width, &height);
     view_->Layout();
+    AddWindowUpdateAreaToSystemClipRegion();
 #if GTK_CHECK_VERSION(2,10,0)
-    should_update_input_shape_mask_ = ShouldUpdateInputShapeMask(width, height);
+    should_update_input_shape_mask_ = ShouldUpdateInputShapeMask();
 #endif
-    AddExtendedWindowAreaToSystemClipRegion(width, height);
     GdkRegion *region = CreateExposeRegionFromViewClipRegion();
     if (sys_clip_region_) {
       AddGdkRegionToViewClipRegion(sys_clip_region_);
@@ -1002,9 +992,6 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
   double mouse_down_x_;
   double mouse_down_y_;
   ViewInterface::HitTest mouse_down_hittest_;
-
-  int last_width_;
-  int last_height_;
 
   bool self_draw_;
   guint self_draw_timer_;
