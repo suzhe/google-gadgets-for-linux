@@ -1089,6 +1089,13 @@ class BrowserElementImpl {
       } else {
         result = OpenURL(params[2]) ? '1' : '0';
       }
+    } else if (strcmp(type, kGoToURLFeedback) == 0) {
+      if (param_count != 3) {
+        LOG("%s feedback needs 3 parameters, but only %zu is given",
+            kGoToURLFeedback, param_count);
+      } else {
+        result = ongotourl_signal_(params[2]) ? '1' : '0';
+      }
     } else if (strcmp(type, kNetErrorFeedback) == 0) {
       if (param_count != 3) {
         LOG("%s feedback needs 3 parameters, but only %zu is given",
@@ -1135,6 +1142,7 @@ class BrowserElementImpl {
   Connection *minimized_connection_, *restored_connection_,
              *popout_connection_, *popin_connection_,
              *dock_connection_, *undock_connection_;
+  Signal1<bool, const char *> ongotourl_signal_;
   Signal1<bool, const char *> onerror_signal_;
 };
 
@@ -1191,6 +1199,8 @@ void BrowserElement::DoClassRegister() {
                    NewSlot(&BrowserElement::IsAlwaysOpenNewWindow),
                    NewSlot(&BrowserElement::SetAlwaysOpenNewWindow));
   RegisterClassSignal("onerror", &BrowserElementImpl::onerror_signal_,
+                      &BrowserElement::impl_);
+  RegisterClassSignal("ongotourl", &BrowserElementImpl::ongotourl_signal_,
                       &BrowserElement::impl_);
 }
 
