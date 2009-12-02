@@ -245,7 +245,7 @@ const char kUnrefFeedback[] = "UNREF";
 
 /**
  * The browser child tells the controller that the browser is about to open
- * an URL.
+ * a URL in a new window.
  *
  * Message format:
  * <code>
@@ -260,6 +260,24 @@ const char kUnrefFeedback[] = "UNREF";
  * not opened by the controller respectively.
  */
 const char kOpenURLFeedback[] = "OPEN";
+
+/**
+ * The browser child tells the controller that the browser is about to go to
+ * a URL in the current window or some sub-frame.
+ *
+ * Message format:
+ * <code>
+ * GOTO\n
+ * Browser ID (size_t)\n
+ * URL (normal string)\n
+ * """EOM"""\n
+ * </code>
+ *
+ * The controller must immediately reply a message containing kReplyPrefix and
+ * the return value "1" or "0" indicating if the URL has been/will be opened or
+ * not opened by the controller respectively.
+ */
+const char kGoToURLFeedback[] = "GOTO";
 
 /**
  * The browser child tells the controller that the browser has encountered a

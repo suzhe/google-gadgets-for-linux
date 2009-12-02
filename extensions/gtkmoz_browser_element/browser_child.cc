@@ -627,8 +627,18 @@ class ContentPolicy : public nsIContentPolicy {
       return NS_OK;
     }
 
-    if (!browser_info->always_open_new_window &&
-        (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT)) {
+    if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
+      if (!browser_info->always_open_new_window) {
+        std::string r = SendFeedback(browser_info->browser_id,
+                                     kGoToURLFeedback, url_spec.get(),
+                                     NULL);
+        // The controller should have opened the URL, so don't let the
+        // embedded browser open it.
+        if (r[0] != '0')
+          *retval = REJECT_OTHER;
+        return NS_OK;
+      }
+
       if (request_origin)
         request_origin->GetSpec(origin_spec);
 
