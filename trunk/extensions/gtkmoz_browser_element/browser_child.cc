@@ -53,6 +53,8 @@
 #endif
 #include <nsEvent.h>
 #include <nsICategoryManager.h>
+#include <nsIChannel.h>
+#include <nsIChannelEventSink.h>
 #include <nsIComponentRegistrar.h>
 #include <nsIContentPolicy.h>
 #include <nsIDOMAbstractView.h>
@@ -581,9 +583,11 @@ static BrowserInfo *FindBrowserByContentPolicyContext(nsISupports *context,
   return NULL;
 }
 
-class ContentPolicy : public nsIContentPolicy {
+class ContentPolicy : public nsIContentPolicy, public nsIChannelEventSink {
  public:
   NS_DECL_ISUPPORTS
+
+  static const PRUint32 kTypeRedirect = 999;
 
   NS_IMETHOD ShouldLoad(PRUint32 content_type, nsIURI *content_location,
                         nsIURI *request_origin, nsISupports *context,
@@ -627,8 +631,10 @@ class ContentPolicy : public nsIContentPolicy {
       return NS_OK;
     }
 
-    if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
-      if (!browser_info->always_open_new_window) {
+    if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT ||
+        content_type == kTypeRedirect) {
+      if (content_type == kTypeRedirect ||
+          !browser_info->always_open_new_window) {
         std::string r = SendFeedback(browser_info->browser_id,
                                      kGoToURLFeedback, url_spec.get(),
                                      NULL);
@@ -693,9 +699,28 @@ class ContentPolicy : public nsIContentPolicy {
     return ShouldLoad(content_type, content_location, request_origin,
                       context, mime_type, extra, retval);
   }
+
+  NS_IMETHOD OnChannelRedirect(nsIChannel *old_channel, nsIChannel *new_channel,
+                               PRUint32 flags) {
+    nsCOMPtr<nsIURI> uri;
+    nsresult rv = new_channel->GetURI(getter_AddRefs(uri));
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIInterfaceRequestor> callbacks;
+    rv = new_channel->GetNotificationCallbacks(getter_AddRefs(callbacks));
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIDOMWindow> window(do_GetInterface(callbacks));
+    if (window) {
+      PRInt16 should_load;
+      rv = ShouldLoad(kTypeRedirect, uri, nsnull, window,
+                      NS_LITERAL_CSTRING(""), nsnull, &should_load);
+      NS_ENSURE_SUCCESS(rv, rv);
+      return should_load == ACCEPT ? NS_OK : NS_ERROR_FAILURE;
+    }
+    return NS_OK;
+  }
 };
 
-NS_IMPL_ISUPPORTS1(ContentPolicy, nsIContentPolicy)
+NS_IMPL_ISUPPORTS2(ContentPolicy, nsIContentPolicy, nsIChannelEventSink)
 
 static ContentPolicy g_content_policy;
 static ContentPolicy *GetContentPolicy() {
@@ -1231,6 +1256,10 @@ static nsresult InitCustomComponents() {
                                           CONTENT_POLICY_CONTRACTID,
                                           PR_FALSE, PR_TRUE, nsnull);
   NS_ENSURE_SUCCESS(rv, rv);
+  rv = category_manager->AddCategoryEntry("net-channel-event-sinks",
+                                          CONTENT_POLICY_CONTRACTID,
+                                          CONTENT_POLICY_CONTRACTID,
+                                          PR_FALSE, PR_TRUE, nsnull);
   return rv;
 }
 
