@@ -136,8 +136,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   bool ChangeState(State new_state) {
-    DLOG("XMLHttpRequest: ChangeState from %d to %d this=%p",
-         state_, new_state, this);
+#ifdef SOUP_XHR_VERBOSE
+    DLOG("%p: ChangeState from %d to %d", this, state_, new_state);
+#endif
     state_ = new_state;
     onreadystatechange_signal_();
     // ChangeState may re-entered during the signal, so the current state_
@@ -157,7 +158,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     if (!GetUsernamePasswordFromURL(url).empty()) {
       // GDWin Compatibility.
-      DLOG("Username:password in URL is not allowed: %s", url);
+      LOG("%p: Username:password in URL is not allowed: %s", this, url);
       return SYNTAX_ERR;
     }
 
@@ -175,11 +176,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     if (method_.empty()) {
-      LOG("XMLHttpRequest: Unsupported method: %s", method);
+      LOG("%p: Unsupported method: %s", this, method);
       return SYNTAX_ERR;
     }
 
     message_ = soup_message_new(method_.c_str(), url_.c_str());
+
+#ifdef SOUP_XHR_VERBOSE
+    DLOG("%p: Open(%s, %s, %d) message:%p", this, method, url, async, message_);
+#endif
 
     g_signal_connect(G_OBJECT(message_), "finished",
                      G_CALLBACK(FinishedCallback), this);
@@ -224,7 +229,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   virtual ExceptionCode SetRequestHeader(const char *header,
                                          const char *value) {
     if (state_ != OPENED || send_flag_) {
-      LOG("XMLHttpRequest: SetRequestHeader: Invalid state: %d", state_);
+      LOG("%p: SetRequestHeader: Invalid state: %d", this, state_);
       return INVALID_STATE_ERR;
     }
 
@@ -232,21 +237,25 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     ASSERT(message_);
 
     if (!IsValidHTTPToken(header)) {
-      LOG("XMLHttpRequest::SetRequestHeader: Invalid header %s", header);
+      LOG("%p: SetRequestHeader: Invalid header %s", this, header);
       return SYNTAX_ERR;
     }
 
     if (!IsValidHTTPHeaderValue(value)) {
-      LOG("XMLHttpRequest::SetRequestHeader: Invalid value: %s", value);
+      LOG("%p: SetRequestHeader: Invalid value: %s", this, value);
       return SYNTAX_ERR;
     }
 
     if (IsForbiddenHeader(header)) {
-      DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
+      DLOG("%p: SetRequestHeader: Forbidden header %s", this, header);
       return NO_ERR;
     }
 
     if (!value || !*value) return NO_ERR;
+
+#ifdef SOUP_XHR_VERBOSE
+    DLOG("%p: SetRequestHeader(%s, %s)", this, header, value);
+#endif
 
     SoupMessageHeaders *headers = message_->request_headers;
     if (strcasecmp("Content-Type", header) == 0) {
@@ -263,7 +272,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode Send(const std::string &data) {
     if (state_ != OPENED || send_flag_) {
-      LOG("XMLHttpRequest: Send: Invalid state: %d", state_);
+      LOG("%p: Send: Invalid state: %d", this, state_);
       return INVALID_STATE_ERR;
     }
 
@@ -289,9 +298,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return ABORT_ERR;
     }
 
+#ifdef SOUP_XHR_VERBOSE
+    DLOG("%p: Send(%zu, %s)", this, data.size(), method_.c_str());
+#endif
     // As described in the spec, if method is GET then discard the data.
-    if (data.size() && method_ != "GET") {
-      DLOG("Send: data length: %zu, method: %s", data.size(), method_.c_str());
+    if (method_ != "GET") {
       request_data_ = data;
       soup_message_body_append(message_->request_body, SOUP_MEMORY_STATIC,
                                request_data_.c_str(), request_data_.size());
@@ -302,6 +313,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
             message_->request_headers, "application/x-www-form-urlencoded",
             NULL);
       }
+      if (!data.size())
+        soup_message_headers_set_content_length(message_->request_headers, 0);
     }
 
     send_flag_ = true;
@@ -362,7 +375,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = NULL;
-    LOG("XMLHttpRequest: GetAllResponseHeaders: Invalid state: %d", state_);
+    LOG("%p: GetAllResponseHeaders: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -380,7 +393,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         *result = &it->second;
       return NO_ERR;
     }
-    LOG("XMLHttpRequest: GetRequestHeader: Invalid state: %d", state_);
+    LOG("%p: GetRequestHeader: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -426,7 +439,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     result->clear();
-    LOG("XMLHttpRequest: GetResponseText: Invalid state: %d", state_);
+    LOG("%p: GetResponseText: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -439,7 +452,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     result->clear();
-    LOG("XMLHttpRequest: GetResponseBody: Invalid state: %d", state_);
+    LOG("%p: GetResponseBody: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -455,7 +468,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     result = NULL;
-    LOG("XMLHttpRequest: GetResponseXML: Invalid state: %d", state_);
+    LOG("%p: GetResponseXML: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -468,7 +481,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = 0;
-    LOG("XMLHttpRequest: GetStatus: Invalid state: %d", state_);
+    LOG("%p: GetStatus: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -481,7 +494,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = NULL;
-    LOG("XMLHttpRequest: GetStatusText: Invalid state: %d", state_);
+    LOG("%p: GetStatusText: Invalid state: %d", this, state_);
     return INVALID_STATE_ERR;
   }
 
@@ -505,7 +518,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
-      DLOG("XMLHttpRequest: Set pending exception: %d this=%p", code, this);
+      DLOG("%p: Set pending exception: %d", this, code);
       SetPendingException(new XMLHttpRequestException(code));
       return false;
     }
@@ -639,15 +652,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
  public:
 #ifdef SOUP_XHR_VERBOSE
-  static void PrintMessageInfo(const char *func, SoupMessage *msg,
-                               SoupBuffer *chunk) {
+  static void PrintMessageInfo(XMLHttpRequest *self, const char *func,
+                               SoupMessage *msg, SoupBuffer *chunk) {
     char *url = soup_uri_to_string(soup_message_get_uri(msg), FALSE);
     if (chunk) {
-      DLOG("%s: chunk length:%zd url:%s", func, chunk->length, url);
+      DLOG("%p: %s: chunk length:%zd url:%s", self, func, chunk->length, url);
     } else {
-      DLOG("%s: url:%s", func, url);
+      DLOG("%p: %s: url:%s", self, func, url);
     }
-    DLOG("status:%d  reason:%s", msg->status_code, msg->reason_phrase);
+    DLOG("%p: state:%d  status:%d reason:%s", self, (self ? self->state_ : 0),
+         msg->status_code, msg->reason_phrase);
     g_free(url);
   }
 #endif
@@ -673,6 +687,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void CancelMessage(guint status) {
     if (message_) {
       if (send_flag_) {
+#ifdef SOUP_XHR_VERBOSE
+        DLOG("%p: CancelMessage(%u)", this, status);
+#endif
         soup_session_cancel_message(session_, message_, status);
       } else {
         g_object_unref(message_);
@@ -694,10 +711,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static void FinishedCallback(SoupMessage *msg, gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    PrintMessageInfo("FinishedCallback", msg, NULL);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
+#ifdef SOUP_XHR_VERBOSE
+    PrintMessageInfo(request, "FinishedCallback", msg, NULL);
+#endif
     ASSERT(request->message_ == msg);
 
     if ((request->state_ == OPENED && request->send_flag_) ||
@@ -716,10 +733,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static void GotChunkCallback(SoupMessage *msg, SoupBuffer *chunk,
                                gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    PrintMessageInfo("GotChunkCallback", msg, chunk);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
+#ifdef SOUP_XHR_VERBOSE
+    PrintMessageInfo(request, "GotChunkCallback", msg, chunk);
+#endif
     ASSERT(request->message_ == msg);
     ASSERT(request->send_flag_);
 
@@ -775,11 +792,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static void GotHeadersCallback(SoupMessage *msg, gpointer user_data) {
+    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
 #ifdef SOUP_XHR_VERBOSE
-    PrintMessageInfo("GotHeadersCallback", msg, NULL);
+    PrintMessageInfo(request, "GotHeadersCallback", msg, NULL);
     soup_message_headers_foreach(msg->response_headers, PrintHeaderItem, NULL);
 #endif
-    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
     ASSERT(request->message_ == msg);
     ASSERT(request->send_flag_);
     ASSERT(request->state_ == OPENED);
@@ -810,10 +827,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static void RestartedCallback(SoupMessage *msg, gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    PrintMessageInfo("RestartedCallback", msg, NULL);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
+#ifdef SOUP_XHR_VERBOSE
+    PrintMessageInfo(request, "RestartedCallback", msg, NULL);
+#endif
     ASSERT(request->message_ == msg);
     ASSERT(request->send_flag_);
 
@@ -840,10 +857,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static void MessageCompleteCallback(SoupSession *session, SoupMessage *msg,
                                       gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    PrintMessageInfo("MessageCompleteCallback", msg, NULL);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
+#ifdef SOUP_XHR_VERBOSE
+    PrintMessageInfo(request, "MessageCompleteCallback", msg, NULL);
+#endif
     ASSERT(request->message_ == msg);
     ASSERT(request->send_flag_);
 
@@ -857,38 +874,45 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
 #ifdef SOUP_XHR_VERBOSE
   static void MessageDestroyed(gpointer data, GObject *message) {
-    DLOG("MessageDestroyed:%p", message);
+    DLOG("%p: MessageDestroyed:%p", data, message);
   }
 
   static void GotBodyCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("GotBodyCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "GotBodyCallback", msg, NULL);
   }
 
   static void GotInformationalCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("GotInformationalCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "GotInformationalCallback", msg, NULL);
     soup_message_headers_foreach(msg->response_headers, PrintHeaderItem, NULL);
   }
 
   static void WroteBodyCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("WroteBodyCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "WroteBodyCallback", msg, NULL);
   }
 
   static void WroteBodyDataCallback(SoupMessage *msg, SoupBuffer *chunk,
                                     gpointer user_data) {
-    PrintMessageInfo("WroteBodyDataCallback", msg, chunk);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "WroteBodyDataCallback", msg, chunk);
   }
 
   static void WroteChunkCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("WroteChunkCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "WroteChunkCallback", msg, NULL);
   }
 
   static void WroteHeadersCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("WroteHeadersCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "WroteHeadersCallback", msg, NULL);
     soup_message_headers_foreach(msg->request_headers, PrintHeaderItem, NULL);
   }
 
   static void WroteInformationalCallback(SoupMessage *msg, gpointer user_data) {
-    PrintMessageInfo("WroteInformationalCallback", msg, NULL);
+    PrintMessageInfo(static_cast<XMLHttpRequest *>(user_data),
+                     "WroteInformationalCallback", msg, NULL);
   }
 #endif
 
@@ -970,8 +994,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
       }
       sessions_.erase(it);
     } else {
-      DLOG("XMLHttpRequestFactory::DestroySession Invalid session: %d",
-           session_id);
+      DLOG("DestroySession Invalid session: %d", session_id);
     }
   }
 
@@ -991,8 +1014,7 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
       return new XMLHttpRequest(it->second,  parser);
     }
 
-    DLOG("XMLHttpRequestFactory::CreateXMLHttpRequest: "
-         "Invalid session: %d", session_id);
+    DLOG("CreateXMLHttpRequest: Invalid session: %d", session_id);
     return NULL;
   }
 
@@ -1060,13 +1082,13 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
                                    SoupAuth *auth,
                                    gboolean retrying,
                                    gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    XMLHttpRequest::PrintMessageInfo("AuthenticateCallback", msg, NULL);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
         g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
     ASSERT(request);
-
+#ifdef SOUP_XHR_VERBOSE
+    XMLHttpRequest::PrintMessageInfo(request, "AuthenticateCallback", msg,
+                                     NULL);
+#endif
     // TODO: Show authenticate dialog when necessary.
     if (!retrying && !soup_auth_is_for_proxy(auth)) {
       // Let XMLHttpRequest fill in user and password information
@@ -1079,14 +1101,16 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
                                      SoupMessage *msg,
                                      SoupSocket *socket,
                                      gpointer user_data) {
-#ifdef SOUP_XHR_VERBOSE
-    XMLHttpRequest::PrintMessageInfo("RequestStartedCallback", msg, NULL);
-#endif
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
         g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
+#ifdef SOUP_XHR_VERBOSE
+    XMLHttpRequest::PrintMessageInfo(request, "RequestStartedCallback", msg,
+                                     NULL);
+#endif
     // msg might be an additional message created by soup internally,
     // in this case, request will be null.
     if (request) {
+      ASSERT(request->GetReadyState() == XMLHttpRequest::OPENED);
       request->SetupCookie();
     }
   }
@@ -1095,12 +1119,19 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   static void RequestQueuedCallback(SoupSession *session,
                                     SoupMessage *msg,
                                     gpointer user_data) {
-    XMLHttpRequest::PrintMessageInfo("RequestQueuedCallback", msg, NULL);
+    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
+        g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
+    XMLHttpRequest::PrintMessageInfo(request, "RequestQueuedCallback", msg,
+                                     NULL);
   }
 
   static void RequestUnqueuedCallback(SoupSession *session,
                                       SoupMessage *msg,
                                       gpointer user_data) {
+    XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
+        g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
+    XMLHttpRequest::PrintMessageInfo(request, "RequestUnqueuedCallback", msg,
+                                     NULL);
   }
 #endif
 

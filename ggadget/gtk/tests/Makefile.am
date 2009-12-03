@@ -35,6 +35,9 @@ LDADD			= @GTK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
+if GTK2_TARGET_X11
+  LDADD			+= $(X_LIBS)
+endif
 
 check_PROGRAMS		= cairo_canvas_test \
 			  cairo_graphics_test \

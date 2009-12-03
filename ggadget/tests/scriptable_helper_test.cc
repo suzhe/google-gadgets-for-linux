@@ -395,8 +395,8 @@ static void CheckEnumerateProperties(bool register_class) {
     "SCONSTANT9", "SetCallback", "SignalResult", "NativeOwned", "ObjectMethod",
     "MethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
     "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
-    "ontest", "time", "oncomplex", "FireComplexSignal", "ComplexSignalData",
-    "IntProperty", ""
+    "ontest", "time", "oncomplex", "FireComplexSignal", "FireDynamicSignal",
+    "ComplexSignalData", "IntProperty", ""
   };
   std::set<std::string> expected;
   for (size_t i = 0; i < arraysize(property_names); ++i)
