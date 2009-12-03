@@ -523,13 +523,17 @@ class BrowserElement::Impl {
          webkit_web_navigation_action_get_modifier_state(action));
 
     gboolean result = FALSE;
-    if (reason == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
+    if (reason == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED)
       result = impl->HandleNavigationRequest(original_uri, new_uri);
-      if (result)
-        webkit_web_policy_decision_ignore(decision);
-    }
 
+    // If the url was not opened in a new window, the give the gadget a chance
+    // to handle the url.
     if (!result)
+      result = impl->ongotourl_signal_(new_uri);
+
+    if (result)
+      webkit_web_policy_decision_ignore(decision);
+    else
       impl->loaded_uri_ = new_uri ? new_uri : "";
 
     return result;
@@ -592,6 +596,8 @@ class BrowserElement::Impl {
   Connection *undock_connection_;
 
   ScriptableHolder<ScriptableInterface> external_object_;
+
+  Signal1<bool, const char *> ongotourl_signal_;
 
   gint x_;
   gint y_;
@@ -662,6 +668,9 @@ void BrowserElement::DoClassRegister() {
   RegisterProperty("alwaysOpenNewWindow",
                    NewSlot(&BrowserElement::IsAlwaysOpenNewWindow),
                    NewSlot(&BrowserElement::SetAlwaysOpenNewWindow));
+  RegisterClassSignal("ongotourl",
+                      &Impl::ongotourl_signal_,
+                      &BrowserElement::impl_);
 }
 
 } // namespace gtkwebkit

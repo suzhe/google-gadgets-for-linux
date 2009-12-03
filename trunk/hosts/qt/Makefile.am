@@ -42,6 +42,10 @@ ggl_qt_LDADD		= $(QT4_LIBS) \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
+if GGL_HAVE_XLIB
+ggl_qt_LDADD += $(X_LIBS) -lXrender
+endif
+
 # For static build mode, all necessary modules must be linked into binary
 # directly.
 if GGL_DISABLE_SHARED
