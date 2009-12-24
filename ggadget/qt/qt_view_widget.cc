@@ -204,8 +204,6 @@ class QtViewWidget::Impl {
     if (!view_) return;
     int buttons = GetMouseButtons(event->buttons());
     if (buttons != MouseEvent::BUTTON_NONE) {
-      owner_->grabMouse();
-
       if (!mouse_drag_moved_) {
         // Ignore tiny movement of mouse.
         QPoint offset = QCursor::pos() - mouse_pos_;
@@ -303,7 +301,6 @@ class QtViewWidget::Impl {
     }
   }
   void mouseReleaseEvent(QMouseEvent *event) {
-    owner_->releaseMouse();
     if (!view_ || mouse_drag_moved_)
       return;
 
