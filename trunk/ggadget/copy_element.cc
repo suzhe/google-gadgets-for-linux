@@ -42,6 +42,7 @@ class CopyElement::Impl : public SmallObject<> {
   }
 
   void OnSourceRefChange(int ref_count, int change) {
+    GGL_UNUSED(ref_count);
     if (change == 0) {
       // The source's destructor is being called.
       refchange_connection_->Disconnect();

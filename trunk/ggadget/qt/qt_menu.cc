@@ -30,6 +30,7 @@ class QtMenu::Impl {
   void AddItem(const char *item_text, int style, int stock_icon,
       ggadget::Slot1<void, const char *> *handler,
       int priority) {
+    GGL_UNUSED(stock_icon);
     // FIXME: support stock icons.
     QAction *action;
     if (!item_text || !*item_text) {

@@ -700,6 +700,7 @@ class HotKeyDialog::Impl {
 
   static gboolean OnEntryClicked(GtkWidget *widget, GdkEventButton *event,
                                  gpointer data) {
+    GGL_UNUSED(event);
     Impl *impl = reinterpret_cast<Impl *>(data);
     gtk_widget_grab_focus(widget);
     impl->UpdateEntryText(true);
@@ -710,6 +711,7 @@ class HotKeyDialog::Impl {
 
   static gboolean OnEntryKeyPressed(GtkWidget *widget, GdkEventKey *event,
                                     gpointer data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(data);
     KeyEvent key(event);
     if (key.IsValid())
@@ -719,6 +721,7 @@ class HotKeyDialog::Impl {
 
   static gboolean OnEntryKeyReleased(GtkWidget *widget, GdkEventKey *event,
                                      gpointer data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(data);
     KeyEvent key(event);
     if (key.IsValid() && impl->recorder_.PushKeyEvent(key, false, &key)) {
@@ -730,6 +733,7 @@ class HotKeyDialog::Impl {
   }
 
   static void OnClearButtonClicked(GtkButton *button, gpointer data) {
+    GGL_UNUSED(button);
     Impl *impl = reinterpret_cast<Impl *>(data);
     gtk_window_set_focus(GTK_WINDOW(impl->dialog_), NULL);
     impl->hotkey_.Reset();

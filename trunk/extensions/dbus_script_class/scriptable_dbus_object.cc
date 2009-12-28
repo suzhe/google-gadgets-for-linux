@@ -183,6 +183,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
         return ResultVariant(Variant(result));
       }
       virtual bool operator==(const Slot &another) const {
+        GGL_UNUSED(another);
         return false;
       }
      private:
@@ -227,6 +228,7 @@ class ScriptableDBusObject::Impl : public SmallObject<> {
       return Variant::TYPE_INT64;
     }
     virtual bool operator==(const Slot &another) const {
+      GGL_UNUSED(another);
       // No use.
       return false;
     }

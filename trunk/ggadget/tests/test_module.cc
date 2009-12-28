@@ -68,6 +68,7 @@ extern "C" {
   bool FUNC_NAME(RegisterScriptExtension)(
       ggadget::ScriptContextInterface *context,
       ggadget::Gadget *gadget) {
+    GGL_UNUSED(gadget);
     LOG("Register Script extension %s, context=%p",
         AS_STRING(MODULE_NAME), context);
     return true;

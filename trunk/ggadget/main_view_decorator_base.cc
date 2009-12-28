@@ -779,6 +779,8 @@ void MainViewDecoratorBase::GetClientExtents(double *width,
 }
 
 bool MainViewDecoratorBase::OnClientSizing(double *width, double *height) {
+  GGL_UNUSED(width);
+  GGL_UNUSED(height);
   if (impl_->minimized_)
     *height = kVDMainMinimizedHeight;
   return true;

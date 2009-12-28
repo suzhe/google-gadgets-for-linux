@@ -82,10 +82,14 @@ class LogTask : public WatchCallbackInterface {
       : level_(level), file_(file), line_(line), message_(message) {
   }
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     DoLog(level_, VariantValue<const char *>()(file_), line_, message_);
     return false;
   }
   virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     delete this;
   }
 

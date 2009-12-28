@@ -62,11 +62,14 @@ void JSNativeWrapper::Unref(bool transient) const {
 
 ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
     const char *name, Variant *prototype) {
+  GGL_UNUSED(name);
+  GGL_UNUSED(prototype);
   return ScriptableInterface::PROPERTY_DYNAMIC;
 }
 
 bool JSNativeWrapper::EnumerateProperties(
     EnumeratePropertiesCallback *callback) {
+  GGL_UNUSED(callback);
 #if 0
   ScopedLogContext log_context(GetJSScriptContext(js_context_));
   ASSERT(callback);
@@ -96,6 +99,7 @@ bool JSNativeWrapper::EnumerateProperties(
 }
 
 bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
+  GGL_UNUSED(callback);
 #if 0
   ASSERT(callback);
   ScopedLogContext log_context(GetJSScriptContext(js_context_));

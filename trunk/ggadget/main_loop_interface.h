@@ -87,10 +87,13 @@ class WatchCallbackSlot : public WatchCallbackInterface {
  public:
   WatchCallbackSlot(Slot1<bool, int> *slot) : slot_(slot) { }
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
     if (slot_) return (*slot_)(watch_id);
     return false;
   }
   virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     delete slot_;
     delete this;
   }

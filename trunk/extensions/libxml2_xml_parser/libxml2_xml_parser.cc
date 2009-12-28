@@ -86,6 +86,7 @@ static const char kXMLTagUTF32BE[] = {
 static bool g_error_occurred = false;
 static std::string g_error_buffer;
 static void ErrorFunc(void *ctx, const char *msg, ...) {
+  GGL_UNUSED(ctx);
   va_list ap;
   va_start(ap, msg);
   StringAppendVPrintf(&g_error_buffer, msg, ap);
@@ -692,6 +693,7 @@ class XMLParser : public XMLParserInterface {
                                     const char *encoding_fallback,
                                     std::string *encoding,
                                     std::string *utf8_content) {
+    GGL_UNUSED(filename);
     // The caller wants nothing?
     if (!encoding && !utf8_content)
       return true;

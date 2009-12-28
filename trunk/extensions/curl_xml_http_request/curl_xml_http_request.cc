@@ -513,6 +513,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           worker_context_(*worker_context) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl &&
           worker_context_.this_p->WriteHeader(data_) != data_.size()) {
         // WriteHeader() failed. Terminate the request.
@@ -521,6 +523,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
 
@@ -539,6 +543,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           status_(status) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl &&
         worker_context_.this_p->WriteBody(data_, status_, effective_url_) !=
             data_.size()) {
@@ -1102,11 +1108,18 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
 
   static void Lock(CURL *handle, curl_lock_data data,
                    curl_lock_access access, void *userptr) {
+    GGL_UNUSED(handle);
+    GGL_UNUSED(data);
+    GGL_UNUSED(access);
+    GGL_UNUSED(userptr);
     // This synchronization scope is bigger than optimal, but is much simpler.
     pthread_mutex_lock(&mutex_);
   }
 
   static void Unlock(CURL *handle, curl_lock_data data, void *userptr) {
+    GGL_UNUSED(handle);
+    GGL_UNUSED(data);
+    GGL_UNUSED(userptr);
     pthread_mutex_unlock(&mutex_);
   }
 

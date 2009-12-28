@@ -80,6 +80,7 @@ JSFunctionSlot::~JSFunctionSlot() {
 
 ResultVariant JSFunctionSlot::Call(ScriptableInterface *object,
                                    int argc, const Variant argv[]) const {
+  GGL_UNUSED(object);
   bool death_flag = false;
   bool *death_flag_ptr = &death_flag;
   if (!death_flag_ptr_) {

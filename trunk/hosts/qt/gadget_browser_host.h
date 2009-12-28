@@ -33,24 +33,30 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   }
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type) {
+    GGL_UNUSED(gadget);
     return new ggadget::qt::QtViewHost(
         type, 1.0, ggadget::qt::QtViewHost::FLAG_RECORD_STATES,
         view_debug_mode_, NULL);
   }
   virtual Gadget *LoadGadget(const char *path, const char *options_name,
                              int instance_id, bool show_debug_console) {
+    GGL_UNUSED(path);
+    GGL_UNUSED(options_name);
+    GGL_UNUSED(instance_id);
+    GGL_UNUSED(show_debug_console);
     return NULL;
   }
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);    
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
   virtual void Run() {}
-  virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
+  virtual void ShowGadgetDebugConsole(Gadget *) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
-  virtual bool OpenURL(const Gadget *gadget, const char *url) { return false; }
+  virtual bool OpenURL(const Gadget *, const char *) { return false; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

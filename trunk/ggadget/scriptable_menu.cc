@@ -50,6 +50,7 @@ class ScriptableMenu::Impl : public SmallObject<> {
       return result;
     }
     virtual bool operator==(const Slot &another) const {
+      GGL_UNUSED(another);
       // Not used.
       return false;
     }

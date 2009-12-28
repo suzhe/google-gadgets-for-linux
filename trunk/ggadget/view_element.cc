@@ -398,6 +398,7 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
 
 EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
                                      BasicElement **fired_element) {
+  GGL_UNUSED(direct);
   if (!impl_->child_view_)
     return EVENT_RESULT_UNHANDLED;
 

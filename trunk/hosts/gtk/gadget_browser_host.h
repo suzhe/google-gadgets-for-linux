@@ -31,7 +31,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   GadgetBrowserHost(ggadget::HostInterface *owner, int view_debug_mode)
     : owner_(owner), view_debug_mode_(view_debug_mode) {
   }
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(Gadget *,
                                          ViewHostInterface::Type type) {
     int flags = ggadget::gtk::SingleViewHost::WM_MANAGEABLE |
                 ggadget::gtk::SingleViewHost::REMOVE_ON_CLOSE |
@@ -44,12 +44,13 @@ class GadgetBrowserHost : public ggadget::HostInterface {
                               show_debug_console);
   }
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
-  virtual void ShowGadgetDebugConsole(Gadget *gadget) {}
+  virtual void ShowGadgetDebugConsole(Gadget *) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
   virtual bool OpenURL(const Gadget *gadget, const char *url) {
     return owner_->OpenURL(gadget, url);

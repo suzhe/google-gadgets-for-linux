@@ -92,6 +92,7 @@ class HtmlFlashElement : public BasicElement {
 
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
+      GGL_UNUSED(object);
       if (owner_ && name_ && owner_->movie_object_.Get()) {
         Slot *slot = NULL;
         ResultVariant prop = owner_->movie_object_.Get()->GetProperty(name_);

@@ -140,7 +140,7 @@ void QtViewHost::SetCaption(const std::string &caption) {
     impl_->window_->setWindowTitle(impl_->caption_);
 }
 
-void QtViewHost::SetShowCaptionAlways(bool always) {
+void QtViewHost::SetShowCaptionAlways(bool) {
 }
 
 void QtViewHost::SetCursor(ViewInterface::CursorType type) {
@@ -174,6 +174,7 @@ bool QtViewHost::ShowContextMenu(int button) {
 }
 
 void QtViewHost::BeginMoveDrag(int button) {
+  GGL_UNUSED(button);
 }
 
 void QtViewHost::Alert(const ViewInterface *view, const char *message) {

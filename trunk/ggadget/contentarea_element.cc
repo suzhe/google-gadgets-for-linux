@@ -142,10 +142,14 @@ class ContentAreaElement::Impl : public SmallObject<> {
    public:
     QueueDrawCallback(ContentAreaElement *area) : area_(area) { ASSERT(area); }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       area_->QueueDraw();
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
    private:
@@ -443,6 +447,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
   }
 
   bool AddContentItem(ContentItem *item, DisplayOptions options) {
+    GGL_UNUSED(options);
     ContentItems::iterator it = std::find(content_items_.begin(),
                                           content_items_.end(),
                                           item);

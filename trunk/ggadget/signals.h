@@ -196,6 +196,7 @@ class SignalSlot : public Slot {
 
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(obj);
     // A SignalSlot is always bound to an object, so obj is ignored.
     return signal_->Emit(argc, argv);
   }

@@ -333,6 +333,7 @@ class SingleViewHost::Impl {
   }
 
   void SetShowCaptionAlways(bool always) {
+    GGL_UNUSED(always);
     // SingleViewHost will always show caption when window decorator is shown.
   }
 
@@ -719,6 +720,7 @@ class SingleViewHost::Impl {
   // gtk signal handlers.
   static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
                                  gpointer user_data) {
+    GGL_UNUSED(event);
     DLOG("FocusInHandler(%p)", widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->move_dragging_)
@@ -729,6 +731,8 @@ class SingleViewHost::Impl {
 #ifdef _DEBUG
   static gboolean FocusOutHandler(GtkWidget *widget, GdkEventFocus *event,
                                   gpointer user_data) {
+    GGL_UNUSED(event);
+    GGL_UNUSED(user_data);
     DLOG("FocusOutHandler(%p)", widget);
     return FALSE;
   }
@@ -744,6 +748,7 @@ class SingleViewHost::Impl {
   }
 
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
+    GGL_UNUSED(widget);
     DLOG("View window is going to be shown.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->view_ && impl->enable_signals_)
@@ -751,6 +756,7 @@ class SingleViewHost::Impl {
   }
 
   static void WindowHideHandler(GtkWidget *widget, gpointer user_data) {
+    GGL_UNUSED(widget);
     DLOG("View window is going to be hidden.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->view_ && impl->enable_signals_) {
@@ -770,6 +776,7 @@ class SingleViewHost::Impl {
 
   static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
                                    gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->enable_signals_) {
       if (impl->win_x_ != event->x || impl->win_y_ != event->y) {
@@ -791,6 +798,7 @@ class SingleViewHost::Impl {
 
   static void DialogResponseHandler(GtkDialog *dialog, gint response,
                                     gpointer user_data) {
+    GGL_UNUSED(dialog);
     DLOG("%s button clicked in options dialog.",
          response == GTK_RESPONSE_OK ? "Ok" :
          response == GTK_RESPONSE_CANCEL ? "Cancel" : "No");
@@ -886,6 +894,8 @@ class SingleViewHost::Impl {
 
   static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
                                        gpointer user_data) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(event);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->resize_width_mode_ || impl->resize_height_mode_) {
       impl->StopResizeDrag();
@@ -897,6 +907,7 @@ class SingleViewHost::Impl {
   static void WidgetSizeRequestHandler(GtkWidget *widget,
                                       GtkRequisition *requisition,
                                       gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     double zoom = impl->view_->GetGraphics()->GetZoom();
     if (impl->resizable_mode_ == ViewInterface::RESIZABLE_FALSE) {
@@ -925,6 +936,7 @@ class SingleViewHost::Impl {
   static void FixedSizeAllocateHandler(GtkWidget *widget,
                                        GtkAllocation *allocation,
                                        gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (GTK_WIDGET_VISIBLE(impl->window_) &&
         !impl->resize_width_mode_ && !impl->resize_height_mode_ &&

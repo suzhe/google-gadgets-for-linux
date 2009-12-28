@@ -57,6 +57,7 @@ class ListBoxElement::Impl : public SmallObject<> {
     item_height_relative_(false),
     multiselect_(false),
     item_separator_(false) {
+    GGL_UNUSED(view);
   }
 
   ~Impl() {

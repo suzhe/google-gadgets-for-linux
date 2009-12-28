@@ -221,6 +221,11 @@ template <typename T, size_t N>
 char (&ArraySizeHelper(const T (&array)[N]))[N];
 
 /**
+ * Avoids warning on unused parameters of functions.
+ */
+#define GGL_UNUSED(x) (void)x;
+
+/**
  * The @c arraysize(arr) macro returns the # of elements in an array arr.
  * The expression is a compile-time constant, and therefore can be
  * used in defining new arrays, for example.  If you use @c arraysize on

@@ -90,6 +90,7 @@ class GtkSystemBrowseForFileHelper {
 
   // Function to destroy the helper object when framework is destroyed.
   void OnFrameworkRefChange(int ref, int change) {
+    GGL_UNUSED(ref);
     if (change == 0) {
       DLOG("Framework destroyed, delete GtkSystemBrowseForFileHelper object.");
       delete this;

@@ -42,6 +42,8 @@ class WebPage : public QWebPage {
 
  private slots:
   void OnLinkHovered(const QString &link, const QString & title, const QString & textContent ) {
+    GGL_UNUSED(title);
+    GGL_UNUSED(textContent);
     url_ = link;
   }
 
@@ -221,7 +223,7 @@ class BrowserElement::Impl {
 
 QWebPage *WebPage::createWindow(
 #if QT_VERSION >= 0x040400
-     WebWindowType type
+     WebWindowType
 #endif
      ) {
   handler_->OpenUrl(url_);

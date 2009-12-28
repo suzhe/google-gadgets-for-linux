@@ -100,9 +100,9 @@ class SideBar::Impl : public View {
     virtual void EnableInputShapeMask(bool /* enable */) {
       // Do nothing.
     }
-    virtual void SetResizable(ViewInterface::ResizableMode mode) {}
-    virtual void SetCaption(const std::string &caption) {}
-    virtual void SetShowCaptionAlways(bool always) {}
+    virtual void SetResizable(ViewInterface::ResizableMode) {}
+    virtual void SetCaption(const std::string &) {}
+    virtual void SetShowCaptionAlways(bool) {}
     virtual void SetCursor(ViewInterface::CursorType type) {
       view_element_->SetCursor(type);
       owner_->view_host_->SetCursor(type);
@@ -119,6 +119,8 @@ class SideBar::Impl : public View {
     }
     virtual bool ShowView(bool modal, int flags,
                           Slot1<bool, int> *feedback_handler) {
+      GGL_UNUSED(modal);
+      GGL_UNUSED(flags);
       delete feedback_handler;
       if (view_element_->GetChildView()) {
         view_element_->SetVisible(true);
@@ -134,8 +136,13 @@ class SideBar::Impl : public View {
     virtual bool ShowContextMenu(int button) {
       return owner_->view_host_->ShowContextMenu(button);
     }
-    virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
-    virtual void BeginMoveDrag(int button) {}
+    virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {
+      GGL_UNUSED(button);
+      GGL_UNUSED(hittest);
+    }
+    virtual void BeginMoveDrag(int button) {
+      GGL_UNUSED(button);
+    }
     virtual void Alert(const ViewInterface *view, const char *message) {
       owner_->view_host_->Alert(view, message);
     }

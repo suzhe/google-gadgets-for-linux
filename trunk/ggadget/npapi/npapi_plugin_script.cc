@@ -109,6 +109,7 @@ class ScriptableNPObject::Impl {
 
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
+      GGL_UNUSED(object);
       NPObject *np_obj = owner_->np_obj_;
 
       scoped_array<NPVariant> args(new NPVariant[argc]);

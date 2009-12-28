@@ -81,6 +81,7 @@ bool GtkHostBase::ConfirmGadget(const std::string &path,
                                 const std::string &title,
                                 const std::string &description,
                                 Permissions *permissions) {
+  GGL_UNUSED(path);
   // If the permissions was already saved and there is no ungranted permission,
   // just returns true.
   if (Gadget::LoadGadgetInitialPermissions(options_name.c_str(), permissions) &&

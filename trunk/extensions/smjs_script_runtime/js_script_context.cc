@@ -99,6 +99,7 @@ static JSLocaleCallbacks gLocaleCallbacks = {
   // SpiderMonkey's upper/lower convertions conform to the Unicode standard.
   NULL, NULL,
   LocaleCompare, LocaleToUnicode,
+  NULL
 };
 
 // For each native classes registered to each JSScriptContext with
@@ -232,6 +233,7 @@ JSScriptContext::~JSScriptContext() {
 // way to get the current filename and lineno is from the JSErrorReport.
 void JSScriptContext::RecordFileAndLine(JSContext *cx, const char *message,
                                         JSErrorReport *report) {
+  GGL_UNUSED(message);
   JSScriptContext *context = GetJSScriptContext(cx);
   if (context) {
     context->filename_ = report->filename ? report->filename : "";
@@ -402,6 +404,9 @@ Slot *JSScriptContext::Compile(const char *script,
 
 static JSBool ReturnSelf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                          jsval *rval) {
+  GGL_UNUSED(cx);
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
   *rval = OBJECT_TO_JSVAL(obj);
   return JS_TRUE;
 }
@@ -434,6 +439,10 @@ static void ForceGC(JSContext *cx) {
 
 static JSBool DoGC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                    jsval *rval) {
+  GGL_UNUSED(obj);
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
+  GGL_UNUSED(rval);
   ForceGC(cx);
   return JS_TRUE;
 }
@@ -460,6 +469,7 @@ bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
 
 JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv, jsval *rval) {
+  GGL_UNUSED(rval);
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   ScopedLogContext log_context(context_wrapper);
@@ -607,6 +617,7 @@ JSBool JSScriptContext::EvaluateToJSVal(ScriptableInterface *object,
 
 void JSScriptContext::ReportError(JSContext *cx, const char *message,
                                   JSErrorReport *report) {
+  GGL_UNUSED(cx);
   LOGE("%s:%d: %s", report->filename, report->lineno, message);
 }
 

@@ -382,6 +382,7 @@ class SimpleGtkHost::Impl {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ASSERT(gadget);
     ViewInterface *main_view = gadget->GetMainView();
 
@@ -474,6 +475,7 @@ class SimpleGtkHost::Impl {
   }
 
   void FontSizeMenuHandler(const char *str, int delta) {
+    GGL_UNUSED(str);
     int new_font_size;
     if (delta == 0) {
       new_font_size = kDefaultFontSize;
@@ -490,6 +492,7 @@ class SimpleGtkHost::Impl {
   }
 
   void AboutMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     safe_to_exit_ = false;
     ShowAboutDialog(owner_);
     safe_to_exit_ = true;
@@ -693,6 +696,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnMainViewResizedHandler(int width, int height, int gadget_id) {
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end()) {
       AdjustViewHostPosition(&it->second);
@@ -700,6 +705,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnMainViewMovedHandler(int x, int y, int gadget_id) {
+    GGL_UNUSED(x);
+    GGL_UNUSED(y);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end()) {
       AdjustViewHostPosition(&it->second);
@@ -720,6 +727,7 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnPopOutViewBeginResizeHandler(int button, int hittest, int gadget_id) {
+    GGL_UNUSED(button);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end() && it->second.popout) {
       if (it->second.popout_on_right)
@@ -739,6 +747,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnPopOutViewResizedHandler(int width, int height, int gadget_id) {
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end() && it->second.popout) {
       AdjustViewHostPosition(&it->second);
@@ -746,6 +756,7 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnPopOutViewBeginMoveHandler(int button) {
+    GGL_UNUSED(button);
     // User can't move popout view window.
     return true;
   }
@@ -763,6 +774,7 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnDetailsViewBeginResizeHandler(int button, int hittest, int gadget_id) {
+    GGL_UNUSED(button);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end() && it->second.details) {
       if (it->second.details_on_right)
@@ -782,6 +794,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnDetailsViewResizedHandler(int width, int height, int gadget_id) {
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
     GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
     if (it != gadgets_.end() && it->second.details) {
       AdjustViewHostPosition(&it->second);
@@ -789,6 +803,7 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnDetailsViewBeginMoveHandler(int button) {
+    GGL_UNUSED(button);
     // User can't move popout view window.
     return true;
   }
@@ -797,6 +812,7 @@ class SimpleGtkHost::Impl {
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
                                          guint activate_time,
                                          gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     gtk_menu_popup(GTK_MENU(impl->host_menu_), NULL, NULL,
                    gtk_status_icon_position_menu, impl->status_icon_,
@@ -813,6 +829,7 @@ class SimpleGtkHost::Impl {
 #endif
 
   static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->ToggleAllGadgets();
   }

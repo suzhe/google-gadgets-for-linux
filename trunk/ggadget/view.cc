@@ -156,6 +156,7 @@ class View::Impl : public SmallObject<> {
     }
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
       ASSERT(event_.GetToken() == watch_id);
       delete this;
     }

@@ -277,6 +277,8 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
     }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       // The gadget manager always use positive instance ids, so this designee_id
       // won't conflict with them.
       int designee_id = -g_designer_gadget->GetInstanceID() - 1;
@@ -309,6 +311,8 @@ class DesignerUtils : public ScriptableHelperNativeOwnedDefault {
     }
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
 

@@ -49,6 +49,7 @@ static void AppendArrayToJSON(JSContext *cx, JSObject *array,
 
 static void AppendStringToJSON(JSContext *cx, JSString *str,
                                std::string *json) {
+  GGL_UNUSED(cx);
   *json += '"';
   const jschar *chars = JS_GetStringChars(str);
   if (chars) {

@@ -737,7 +737,9 @@ template <>
 struct VariantValue<void> {
   typedef void value_type;
 
-  value_type operator()(const Variant &v) { }
+  value_type operator()(const Variant &v) {
+    GGL_UNUSED(v);
+  }
 };
 
 /**

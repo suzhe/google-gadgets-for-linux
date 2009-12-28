@@ -67,12 +67,16 @@ class DefaultMemory : public MemoryInterface {
 
 class DefaultPerfmon : public PerfmonInterface {
  public:
-  virtual Variant GetCurrentValue(const char *counter_path) { return Variant(0); }
+  virtual Variant GetCurrentValue(const char *counter_path) {
+    GGL_UNUSED(counter_path);
+    return Variant(0); 
+  }
   virtual int AddCounter(const char *counter_path, CallbackSlot *slot) {
+    GGL_UNUSED(counter_path);
     delete slot;
     return -1;
   }
-  virtual void RemoveCounter(int id) { }
+  virtual void RemoveCounter(int id) { GGL_UNUSED(id); }
 };
 
 class DefaultPower : public PowerInterface {
@@ -88,14 +92,20 @@ class DefaultProcesses : public ProcessesInterface {
  public:
   virtual void Destroy() { }
   virtual int GetCount() const { return 0; }
-  virtual ProcessInfoInterface *GetItem(int index) { return NULL; }
+  virtual ProcessInfoInterface *GetItem(int index) {
+    GGL_UNUSED(index);
+    return NULL; 
+  }
 };
 
 class DefaultProcess : public ProcessInterface {
  public:
   virtual ProcessesInterface *EnumerateProcesses() { return &default_processes_; }
   virtual ProcessInfoInterface *GetForeground() { return NULL; }
-  virtual ProcessInfoInterface *GetInfo(int pid) { return NULL; }
+  virtual ProcessInfoInterface *GetInfo(int pid) {
+    GGL_UNUSED(pid);
+    return NULL;
+  }
  private:
   DefaultProcesses default_processes_;
 };
@@ -107,18 +117,21 @@ class DefaultWireless : public WirelessInterface {
   virtual bool EnumerationSupported() const { return false; }
   virtual int GetAPCount() const { return 0; }
   virtual WirelessAccessPointInterface *GetWirelessAccessPoint(int index) {
+    GGL_UNUSED(index);
     return NULL;
   }
   virtual std::string GetName() const { return "Unknown"; }
   virtual std::string GetNetworkName() const  { return "Unknwon"; }
   virtual int GetSignalStrength() const { return 0; }
   virtual void ConnectAP(const char *ap_name, Slot1<void, bool> *callback) {
+    GGL_UNUSED(ap_name);
     if (callback) {
       (*callback)(false);
       delete callback;
     }
   }
   virtual void DisconnectAP(const char *ap_name, Slot1<void, bool> *callback) {
+    GGL_UNUSED(ap_name);
     if (callback) {
       (*callback)(false);
       delete callback;
@@ -146,76 +159,152 @@ class DefaultFileSystem : public FileSystemInterface {
  public:
   virtual DrivesInterface *GetDrives() { return NULL; }
   virtual std::string BuildPath(const char *path, const char *name) {
+    GGL_UNUSED(path);
+    GGL_UNUSED(name);
     return "";
   }
-  virtual std::string GetDriveName(const char *path) { return ""; }
-  virtual std::string GetParentFolderName(const char *path) { return ""; }
-  virtual std::string GetFileName(const char *path) { return ""; }
-  virtual std::string GetBaseName(const char *path) { return ""; }
-  virtual std::string GetExtensionName(const char *path) { return ""; }
-  virtual std::string GetAbsolutePathName(const char *path) { return ""; }
-  virtual std::string GetTempName() { return ""; }
-  virtual bool DriveExists(const char *drive_spec) { return false; }
-  virtual bool FileExists(const char *file_spec) { return false; }
-  virtual bool FolderExists(const char *folder_spec) { return false; }
-  virtual DriveInterface *GetDrive(const char *drive_spec) { return NULL; }
-  virtual FileInterface *GetFile(const char *file_path) { return NULL; }
-  virtual FolderInterface *GetFolder(const char *folder_path) { return NULL; }
-  virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder) {
-    return NULL;
+  virtual std::string GetDriveName(const char *path) {
+    GGL_UNUSED(path);
+    return "";
   }
-  virtual bool DeleteFile(const char *file_spec, bool force) { return false; }
-  virtual bool DeleteFolder(const char *folder_spec, bool force) {
+  virtual std::string GetParentFolderName(const char *path) {
+    GGL_UNUSED(path);
+    return "";
+  }
+  virtual std::string GetFileName(const char *path) {
+    GGL_UNUSED(path);
+    return "";
+  }
+  virtual std::string GetBaseName(const char *path) {
+    GGL_UNUSED(path);
+    return "";
+  }
+  virtual std::string GetExtensionName(const char *path) {
+    GGL_UNUSED(path);
+    return ""; 
+  }
+  virtual std::string GetAbsolutePathName(const char *path) {
+    GGL_UNUSED(path);
+    return "";
+  }
+  virtual std::string GetTempName() { return ""; }
+  virtual bool DriveExists(const char *drive_spec) {
+    GGL_UNUSED(drive_spec);
     return false;
   }
-  virtual bool MoveFile(const char *source, const char *dest) { return false; }
+  virtual bool FileExists(const char *file_spec) {
+    GGL_UNUSED(file_spec);
+    return false;
+  }
+  virtual bool FolderExists(const char *folder_spec) {
+    GGL_UNUSED(folder_spec);
+    return false;
+  }
+  virtual DriveInterface *GetDrive(const char *drive_spec) {
+    GGL_UNUSED(drive_spec);
+    return NULL;
+  }
+  virtual FileInterface *GetFile(const char *file_path) {
+    GGL_UNUSED(file_path);
+    return NULL;
+  }
+  virtual FolderInterface *GetFolder(const char *folder_path) {
+    GGL_UNUSED(folder_path);
+    return NULL; 
+  }
+  virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder) {
+    GGL_UNUSED(special_folder);
+    return NULL;
+  }
+  virtual bool DeleteFile(const char *file_spec, bool force) {
+    GGL_UNUSED(file_spec);
+    GGL_UNUSED(force);
+    return false;
+  }
+  virtual bool DeleteFolder(const char *folder_spec, bool force) {
+    GGL_UNUSED(folder_spec);
+    GGL_UNUSED(force);
+    return false;
+  }
+  virtual bool MoveFile(const char *source, const char *dest) {
+    GGL_UNUSED(source);
+    GGL_UNUSED(dest);
+    return false;
+  }
   virtual bool MoveFolder(const char *source, const char *dest) {
+    GGL_UNUSED(source);
+    GGL_UNUSED(dest);
     return false;
   }
   virtual bool CopyFile(const char *source, const char *dest,
                         bool overwrite) {
+    GGL_UNUSED(source);
+    GGL_UNUSED(dest);
+    GGL_UNUSED(overwrite);
     return false;
   }
   virtual bool CopyFolder(const char *source, const char *dest,
                           bool overwrite) {
+    GGL_UNUSED(source);
+    GGL_UNUSED(dest);
+    GGL_UNUSED(overwrite);
     return false;
   }
 
   virtual FolderInterface *CreateFolder(const char *path) {
+    GGL_UNUSED(path);
     return NULL;
   }
   virtual TextStreamInterface *CreateTextFile(const char *filename,
                                               bool overwrite,
                                               bool unicode) {
+    GGL_UNUSED(filename);
+    GGL_UNUSED(overwrite);
+    GGL_UNUSED(unicode);
     return NULL;
   }
   virtual TextStreamInterface *OpenTextFile(const char *filename,
                                             IOMode mode,
                                             bool create,
                                             Tristate format) {
+    GGL_UNUSED(filename);
+    GGL_UNUSED(mode);
+    GGL_UNUSED(create);
+    GGL_UNUSED(format);
     return NULL;
   }
   virtual BinaryStreamInterface *CreateBinaryFile(const char *filename,
                                                   bool overwrite) {
+    GGL_UNUSED(filename);
+    GGL_UNUSED(overwrite);
     return NULL;
   }
   virtual BinaryStreamInterface *OpenBinaryFile(const char *filename,
                                                 IOMode mode,
                                                 bool create) {
+    GGL_UNUSED(filename);
+    GGL_UNUSED(mode);
+    GGL_UNUSED(create);
     return NULL;
   }
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode) {
+    GGL_UNUSED(type);
+    GGL_UNUSED(unicode);
     return NULL;
   }
   virtual std::string GetFileVersion(const char *filename) {
+    GGL_UNUSED(filename);
     return "";
   }
 };
 
 class DefaultAudio : public AudioInterface {
  public:
-  virtual AudioclipInterface * CreateAudioclip(const char *src) { return NULL; }
+  virtual AudioclipInterface * CreateAudioclip(const char *src) {
+    GGL_UNUSED(src);
+    return NULL; 
+  }
 };
 
 class DefaultRuntime : public RuntimeInterface {
@@ -256,6 +345,7 @@ class DefaultUser : public UserInterface {
     return false;
   }
   virtual void SetIdlePeriod(time_t period) {
+    GGL_UNUSED(period);
   }
   virtual time_t GetIdlePeriod() const {
     return 0;
@@ -287,14 +377,17 @@ static ScriptableScreen g_script_screen_(&g_screen_);
 static ScriptableUser g_script_user_(&g_user_);
 
 static std::string DefaultGetFileIcon(const char *filename) {
+  GGL_UNUSED(filename);
   return std::string("");
 }
 
 static std::string DefaultBrowseForFile(const char *filter) {
+  GGL_UNUSED(filter);
   return std::string("");
 }
 
 static ScriptableArray *DefaultBrowseForFiles(const char *filter) {
+  GGL_UNUSED(filter);
   return new ScriptableArray();
 }
 

@@ -148,6 +148,8 @@ class CpuUsageWatch : public WatchCallbackInterface {
   }
 
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     double last = current_cpu_usage_;
     current_cpu_usage_ = GetCurrentCpuUsage();
 
@@ -161,6 +163,8 @@ class CpuUsageWatch : public WatchCallbackInterface {
   }
 
   virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     // In case the main loop is destroyed before the watch.
     watch_id_ = -1;
   }

@@ -905,6 +905,7 @@ void GtkEditImpl::QueueCursorBlink() {
 }
 
 bool GtkEditImpl::CursorBlinkCallback(int timer_id) {
+  GGL_UNUSED(timer_id);
   -- cursor_blink_status_;
   if (cursor_blink_status_ < 0)
     cursor_blink_status_ = 2;
@@ -1892,6 +1893,7 @@ void GtkEditImpl::UpdateIMCursorLocation() {
 
 void GtkEditImpl::CommitCallback(GtkIMContext *context, const char *str,
                                  void *gg) {
+  GGL_UNUSED(context);
   reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
   reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
@@ -1907,6 +1909,7 @@ gboolean GtkEditImpl::RetrieveSurroundingCallback(GtkIMContext *context,
 
 gboolean GtkEditImpl::DeleteSurroundingCallback(GtkIMContext *context, int offset,
                                             int n_chars, void *gg) {
+  GGL_UNUSED(context);
   GtkEditImpl *edit = reinterpret_cast<GtkEditImpl*>(gg);
   const char *text = edit->text_.c_str();
   int text_length = static_cast<int>(edit->text_.length());
@@ -1927,6 +1930,7 @@ gboolean GtkEditImpl::DeleteSurroundingCallback(GtkIMContext *context, int offse
 }
 
 void GtkEditImpl::PreeditStartCallback(GtkIMContext *context, void *gg) {
+  GGL_UNUSED(context);
   reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
   reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
   reinterpret_cast<GtkEditImpl*>(gg)->UpdateIMCursorLocation();
@@ -1953,12 +1957,14 @@ void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
 }
 
 void GtkEditImpl::PreeditEndCallback(GtkIMContext *context, void *gg) {
+  GGL_UNUSED(context);
   reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
   reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
 
 void GtkEditImpl::PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg) {
+  GGL_UNUSED(clipboard);
   reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
   reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false, MINIMAL_ADJUST);
 }
