@@ -186,17 +186,20 @@ bool DecoratedViewHost::ShowContextMenu(int button) {
 }
 
 void DecoratedViewHost::Alert(const ViewInterface *view, const char *message) {
+  GGL_UNUSED(view);
   impl_->view_decorator_->Alert(message);
 }
 
 ViewHostInterface::ConfirmResponse DecoratedViewHost::Confirm(
     const ViewInterface *view, const char *message, bool cancel_button) {
+  GGL_UNUSED(view);
   return impl_->view_decorator_->Confirm(message, cancel_button);
 }
 
 std::string DecoratedViewHost::Prompt(const ViewInterface *view,
                                       const char *message,
                                       const char *default_value) {
+  GGL_UNUSED(view);
   return impl_->view_decorator_->Prompt(message, default_value);
 }
 

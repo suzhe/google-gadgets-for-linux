@@ -216,6 +216,7 @@ class QtHost::Impl : public QObject {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ViewInterface *main_view = gadget->GetMainView();
 
     // If this gadget is popped out, popin it first.

@@ -210,6 +210,7 @@ class QtViewHost::Impl : public QObject {
   }
 
   bool ShowContextMenu(int button) {
+    GGL_UNUSED(button);
     ASSERT(view_);
     context_menu_.clear();
     QtMenu qt_menu(&context_menu_);

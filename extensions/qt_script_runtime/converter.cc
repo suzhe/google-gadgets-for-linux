@@ -39,6 +39,7 @@ namespace qt {
 
 static bool ConvertJSToNativeVoid(const QScriptValue &qval,
                                   Variant *val) {
+  GGL_UNUSED(qval);
   *val = Variant();
   return true;
 }
@@ -297,6 +298,8 @@ bool ConvertJSArgsToNative(QScriptContext *ctx, Slot *slot,
 
 static bool ConvertNativeToJSVoid(QScriptEngine *engine,
                                   const Variant &val, QScriptValue *qval) {
+  GGL_UNUSED(engine);
+  GGL_UNUSED(val);
   *qval = QScriptValue();
   return true;
 }
@@ -387,6 +390,9 @@ static bool ConvertNativeToJSDate(QScriptEngine *engine,
 
 static bool ConvertNativeToJSFunction(QScriptEngine *engine,
                                       const Variant &val, QScriptValue *qval) {
+  GGL_UNUSED(engine);
+  GGL_UNUSED(val);
+  GGL_UNUSED(qval);
   // To be compatible with the Windows version, we don't support returning
   // native Slots to JavaScript.
   DLOG("ConvertNativeToJSFunction");

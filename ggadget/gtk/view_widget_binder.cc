@@ -408,6 +408,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
                                        gpointer user_data) {
+    GGL_UNUSED(widget);
     DLOG("ButtonReleaseHandler.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
@@ -455,6 +456,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean KeyPressHandler(GtkWidget *widget, GdkEventKey *event,
                                   gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
@@ -499,6 +501,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean KeyReleaseHandler(GtkWidget *widget, GdkEventKey *event,
                                     gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
 
@@ -687,6 +690,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean ScrollHandler(GtkWidget *widget, GdkEventScroll *event,
                                 gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     int delta_x = 0, delta_y = 0;
     if (event->direction == GDK_SCROLL_UP) {
@@ -709,6 +713,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean LeaveNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
+    GGL_UNUSED(widget);
     if (event->mode != GDK_CROSSING_NORMAL ||
         event->detail == GDK_NOTIFY_INFERIOR)
       return FALSE;
@@ -730,6 +735,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean EnterNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
+    GGL_UNUSED(widget);
     if (event->mode != GDK_CROSSING_NORMAL ||
         event->detail == GDK_NOTIFY_INFERIOR)
       return FALSE;
@@ -746,6 +752,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
                                  gpointer user_data) {
+    GGL_UNUSED(event);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     DLOG("FocusInHandler: widget: %p, view: %p, focused: %d, child: %p",
          widget, impl->view_, impl->focused_,
@@ -760,6 +767,7 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static gboolean FocusOutHandler(GtkWidget *widget, GdkEventFocus *event,
                                   gpointer user_data) {
+    GGL_UNUSED(event);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     DLOG("FocusOutHandler: widget: %p, view: %p, focused: %d, child: %p",
          widget, impl->view_, impl->focused_,
@@ -801,6 +809,9 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 #ifdef GRAB_POINTER_EXPLICITLY
   static gboolean GrabBrokenHandler(GtkWidget *widget, GdkEvent *event,
                                     gpointer user_data) {
+    GGL_UNUSED(event);
+    GGL_UNUSED(widget);
+    GGL_UNUSED(user_data);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->pointer_grabbed_ = false;
     return FALSE;
@@ -813,6 +824,8 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
                                       GtkSelectionData *data,
                                       guint info, guint time,
                                       gpointer user_data) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(info);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (!impl->current_drag_event_) {
       // There are some cases that multiple drag events are fired in one event
@@ -925,11 +938,14 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
   static void ScreenChangedHandler(GtkWidget *widget, GdkScreen *last_screen,
                                    gpointer user_data) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(last_screen);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->SetupBackgroundMode();
   }
 
   static void CompositedChangedHandler(GtkWidget *widget, gpointer user_data) {
+    GGL_UNUSED(widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->SetupBackgroundMode();
   }

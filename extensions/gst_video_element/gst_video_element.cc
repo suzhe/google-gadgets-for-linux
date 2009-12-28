@@ -492,6 +492,7 @@ GstVideoElement::GstStateToLocalState(GstState state) {
 gboolean GstVideoElement::OnNewMessage(GstBus *bus,
                                        GstMessage *msg,
                                        gpointer data) {
+  GGL_UNUSED(bus);
   ASSERT(msg && data);
   GstVideoElement *object = static_cast<GstVideoElement*>(data);
 

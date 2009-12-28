@@ -765,6 +765,7 @@ class Wireless::Impl {
       return result_;
     }
     bool Callback(int i, const Variant &elm) {
+      GGL_UNUSED(i);
       if (elm.type() == Variant::TYPE_STRING) {
         std::string con_path = VariantValue<std::string>()(elm);
         DBusProxy *con =
@@ -795,6 +796,7 @@ class Wireless::Impl {
       return true;
     }
     bool MatchDeviceCallback(int i, const Variant &dev) {
+      GGL_UNUSED(i);
       std::string dev_path;
       if (dev.ConvertToString(&dev_path) && dev_path == dev_path_) {
         result_ = true;
@@ -962,6 +964,7 @@ class Wireless::Impl {
 
   static bool EnumerateSSIDCallback(int i, const Variant &byte,
                                     std::string *ssid) {
+    GGL_UNUSED(i);
     if (byte.type() == Variant::TYPE_INT64) {
       ssid->push_back(VariantValue<char>()(byte));
       return true;

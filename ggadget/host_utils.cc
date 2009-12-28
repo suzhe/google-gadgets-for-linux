@@ -576,6 +576,9 @@ void SetupGadgetGetFeedbackURLHandler(Gadget *gadget) {
     }
     virtual ResultVariant Call(ScriptableInterface *object,
                                int argc, const Variant argv[]) const {
+      GGL_UNUSED(object);
+      GGL_UNUSED(argc);
+      GGL_UNUSED(argv);
       if (!url_retrieved_) {
         GadgetManagerInterface *gadget_manager = GetGadgetManager();
         if (gadget_ && gadget_manager) {
@@ -588,6 +591,7 @@ void SetupGadgetGetFeedbackURLHandler(Gadget *gadget) {
       return ResultVariant(Variant(url_));
     }
     virtual bool operator==(const Slot &another) const {
+      GGL_UNUSED(another);
       return false;
     }
    private:

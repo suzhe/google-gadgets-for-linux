@@ -151,6 +151,7 @@ class DefaultOptions : public MemoryOptions {
   }
 
   bool OnFlushTimer(int timer) {
+    GGL_UNUSED(timer);
     // DeleteStorage() sets file_manager_ to NULL.
     if (!file_manager_)
       return false;
@@ -160,6 +161,7 @@ class DefaultOptions : public MemoryOptions {
   }
 
   void OnOptionChange(const char *option) {
+    GGL_UNUSED(option);
     changed_ = true;
   }
 

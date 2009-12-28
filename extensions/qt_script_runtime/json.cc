@@ -47,6 +47,7 @@ static void AppendArrayToJSON(QScriptEngine *engine, const QScriptValue &qval,
 
 static void AppendStringToJSON(QScriptEngine *engine, QString str,
                                std::string *json) {
+  GGL_UNUSED(engine);
   *json += EncodeJavaScriptString(str.utf16(), '"');
 }
 
@@ -72,6 +73,7 @@ static void AppendObjectToJSON(QScriptEngine *engine, const QScriptValue &qval,
 
 static void AppendNumberToJSON(QScriptEngine *engine, const QScriptValue &qval,
                                std::string *json) {
+  GGL_UNUSED(engine);
   std::string str = qval.toString().toStdString();
   if (str.empty() || str[0] == 'I' || str[1] == 'I' || str[0] == 'N')
     *json += '0';
@@ -81,6 +83,7 @@ static void AppendNumberToJSON(QScriptEngine *engine, const QScriptValue &qval,
 
 static void AppendDateToJSON(QScriptEngine *engine, const QScriptValue &qval,
                                std::string *json) {
+  GGL_UNUSED(engine);
   *json += kDatePrefix;
   uint64_t v = static_cast<uint64_t>(qval.toNumber());
   char buf[30];

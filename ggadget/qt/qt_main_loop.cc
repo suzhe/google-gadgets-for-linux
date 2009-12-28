@@ -73,6 +73,8 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
 
   // Handle thread adding timeout watches
   virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     union {
       char data[sizeof(TimeoutPipeEvent)];
       TimeoutPipeEvent event;
@@ -98,6 +100,8 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
   }
 
   virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
     // do nothing
   }
 
@@ -283,6 +287,7 @@ void QtMainLoop::Run() {
 }
 
 bool QtMainLoop::DoIteration(bool may_block) {
+  GGL_UNUSED(may_block);
   return true;
 }
 
@@ -345,6 +350,7 @@ void WatchNode::OnTimeout() {
 }
 
 void WatchNode::OnIOEvent(int fd) {
+  GGL_UNUSED(fd);
   if (!calling_ && !removing_) {
     calling_ = true;
     bool ret = callback_->Call(main_loop_, watch_id_);

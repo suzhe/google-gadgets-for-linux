@@ -42,10 +42,14 @@ class ViewDecoratorBase::Impl : public SmallObject<> {
    public:
     SignalPostCallback(const Signal0<void> *signal) : signal_(signal) {}
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       (*signal_)();
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
     const Signal0<void> *signal_;
@@ -665,6 +669,8 @@ void ViewDecoratorBase::GetClientExtents(double *width, double *height) const {
 bool ViewDecoratorBase::OnClientSizing(double *width, double *height) {
   // To be implemented by derived classes to report suitable client size when
   // child view is not visible.
+  GGL_UNUSED(width);
+  GGL_UNUSED(height);
   return true;
 }
 

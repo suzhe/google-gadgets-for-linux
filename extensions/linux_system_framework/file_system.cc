@@ -196,6 +196,7 @@ static bool CopyFolder(const char *source, const char *dest, bool overwrite) {
 
 // The no_use parameter eases wildcard handling. See OperateWildcard.
 static bool MoveFile(const char *source, const char *dest, bool no_use) {
+  GGL_UNUSED(no_use);
   ASSERT(source);
   ASSERT(*source);
   ASSERT(dest);
@@ -224,6 +225,7 @@ static bool MoveFile(const char *source, const char *dest, bool no_use) {
 
 // The no_use parameter eases wildcard handling. See OperateWildcard.
 static bool MoveFolder(const char *source, const char *dest, bool no_use) {
+  GGL_UNUSED(no_use);
   ASSERT(source);
   ASSERT(*source);
   ASSERT(dest);
@@ -253,6 +255,7 @@ static bool MoveFolder(const char *source, const char *dest, bool no_use) {
 
 // The no_use parameter eases wildcard handling. See OperateWildcard.
 static bool DeleteFile(const char *filename, const char *no_use, bool force) {
+  GGL_UNUSED(no_use);
   ASSERT(filename);
   ASSERT(*filename);
 
@@ -263,6 +266,7 @@ static bool DeleteFile(const char *filename, const char *no_use, bool force) {
 
 // The no_use parameter eases wildcard handling. See OperateWildcard.
 static bool DeleteFolder(const char *filename, const char *no_use, bool force) {
+  GGL_UNUSED(no_use);
   ASSERT(filename);
   ASSERT(*filename);
 
@@ -340,6 +344,7 @@ class TextStream : public TextStreamInterface {
         line_(-1),
         col_(-1),
         readingptr_(0) {
+    GGL_UNUSED(unicode);          
     if (fd_ != -1) {
       line_ = 1;
       col_ = 1;
@@ -833,6 +838,7 @@ class Drive : public DriveInterface {
   }
 
   virtual bool SetVolumnName(const char *name) {
+    GGL_UNUSED(name);
     // TODO: implement this.
     return false;
   }
@@ -1442,6 +1448,7 @@ std::string FileSystem::BuildPath(const char *path, const char *name) {
 }
 
 std::string FileSystem::GetDriveName(const char *path) {
+  GGL_UNUSED(path);
   return "";
 }
 
@@ -1526,6 +1533,7 @@ std::string FileSystem::GetTempName() {
 }
 
 bool FileSystem::DriveExists(const char *drive_spec) {
+  GGL_UNUSED(drive_spec);
   return false;
 }
 
@@ -1569,6 +1577,7 @@ bool FileSystem::FolderExists(const char *folder_spec) {
 }
 
 DriveInterface *FileSystem::GetDrive(const char *drive_spec) {
+  GGL_UNUSED(drive_spec);
   return NULL;
 }
 
@@ -1729,6 +1738,7 @@ FileSystem::GetStandardStream(StandardStreamType type, bool unicode) {
 }
 
 std::string FileSystem::GetFileVersion(const char *filename) {
+  GGL_UNUSED(filename);
   return "";
 }
 

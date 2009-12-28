@@ -94,10 +94,13 @@ class ObjectVideoPlayer::Impl : public SmallObject<> {
     }
 
     void SetItemInfo(const std::string& attr, const std::string& value) {
+      GGL_UNUSED(attr);
+      GGL_UNUSED(value);
       // Currently, users are not allowed to modify the tag info.
     }
 
     bool IsReadOnlyItem(const std::string& attr) {
+      GGL_UNUSED(attr);
       return true;
     }
 
@@ -463,6 +466,7 @@ class ObjectVideoPlayer::Impl : public SmallObject<> {
   }
 
   Playlist *NewPlaylist(const char *name, const char *meta_file) {
+    GGL_UNUSED(meta_file);
     // We don't use any meta file for playlist. The parameter exists for
     // interface compatibility.
     if (name) {
@@ -521,6 +525,7 @@ class ObjectVideoPlayer::Impl : public SmallObject<> {
   }
 
   bool RequestMediaAccessRights(const std::string &access) {
+    GGL_UNUSED(access);
     return true;
   }
 

@@ -80,6 +80,7 @@ class Tooltip::Impl {
   }
 
   bool DelayedShow(int watch_id) {
+    GGL_UNUSED(watch_id);
     GdkScreen *screen;
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
@@ -89,6 +90,7 @@ class Tooltip::Impl {
   }
 
   bool DelayedHide(int watch_id) {
+    GGL_UNUSED(watch_id);
     gtk_widget_hide(window_);
     hide_timer_ = 0;
     return false;
@@ -147,6 +149,8 @@ class Tooltip::Impl {
 
   static gboolean PaintTooltipWindow(GtkWidget *widget, GdkEventExpose *event,
                                      gpointer user_data) {
+    GGL_UNUSED(event);
+    GGL_UNUSED(user_data);
     GtkRequisition req;
     gtk_widget_size_request(widget, &req);
     gtk_paint_flat_box(widget->style, widget->window,

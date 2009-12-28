@@ -76,7 +76,10 @@ class QtViewHost : public ViewHostInterface {
                         Slot1<bool, int> *feedback_handler);
   virtual void CloseView();
   virtual bool ShowContextMenu(int button);
-  virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
+  virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {
+    GGL_UNUSED(button);
+    GGL_UNUSED(hittest);
+  }
   virtual void BeginMoveDrag(int button);
 
   virtual void Alert(const ViewInterface *view, const char *message);

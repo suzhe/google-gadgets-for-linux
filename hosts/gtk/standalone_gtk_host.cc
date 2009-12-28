@@ -167,6 +167,7 @@ class StandaloneGtkHost::Impl {
 
   ViewHostInterface *NewViewHost(Gadget *gadget,
                                  ViewHostInterface::Type type) {
+    GGL_UNUSED(gadget);
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
       vh_flags |= (SingleViewHost::DECORATED | SingleViewHost::WM_MANAGEABLE);
@@ -226,6 +227,7 @@ class StandaloneGtkHost::Impl {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ASSERT(gadget && gadget == gadget_);
     owner_->Exit();
   }
@@ -275,10 +277,14 @@ class StandaloneGtkHost::Impl {
   }
 
   void OnMainViewResizedHandler(int width, int height) {
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
     AdjustViewHostPosition();
   }
 
   void OnMainViewMovedHandler(int x, int y) {
+    GGL_UNUSED(x);
+    GGL_UNUSED(y);
     AdjustViewHostPosition();
   }
 
@@ -290,6 +296,7 @@ class StandaloneGtkHost::Impl {
   }
 
   bool OnDetailsViewBeginResizeHandler(int button, int hittest) {
+    GGL_UNUSED(button);
     if (details_on_right_) {
       return hittest == ViewInterface::HT_LEFT ||
              hittest == ViewInterface::HT_TOPLEFT ||
@@ -306,10 +313,13 @@ class StandaloneGtkHost::Impl {
   }
 
   void OnDetailsViewResizedHandler(int width, int height) {
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
     AdjustViewHostPosition();
   }
 
   bool OnDetailsViewBeginMoveHandler(int button) {
+    GGL_UNUSED(button);
     // User can't move popout view window.
     return true;
   }

@@ -419,6 +419,7 @@ static const char kWorkAreaChangeSelfTag[] = "workarea-change-self";
 
 static GdkFilterReturn WorkAreaPropertyNotifyFilter(
     GdkXEvent *gdk_xevent, GdkEvent *event, gpointer data) {
+  GGL_UNUSED(event);
   g_return_val_if_fail(gdk_xevent, GDK_FILTER_CONTINUE);
 
   Slot0<void> *slot = static_cast<Slot0<void> *>(
@@ -457,6 +458,7 @@ static void WorkAreaChangeDestroySelfNotify(gpointer data) {
 
 static void WorkAreaScreenChangedCallback(GtkWidget *widget, GdkScreen *prev,
                                           gpointer data) {
+  GGL_UNUSED(data);
   if (prev) {
     GdkWindow *root = gdk_screen_get_root_window(prev);
     if (root)
@@ -598,6 +600,7 @@ static void OnDebugConsoleDestroy(GtkObject *object, gpointer user_data) {
 }
 
 static void OnClearClicked(GtkButton *button, gpointer user_data) {
+  GGL_UNUSED(button);
   DebugConsoleInfo *info = static_cast<DebugConsoleInfo *>(user_data);
   GtkTextBuffer *buffer = gtk_text_view_get_buffer(info->log_view);
   if (buffer) {

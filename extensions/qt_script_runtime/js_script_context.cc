@@ -111,14 +111,14 @@ static QDateTime CustomParseDate(const QString &arg) {
   return dt;
 }
 
-QScriptValue ParseDate(QScriptContext *ctx, QScriptEngine *eng) {
+static QScriptValue ParseDate(QScriptContext *ctx, QScriptEngine *eng) {
   if (!ctx->argument(0).isString())
     return ctx->callee().data().construct(ctx->argumentsObject());
   QString arg = ctx->argument(0).toString();
   return eng->newDate(CustomParseDate(arg));
 }
 
-QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
+static QScriptValue CustomDateConstructor(QScriptContext *ctx, QScriptEngine *eng) {
   if (!ctx->argument(0).isString())
     return ctx->callee().data().construct(ctx->argumentsObject());
   QString arg = ctx->argument(0).toString();
@@ -401,6 +401,8 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
     const QScriptString &property_name,
     QueryFlags flags,
     uint *id) {
+  GGL_UNUSED(object);
+  GGL_UNUSED(flags);
   if (!object_) return 0;
 
   QString name = property_name.toString();
@@ -444,6 +446,7 @@ QScriptClass::QueryFlags ResolverScriptClass::queryProperty(
 QScriptValue ResolverScriptClass::property(const QScriptValue & object,
                                            const QScriptString & name,
                                            uint id) {
+  GGL_UNUSED(object);
   std::string sname = name.toString().toStdString();
 
   JSScriptContext::Impl *impl = GetEngineContextImpl(engine());
@@ -493,6 +496,8 @@ void ResolverScriptClass::setProperty(QScriptValue &object,
                                       const QScriptString &name,
                                       uint id,
                                       const QScriptValue &value) {
+  GGL_UNUSED(object);
+  GGL_UNUSED(id);
   std::string sname = name.toString().toStdString();
   // Remove me when code is stable
   if (sname.compare("trap") == 0)
@@ -617,6 +622,12 @@ bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
                                         ScriptContextInterface *src_context,
                                         ScriptableInterface *src_object,
                                         const char *src_expr) {
+  GGL_UNUSED(dest_object);
+  GGL_UNUSED(dest_object_expr);
+  GGL_UNUSED(dest_property);
+  GGL_UNUSED(src_context);
+  GGL_UNUSED(src_object);
+  GGL_UNUSED(src_expr);
   ASSERT(0);
   return false;
 }
@@ -625,6 +636,7 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
                                        const char *object_expr,
                                        const char *property,
                                        const Variant &value) {
+  GGL_UNUSED(object);
   ScopedLogContext log_context(this);
 
   DLOG("AssignFromNative: o:%s,p:%s,v:%s", object_expr, property,
@@ -644,6 +656,7 @@ bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
 
 Variant JSScriptContext::Evaluate(ScriptableInterface *object,
                                   const char *expr) {
+  GGL_UNUSED(object);
   DLOG("Evaluate: %s", expr);
   ASSERT(0);
   Variant result;

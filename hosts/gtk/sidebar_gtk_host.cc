@@ -446,6 +446,7 @@ class SideBarGtkHost::Impl {
   }
 
   void OnSideBarResized(int width, int height) {
+    GGL_UNUSED(height);
     // ignore width changes when the sidebar is minimized.
     if (!sidebar_->IsMinimized()) {
       sidebar_width_ = width;
@@ -536,7 +537,7 @@ class SideBarGtkHost::Impl {
     }
   }
 
-  void OnSideBarClick(View *view) {
+  void OnSideBarClick(View *) {
     if (auto_hide_source_) {
       g_source_remove(auto_hide_source_);
       auto_hide_source_ = 0;
@@ -924,6 +925,7 @@ class SideBarGtkHost::Impl {
 
   // Only for floating main view.
   bool OnMainViewBeginMove(int button, int gadget_id) {
+    GGL_UNUSED(button);
     GadgetInfo *info = &gadgets_[gadget_id];
     ASSERT(info->gadget);
     ASSERT(info->floating);
@@ -1095,6 +1097,8 @@ class SideBarGtkHost::Impl {
   }
 
   bool OnDetailsViewBeginMove(int button, int gadget_id) {
+    GGL_UNUSED(button);
+    GGL_UNUSED(gadget_id);
     // details window is not allowed to move, just return true
     return true;
   }
@@ -1172,6 +1176,7 @@ class SideBarGtkHost::Impl {
   }
 
   bool OnPopOutViewBeginResize(int button, int hittest, int gadget_id) {
+    GGL_UNUSED(gadget_id);
     if (button != MouseEvent::BUTTON_LEFT || hittest == ViewInterface::HT_TOP)
       return true;
 
@@ -1189,6 +1194,8 @@ class SideBarGtkHost::Impl {
   }
 
   bool OnPopOutViewBeginMove(int button, int gadget_id) {
+    GGL_UNUSED(gadget_id);
+    GGL_UNUSED(button);
     // popout window is not allowed to move, just return true
     return true;
   }
@@ -1574,6 +1581,7 @@ class SideBarGtkHost::Impl {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ASSERT(gadget);
     int id = gadget->GetInstanceID();
     // If RemoveGadgetInstance() returns false, then means this instance is not
@@ -1607,22 +1615,27 @@ class SideBarGtkHost::Impl {
 
   // handlers for menu items
   void FloatingGadgetMenuHandler(const char *str, Gadget *gadget) {
+    GGL_UNUSED(str);
     gadget->ShowMainView();
   }
 
   void AddGadgetMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
   void ShowAllMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     ShowOrHideAll(true);
   }
 
   void HideAllMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     ShowOrHideAll(false);
   }
 
   void AutoHideMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     auto_hide_ = !auto_hide_;
     options_->PutInternalValue(kOptionAutoHide, Variant(auto_hide_));
 
@@ -1639,6 +1652,7 @@ class SideBarGtkHost::Impl {
   }
 
   void AlwaysOnTopMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     always_on_top_ = !always_on_top_;
     options_->PutInternalValue(kOptionAlwaysOnTop,
                                Variant(always_on_top_));
@@ -1672,6 +1686,7 @@ class SideBarGtkHost::Impl {
   }
 
   void SideBarPositionMenuHandler(const char *str, int position) {
+    GGL_UNUSED(str);
     CloseAllPopOutWindowsOfSideBar(-1);
     sidebar_position_ = position;
     options_->PutInternalValue(kOptionPosition,
@@ -1683,6 +1698,7 @@ class SideBarGtkHost::Impl {
   }
 
   void OpenCloseSidebarMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     closed_ = !closed_;
     ShowOrHideSideBar(!closed_);
   }
@@ -1701,6 +1717,7 @@ class SideBarGtkHost::Impl {
   }
 
   void FontSizeMenuHandler(const char *str, int delta) {
+    GGL_UNUSED(str);
     int new_font_size;
     if (delta == 0) {
       new_font_size = kDefaultFontSize;
@@ -1716,12 +1733,14 @@ class SideBarGtkHost::Impl {
   }
 
   void AboutMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     safe_to_exit_ = false;
     ShowAboutDialog(owner_);
     safe_to_exit_ = true;
   }
 
   void ExitMenuHandler(const char *str) {
+    GGL_UNUSED(str);
     owner_->Exit();
   }
 
@@ -1756,6 +1775,7 @@ class SideBarGtkHost::Impl {
   // gtk call-backs
   static gboolean ToplevelWindowFocusOutHandler(
       GtkWidget *widget, GdkEventFocus *event, Impl *impl) {
+    GGL_UNUSED(event);
     DLOG("ToplevelWindowFocusOutHandler %d", widget == impl->sidebar_window_);
     if (impl->auto_hide_ && !impl->sidebar_->IsMinimized() &&
         impl->auto_hide_source_ == 0) {
@@ -1777,6 +1797,7 @@ class SideBarGtkHost::Impl {
 
   static gboolean ToplevelWindowFocusInHandler(
       GtkWidget *widget, GdkEventFocus *event, Impl *impl) {
+    GGL_UNUSED(event);
     DLOG("ToplevelWindowFocusInHandler %d", widget == impl->sidebar_window_);
     if (impl->auto_hide_source_) {
       g_source_remove(impl->auto_hide_source_);
@@ -1787,6 +1808,8 @@ class SideBarGtkHost::Impl {
 
   static gboolean SideBarEnterNotifyHandler(
       GtkWidget *widget, GdkEventCrossing *event, Impl *impl) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(event);
     DLOG("SideBarEnterNotifyHandler");
     if (impl->auto_hide_source_) {
       g_source_remove(impl->auto_hide_source_);
@@ -1809,6 +1832,8 @@ class SideBarGtkHost::Impl {
 
   static gboolean SideBarLeaveNotifyHandler(
       GtkWidget *widget, GdkEventCrossing *event, Impl *impl) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(event);
     DLOG("SideBarLeaveNotifyHandler");
     if (impl->auto_hide_ && !impl->sidebar_->IsMinimized() &&
         !gtk_window_is_active(GTK_WINDOW(impl->sidebar_window_)) &&
@@ -1821,6 +1846,8 @@ class SideBarGtkHost::Impl {
 
   static gboolean DragObserverMotionNotifyHandler(
       GtkWidget *widget, GdkEventMotion *event, Impl *impl) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(event);
     if (impl->sidebar_moving_) {
       impl->OnSideBarMove();
     } else if (impl->dragging_gadget_) {
@@ -1831,6 +1858,7 @@ class SideBarGtkHost::Impl {
 
   static gboolean DragObserverButtonReleaseHandler(
       GtkWidget *widget, GdkEventMotion *event, Impl *impl) {
+    GGL_UNUSED(widget);
     gdk_pointer_ungrab(event->time);
     if (impl->sidebar_moving_) {
       impl->OnSideBarEndMove();
@@ -1843,6 +1871,7 @@ class SideBarGtkHost::Impl {
 
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   static void StatusIconActivateHandler(GtkWidget *widget, Impl *impl) {
+    GGL_UNUSED(widget);
     if (!impl->gadgets_shown_ ||
         (!impl->closed_ && impl->sidebar_->IsMinimized()))
       impl->ShowOrHideAll(true);
@@ -1852,6 +1881,7 @@ class SideBarGtkHost::Impl {
 
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
                                          guint activate_time, Impl *impl) {
+    GGL_UNUSED(widget);
     if (impl->status_icon_menu_)
       gtk_widget_destroy(impl->status_icon_menu_);
 

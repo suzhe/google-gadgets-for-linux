@@ -670,8 +670,14 @@ class DOMNodeImpl : public SmallObject<> {
   class EmptyNodeList : public DOMNodeListBase {
    public:
     DEFINE_CLASS_ID(0xd59e03c958194bd8, DOMNodeListInterface);
-    virtual DOMNodeInterface *GetItem(size_t index) { return NULL; }
-    virtual const DOMNodeInterface *GetItem(size_t index) const { return NULL; }
+    virtual DOMNodeInterface *GetItem(size_t index) {
+      GGL_UNUSED(index);
+      return NULL;
+    }
+    virtual const DOMNodeInterface *GetItem(size_t index) const {
+      GGL_UNUSED(index);
+      return NULL;
+    }
     virtual size_t GetLength() const { return 0; }
   };
 
@@ -1009,6 +1015,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
 
   virtual std::string GetNodeValue() const { return std::string(); }
   virtual DOMExceptionCode SetNodeValue(const std::string &node_value) {
+    GGL_UNUSED(node_value);
     return DOM_NO_MODIFICATION_ALLOWED_ERR;
   }
   virtual bool AllowsNodeValue() const { return false; }
@@ -1362,6 +1369,7 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
 
  protected:
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) {
+    GGL_UNUSED(new_child);
     // DOMCharacterData doesn't allow adding children to it.
     return DOM_HIERARCHY_REQUEST_ERR;
   }
@@ -1418,6 +1426,7 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
   }
 
   virtual DOMNodeInterface *CloneNode(bool deep) const {
+    GGL_UNUSED(deep);
     // Attr.cloneNode always clone its children, even if deep is false.
     return Super::CloneNode(true);
   }
@@ -1452,6 +1461,7 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
   void SetOwnerElement(DOMElement *owner_element); // Defined after DOMElement.
 
   virtual void AppendXML(size_t indent, std::string *xml) {
+    GGL_UNUSED(indent);
     // Omit the indent parameter, let the parent deal with it.
     xml->append(GetNodeName());
     xml->append("=\"");
@@ -1876,6 +1886,7 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
   }
 
   virtual void AppendXML(size_t indent, std::string *xml) {
+    GGL_UNUSED(indent);
     // Omit the indent parameter, let the parent deal with it.
     std::string node_value(GetNodeValue());
     std::string trimmed = TrimString(EncodeXMLString(GetNodeValue()));
@@ -2078,6 +2089,7 @@ class DOMProcessingInstruction
 
  protected:
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) {
+    GGL_UNUSED(new_child);
     // DOMProcessingInstruction doesn't allow adding children to it.
     return DOM_HIERARCHY_REQUEST_ERR;
   }
@@ -2316,6 +2328,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
   virtual DOMExceptionCode CreateEntityReference(
       const std::string &name, DOMEntityReferenceInterface **result) {
+    GGL_UNUSED(name);
     ASSERT(result);
     *result = NULL;
     return DOM_NOT_SUPPORTED_ERR;
@@ -2353,6 +2366,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
  protected:
   virtual DOMNodeInterface *CloneSelf(DOMDocumentInterface *owner_document) {
+    GGL_UNUSED(owner_document);
     return NULL;
   }
 
@@ -2416,6 +2430,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
   ScriptableInterface *ScriptCreateEntityReference(const std::string &name) {
+    GGL_UNUSED(name);
     // TODO: if we support DTD.
     return NULL;
   }
@@ -2428,8 +2443,11 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
   static void DummySetProperty(const std::string &name, const Variant &value) {
+    GGL_UNUSED(name);
+    GGL_UNUSED(value);
   }
   static Variant DummyGetProperty(const std::string &name) {
+    GGL_UNUSED(name);
     return Variant();
   }
 

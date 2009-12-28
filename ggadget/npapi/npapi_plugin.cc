@@ -555,12 +555,18 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static NPError NPN_RequestRead(NPStream *stream, NPByteRange *rangeList) {
+    GGL_UNUSED(stream);
+    GGL_UNUSED(rangeList);
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
   }
 
   static NPError NPN_NewStream(NPP instance, NPMIMEType type,
                                const char *target, NPStream **stream) {
+    GGL_UNUSED(instance);
+    GGL_UNUSED(type);
+    GGL_UNUSED(target);
+    GGL_UNUSED(stream);
     // Plugin-produced stream is not supported.
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
@@ -568,12 +574,19 @@ class Plugin::Impl : public SmallObject<> {
 
   static int32 NPN_Write(NPP instance, NPStream *stream,
                          int32 len, void *buffer) {
+    GGL_UNUSED(instance);
+    GGL_UNUSED(stream);
+    GGL_UNUSED(len);
+    GGL_UNUSED(buffer);
     NOT_IMPLEMENTED();
     return -1;
   }
 
   static NPError NPN_DestroyStream(NPP instance, NPStream *stream,
                                    NPReason reason) {
+    GGL_UNUSED(instance);
+    GGL_UNUSED(stream);
+    GGL_UNUSED(reason);
     NOT_IMPLEMENTED();
     return NPERR_GENERIC_ERROR;
   }
@@ -587,11 +600,13 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static const char *NPN_UserAgent(NPP instance) {
+    GGL_UNUSED(instance);
     CHECK_MAIN_THREAD();
     return kUserAgent;
   }
 
   static uint32 NPN_MemFlush(uint32 size) {
+    GGL_UNUSED(size);
     CHECK_MAIN_THREAD();
     return 0;
   }
@@ -599,6 +614,7 @@ class Plugin::Impl : public SmallObject<> {
   static void NPN_ReloadPlugins(NPBool reloadPages) {
     // We don't provide any plugin-in with the authority that can reload
     // all plug-ins in the plugins directory.
+    GGL_UNUSED(reloadPages);
     NOT_IMPLEMENTED();
   }
 
@@ -608,6 +624,7 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static jref NPN_GetJavaPeer(NPP instance) {
+    GGL_UNUSED(instance);
     NOT_IMPLEMENTED();
     return NULL;
   }
@@ -704,6 +721,8 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static void NPN_InvalidateRegion(NPP instance, NPRegion invalidRegion) {
+    GGL_UNUSED(instance);
+    GGL_UNUSED(invalidRegion);
     NOT_IMPLEMENTED();
   }
 
@@ -726,6 +745,7 @@ class Plugin::Impl : public SmallObject<> {
   static bool NPN_Invoke(NPP npp, NPObject *npobj, NPIdentifier method_name,
                          const NPVariant *args, uint32_t arg_count,
                          NPVariant *result) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->invoke &&
            npobj->_class->invoke(npobj, method_name, args, arg_count, result);
@@ -734,6 +754,7 @@ class Plugin::Impl : public SmallObject<> {
   static bool NPN_InvokeDefault(NPP npp, NPObject *npobj,
                                 const NPVariant *args, uint32_t arg_count,
                                 NPVariant *result) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->invokeDefault &&
            npobj->_class->invokeDefault(npobj, args, arg_count, result);
@@ -741,12 +762,17 @@ class Plugin::Impl : public SmallObject<> {
 
   static bool NPN_Evaluate(NPP npp, NPObject *npobj, NPString *script,
                            NPVariant *result) {
+    GGL_UNUSED(npp);
+    GGL_UNUSED(npobj);
+    GGL_UNUSED(script);
+    GGL_UNUSED(result);
     NOT_IMPLEMENTED();
     return false;
   }
 
   static bool NPN_GetProperty(NPP npp, NPObject *npobj,
                               NPIdentifier property_name, NPVariant *result) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->getProperty &&
            npobj->_class->getProperty(npobj, property_name, result);
@@ -755,6 +781,7 @@ class Plugin::Impl : public SmallObject<> {
   static bool NPN_SetProperty(NPP npp, NPObject *npobj,
                               NPIdentifier property_name,
                               const NPVariant *value) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->setProperty &&
            npobj->_class->setProperty(npobj, property_name, value);
@@ -762,6 +789,7 @@ class Plugin::Impl : public SmallObject<> {
 
   static bool NPN_RemoveProperty(NPP npp, NPObject *npobj,
                                  NPIdentifier property_name) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->removeProperty &&
            npobj->_class->removeProperty(npobj, property_name);
@@ -769,6 +797,7 @@ class Plugin::Impl : public SmallObject<> {
 
   static bool NPN_HasProperty(NPP npp, NPObject *npobj,
                               NPIdentifier property_name) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->hasProperty &&
            npobj->_class->hasProperty(npobj, property_name);
@@ -776,27 +805,34 @@ class Plugin::Impl : public SmallObject<> {
 
   static bool NPN_HasMethod(NPP npp, NPObject *npobj,
                             NPIdentifier method_name) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->hasMethod &&
            npobj->_class->hasMethod(npobj, method_name);
   }
 
   static void NPN_SetException(NPObject *npobj, const NPUTF8 *message) {
+    GGL_UNUSED(npobj);
+    GGL_UNUSED(message);
     NOT_IMPLEMENTED();
   }
 
   static bool NPN_PushPopupsEnabledState(NPP instance, NPBool enabled) {
+    GGL_UNUSED(instance);
+    GGL_UNUSED(enabled);
     NOT_IMPLEMENTED();
     return false;
   }
 
   static bool NPN_PopPopupsEnabledState(NPP instance) {
+    GGL_UNUSED(instance);
     NOT_IMPLEMENTED();
     return false;
   }
 
   static bool NPN_Enumerate(NPP npp, NPObject *npobj,
                             NPIdentifier **identifiers, uint32_t *count) {
+    GGL_UNUSED(npp);
     ENSURE_MAIN_THREAD(false);
     return npobj && npobj->_class && npobj->_class->enumerate &&
            npobj->_class->enumerate(npobj, identifiers, count);
@@ -807,10 +843,14 @@ class Plugin::Impl : public SmallObject<> {
     AsyncCall(void (*func)(void *), void *user_data)
         : func_(func), user_data_(user_data) { }
     virtual bool Call(MainLoopInterface *mainloop, int watch_id) {
+      GGL_UNUSED(mainloop);
+      GGL_UNUSED(watch_id);
       (*func_)(user_data_);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *mainloop, int watch_id) {
+      GGL_UNUSED(mainloop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
    private:
@@ -834,6 +874,7 @@ class Plugin::Impl : public SmallObject<> {
   // between calling this function and termination of the plugin instance.
   static void NPN_PluginThreadAsyncCall(NPP instance, void (*func)(void *),
                                         void *user_data) {
+    GGL_UNUSED(instance);
     if (GetGlobalMainLoop()->IsMainThread())
       DLOG("NPN_PluginThreadAsyncCall called from the non-main thread.");
     else
@@ -852,6 +893,7 @@ class Plugin::Impl : public SmallObject<> {
   // Only support window.top and window.location because the flash plugin
   // requires them.
   static bool BrowserWindowHasProperty(NPObject *npobj, NPIdentifier name) {
+    GGL_UNUSED(npobj);
     ENSURE_MAIN_THREAD(false);
     std::string name_str = GetIdentifierName(name);
     return name_str == "location" || name_str == "top";
@@ -874,6 +916,7 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static bool LocationHasMethod(NPObject *npobj, NPIdentifier name) {
+    GGL_UNUSED(npobj);
     ENSURE_MAIN_THREAD(false);
     return GetIdentifierName(name) == "toString";
   }
@@ -881,6 +924,8 @@ class Plugin::Impl : public SmallObject<> {
   static bool LocationInvoke(NPObject *npobj, NPIdentifier name,
                              const NPVariant *args, uint32_t argCount,
                              NPVariant *result) {
+    GGL_UNUSED(args);
+    GGL_UNUSED(argCount);
     ENSURE_MAIN_THREAD(false);
     if (GetIdentifierName(name) == "toString") {
       Impl *owner = reinterpret_cast<OwnedNPObject *>(npobj)->owner;
@@ -891,6 +936,7 @@ class Plugin::Impl : public SmallObject<> {
   }
 
   static bool LocationHasProperty(NPObject *npobj, NPIdentifier name) {
+    GGL_UNUSED(npobj);
     ENSURE_MAIN_THREAD(false);
     return GetIdentifierName(name) == "href";
   }

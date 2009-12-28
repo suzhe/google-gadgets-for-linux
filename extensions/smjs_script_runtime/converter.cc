@@ -41,6 +41,8 @@ namespace smjs {
 
 static JSBool ConvertJSToNativeVoid(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
+  GGL_UNUSED(cx);
+  GGL_UNUSED(js_val);
   *native_val = Variant();
   return JS_TRUE;
 }
@@ -491,6 +493,8 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
 static JSBool ConvertNativeToJSVoid(JSContext *cx,
                                     const Variant &native_val,
                                     jsval *js_val) {
+  GGL_UNUSED(cx);
+  GGL_UNUSED(native_val);
   *js_val = JSVAL_VOID;
   return JS_TRUE;
 }
@@ -498,6 +502,7 @@ static JSBool ConvertNativeToJSVoid(JSContext *cx,
 static JSBool ConvertNativeToJSBool(JSContext *cx,
                                     const Variant &native_val,
                                     jsval *js_val) {
+  GGL_UNUSED(cx);
   *js_val = BOOLEAN_TO_JSVAL(VariantValue<bool>()(native_val));
   return JS_TRUE;
 }
@@ -608,6 +613,9 @@ static JSBool ConvertNativeUTF16ToJSString(JSContext *cx,
 
 static JSBool ReturnSelf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                          jsval *rval) {
+  GGL_UNUSED(cx);
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
   *rval = OBJECT_TO_JSVAL(obj);
   return JS_TRUE;
 }
@@ -697,6 +705,9 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
+  GGL_UNUSED(cx);
+  GGL_UNUSED(native_val);
+  GGL_UNUSED(js_val);
   DLOG("Reading native function in JavaScript");
   // Just leave the value that SpiderMonkey recorded in SetProperty.
   return JS_TRUE;

@@ -356,7 +356,7 @@ CanvasInterface::Alignment QtEditElement::GetAlign() const {
   return CanvasInterface::ALIGN_LEFT;
 }
 
-void QtEditElement::SetAlign(CanvasInterface::Alignment align) {
+void QtEditElement::SetAlign(CanvasInterface::Alignment) {
   // TODO
 }
 
@@ -365,7 +365,7 @@ CanvasInterface::VAlignment QtEditElement::GetVAlign() const {
   return CanvasInterface::VALIGN_TOP;
 }
 
-void QtEditElement::SetVAlign(CanvasInterface::VAlignment valign) {
+void QtEditElement::SetVAlign(CanvasInterface::VAlignment) {
   // TODO
 }
 

@@ -114,6 +114,7 @@ class MenuBuilder::Impl {
   }
 
   static void OnItemActivate(GtkMenuItem *item, gpointer data) {
+    GGL_UNUSED(data);
     if (g_object_get_data(G_OBJECT(item), kMenuItemNoCallbackTag) != NULL)
       return;
 

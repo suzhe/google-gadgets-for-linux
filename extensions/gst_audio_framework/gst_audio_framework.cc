@@ -397,6 +397,7 @@ class GstAudioclip : public AudioclipInterface {
   }
 
   static gboolean OnNewMessage(GstBus *bus, GstMessage *msg, gpointer object) {
+    GGL_UNUSED(bus);
     switch (GST_MESSAGE_TYPE(msg)) {
       case GST_MESSAGE_ERROR:
         (reinterpret_cast<GstAudioclip*>(object))->OnError(msg);

@@ -62,6 +62,7 @@ class GadgetVideoSink::ImageBuffer {
 
   static void ImageBufferClassInit(gpointer g_class, gpointer class_data)
   {
+    GGL_UNUSED(class_data);
     GstMiniObjectClass *mini_object_class = GST_MINI_OBJECT_CLASS(g_class);
     mini_object_class->finalize =
         (GstMiniObjectFinalizeFunction)Finalize;
@@ -324,6 +325,7 @@ GType GadgetVideoSink::GadgetVideoSinkGetType(void) {
       sizeof(GadgetVideoSink),
       0,
       (GInstanceInitFunc)Init,
+      (GTypeValueTable*)NULL
     };
 
     videosink_type = g_type_register_static(GST_TYPE_VIDEO_SINK,

@@ -179,6 +179,7 @@ void GoogleGadgetManager::Init() {
 }
 
 bool GoogleGadgetManager::OnFreeMetadataTimer(int timer) {
+  GGL_UNUSED(timer);
   if (!browser_gadget_) {
     // Only free metadata when the gadget browser is not active.
     metadata_.FreeMemory();
@@ -226,6 +227,7 @@ void GoogleGadgetManager::ScheduleUpdate(int64_t time) {
 }
 
 bool GoogleGadgetManager::OnUpdateTimer(int timer) {
+  GGL_UNUSED(timer);
   UpdateGadgetsMetadata(false);
   return false;
 }
@@ -601,6 +603,7 @@ class AddedTimeUpdater {
  public:
   AddedTimeUpdater(GadgetInfoMap *map) : map_(map) { }
   bool Callback(const char *name, const Variant &value, bool encrypted) {
+    GGL_UNUSED(encrypted);
     if (strncmp(name, kGadgetAddedTimeOptionPrefix,
                 arraysize(kGadgetAddedTimeOptionPrefix) - 1) == 0) {
       std::string gadget_id(name);
@@ -1163,6 +1166,7 @@ bool GoogleGadgetManager::OnFirstDailyPing(int timer) {
 }
 
 bool GoogleGadgetManager::OnDailyPing(int timer) {
+  GGL_UNUSED(timer);
   ASSERT(collector_);
   global_options_->PutValue(kLastDailyPingTimeOption,
                             Variant(main_loop_->GetCurrentTime()));

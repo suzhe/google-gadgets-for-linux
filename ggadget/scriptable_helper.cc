@@ -55,6 +55,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   // called.
   virtual uint64_t GetClassId() const { return 0; }
   virtual bool IsInstanceOf(uint64_t class_id) const {
+    GGL_UNUSED(class_id);
     ASSERT(false); return false;
   }
   virtual bool IsStrict() const { ASSERT(false); return false; }
@@ -92,6 +93,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
     }
 
     void OnRefChange(int ref_count, int change) {
+      GGL_UNUSED(ref_count);
       // We have a similar mechanism in ScriptableHolder.
       // Please see the comments there.
       if (change == 0) {
@@ -373,11 +375,14 @@ class StringEnumGetter : public Slot0<const char *> {
   }
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
+    GGL_UNUSED(argv);
     int index = VariantValue<int>()(slot_->Call(obj, 0, NULL).v());
     return ResultVariant(index >= 0 && index < count_ ?
                          Variant(names_[index]) : Variant(""));
   }
   virtual bool operator==(const Slot &another) const {
+    GGL_UNUSED(another);
     return false; // Not used.
   }
   Slot *slot_;
@@ -394,6 +399,8 @@ class StringEnumSetter : public Slot1<void, const char *> {
   }
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
+    GGL_UNUSED(argv);
     const char *name = VariantValue<const char *>()(argv[0]);
     if (!name)
       return ResultVariant();
@@ -408,6 +415,7 @@ class StringEnumSetter : public Slot1<void, const char *> {
     return ResultVariant();
   }
   virtual bool operator==(const Slot &another) const {
+    GGL_UNUSED(another);
     return false; // Not used.
   }
   Slot *slot_;
@@ -449,10 +457,13 @@ class ClassSignalGetter : public Slot0<Slot *> {
   }
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
+    GGL_UNUSED(argv);
     Slot *slot = class_signal_->GetSignal(obj)->GetDefaultSlot();
     return ResultVariant(Variant(slot));
   }
   virtual bool operator==(const Slot &another) const {
+    GGL_UNUSED(another);
     return false; // Not used.
   }
  private:
@@ -478,6 +489,7 @@ class ClassSignalSetter : public Slot1<void, Slot *> {
     return ResultVariant();
   }
   virtual bool operator==(const Slot &another) const {
+    GGL_UNUSED(another);
     return false; // Not used.
   }
  private:
@@ -550,6 +562,7 @@ void ScriptableHelperImpl::Ref() const {
 }
 
 void ScriptableHelperImpl::Unref(bool transient) const {
+  GGL_UNUSED(transient);
   // The parameter traisnent is ignored here. Let the ScriptableHelper
   // template deal with it.
 #ifdef VERBOSE_DEBUG_REF

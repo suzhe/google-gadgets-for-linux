@@ -86,6 +86,7 @@ class QtSystemBrowseForFileHelper {
 
   // Function to destroy the helper object when framework is destroyed.
   void OnFrameworkRefChange(int ref, int change) {
+    GGL_UNUSED(ref);
     if (change == 0) {
       DLOG("Framework destroyed, delete QtSystemBrowseForFileHelper object.");
       delete this;
@@ -112,6 +113,9 @@ class QtSystemBrowseForFileHelper {
   bool BrowseForFilesImpl(const char *filter, bool multiple, const char *title,
                           BrowseForFileMode mode, const char *default_name,
                           std::vector<std::string> *result) {
+    GGL_UNUSED(title);
+    GGL_UNUSED(mode);
+    GGL_UNUSED(default_name);
     ASSERT(result);
     result->clear();
 
@@ -175,6 +179,7 @@ static std::string GetDesktopEntryIcon(const char *file) {
 }
 
 static std::string GetDirectorySpecialIcon(const std::string &file) {
+  GGL_UNUSED(file);
   // TODO: check .directory file to show the right icon
   return "";
 }

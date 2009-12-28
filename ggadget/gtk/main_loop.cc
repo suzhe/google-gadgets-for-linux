@@ -233,6 +233,7 @@ class MainLoop::Impl {
   // Callback functions to be registered into gtk's main loop for io watch.
   static gboolean IOWatchCallback(GIOChannel *channel, GIOCondition condition,
                                   gpointer data) {
+    GGL_UNUSED(channel);
     WatchNode *node = static_cast<WatchNode *>(data);
     if (node && !node->calling && !node->removing) {
       MainLoop::Impl *impl = node->impl;

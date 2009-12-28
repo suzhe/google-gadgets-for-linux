@@ -222,6 +222,7 @@ int ScrollingElement::GetXPageStep() const {
 }
 
 void ScrollingElement::SetXPageStep(int value) {
+  GGL_UNUSED(value);
   // TODO: X scroll bar is not supported yet.
 }
 
@@ -242,6 +243,7 @@ int ScrollingElement::GetXLineStep() const {
 }
 
 void ScrollingElement::SetXLineStep(int value) {
+  GGL_UNUSED(value);
   // TODO: X scroll bar is not supported yet.
 }
 

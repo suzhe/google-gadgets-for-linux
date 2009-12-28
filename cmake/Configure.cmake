@@ -169,7 +169,7 @@ ENDIF(GGL_DEFAULT_SSL_CA_FILE)
 
 INCLUDE(CheckCCompilerFlag)
 IF(UNIX)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror -Wconversion")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror -Wconversion -Wextra")
   # No "-Wall -Werror" for C flags, to avoid third_party code break.
   SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   SET(PROJECT_RESOURCE_DIR share/${PRODUCT_NAME})

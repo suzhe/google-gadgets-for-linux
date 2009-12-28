@@ -154,6 +154,7 @@ static int GetHash(int base, const char *str) {
 }
 
 bool User::CheckInputEvents(int watch_id) {
+  GGL_UNUSED(watch_id);
   char line[256];
   FILE *interrupt_file = fopen(kProcfsInterruptsFile, "r");
   if (interrupt_file) {

@@ -171,6 +171,7 @@ JSBool NativeJSWrapper::CheckNotDeleted() {
 JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv,
                                         jsval *rval) {
+  GGL_UNUSED(obj);
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
   // In this case, the real self object being called is at argv[-2].
@@ -197,6 +198,8 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
 JSBool NativeJSWrapper::WrapperDefaultToString(JSContext *cx, JSObject *obj,
                                                uintN argc, jsval *argv,
                                                jsval *rval) {
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
   if (JS_IsExceptionPending(cx))
     return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
@@ -293,6 +296,7 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
 }
 
 uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
+  GGL_UNUSED(arg);
   // The current context may be different from wrapper's context during
   // GC marking.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
@@ -612,6 +616,8 @@ class NameCollector {
   NameCollector(std::vector<std::string> *names) : names_(names) { }
   bool Collect(const char *name, ScriptableInterface::PropertyType type,
                const Variant &value) {
+    GGL_UNUSED(type);
+    GGL_UNUSED(value);
     names_->push_back(name);
     return true;
   }

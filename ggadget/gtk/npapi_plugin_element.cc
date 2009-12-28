@@ -177,6 +177,8 @@ class NPAPIPluginElement::Impl : public SmallObject<> {
   }
 
   static gboolean OnPlugRemoved(GtkWidget *widget, gpointer data) {
+    GGL_UNUSED(widget);
+    GGL_UNUSED(data);
     return TRUE;
   }
 

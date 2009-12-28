@@ -98,7 +98,7 @@ void BrowserElement::Layout() {
   impl_->Layout();
 }
 
-void BrowserElement::DoDraw(CanvasInterface *canvas) {
+void BrowserElement::DoDraw(CanvasInterface *) {
 }
 
 BasicElement *BrowserElement::CreateInstance(View *view, const char *name) {

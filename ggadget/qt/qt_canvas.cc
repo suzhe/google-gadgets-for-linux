@@ -169,6 +169,8 @@ class QtCanvas::Impl {
                           const CanvasInterface *img,
                           double mx, double my,
                           const CanvasInterface *mask) {
+    GGL_UNUSED(mx);
+    GGL_UNUSED(my);
     DLOG("DrawCanvasWithMask: (%p, %p) on %p", img, mask, owner_);
     QPainter *p = painter_;
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
@@ -304,6 +306,16 @@ class QtCanvas::Impl {
                            const CanvasInterface *texture,
                            Alignment align, VAlignment valign,
                            Trimming trimming, int text_flags) {
+    GGL_UNUSED(x);
+    GGL_UNUSED(y);
+    GGL_UNUSED(width);
+    GGL_UNUSED(height);
+    GGL_UNUSED(f);
+    GGL_UNUSED(texture);
+    GGL_UNUSED(align);
+    GGL_UNUSED(valign);
+    GGL_UNUSED(trimming);
+    GGL_UNUSED(text_flags);
     DLOG("DrawTextWithTexture: %s", text);
     ASSERT(0);
     return true;
@@ -484,6 +496,7 @@ bool QtCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
 bool QtCanvas::DrawRawImage(double x, double y,
                             const char *data, RawImageFormat format,
                             int width, int height, int stride) {
+  GGL_UNUSED(stride);
   QImage::Format qt_format;
   if (format == RAWIMAGE_FORMAT_RGB24)
     qt_format = QImage::Format_RGB32;

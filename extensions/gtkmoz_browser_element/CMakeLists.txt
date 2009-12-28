@@ -32,6 +32,7 @@ OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS
   "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor -Wno-conversion -fno-strict-aliasing")
+STRING(REPLACE "-Wextra" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 IF(NOT GTKMOZEMBED_FOUND)
   MESSAGE(FATAL "gtkmozembed library not found!")

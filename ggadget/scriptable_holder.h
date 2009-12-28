@@ -70,6 +70,7 @@ class ScriptableHolder {
 
  private:
   void OnRefChange(int ref_count, int change) {
+    GGL_UNUSED(ref_count);
     // The object's destructor is being called.
     // This holder still holds a reference on this scriptable object.
     // If the program reaches here, the object must be a native owned object,

@@ -117,12 +117,16 @@ Power::~Power() {
 
 void Power::OnBatterySignal(const std::string &name,
                             int argc, const Variant *argv) {
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
   if (name == kHalSignalPropertyModified)
     LoadBatteryInfo();
 }
 
 void Power::OnAcAdapterSignal(const std::string &name,
                               int argc, const Variant *argv) {
+  GGL_UNUSED(argc);
+  GGL_UNUSED(argv);
   if (name == kHalSignalPropertyModified)
     LoadAcAdapterInfo();
 }

@@ -450,6 +450,7 @@ class DBusProxy::Impl : public SmallObject<> {
 
     void NameOwnerChanged(const char *name, const char *old_owner,
                           const char *new_owner) {
+      GGL_UNUSED(old_owner);
       // Don't monitor owner names.
       if (name[0] == ':') return;
 #ifdef DBUS_VERBOSE_LOG

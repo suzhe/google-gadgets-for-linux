@@ -301,6 +301,7 @@ class ComboBoxElement::Impl : public SmallObject<> {
   }
 
   void OnSelectionRefChange(int ref_count, int change) {
+    GGL_UNUSED(ref_count);
     if (change == 0) {
       // The source's destructor is being called.
       selection_refchange_connection_->Disconnect();

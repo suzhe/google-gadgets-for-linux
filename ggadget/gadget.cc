@@ -512,12 +512,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       : host_(host), owner_(owner), save_data_(save_data) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       owner_->impl_->remove_me_timer_ = 0;
       if (owner_->impl_->IsSafeToRemove())
         host_->RemoveGadget(owner_, save_data_);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
    private:
@@ -595,6 +599,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void SetIcons(const Variant &param1, const Variant &param2) {
+    GGL_UNUSED(param1);
+    GGL_UNUSED(param2);
     LOG("pluginHelper.SetIcons is no longer supported. "
         "Please specify icons in the manifest file.");
   }
@@ -667,6 +673,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   std::string OnContextLog(LogLevel level, const char *filename, int line,
                            const std::string &message,
                            ScriptContextInterface *context) {
+    GGL_UNUSED(filename);
+    GGL_UNUSED(line);
     std::string real_message;
     std::string script_filename;
     int script_line = 0;
@@ -815,6 +823,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return ResultVariant(Variant(result));
     }
     virtual bool operator==(const Slot &another) const {
+      GGL_UNUSED(another);
       return false;
     }
    private:
@@ -907,6 +916,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       delete details_view_;
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       impl_->destroy_details_view_timer_ = 0;
       // Let the destructor do the actual thing, because this callback may
       // be removed before it is fired if it is scheduled just before the
@@ -914,6 +925,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       delete this;
     }
    private:
