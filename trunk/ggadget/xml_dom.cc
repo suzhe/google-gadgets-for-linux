@@ -2029,7 +2029,7 @@ class DOMDocumentFragment : public DOMNodeBase<DOMDocumentFragmentInterface> {
     // Because DOMDocumentFragment can't be child of any node, the indent
     // should always be zero.
     ASSERT(indent == 0);
-    GetImpl()->AppendChildrenXML(0, xml);
+    GetImpl()->AppendChildrenXML(indent, xml);
   }
 
  protected:
@@ -2337,7 +2337,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   virtual void AppendXML(size_t indent, std::string *xml) {
     ASSERT(indent == 0);
     xml->append(kStandardXMLDecl);
-    GetImpl()->AppendChildrenXML(0, xml);
+    GetImpl()->AppendChildrenXML(indent, xml);
   }
 
   virtual XMLParserInterface *GetXMLParser() const {

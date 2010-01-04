@@ -59,7 +59,7 @@ class Elements::Impl : public SmallObject<> {
   do { for (size_t i_i = 0; i_i < children_.size(); i_i++) \
     ASSERT_ELEMENT_INDEX(children_[i_i], i_i); } while (false)
 #else
-#define ASSERT_ELEMENTS_INTEGRITY do; while (false)
+#define ASSERT_ELEMENTS_INTEGRITY do{} while (false)
 #endif
 
   size_t GetCount() {

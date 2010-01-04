@@ -1436,6 +1436,7 @@ class DBusMainLoopClosure::Impl {
       SetEnabled(dbus_watch_get_enabled(watch));
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
       ASSERT(impl_);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == read_id_ || watch_id == write_id_);
@@ -1466,6 +1467,7 @@ class DBusMainLoopClosure::Impl {
       return true;
     }
     virtual void OnRemove(MainLoopInterface* main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == read_id_ || watch_id == write_id_);
       if (read_id_ == watch_id)
@@ -1548,6 +1550,8 @@ class DBusMainLoopClosure::Impl {
       SetEnabled(dbus_timeout_get_enabled(timeout));
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       ASSERT(impl_);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == watch_id_);
@@ -1575,6 +1579,8 @@ class DBusMainLoopClosure::Impl {
       return true;
     }
     virtual void OnRemove(MainLoopInterface* main_loop, int watch_id) {
+      GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       ASSERT(main_loop == impl_->main_loop_);
       ASSERT(watch_id == watch_id_);
       watch_id_ = -1;

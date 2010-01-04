@@ -535,6 +535,8 @@ bool ResolverScriptClass::supportsExtension(Extension extension) const {
 
 QVariant ResolverScriptClass::extension(Extension extension,
                                         const QVariant &argument) {
+
+  GGL_UNUSED(extension);
   ASSERT(call_slot_ && extension == Callable);
   DLOG("Object called as function");
   QScriptContext *context = qvariant_cast<QScriptContext*>(argument);

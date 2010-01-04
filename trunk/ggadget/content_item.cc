@@ -278,6 +278,7 @@ void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
 }
 
 void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
+  GGL_UNUSED(content_area);
   ASSERT(impl_->content_area_ == content_area);
   impl_->content_area_ = NULL;
   Unref();

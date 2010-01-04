@@ -482,6 +482,7 @@ class ClassSignalSetter : public Slot1<void, Slot *> {
   }
   virtual ResultVariant Call(ScriptableInterface *obj,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     ASSERT(argc == 1);
     Signal *signal = class_signal_->GetSignal(obj);
     Slot *slot = VariantValue<Slot *>()(argv[0]);

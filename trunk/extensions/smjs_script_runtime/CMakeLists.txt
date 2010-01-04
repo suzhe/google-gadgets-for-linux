@@ -23,6 +23,7 @@ ADD_SUBDIRECTORY(tests)
 # Added -fcheck-new to disable the warning about operator new returning NULL
 # in jscntxt.h.
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
+STRING(REPLACE "-Wextra" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 SET(SRCS
   converter.cc

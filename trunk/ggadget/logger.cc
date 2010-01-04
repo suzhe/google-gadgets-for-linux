@@ -130,6 +130,7 @@ void PushLogContext(void *context) {
 }
 
 void PopLogContext(void *log_context) {
+  GGL_UNUSED(log_context);
   if (!g_log_destroyed) {
     ASSERT(log_context == g_log.context_stack.back());
     g_log.context_stack.pop_back();
