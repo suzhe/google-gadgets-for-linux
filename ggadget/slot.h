@@ -163,6 +163,7 @@ class FunctorSlot0 : public Slot0<R> {
   FunctorSlot0(F functor) : functor_(functor) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     return ResultVariant(Variant(functor_()));
@@ -186,6 +187,7 @@ class FunctorSlot0<void, F> : public Slot0<void> {
   FunctorSlot0(F functor) : functor_(functor) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     functor_();
@@ -213,6 +215,7 @@ class MethodSlot0 : public Slot0<R> {
                              int argc, const Variant argv[]) const {
     // object parameter is ignored because object is bound when this object
     // is constructed.
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     return ResultVariant(Variant((object_->*method_)()));
@@ -240,6 +243,7 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
     // object parameter is ignored because object is bound when this object
     // is constructed.
     GGL_UNUSED(object);
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     (object_->*method_)();
@@ -275,6 +279,7 @@ class UnboundMethodSlot0 : public Slot0<R> {
   }
   virtual ResultVariant Call(ScriptableInterface *object,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     ASSERT(object);
@@ -303,6 +308,7 @@ class UnboundMethodSlot0<void, T, M> : public Slot0<void> {
   void operator()(T *object) const { Call(object, 0, NULL); }
   virtual ResultVariant Call(ScriptableInterface *object,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     ASSERT(object);
@@ -339,6 +345,7 @@ class DelegatedMethodSlot0 : public Slot0<R> {
   }
   virtual ResultVariant Call(ScriptableInterface *object,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     ASSERT(object && delegate_getter_(down_cast<T *>(object)));
@@ -371,6 +378,7 @@ class DelegatedMethodSlot0<void, T, M, DelegateGetter> : public Slot0<void> {
   void operator()(T *object) const { Call(object, 0, NULL); }
   virtual ResultVariant Call(ScriptableInterface *object,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     ASSERT(object && delegate_getter_(down_cast<T *>(object)));
@@ -435,6 +443,7 @@ class FunctorSlotClosure0 : public Slot0<R> {
   FunctorSlotClosure0(F functor, PA pa) : functor_(functor), pa_(pa) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     return ResultVariant(Variant(functor_(pa_)));
@@ -459,6 +468,7 @@ class FunctorSlotClosure0<void, F, PA> : public Slot0<void> {
   FunctorSlotClosure0(F functor, PA pa) : functor_(functor), pa_(pa) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     functor_(pa_);
@@ -486,6 +496,8 @@ class MethodSlotClosure0 : public Slot0<R> {
     : obj_(obj), method_(method), pa_(pa) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
+    GGL_UNUSED(argv);
     ASSERT(argc == 0);
     return ResultVariant(Variant((obj_->*method_)(pa_)));
   }
@@ -511,6 +523,7 @@ class MethodSlotClosure0<void, T, M, PA> : public Slot0<void> {
     : obj_(obj), method_(method), pa_(pa) { }
   virtual ResultVariant Call(ScriptableInterface *,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
     GGL_UNUSED(argv);
     ASSERT(argc == 0);
     (obj_->*method_)(pa_);
@@ -727,6 +740,7 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant(functor_(_call_args)));                      \
@@ -748,6 +762,7 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     functor_(_call_args);                                                     \
@@ -769,6 +784,7 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant((obj_->*method_)(_call_args)));              \
@@ -791,6 +807,7 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
@@ -823,6 +840,7 @@ class UnboundMethodSlot##n : public Slot##n<R, _arg_type_names> {             \
   }                                                                           \
   virtual ResultVariant Call(ScriptableInterface *obj,                        \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     ASSERT(obj);                                                              \
@@ -854,6 +872,7 @@ class UnboundMethodSlot##n<void, _arg_type_names, T, M> :                     \
   }                                                                           \
   virtual ResultVariant Call(ScriptableInterface *obj,                        \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     ASSERT(obj);                                                              \
@@ -890,6 +909,7 @@ class DelegatedMethodSlot##n : public Slot##n<R, _arg_type_names> {           \
   }                                                                           \
   virtual ResultVariant Call(ScriptableInterface *obj,                        \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     ASSERT(obj && delegate_getter_(down_cast<T *>(obj)));                     \
@@ -926,6 +946,7 @@ class DelegatedMethodSlot##n<void, _arg_type_names, T, M, DelegateGetter>     \
   }                                                                           \
   virtual ResultVariant Call(ScriptableInterface *obj,                        \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     ASSERT(obj && delegate_getter_(down_cast<T *>(obj)));                     \
@@ -971,6 +992,7 @@ class FunctorSlotClosure##n : public Slot##n<R, _arg_type_names> {            \
   FunctorSlotClosure##n(F functor, PA pa) : functor_(functor), pa_(pa) { }    \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant(functor_(_call_args, pa_)));                 \
@@ -993,6 +1015,7 @@ class FunctorSlotClosure##n<void, _arg_type_names, F, PA> :                   \
   FunctorSlotClosure##n(F functor, PA pa) : functor_(functor), pa_(pa) { }    \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     functor_(_call_args, pa_);                                                \
@@ -1016,6 +1039,7 @@ class MethodSlotClosure##n : public Slot##n<R, _arg_type_names> {             \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     return ResultVariant(Variant((obj_->*method_)(_call_args, pa_)));         \
@@ -1040,6 +1064,7 @@ class MethodSlotClosure##n<void, _arg_type_names, T, M, PA> :                 \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
   virtual ResultVariant Call(ScriptableInterface *,                           \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     GGL_UNUSED(argv);                                                         \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args, pa_);                                        \

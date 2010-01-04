@@ -65,10 +65,12 @@ Variant::~Variant() {
     // This typedef is required because ...~std::string() may cause error.
     typedef std::string String;
     // Don't delete because the pointer is allocated in place.
-    reinterpret_cast<String *>(&v_.string_place_)->~String();
+    void *data = v_.string_place_;
+    reinterpret_cast<String *>(data)->~String();
   } else if (type_ == TYPE_UTF16STRING) {
     // Don't delete because the pointer is allocated in place.
-    reinterpret_cast<UTF16String *>(&v_.utf16_string_place_)->~UTF16String();
+    void *data = v_.utf16_string_place_;
+    reinterpret_cast<UTF16String *>(data)->~UTF16String();
   }
 }
 
@@ -80,13 +82,16 @@ Variant &Variant::operator=(const Variant &source) {
     // This typedef is required because ...~std::string() may cause error.
     typedef std::string String;
     // Don't delete because the pointer is allocated in place.
-    reinterpret_cast<String *>(&v_.string_place_)->~String();
+    void *data = v_.string_place_;
+    reinterpret_cast<String *>(data)->~String();
   } else if (type_ == TYPE_UTF16STRING) {
     // Don't delete because the pointer is allocated in place.
-    reinterpret_cast<UTF16String *>(&v_.utf16_string_place_)->~UTF16String();
+    void *data = v_.utf16_string_place_;
+    reinterpret_cast<UTF16String *>(data)->~UTF16String();
   }
 
   type_ = source.type_;
+  const void *data = source.v_.string_place_;
   switch (type_) {
     case TYPE_VOID:
       break;
@@ -102,11 +107,11 @@ Variant &Variant::operator=(const Variant &source) {
     case TYPE_STRING:
     case TYPE_JSON:
       new (&v_.string_place_) std::string(
-          *reinterpret_cast<const std::string *>(&source.v_.string_place_));
+          *reinterpret_cast<const std::string *>(data));
       break;
     case TYPE_UTF16STRING:
       new (&v_.utf16_string_place_) UTF16String(
-       *reinterpret_cast<const UTF16String *>(&source.v_.utf16_string_place_));
+       *reinterpret_cast<const UTF16String *>(data));
       break;
     case TYPE_SCRIPTABLE:
       v_.scriptable_value_ = source.v_.scriptable_value_;
@@ -187,6 +192,7 @@ static std::string FitString(const std::string &input) {
 
 // Used in unittests.
 std::string Variant::Print() const {
+  const void *data = v_.string_place_;
   switch (type_) {
     case TYPE_VOID:
       return "VOID";
@@ -199,7 +205,7 @@ std::string Variant::Print() const {
     case TYPE_STRING:
       return std::string("STRING:") +
          // Print "(nil)" for NULL string pointer.
-         FitString(*reinterpret_cast<const std::string *>(&v_.string_place_));
+         FitString(*reinterpret_cast<const std::string *>(data));
     case TYPE_JSON:
       return std::string("JSON:") +
              FitString(VariantValue<JSONString>()(*this).value);
@@ -207,7 +213,7 @@ std::string Variant::Print() const {
       std::string utf8_string;
       ConvertStringUTF16ToUTF8(
           // Print "(nil)" for NULL string pointer.
-          *reinterpret_cast<const UTF16String *>(&v_.utf16_string_place_),
+          *reinterpret_cast<const UTF16String *>(data),
           &utf8_string);
       return "UTF16STRING:" + FitString(utf8_string);
     }

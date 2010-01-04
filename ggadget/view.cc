@@ -110,6 +110,7 @@ class View::Impl : public SmallObject<> {
     }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      GGL_UNUSED(watch_id);
       ASSERT(event_.GetToken() == watch_id);
       ScopedLogContext log_context(impl_->gadget_);
 
@@ -157,6 +158,7 @@ class View::Impl : public SmallObject<> {
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
       GGL_UNUSED(main_loop);
+      GGL_UNUSED(watch_id);
       ASSERT(event_.GetToken() == watch_id);
       delete this;
     }
