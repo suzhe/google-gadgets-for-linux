@@ -404,7 +404,10 @@ class View::Impl : public SmallObject<> {
       // We used to check IsReallyEnabled() here, which seems too strict
       // because the grabmouse_element_ may move out of the visible area, but
       // it should still grab the mouse.
-      if (grabmouse_element_.Get()->IsEnabled() &&
+      // EVENT_MOUSE_UP should always be fired no matter if the element is
+      // enabled or not.
+      if ((grabmouse_element_.Get()->IsEnabled() ||
+           type == Event::EVENT_MOUSE_UP) &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {

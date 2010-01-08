@@ -328,9 +328,11 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
 
     self_draw_ = true;
     GdkRegion *region = GetInvalidateRegion();
-    gdk_window_invalidate_region(widget_->window, region, TRUE);
+    if (!gdk_region_empty(region)) {
+      gdk_window_invalidate_region(widget_->window, region, TRUE);
+      gdk_window_process_updates(widget_->window, TRUE);
+    }
     gdk_region_destroy(region);
-    gdk_window_process_updates(widget_->window, TRUE);
     last_self_draw_time_ = GetCurrentTime();
     self_draw_ = false;
   }
