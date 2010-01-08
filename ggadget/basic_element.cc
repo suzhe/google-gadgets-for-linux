@@ -866,7 +866,10 @@ class BasicElement::Impl : public SmallObject<> {
       *hittest = this_hittest;
     }
 
-    if (!enabled_) {
+    // Direct EVENT_MOUSE_UP and EVENT_MOUSE_OUT must be processed even if the
+    // element is disabled.
+    if (!enabled_ && !(direct && (type == Event::EVENT_MOUSE_UP ||
+                                  type == Event::EVENT_MOUSE_OUT))) {
       return EVENT_RESULT_UNHANDLED;
     }
 
