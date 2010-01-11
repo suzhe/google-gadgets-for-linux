@@ -665,6 +665,17 @@ JSBool JSScriptContext::OperationCallback(JSContext *cx) {
     return JS_TRUE;
   }
 
+  static uint64_t last_time = 0;
+  if (last_time != 0 &&
+      (now < last_time || now - last_time > kMaxScriptRunTime / 10)) {
+    DLOG("Time changed, reset blocked-script timer.");
+    // There must be some time change. Reset the timer.
+    last_time = now;
+    operation_callback_time_ = now;
+    return JS_TRUE;
+  }
+  last_time = now;
+
   if (now > operation_callback_time_ + kMaxScriptRunTime) {
     static bool handling_script_blocked_signal = false;
     if (handling_script_blocked_signal) {
