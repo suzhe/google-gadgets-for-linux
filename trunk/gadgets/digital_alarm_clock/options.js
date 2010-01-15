@@ -24,7 +24,7 @@ var gSavedEditValue = "";
 /**
  * Method called when options are opened
  */
-function onOpen() {
+function _onOpen() {
   oString1.innerText = ALARM_SET;
   oString2.innerText = DEFAULT_ALARM;
   oString3.innerText = USE_FILE;
