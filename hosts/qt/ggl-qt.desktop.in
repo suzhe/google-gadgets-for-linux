@@ -10,3 +10,4 @@ StartupNotify=true
 Type=Application
 Categories=KDE;Qt;Network;News;
 MimeType=application/x-google-gadget;app/gg;
+OnlyShowIn=KDE;

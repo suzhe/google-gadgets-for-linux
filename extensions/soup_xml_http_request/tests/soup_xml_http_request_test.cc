@@ -617,7 +617,7 @@ TEST(XMLHttpRequest, AbortAfterFinished) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
-  ASSERT_EQ(XMLHttpRequestInterface::ABORT_ERR, request->Send(std::string()));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->Send(std::string()));
   // no additional readystatechange signal.
   ASSERT_EQ(5, callback.callback_count_);
   ASSERT_TRUE(callback.aborted_);
