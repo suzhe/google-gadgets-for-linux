@@ -1087,14 +1087,15 @@ class BrowserElementImpl {
         LOG("%s feedback needs 3 parameters, but only %zu is given",
             kOpenURLFeedback, param_count);
       } else {
-        result = OpenURL(params[2]) ? '1' : '0';
+        result = ongotourl_signal_(params[2], true) || OpenURL(params[2]) ?
+            '1' : '0';
       }
     } else if (strcmp(type, kGoToURLFeedback) == 0) {
       if (param_count != 3) {
         LOG("%s feedback needs 3 parameters, but only %zu is given",
             kGoToURLFeedback, param_count);
       } else {
-        result = ongotourl_signal_(params[2]) ? '1' : '0';
+        result = ongotourl_signal_(params[2], false) ? '1' : '0';
       }
     } else if (strcmp(type, kNetErrorFeedback) == 0) {
       if (param_count != 3) {
@@ -1142,7 +1143,7 @@ class BrowserElementImpl {
   Connection *minimized_connection_, *restored_connection_,
              *popout_connection_, *popin_connection_,
              *dock_connection_, *undock_connection_;
-  Signal1<bool, const char *> ongotourl_signal_;
+  Signal2<bool, const char *, bool> ongotourl_signal_;
   Signal1<bool, const char *> onerror_signal_;
 };
 
