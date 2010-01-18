@@ -27,6 +27,10 @@ class Permissions;
 class Connection;
 template <typename R, typename P1> class Slot1;
 
+// Names of some built-in gadgets.
+const char kRSSGadgetName[] = "rss";
+const char kIGoogleGadgetName[] = "igoogle";
+
 /**
  * @ingroup Interfaces
  * @ingroup Gadget
@@ -45,11 +49,11 @@ class GadgetManagerInterface {
   virtual void Init() = 0;
 
   /**
-   * Creates an new instance of a gadget specified by the file path. Used to
-   * open a gadget located in local file system.
-   * @param file location of a gadget file. The location can be a full path of
-   *     a gadget file, or a location that can be recognized by the global
-   *     file manager.
+   * Creates an new instance of a gadget specified by the file path or the
+   * name of a built-in gadget.
+   * @param file location of a gadget file or name of a built-in gadget.
+   *     The location can be a full path of a gadget file, or a location
+   *     that can be recognized by the global file manager.
    * @return the gadget instance id (>=0) of the new instance, or -1 on error.
    */
   virtual int NewGadgetInstanceFromFile(const char *file) = 0;

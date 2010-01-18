@@ -82,6 +82,7 @@ in this case C. You may move it so that it is in front of a different character,
 even in the middle of a word. -->
 <MENU_ITEM_ABOUT>&amp;About...</MENU_ITEM_ABOUT>
 <MENU_ITEM_ADD_GADGETS>Add &amp;Gadgets...</MENU_ITEM_ADD_GADGETS>
+<MENU_ITEM_ADD_IGOOGLE_GADGET>Add an &amp;iGoogle Gadget</MENU_ITEM_ADD_IGOOGLE_GADGET>
 <MENU_ITEM_ALWAYS_ON_TOP>Always on &amp;Top</MENU_ITEM_ALWAYS_ON_TOP>
 <MENU_ITEM_AUTO_FIT>Auto &amp;Fit</MENU_ITEM_AUTO_FIT>
 <MENU_ITEM_AUTO_HIDE>A&amp;uto Hide</MENU_ITEM_AUTO_HIDE>

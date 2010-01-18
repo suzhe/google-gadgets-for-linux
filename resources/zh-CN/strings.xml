@@ -82,6 +82,7 @@ in this case C. You may move it so that it is in front of a different character,
 even in the middle of a word. -->
 <MENU_ITEM_ABOUT>关于(&amp;A)...</MENU_ITEM_ABOUT>
 <MENU_ITEM_ADD_GADGETS>添加小工具(&amp;G)...</MENU_ITEM_ADD_GADGETS>
+<MENU_ITEM_ADD_IGOOGLE_GADGET>添加 iGoogle 小工具(&amp;I)</MENU_ITEM_ADD_IGOOGLE_GADGET>
 <MENU_ITEM_ALWAYS_ON_TOP>总在最前(&amp;T)</MENU_ITEM_ALWAYS_ON_TOP>
 <MENU_ITEM_AUTO_FIT>自适应(&amp;F)</MENU_ITEM_AUTO_FIT>
 <MENU_ITEM_AUTO_HIDE>自动隐藏(&amp;U)</MENU_ITEM_AUTO_HIDE>

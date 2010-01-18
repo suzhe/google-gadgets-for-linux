@@ -26,8 +26,7 @@
 <GADGET_NOTLOADED>Options loading...</GADGET_NOTLOADED>
 <NO_OPTIONS>This gadget has no configurable option.</NO_OPTIONS>
 <GADGET_DIRECTORY_URL>http://www.google.com/ig/directory</GADGET_DIRECTORY_URL>
-<GADGET_URL_HINT>Find a favorite iGoogle Gadget in Gadget directory and paste (or drag) the URL into the entry box below. Then click &quot;Load Gadget&quot; button.
-You can find the URL by clicking &quot;Share this gadget&quot; link in gadget's description page.</GADGET_URL_HINT>
+<GADGET_URL_HINT>Find a favorite iGoogle Gadget in Gadget directory and drag the link into the entry box below, or enter the gadget URL. Then click &quot;Load Gadget&quot; button.</GADGET_URL_HINT>
 <LOAD_GADGET>Load Gadget</LOAD_GADGET>
 <INVALID_URL>Invalid Gadget URL.</INVALID_URL>
 <GADGET_UNLOAD>Unload</GADGET_UNLOAD>
