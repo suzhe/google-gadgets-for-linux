@@ -276,7 +276,9 @@ class XMLHttpRequest : public QObject,
       return NO_ERR;
     }
 
-    if (strcasecmp(header, "Cookie") == 0 &&
+    // strcasecmp shall be used, but it'll break gmail gadget.
+    // Microsoft XHR is also case sensitive.
+    if (strcmp(header, "Cookie") == 0 &&
         value && strcasecmp(value, "none") == 0) {
       // Microsoft XHR hidden feature: setRequestHeader('Cookie', 'none')
       // clears all cookies. Some gadgets (e.g. reader) use this.
@@ -320,8 +322,7 @@ class XMLHttpRequest : public QObject,
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed.
       Ref();
-      if (!no_cookie_)
-        RestoreCookie(QUrl(url_.c_str()), request_header_);
+      if (!no_cookie_) RestoreCookie(QUrl(url_.c_str()), request_header_);
 
       if (data.size()) {
         send_data_ = new QByteArray(data.c_str(),
@@ -705,8 +706,7 @@ class XMLHttpRequest : public QObject,
     } else {
       redirected_times_++;
       // FIXME(idlecat): What is the right behavior when redirected?
-      if (no_cookie_)
-        RestoreCookie(QUrl(url_.c_str()), request_header_);
+      if (!no_cookie_) RestoreCookie(QUrl(url_.c_str()), request_header_);
 
       if (send_data_)
         http_->request(*request_header_, *send_data_);
