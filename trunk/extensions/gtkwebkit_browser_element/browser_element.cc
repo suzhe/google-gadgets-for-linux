@@ -180,7 +180,6 @@ class BrowserElement::Impl {
                        G_CALLBACK(WebViewWindowObjectCleared), this);
 #endif
 
-#if WEBKIT_CHECK_VERSION(1,0,3)
       WebKitWebWindowFeatures *features =
           webkit_web_view_get_window_features(WEBKIT_WEB_VIEW(web_view_));
       ASSERT(features);
@@ -195,10 +194,6 @@ class BrowserElement::Impl {
                        "navigation-policy-decision-requested",
                        G_CALLBACK(WebViewNavigationPolicyDecisionRequested),
                        this);
-#else
-      g_signal_connect(G_OBJECT(web_view_), "navigation-requested",
-                       G_CALLBACK(WebViewNavigationRequested), this);
-#endif
 
       GetWidgetExtents(&x_, &y_, &width_, &height_);
 
@@ -345,7 +340,7 @@ class BrowserElement::Impl {
         old_len = old_end - old_uri;
       // Treats urls with the same base url but different refs as equal.
       if (new_len != old_len || strncmp(new_uri, old_uri, new_len) != 0) {
-        result = OpenURL(new_uri);
+        result = ongotourl_signal_(new_uri, true) || OpenURL(new_uri);
       }
     }
     return result;
@@ -478,7 +473,6 @@ class BrowserElement::Impl {
   }
 #endif
 
-#if WEBKIT_CHECK_VERSION(1,0,3)
   static WebKitWebView* WebViewCreateWebView(WebKitWebView *web_view,
                                              WebKitWebFrame *web_frame,
                                              Impl *impl) {
@@ -489,8 +483,9 @@ class BrowserElement::Impl {
 
     // FIXME: is it necessary to create a hidden new webview and handle
     // navigation policy of the new webview?
-    if (IsValidURL(impl->hovering_over_uri_.c_str()))
-      impl->OpenURL(impl->hovering_over_uri_.c_str());
+    const char *url = impl->hovering_over_uri_.c_str();
+    if (IsValidURL(url) && !impl->ongotourl_signal_(url, true))
+      impl->OpenURL(url);
 
     return NULL;
   }
@@ -526,10 +521,10 @@ class BrowserElement::Impl {
     if (reason == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED)
       result = impl->HandleNavigationRequest(original_uri, new_uri);
 
-    // If the url was not opened in a new window, the give the gadget a chance
+    // If the url was not opened in a new window, then give the gadget a chance
     // to handle the url.
     if (!result)
-      result = impl->ongotourl_signal_(new_uri);
+      result = impl->ongotourl_signal_(new_uri, false);
 
     if (result)
       webkit_web_policy_decision_ignore(decision);
@@ -558,26 +553,6 @@ class BrowserElement::Impl {
     ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
     DLOG("WebViewWindowHeightNotify(Impl=%p, width=%d)", impl, height);
   }
-#else
-  static WebKitNavigationResponse WebViewNavigationRequested(
-      WebKitWebView *web_view, WebKitWebFrame *web_frame,
-      WebKitNetworkRequest *request, Impl *impl) {
-    if (!impl->owner_) return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
-    const char *new_uri = webkit_network_request_get_uri(request);
-    ScopedLogContext log_context(impl->owner_->GetView()->GetGadget());
-    DLOG("WebViewNavigationRequested(Impl=%p, web_view=%p, "
-         "web_frame=%p, uri=%s)",
-         impl, web_view, web_frame, webkit_network_request_get_uri(request));
-
-    if (strcmp(impl->hovering_over_uri_.c_str(), new_uri) == 0 &&
-        impl->HandleNavigationRequest(impl->loaded_uri_.c_str(), new_uri)) {
-      return WEBKIT_NAVIGATION_RESPONSE_IGNORE;
-    }
-
-    impl->loaded_uri_ = new_uri ? new_uri : "";
-    return WEBKIT_NAVIGATION_RESPONSE_ACCEPT;
-  }
-#endif
 
   std::string content_type_;
   std::string content_;
@@ -597,7 +572,7 @@ class BrowserElement::Impl {
 
   ScriptableHolder<ScriptableInterface> external_object_;
 
-  Signal1<bool, const char *> ongotourl_signal_;
+  Signal2<bool, const char *, bool> ongotourl_signal_;
 
   gint x_;
   gint y_;
