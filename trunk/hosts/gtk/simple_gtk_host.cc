@@ -161,6 +161,10 @@ class SimpleGtkHost::Impl {
                          MenuInterface::MENU_ITEM_ICON_ADD,
                          NewSlot(this, &Impl::AddGadgetMenuCallback),
                          priority);
+    menu_builder.AddItem(GM_("MENU_ITEM_ADD_IGOOGLE_GADGET"), 0,
+                         MenuInterface::MENU_ITEM_ICON_ADD,
+                         NewSlot(this, &Impl::AddIGoogleGadgetMenuCallback),
+                         priority);
     menu_builder.AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0, 0,
                          NewSlot(this, &Impl::ShowAllMenuCallback),
                          priority);
@@ -511,6 +515,10 @@ class SimpleGtkHost::Impl {
 
   void AddGadgetMenuCallback(const char *) {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
+  }
+
+  void AddIGoogleGadgetMenuCallback(const char *) {
+    gadget_manager_->NewGadgetInstanceFromFile(kIGoogleGadgetName);
   }
 
   void OnCloseHandler(DecoratedViewHost *decorated) {

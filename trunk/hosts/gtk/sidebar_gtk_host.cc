@@ -365,6 +365,9 @@ class SideBarGtkHost::Impl {
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
                   MenuInterface::MENU_ITEM_ICON_ADD,
                   NewSlot(this, &Impl::AddGadgetMenuHandler), priority);
+    menu->AddItem(GM_("MENU_ITEM_ADD_IGOOGLE_GADGET"), 0,
+                  MenuInterface::MENU_ITEM_ICON_ADD,
+                  NewSlot(this, &Impl::AddIGoogleGadgetMenuHandler), priority);
     menu->AddItem(NULL, 0, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_SIDEBAR"),
                   (closed_ ? 0 : MenuInterface::MENU_ITEM_FLAG_CHECKED), 0,
@@ -1622,6 +1625,11 @@ class SideBarGtkHost::Impl {
   void AddGadgetMenuHandler(const char *str) {
     GGL_UNUSED(str);
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
+  }
+
+  void AddIGoogleGadgetMenuHandler(const char *str) {
+    GGL_UNUSED(str);
+    gadget_manager_->NewGadgetInstanceFromFile(kIGoogleGadgetName);
   }
 
   void ShowAllMenuHandler(const char *str) {

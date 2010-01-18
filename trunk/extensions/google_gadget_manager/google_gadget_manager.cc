@@ -405,12 +405,18 @@ bool GoogleGadgetManager::InitInstanceOptions(const char *gadget_id,
                                               int instance_id) {
   std::string options_name = GetGadgetInstanceOptionsName(instance_id);
   OptionsInterface *instance_options = CreateOptions(options_name.c_str());
+
   Variant org_gadget_id =
       instance_options->GetInternalValue(kInstanceGadgetIdOption);
-  if (org_gadget_id == Variant(gadget_id)) {
-    // The existing options can be reused.
-    delete instance_options;
-    return true;
+
+  // Options won't be reused for blank igoogle gadgets and rss gadgets.
+  if (strcmp(gadget_id, kIGoogleGadgetName) != 0 &&
+      strcmp(gadget_id, kRSSGadgetName) != 0) {
+    if (org_gadget_id == Variant(gadget_id)) {
+      // The existing options can be reused.
+      delete instance_options;
+      return true;
+    }
   }
 
   if (org_gadget_id.type() != Variant::TYPE_VOID) {
@@ -513,7 +519,7 @@ int GoogleGadgetManager::NewGadgetInstance(const char *gadget_id) {
 }
 
 int GoogleGadgetManager::NewGadgetInstanceFromFile(const char *file) {
-  return GadgetIdIsFileLocation(file) ? NewGadgetInstance(file) : -1;
+  return NewGadgetInstance(file);
 }
 
 bool GoogleGadgetManager::RemoveGadgetInstanceInternal(int instance_id,
@@ -971,7 +977,7 @@ std::string GoogleGadgetManager::GetGadgetPath(const char *gadget_id) {
         return file_manager_->GetFullPath(
             GetDownloadedGadgetLocation(gadget_id).c_str());
       }
-    
+
       result.clear();
       StringMap::const_iterator module_id_it = info->attributes.find(kModuleIDAttrib);
       if (module_id_it != info->attributes.end())

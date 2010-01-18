@@ -26,8 +26,7 @@
 <GADGET_NOTLOADED>正在加载选项...</GADGET_NOTLOADED>
 <NO_OPTIONS>该小工具没有可配置的选项。</NO_OPTIONS>
 <GADGET_DIRECTORY_URL>http://www.google.com/ig/directory</GADGET_DIRECTORY_URL>
-<GADGET_URL_HINT>在 iGoogle 小工具目录中选一个你喜爱的小工具，将小工具的URL粘贴或拖拽到下面的输入框中。然后点击“加载小工具”按钮。
-你可以通过点击小工具描述页面上的“共享该小工具”链接来获得小工具的URL。</GADGET_URL_HINT>
+<GADGET_URL_HINT>在 iGoogle 小工具目录中选一个你喜爱的小工具，将小工具的链接拖拽到下面的输入框中，或输入小工具的URL。然后点击“加载小工具”按钮。</GADGET_URL_HINT>
 <LOAD_GADGET>加载小工具</LOAD_GADGET>
 <INVALID_URL>无效的小工具URL.</INVALID_URL>
 <GADGET_UNLOAD>卸载</GADGET_UNLOAD>

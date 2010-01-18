@@ -145,11 +145,9 @@ const char kModuleIDAttrib[] = "module_id";
  * The following are constants used for feed and iGoogle gadgets.
  * These declarations must match those in the corresponding gadget .js files.
  */
-const char kRSSGadgetName[] = "rss";
 const char kRSSURLOption[] = "rss_url";
 const char kRSSModuleID[] = "25";
 const char kIGoogleModuleID[] = "32";
-const char kIGoogleGadgetName[] = "igoogle";
 const char kIGoogleURLOption[] = "download_url";
 /** The following two are optional. */
 const char kIGoogleModuleURLOption[] = "module_url_prefix";

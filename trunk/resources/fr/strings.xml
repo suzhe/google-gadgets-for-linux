@@ -82,6 +82,7 @@ in this case C. You may move it so that it is in front of a different character,
 even in the middle of a word. -->
 <MENU_ITEM_ABOUT>A Propos...</MENU_ITEM_ABOUT>
 <MENU_ITEM_ADD_GADGETS>Ajouter des Gadgets...</MENU_ITEM_ADD_GADGETS>
+<MENU_ITEM_ADD_IGOOGLE_GADGET>Ajouter un Gadget iGoogle</MENU_ITEM_ADD_IGOOGLE_GADGET>
 <MENU_ITEM_ALWAYS_ON_TOP>Toujours au premier plan</MENU_ITEM_ALWAYS_ON_TOP>
 <MENU_ITEM_AUTO_FIT>Redimensionner automatiquement</MENU_ITEM_AUTO_FIT>
 <MENU_ITEM_AUTO_HIDE>Masquer automatiquement</MENU_ITEM_AUTO_HIDE>
