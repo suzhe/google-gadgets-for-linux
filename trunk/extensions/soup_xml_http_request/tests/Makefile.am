@@ -22,6 +22,7 @@ INCLUDES	= -I$(top_builddir) \
 		  -I$(top_srcdir)
 
 LDADD		= $(PTHRREAD_LIBS) \
+		  $(GTK2_LIBS) \
 		  $(top_builddir)/unittest/libgtest.la \
 		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
