@@ -1,3 +1,16 @@
+* 0.11.2 - Jan 27th 2009
+  o DBus proxy: Introspect remote object asynchronously.
+  o Rss gadget: Improved compatibility with some websites.
+  o Edit element: Added vAlign property (Only implemented in Gtk version).
+  o Base element: Added focus overlay and tab stop feature.
+  o Gtk host: Added a menu item to add an iGoogle gadget directly.
+  o Fixed compatibility issue with gtk+-2.18.0 or above. 
+  o Fixed compatibility issue with xulrunner 1.9.2.
+  o Fixed some compile warnings when compiling with gcc 4.4.x
+  o Fixed some crash issues.
+  o Fixed some issues in soup-xml-http-request for handling zero length POST.
+  o Lots of other bugfixes.
+
 * 0.11.1 - Sep 9th 2009
   o Many reported issues have been fixed, including: 311, 313, 314, 315, 316,
     320, 321, 323, 324, 326, 327, 328, 329, 331, 332, 333, etc.
