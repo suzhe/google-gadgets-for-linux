@@ -16,7 +16,6 @@
 
 #include "converter.h"
 
-#include <cmath>
 #include <jsobj.h>
 #include <jscntxt.h>
 #include <jsfun.h>
