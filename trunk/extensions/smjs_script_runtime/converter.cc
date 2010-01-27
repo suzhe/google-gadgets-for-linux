@@ -20,6 +20,7 @@
 #include <jscntxt.h>
 #include <jsfun.h>
 #include <jsnum.h>
+#include <cmath>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_holder.h>
