@@ -22,6 +22,7 @@ SET(LIBS
   ggadget-js${GGL_EPOCH}
   editline
   ggadget-smjs
+  dl
   ${SMJS_LIBRARIES}
 )
 
