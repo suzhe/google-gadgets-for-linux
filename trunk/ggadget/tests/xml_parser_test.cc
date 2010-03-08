@@ -377,6 +377,14 @@ TEST(XMLParser, ParseXMLIntoDOM_Encoding) {
   TestXMLEncoding(src, "UTF-8 BOF with declaration, hint GB2312",
                   src, "GB2312", "UTF-8");
   src = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a>\xE5\xAD\x97</a>";
+  TestXMLEncoding(src, "No BOF with UTF-8 declaration, hint GB2312",
+                  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a>\xE7\x80\x9B?</a>",
+                  "GB2312", "GB2312");
+  src = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a>\xE5\xAD\x97 \xE5\xAD\x97</a>";
+  TestXMLEncoding(src, "No BOF with UTF-8 declaration, hint GB2312",
+                  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a>\xE7\x80\x9B? \xE7\x80\x9B?</a>",
+                  "GB2312", "GB2312");
+  src = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a>\xE5\xAD\x97 \xE5\xAD\x97 \xE5\xAD\x97 \xE5\xAD\x97</a>";
   TestXMLEncodingExpectFail(src, "No BOF with UTF-8 declaration, hint GB2312",
                             "GB2312");
   src = "<?xml version=\"1.0\" encoding=\"GB2312\"?><a>\xD7\xD6</a>";

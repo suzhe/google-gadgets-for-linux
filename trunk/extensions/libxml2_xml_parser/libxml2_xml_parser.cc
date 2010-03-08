@@ -113,35 +113,62 @@ static bool ConvertStringToUTF8(const std::string &content,
   if (content.empty())
     return true;
 
-  xmlCharEncodingHandler *handler = xmlFindCharEncodingHandler(encoding);
+  xmlCharEncodingHandler *handler;
+  if (strcasecmp(encoding, "GB2312") == 0) {
+    // Many XML documents declared GB2312 actually contain characters out
+    // of GB2312 range. Use GB18030 or GBK to prevent decoding errors.
+    handler = xmlFindCharEncodingHandler("GB18030");
+    if (!handler) {
+      // In case that GB18030 is not supported.
+      handler = xmlFindCharEncodingHandler("GBK");
+    }
+  } else {
+    handler = xmlFindCharEncodingHandler(encoding);
+  }
+
   if (!handler)
     return false;
 
-  xmlBuffer *input_buffer = xmlBufferCreateStatic(
-      const_cast<char *>(content.c_str()), content.length());
-  xmlBuffer *output_buffer = xmlBufferCreate();
   // xmlCharEncInFunc's result > 0 even if encoding error occurred, so use
   // ErrorFunc to detect errors.
   xmlGenericErrorFunc old_error_func = xmlGenericError;
   xmlSetGenericErrorFunc(NULL, ErrorFunc);
-  g_error_occurred = false;
-  bool success = false;
-  int result = xmlCharEncInFunc(handler, output_buffer, input_buffer);
-  xmlSetGenericErrorFunc(NULL, old_error_func);
-  if (!g_error_occurred && result > 0) {
-    ASSERT(result == xmlBufferLength(output_buffer));
-    const char *output = FromXmlCharPtr(xmlBufferContent(output_buffer));
-    if (IsLegalUTF8String(output, result)) {
-      success = true;
+  xmlBuffer *input_buffer = xmlBufferCreateStatic(
+      const_cast<char *>(content.c_str()), content.length());
+  int error_count = 0;
+  const int max_errors = std::max(2, static_cast<int>(content.length() / 100));
+  while (error_count <= max_errors && xmlBufferLength(input_buffer) > 0) {
+    xmlBuffer *output_buffer = xmlBufferCreate();
+    g_error_occurred = false;
+    int converted = xmlCharEncInFunc(handler, output_buffer, input_buffer);
+    if (converted > 0) {
+      ASSERT(converted == xmlBufferLength(output_buffer));
+      const char *output = FromXmlCharPtr(xmlBufferContent(output_buffer));
+      if (IsLegalUTF8String(output, converted)) {
+        if (utf8_content)
+          utf8_content->append(output, converted);
+        if (g_error_occurred) {
+          error_count++;
+          if (utf8_content)
+            utf8_content->append("?");
+          xmlBufferShrink(input_buffer, 1);
+        }
+      } else {
+        error_count = max_errors + 1;
+      }
+    } else {
+      error_count++;
       if (utf8_content)
-        utf8_content->append(output, result);
+        utf8_content->append("?");
+      xmlBufferShrink(input_buffer, 1);
     }
+    xmlBufferFree(output_buffer);
   }
 
-  xmlCharEncCloseFunc(handler);
   xmlBufferFree(input_buffer);
-  xmlBufferFree(output_buffer);
-  return success;
+  xmlSetGenericErrorFunc(NULL, old_error_func);
+  xmlCharEncCloseFunc(handler);
+  return error_count <= max_errors;
 }
 
 static std::string GetXMLEncodingDecl(const std::string &xml) {
@@ -256,119 +283,6 @@ static xmlEntity *GetEntityHandler(void *ctx, const xmlChar *name) {
                                NULL, NULL, name);
     }
   }
-  return result;
-}
-
-static xmlDoc *ParseXML(const std::string &xml,
-                        const StringMap *extra_entities,
-                        const char *filename,
-                        const char *encoding_hint,
-                        const char *encoding_fallback,
-                        std::string *encoding,
-                        std::string *utf8_content) {
-  std::string converted_xml;
-  std::string use_encoding;
-  // Indicates whether the encoding is successfully converted before libxml2
-  // parsing, or is detected by libxml2.
-  bool converted = false;
-  if (encoding) encoding->clear();
-
-  // Although libxml2 will do almost the same things, we must do it ourselves
-  // to make encoding_hint have higher priority than the encoding declaration
-  // with xml file, according to the XML standard.
-  if (!DetectUTFEncoding(xml, &use_encoding) &&
-      encoding_hint && *encoding_hint) {
-    use_encoding = encoding_hint;
-  }
-
-  xmlDoc *result = NULL;
-  bool retry;
-  do {
-    retry = false;
-    if (!use_encoding.empty()) {
-      if (ConvertStringToUTF8(xml, use_encoding.c_str(), &converted_xml)) {
-        converted = true;
-        if (utf8_content)
-          *utf8_content = converted_xml;
-        // We have successfully converted the encoding to UTF8, insert a BOM and
-        // remove the original encoding declaration to prevent libxml2 from
-        // converting again.
-        ReplaceXMLEncodingDecl(&converted_xml);
-      } else if (encoding_fallback && use_encoding != encoding_fallback) {
-        // Encoding conversion failed, try fallback_encoding if it has not
-        // been tried.
-        use_encoding = encoding_fallback;
-        retry = true;
-        continue;
-      }
-    } else {
-      converted_xml = xml;
-    }
-
-    xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(
-        converted_xml.c_str(), static_cast<int>(converted_xml.length()));
-    if (!ctxt)
-      return NULL;
-
-    ASSERT(ctxt->sax);
-    ContextData data;
-    ctxt->_private = &data;
-    if (extra_entities) {
-      // Hook getEntity handler to provide extra entities.
-      data.extra_entities = extra_entities;
-      data.original_get_entity_handler = ctxt->sax->getEntity;
-      ctxt->sax->getEntity = GetEntityHandler;
-    }
-
-    // Disable external entities to avoid security troubles.
-    data.original_entity_decl_handler = ctxt->sax->entityDecl;
-    ctxt->sax->entityDecl = EntityDeclHandler;
-    ctxt->sax->resolveEntity = NULL;
-
-    // Let the built-in libxml2 error reporter print the correct filename.
-    ctxt->input->filename = xmlMemStrdup(filename);
-
-    xmlGenericErrorFunc old_error_func = xmlGenericError;
-    xmlSetGenericErrorFunc(NULL, ErrorFunc);
-    xmlParseDocument(ctxt);
-    xmlSetGenericErrorFunc(NULL, old_error_func);
-
-    if (ctxt->wellFormed) {
-      // Successfully parsed the document.
-      result = ctxt->myDoc;
-      if (!converted) {
-        if (ctxt->input && ctxt->input->encoding)
-          use_encoding = FromXmlCharPtr(ctxt->input->encoding);
-        else
-          use_encoding = "UTF-8";
-        if (utf8_content)
-          ConvertStringToUTF8(xml, use_encoding.c_str(), utf8_content);
-      }
-    } else if ((ctxt->errNo == XML_ERR_INVALID_CHAR ||
-                ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
-                ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
-               encoding_fallback && use_encoding != encoding_fallback) {
-      xmlFreeDoc(ctxt->myDoc);
-      ctxt->myDoc = NULL;
-      // libxml2 encoding conversion failed, try fallback_encoding if it has
-      // not been tried.
-      use_encoding = encoding_fallback;
-      retry = true;
-    } else {
-      xmlFreeDoc(ctxt->myDoc);
-      ctxt->myDoc = NULL;
-
-      if (!converted) {
-        use_encoding.clear();
-        if (utf8_content)
-          utf8_content->clear();
-      }
-    }
-    xmlFreeParserCtxt(ctxt);
-  } while (retry);
-
-  if (encoding)
-    *encoding = use_encoding;
   return result;
 }
 
@@ -662,6 +576,134 @@ static bool ContentTypeIsXML(const char *content_type) {
           strcasecmp(content_type + content_type_len - 4, "+xml") == 0);
 }
 
+static bool ConvertToUTF8(const std::string &content, const char *filename,
+                          const char *content_type, const char *encoding_hint,
+                          const char *encoding_fallback,
+                          std::string *encoding, std::string *utf8_content) {
+  GGL_UNUSED(filename);
+  // The caller wants nothing?
+  if (!encoding && !utf8_content)
+    return true;
+
+  bool result = true;
+  std::string encoding_to_use;
+  if (!DetectUTFEncoding(content, &encoding_to_use)) {
+    if (encoding_hint && *encoding_hint) {
+      encoding_to_use = encoding_hint;
+    } else if (STARTS_WITH(content.c_str(), content.size(),
+                           kXMLTagBOMLessUTF16LE)) {
+      encoding_to_use = "UTF-16LE";
+    } else if (STARTS_WITH(content.c_str(), content.size(),
+                           kXMLTagBOMLessUTF16BE)) {
+      encoding_to_use = "UTF-16BE";
+    } else {
+      // Try to find encoding declaration from the content.
+      if (ContentTypeIsXML(content_type) ||
+          STARTS_WITH(content.c_str(), content.size(), kXMLTag)) {
+        encoding_to_use = GetXMLEncodingDecl(content);
+      } else if (content_type && strcasecmp(content_type, "text/html") == 0) {
+        encoding_to_use = GetHTMLCharset(content.c_str());
+      }
+
+      if (encoding_to_use.empty()) {
+        encoding_to_use = "UTF-8";
+      } else if (ToLower(encoding_to_use).find("utf") == 0 &&
+                 (encoding_to_use.find("16") != std::string::npos ||
+                  encoding_to_use.find("32") != std::string::npos)) {
+        // UTF-16 and UTF-32 makes no sense here. Because if the content is
+        // in UTF-16 or UTF-32 encoding, then it's impossible to find the
+        // charset tag by parsing it as char string directly.
+        // In this case, assuming UTF-8 will be the best choice, and will
+        // fallback to ISO8859-1 if it's not UTF-8.
+        encoding_to_use = "UTF-8";
+      }
+    }
+  }
+
+  result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
+                               utf8_content);
+  if (!result && encoding_fallback && *encoding_fallback) {
+    encoding_to_use = encoding_fallback;
+    result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
+  }
+  if (encoding)
+    *encoding = result ? encoding_to_use : "";
+  return result;
+}
+
+static xmlDoc *ParseXML(const std::string &xml,
+                        const StringMap *extra_entities,
+                        const char *filename,
+                        const char *encoding_hint,
+                        const char *encoding_fallback,
+                        std::string *encoding,
+                        std::string *utf8_content) {
+  xmlDoc *xmldoc = NULL;
+
+  if (encoding)
+    encoding->clear();
+  if (utf8_content)
+    utf8_content->clear();
+
+  std::string converted_xml;
+  std::string use_encoding;
+
+  // Convert encoding before we let libxml2 parse the document, to make it
+  // possible to recover from encoding conversion failures.
+  if (!ConvertToUTF8(xml, filename, NULL, encoding_hint, encoding_fallback,
+                     &use_encoding, &converted_xml)) {
+    return false;
+  }
+
+  if (utf8_content)
+    *utf8_content = converted_xml;
+  // We have successfully converted the encoding to UTF8, insert a BOM and
+  // remove the original encoding declaration to prevent libxml2 from
+  // converting again.
+  ReplaceXMLEncodingDecl(&converted_xml);
+
+  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(
+      converted_xml.c_str(), static_cast<int>(converted_xml.length()));
+  if (!ctxt)
+    return NULL;
+
+  ASSERT(ctxt->sax);
+  ContextData data;
+  ctxt->_private = &data;
+  if (extra_entities) {
+    // Hook getEntity handler to provide extra entities.
+    data.extra_entities = extra_entities;
+    data.original_get_entity_handler = ctxt->sax->getEntity;
+    ctxt->sax->getEntity = GetEntityHandler;
+  }
+
+  // Disable external entities to avoid security troubles.
+  data.original_entity_decl_handler = ctxt->sax->entityDecl;
+  ctxt->sax->entityDecl = EntityDeclHandler;
+  ctxt->sax->resolveEntity = NULL;
+
+  // Let the built-in libxml2 error reporter print the correct filename.
+  ctxt->input->filename = xmlMemStrdup(filename);
+
+  xmlGenericErrorFunc old_error_func = xmlGenericError;
+  xmlSetGenericErrorFunc(NULL, ErrorFunc);
+  xmlParseDocument(ctxt);
+  xmlSetGenericErrorFunc(NULL, old_error_func);
+
+  if (ctxt->wellFormed) {
+    // Successfully parsed the document.
+    xmldoc = ctxt->myDoc;
+  } else {
+    xmlFreeDoc(ctxt->myDoc);
+    ctxt->myDoc = NULL;
+  }
+  xmlFreeParserCtxt(ctxt);
+
+  if (encoding)
+    *encoding = use_encoding;
+  return xmldoc;
+}
+
 class XMLParser : public XMLParserInterface {
  public:
   virtual bool CheckXMLName(const char *name) {
@@ -693,55 +735,8 @@ class XMLParser : public XMLParserInterface {
                                     const char *encoding_fallback,
                                     std::string *encoding,
                                     std::string *utf8_content) {
-    GGL_UNUSED(filename);
-    // The caller wants nothing?
-    if (!encoding && !utf8_content)
-      return true;
-
-    bool result = true;
-    std::string encoding_to_use;
-    if (!DetectUTFEncoding(content, &encoding_to_use)) {
-      if (encoding_hint && *encoding_hint) {
-        encoding_to_use = encoding_hint;
-      } else if (STARTS_WITH(content.c_str(), content.size(),
-                             kXMLTagBOMLessUTF16LE)) {
-        encoding_to_use = "UTF-16LE";
-      } else if (STARTS_WITH(content.c_str(), content.size(),
-                             kXMLTagBOMLessUTF16BE)) {
-        encoding_to_use = "UTF-16BE";
-      } else {
-        // Try to find encoding declaration from the content.
-        if (ContentTypeIsXML(content_type) ||
-            STARTS_WITH(content.c_str(), content.size(), kXMLTag)) {
-          encoding_to_use = GetXMLEncodingDecl(content);
-        } else if (content_type && strcasecmp(content_type, "text/html") == 0) {
-          encoding_to_use = GetHTMLCharset(content.c_str());
-        }
-
-        if (encoding_to_use.empty()) {
-          encoding_to_use = "UTF-8";
-        } else if (ToLower(encoding_to_use).find("utf") == 0 &&
-                   (encoding_to_use.find("16") != std::string::npos ||
-                    encoding_to_use.find("32") != std::string::npos)) {
-          // UTF-16 and UTF-32 makes no sense here. Because if the content is
-          // in UTF-16 or UTF-32 encoding, then it's impossible to find the
-          // charset tag by parsing it as char string directly.
-          // In this case, assuming UTF-8 will be the best choice, and will
-          // fallback to ISO8859-1 if it's not UTF-8.
-          encoding_to_use = "UTF-8";
-        }
-      }
-    }
-
-    result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
-                                 utf8_content);
-    if (!result && encoding_fallback && *encoding_fallback) {
-      encoding_to_use = encoding_fallback;
-      result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
-    }
-    if (encoding)
-      *encoding = result ? encoding_to_use : "";
-    return result;
+    return ConvertToUTF8(content, filename, content_type, encoding_hint,
+                         encoding_fallback, encoding, utf8_content);
   }
 
   virtual bool ParseContentIntoDOM(const std::string &content,
@@ -780,9 +775,8 @@ class XMLParser : public XMLParserInterface {
         xmlFreeDoc(xmldoc);
       }
     } else {
-      result = ConvertContentToUTF8(content, filename, content_type,
-                                    encoding_hint, encoding_fallback,
-                                    encoding, utf8_content);
+      result = ConvertToUTF8(content, filename, content_type, encoding_hint,
+                             encoding_fallback, encoding, utf8_content);
     }
 #ifdef _DEBUG
     ASSERT(!domdoc || domdoc->GetRefCount() == original_ref_count);
