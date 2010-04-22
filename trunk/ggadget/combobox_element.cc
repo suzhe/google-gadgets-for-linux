@@ -235,7 +235,10 @@ class ComboBoxElement::Impl : public SmallObject<> {
     if (!edit_) {
       owner_->QueueDrawRect(Rectangle(0, 0, owner_->GetPixelWidth(),
                                       droplist_->GetPixelY()));
+    } else {
+      edit_->QueueDraw();
     }
+
     // From now on, draws the selected item using itemOverColor.
     droplist_->SetMouseSelectionMode(false);
     update_edit_value_ = true;
