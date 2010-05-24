@@ -827,7 +827,10 @@ class ViewWidgetBinder::Impl : public SmallObject<> {
                                       guint info, guint time,
                                       gpointer user_data) {
     GGL_UNUSED(widget);
+    GGL_UNUSED(x);
+    GGL_UNUSED(y);
     GGL_UNUSED(info);
+
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (!impl->current_drag_event_) {
       // There are some cases that multiple drag events are fired in one event

@@ -17,12 +17,14 @@
 IF(GGL_BUILD_SOUP_XML_HTTP_REQUEST)
 
 APPLY_CONFIG(GTK2)
+APPLY_CONFIG(PTHREAD)
 
 ADD_TEST_EXECUTABLE(soup_xml_http_request_test
   soup_xml_http_request_test.cc
 )
 TARGET_LINK_LIBRARIES(soup_xml_http_request_test
   ${GTK2_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
   ggadget${GGL_EPOCH}
   ggadget-gtk${GGL_EPOCH}
   gtest

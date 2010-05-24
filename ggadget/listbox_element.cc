@@ -136,6 +136,10 @@ class ListBoxElement::Impl : public SmallObject<> {
           if (item->IsSelected()) {
             result = true;
             item->SetSelected(false);
+
+            // Clear pending scroll flag to avoid unexpected scrolling to
+            // the top of the list.
+            pending_scroll_ = 0;
           }
         } else {
           LOG(kErrorItemExpected);
