@@ -857,6 +857,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static void MessageCompleteCallback(SoupSession *session, SoupMessage *msg,
                                       gpointer user_data) {
+    GGL_UNUSED(session);
+    GGL_UNUSED(msg);
+
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(user_data);
 #ifdef SOUP_XHR_VERBOSE
     PrintMessageInfo(request, "MessageCompleteCallback", msg, NULL);
@@ -1073,6 +1076,11 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
   static void LoggerPrinter(SoupLogger *logger, SoupLoggerLogLevel level,
                             char direction, const char *data,
                             gpointer user_data) {
+    GGL_UNUSED(logger);
+    GGL_UNUSED(level);
+    GGL_UNUSED(direction);
+    GGL_UNUSED(data);
+    GGL_UNUSED(user_data);
     DLOG("%c %s\n", direction, data);
   }
 #endif
@@ -1082,6 +1090,9 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
                                    SoupAuth *auth,
                                    gboolean retrying,
                                    gpointer user_data) {
+    GGL_UNUSED(session);
+    GGL_UNUSED(user_data);
+
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
         g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
     ASSERT(request);
@@ -1101,6 +1112,10 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
                                      SoupMessage *msg,
                                      SoupSocket *socket,
                                      gpointer user_data) {
+    GGL_UNUSED(session);
+    GGL_UNUSED(socket);
+    GGL_UNUSED(user_data);
+
     XMLHttpRequest *request = static_cast<XMLHttpRequest *>(
         g_object_get_data(G_OBJECT(msg), kSoupMessageXHRKey));
 #ifdef SOUP_XHR_VERBOSE

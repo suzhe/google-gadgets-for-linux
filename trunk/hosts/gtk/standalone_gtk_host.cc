@@ -227,6 +227,7 @@ class StandaloneGtkHost::Impl {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    GGL_UNUSED(gadget);
     GGL_UNUSED(save_data);
     ASSERT(gadget && gadget == gadget_);
     owner_->Exit();
