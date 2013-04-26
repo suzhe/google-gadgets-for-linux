@@ -19,6 +19,10 @@
 
 #include <string>
 
+#if defined(OS_WIN)
+#include <windows.h>
+#endif
+
 namespace ggadget {
 
 /**
@@ -26,6 +30,17 @@ namespace ggadget {
  * @ingroup Utilities
  * @{
  */
+
+/**
+ * Set corresponding system locale.
+ *
+ * This function receive a standard Posix locale name,
+ * then set the corresponding system locale with this info.
+ *
+ * @param locale_name Posix locale full name.
+ * @return true if the locale is successfully set.
+ */
+bool SetLocaleForUiMessage(const char *locale_name);
 
 /**
  * Gets the corresponding Windows locale identifier for a given short or

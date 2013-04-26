@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 #include <string>
 #include <ggadget/decorated_view_host.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/host_interface.h>
 
@@ -27,7 +27,7 @@ namespace hosts {
 namespace qt {
 
 using namespace ggadget;
-using ggadget::Gadget;
+using ggadget::GadgetInterface;
 using ggadget::HostInterface;
 using ggadget::ViewHostInterface;
 using ggadget::ViewInterface;
@@ -37,16 +37,18 @@ class QtHost : public ggadget::HostInterface {
   QtHost(bool composite, int view_debug_mode,
          Gadget::DebugConsoleConfig debug_console);
   virtual ~QtHost();
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                          ViewHostInterface::Type type);
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console);
-  virtual void RemoveGadget(Gadget *gadget, bool save_data);
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console);
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data);
   virtual bool LoadFont(const char *filename);
   virtual void Run();
-  virtual void ShowGadgetDebugConsole(Gadget *gadget);
+  virtual void ShowGadgetDebugConsole(GadgetInterface *gadget);
   virtual int GetDefaultFontSize();
-  virtual bool OpenURL(const Gadget *gadget, const char *url);
+  virtual bool OpenURL(const GadgetInterface *gadget, const char *url);
 
  private:
   class Impl;

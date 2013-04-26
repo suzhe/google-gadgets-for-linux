@@ -67,7 +67,7 @@ static KeyvalKeyCode keyval_key_code_map[] = {
   { GDK_KP_Down,      KeyboardEvent::KEY_DOWN },
   { GDK_Select,       KeyboardEvent::KEY_SELECT },
   { GDK_Print,        KeyboardEvent::KEY_PRINT },
-  { GDK_Execute,      KeyboardEvent::KEY_EXECUTE },
+  { GDK_Execute,      KeyboardEvent::KEY_TO_EXECUTE },
   { GDK_Insert,       KeyboardEvent::KEY_INSERT },
   { GDK_KP_Insert,    KeyboardEvent::KEY_INSERT },
   { GDK_Delete,       KeyboardEvent::KEY_DELETE },
@@ -104,8 +104,8 @@ static KeyvalKeyCode keyval_key_code_map[] = {
   { GDK_bar,          KeyboardEvent::KEY_BACK_SLASH },
   { GDK_bracketright, KeyboardEvent::KEY_BRACKET_RIGHT },
   { GDK_braceright,   KeyboardEvent::KEY_BRACKET_RIGHT },
-  { GDK_quotedbl,     KeyboardEvent::KEY_QUOTE },
-  { GDK_apostrophe,   KeyboardEvent::KEY_QUOTE },
+  { GDK_quotedbl,     KeyboardEvent::KEY_QUOTE_CHAR },
+  { GDK_apostrophe,   KeyboardEvent::KEY_QUOTE_CHAR },
   { GDK_0,            '0' },
   { GDK_1,            '1' },
   { GDK_2,            '2' },
@@ -240,15 +240,15 @@ unsigned int ConvertGdkKeyvalToKeyCode(guint keyval) {
 }
 
 int ConvertGdkModifierToModifier(guint state) {
-  int mod = Event::MOD_NONE;
+  int mod = Event::MODIFIER_NONE;
   if (state & GDK_SHIFT_MASK) {
-    mod |= Event::MOD_SHIFT;
+    mod |= Event::MODIFIER_SHIFT;
   }
   if (state & GDK_CONTROL_MASK) {
-    mod |= Event::MOD_CONTROL;
+    mod |= Event::MODIFIER_CONTROL;
   }
   if (state & GDK_MOD1_MASK) {
-    mod |= Event::MOD_ALT;
+    mod |= Event::MODIFIER_ALT;
   }
   return mod;
 }

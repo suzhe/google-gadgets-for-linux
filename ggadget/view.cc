@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,12 +18,7 @@
 // #define VIEW_VERBOSE_DEBUG
 // #define EVENT_VERBOSE_DEBUG
 
-#include <sys/time.h>
-#include <time.h>
-#include <list>
-#include <set>
 #include <vector>
-#include <cstdlib>
 #include <algorithm>
 
 #include "view.h"
@@ -39,7 +34,7 @@
 #include "file_manager_factory.h"
 #include "main_loop_interface.h"
 #include "gadget_consts.h"
-#include "gadget.h"
+#include "gadget_interface.h"
 #include "graphics_interface.h"
 #include "image_cache.h"
 #include "image_interface.h"
@@ -184,7 +179,7 @@ class View::Impl : public SmallObject<> {
 
   Impl(View *owner,
        ViewHostInterface *view_host,
-       Gadget *gadget,
+       GadgetInterface *gadget,
        ElementFactory *element_factory,
        ScriptContextInterface *script_context)
     :
@@ -192,6 +187,9 @@ class View::Impl : public SmallObject<> {
       height_(0),
       default_width_(320),
       default_height_(240),
+      min_width_(0),
+      min_height_(0),
+      rtl_(false),
       resize_border_left_(0),
       resize_border_top_(0),
       resize_border_right_(0),
@@ -229,7 +227,9 @@ class View::Impl : public SmallObject<> {
       mouse_over_(false),
       view_focused_(false),
       safe_to_destroy_(true),
-      content_changed_(true) {
+      content_changed_(true),
+      auto_width_(false),
+      auto_height_(false) {
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -269,11 +269,17 @@ class View::Impl : public SmallObject<> {
     // because ScriptableView will set itself to ScriptableEvent as SrcElement.
     obj->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
     obj->RegisterProperty("width",
-                          NewSlot(owner_, &View::GetWidth),
-                          NewSlot(owner_, &View::SetWidth));
+                          NewSlot(this, &Impl::GetVariantWidth),
+                          NewSlot(this, &Impl::SetVariantWidth));
     obj->RegisterProperty("height",
-                          NewSlot(owner_, &View::GetHeight),
-                          NewSlot(owner_, &View::SetHeight));
+                          NewSlot(this, &Impl::GetVariantHeight),
+                          NewSlot(this, &Impl::SetVariantHeight));
+    obj->RegisterProperty("minWidth",
+                          NewSlot(owner_, &View::GetMinWidth),
+                          NewSlot(owner_, &View::SetMinWidth));
+    obj->RegisterProperty("minHeight",
+                          NewSlot(owner_, &View::GetMinHeight),
+                          NewSlot(owner_, &View::SetMinHeight));
     obj->RegisterStringEnumProperty("resizable",
                           NewSlot(owner_, &View::GetResizable),
                           NewSlot(owner_, &View::SetResizable),
@@ -316,7 +322,7 @@ class View::Impl : public SmallObject<> {
     obj->RegisterMethod("prompt", NewSlot(owner_, &View::Prompt));
 
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
-    obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetSize));
+    obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetVariantSize));
 
     // Added in GDWin 5.8
     obj->RegisterProperty("resizeBorder",
@@ -331,6 +337,10 @@ class View::Impl : public SmallObject<> {
                           NewSlot(owner_, &View::GetMouseOverElement), NULL);
 #endif
 
+    // Added for BIDI.
+    obj->RegisterProperty("RTL",
+                          NewSlot(owner_, &View::IsTextRTL),
+                          NewSlot(owner_, &View::SetTextRTL));
     obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
     obj->RegisterSignal(kOnClickEvent, &onclick_event_);
     obj->RegisterSignal(kOnCloseEvent, &onclose_event_);
@@ -578,7 +588,8 @@ class View::Impl : public SmallObject<> {
       if (mouse_over_) {
         MouseEvent new_event(Event::EVENT_MOUSE_OUT,
                              event.GetX(), event.GetY(), 0, 0,
-                             MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+                             MouseEvent::BUTTON_NONE,
+                             MouseEvent::MODIFIER_NONE);
         OnMouseEvent(new_event);
       }
       hittest_ = HT_TRANSPARENT;
@@ -603,7 +614,7 @@ class View::Impl : public SmallObject<> {
         !mouse_over_) {
       MouseEvent new_event(Event::EVENT_MOUSE_OVER,
                            event.GetX(), event.GetY(), 0, 0,
-                           MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+                           MouseEvent::BUTTON_NONE, MouseEvent::MODIFIER_NONE);
       OnMouseEvent(new_event);
     }
 
@@ -668,7 +679,8 @@ class View::Impl : public SmallObject<> {
         // that the correct mouseover element will be set.
         MouseEvent new_event(Event::EVENT_MOUSE_MOVE,
                              event.GetX(), event.GetY(), 0, 0,
-                             MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+                             MouseEvent::BUTTON_NONE,
+                             MouseEvent::MODIFIER_NONE);
         result = SendMouseEventToChildren(new_event);
       } else {
         result = SendMouseEventToChildren(event);
@@ -875,7 +887,7 @@ class View::Impl : public SmallObject<> {
               // Only move focus when focus was not moved by the view's and
               // the focused element's event handler.
               old_focused_element == focused_element_.Get()) {
-            if (event.GetModifier() & Event::MOD_SHIFT)
+            if (event.GetModifier() & Event::MODIFIER_SHIFT)
               MoveFocusBackward();
             else
               MoveFocusForward();
@@ -1040,8 +1052,63 @@ class View::Impl : public SmallObject<> {
     return scriptable_event.GetReturnValue();
   }
 
+  void SetVariantSize(const Variant &width, const Variant &height) {
+    double pixel_width = 0;
+    bool width_changed = false;
+    if (width.type() == Variant::TYPE_STRING &&
+        VariantValue<std::string>()(width) == "auto") {
+      width_changed = !auto_width_;
+      auto_width_ = true;
+    } else if (width.ConvertToDouble(&pixel_width)) {
+      width_changed = auto_width_ || (pixel_width != width_);
+      auto_width_ = false;
+    }
+
+    double pixel_height = 0;
+    bool height_changed = false;
+    if (height.type() == Variant::TYPE_STRING &&
+        VariantValue<std::string>()(height) == "auto") {
+      height_changed = !auto_height_;
+      auto_height_ = true;
+    } else if (height.ConvertToDouble(&pixel_height)) {
+      height_changed = auto_height_ || (pixel_height != height_);
+      auto_height_ = false;
+    }
+
+    if ((width_changed && auto_width_) || (height_changed && auto_height_)) {
+      double desired_width = 0;
+      double desired_height = 0;
+      GetDesiredAutoSize(&desired_width, &desired_height);
+      if (auto_width_)
+        pixel_width = desired_width;
+      if (auto_height_)
+        pixel_height = desired_height;
+    }
+
+    SetSize((width_changed ? pixel_width : width_),
+            (height_changed ? pixel_height : height_));
+  }
+
+  void SetVariantWidth(const Variant &width) {
+    SetVariantSize(width, auto_height_ ? Variant("auto") : Variant(height_));
+  }
+
+  Variant GetVariantWidth() const {
+    return auto_width_ ? Variant("auto") : Variant(width_);
+  }
+
+  void SetVariantHeight(const Variant &height) {
+    SetVariantSize(auto_width_ ? Variant("auto") : Variant(width_), height);
+  }
+
+  Variant GetVariantHeight() const {
+    return auto_height_ ? Variant("auto") : Variant(height_);
+  }
+
   void SetSize(double width, double height) {
     ScopedLogContext log_context(gadget_);
+    width = std::max(width, min_width_);
+    height = std::max(height, min_height_);
     if (width != width_ || height != height_) {
       // Invalidate the canvas cache.
       if (canvas_cache_) {
@@ -1060,7 +1127,8 @@ class View::Impl : public SmallObject<> {
 
       // In some case, QueueResize() may not cause redraw,
       // so do layout here to make sure the layout is correct.
-      children_.Layout();
+      if (!draw_queued_)
+        children_.Layout();
 
       SimpleEvent event(Event::EVENT_SIZE);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
@@ -1072,6 +1140,8 @@ class View::Impl : public SmallObject<> {
   }
 
   void ResizeBy(double width, double height) {
+    auto_width_ = false;
+    auto_height_ = false;
     SetSize(width_ + width, height_ + height);
   }
 
@@ -1085,36 +1155,13 @@ class View::Impl : public SmallObject<> {
 
   void SetResizeBorder(const std::string &value) {
     resize_border_specified_ = false;
-    StringVector values;
-    SplitStringList(value, " ", &values);
-    double double_values[4];
-    for (size_t i = 0; i < values.size(); ++i) {
-      if (!Variant(values[i]).ConvertToDouble(double_values + i)) {
+    if (!StringToBorderSize(value,
+                            &resize_border_left_,
+                            &resize_border_top_,
+                            &resize_border_right_,
+                            &resize_border_bottom_)) {
         LOG("Invalid resize border value: %s", value.c_str());
         return;
-      }
-      if (double_values[i] < 0)
-        double_values[i] = 0;
-    }
-
-    if (values.size() == 4) {
-      resize_border_left_ = double_values[0];
-      resize_border_top_ = double_values[1];
-      resize_border_right_ = double_values[2];
-      resize_border_bottom_ = double_values[3];
-    } else if (values.size() == 2) {
-      resize_border_left_ = double_values[0];
-      resize_border_right_ = double_values[0];
-      resize_border_top_ = double_values[1];
-      resize_border_bottom_ = double_values[1];
-    } else if (values.size() == 1) {
-      resize_border_left_ = double_values[0];
-      resize_border_top_ = double_values[0];
-      resize_border_right_ = double_values[0];
-      resize_border_bottom_ = double_values[0];
-    } else {
-      LOG("Invalid resize border value: %s", value.c_str());
-      return;
     }
 
     resize_border_specified_ = true;
@@ -1148,6 +1195,16 @@ class View::Impl : public SmallObject<> {
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
+    if (theme_changed_ && events_enabled_) {
+      SimpleEvent event(Event::EVENT_THEME_CHANGED);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      FireEvent(&scriptable_event, onthemechanged_event_);
+      theme_changed_ = false;
+    }
+
+    children_.CalculateSize();
+
+    AutoUpdateSize();
     children_.Layout();
 
     // Let posted events be processed after Layout() and before actual Draw().
@@ -1155,13 +1212,6 @@ class View::Impl : public SmallObject<> {
     // If Event isn't enabled then postpone these events.
     if (events_enabled_) {
       FirePostedSizeEvents();
-    }
-
-    if (theme_changed_) {
-      SimpleEvent event(Event::EVENT_THEME_CHANGED);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
-      FireEvent(&scriptable_event, onthemechanged_event_);
-      theme_changed_ = false;
     }
     draw_queued_ = false;
 
@@ -1377,6 +1427,18 @@ class View::Impl : public SmallObject<> {
     if (result) {
       *width = event.GetWidth();
       *height = event.GetHeight();
+      if (auto_width_ || auto_height_) {
+        double desired_auto_width = 0;
+        double desired_auto_height = 0;
+        GetDesiredAutoSize(&desired_auto_width, &desired_auto_height);
+        if (auto_width_)
+          *width = desired_auto_width;
+        if (auto_height_)
+          *height = desired_auto_height;
+      }
+
+      *width = std::max(*width, min_width_);
+      *height = std::max(*height, min_height_);
     }
 
     return result;
@@ -1653,11 +1715,82 @@ class View::Impl : public SmallObject<> {
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
+  void AutoUpdateSize() {
+    if (!auto_width_ && !auto_height_)
+      return;
+
+    double width = 0;
+    double height = 0;
+    GetDesiredAutoSize(&width, &height);
+    SetSize(width, height);
+  }
+
+  void GetDesiredAutoSize(double *width, double *height) const {
+    GetChildrenExtents(width, height);
+    *width = auto_width_ ? *width : width_;
+    *height = auto_height_ ? *height : height_;
+  }
+
+  void GetChildrenExtents(double *width, double *height) const {
+    *width = 0;
+    *height = 0;
+    const size_t count = children_.GetCount();
+    for (size_t i = 0; i < count; ++i) {
+      const BasicElement *child = children_.GetItemByIndex(i);
+
+      if (!child->IsVisible())
+        continue;
+
+      const double child_x = child->GetPixelX();
+      const double child_y = child->GetPixelY();
+      const Rectangle child_rect = child->GetMinExtentsInParent();
+      const double child_right = child_rect.x + child_rect.w;
+      const double child_bottom = child_rect.y + child_rect.h;
+
+      if (child->XIsRelative()) {
+        double child_extent = 0;
+        const double relative_x = child->GetRelativeX();
+        if (relative_x == 0) {
+          child_extent = child_right - child->GetPixelX();
+        } else if (relative_x == 1) {
+          child_extent = child_x - child_rect.x;
+        } else {
+          child_extent = std::max(
+              (child_x - child_rect.x) / relative_x,
+              (child_right - child_x) / (1 - relative_x));
+        }
+        *width = std::max(*width, child_extent);
+      } else {
+        *width = std::max(*width, child_right);
+      }
+
+      if (child->YIsRelative()) {
+        double child_extent = 0;
+        const double relative_y = child->GetRelativeY();
+        if (relative_y == 0) {
+          child_extent = child_bottom - child_y;
+        } else if (relative_y == 1) {
+          child_extent = child_y - child_rect.y;
+        } else {
+          child_extent = std::max(
+              (child_y - child_rect.y) / relative_y,
+              (child_bottom - child_y) / (1 - relative_y));
+        }
+        *height = std::max(*height, child_extent);
+      } else {
+        *height = std::max(*height, child_bottom);
+      }
+    }
+  }
+
  public: // member variables
   double width_;
   double height_;
   double default_width_;
   double default_height_;
+  double min_width_;
+  double min_height_;
+  bool rtl_;
 
   double resize_border_left_;
   double resize_border_top_;
@@ -1665,7 +1798,7 @@ class View::Impl : public SmallObject<> {
   double resize_border_bottom_;
 
   View *owner_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
   ElementFactory *element_factory_;
   MainLoopInterface *main_loop_;
   ViewHostInterface *view_host_;
@@ -1740,13 +1873,24 @@ class View::Impl : public SmallObject<> {
   int view_draw_count_;
   uint64_t accum_draw_time_;
 #endif
-
+#if defined(OS_WIN)
+  // MSVC treats enum bit fields as signed! That means if a 2-bit enum bit
+  // field is assigned with an enum value of 3, when reading the field, the
+  // result will be -1 instead of 3, because the highest bit is considered as
+  // a sign bit. So surprisingly the result isn't equal to the original enum
+  // value.
+  HitTest hittest_;
+  HitTest last_hittest_;
+  CursorType last_cursor_type_;
+  ResizableMode resizable_;
+  EventResult dragover_result_ ;
+#else
   HitTest hittest_              : 6;
   HitTest last_hittest_         : 6;
   CursorType last_cursor_type_  : 4;
   ResizableMode resizable_      : 2;
   EventResult dragover_result_  : 2;
-
+#endif
   bool clip_region_enabled_     : 1;
   bool enable_cache_            : 1;
   bool show_caption_always_     : 1;
@@ -1759,6 +1903,8 @@ class View::Impl : public SmallObject<> {
   bool view_focused_            : 1;
   bool safe_to_destroy_         : 1;
   bool content_changed_         : 1;
+  bool auto_width_              : 1;
+  bool auto_height_             : 1;
 
   static const int kAnimationInterval = 40;
   static const int kMinTimeout = 10;
@@ -1767,7 +1913,7 @@ class View::Impl : public SmallObject<> {
 };
 
 View::View(ViewHostInterface *view_host,
-           Gadget *gadget,
+           GadgetInterface *gadget,
            ElementFactory *element_factory,
            ScriptContextInterface *script_context)
     : impl_(new Impl(this, view_host, gadget, element_factory, script_context)) {
@@ -1786,7 +1932,7 @@ View::~View() {
   impl_ = NULL;
 }
 
-Gadget *View::GetGadget() const {
+GadgetInterface *View::GetGadget() const {
   return impl_->gadget_;
 }
 
@@ -1795,7 +1941,7 @@ ScriptContextInterface *View::GetScriptContext() const {
 }
 
 FileManagerInterface *View::GetFileManager() const {
-  Gadget *gadget = GetGadget();
+  GadgetInterface *gadget = GetGadget();
   return gadget ? gadget->GetFileManager() : NULL;
 }
 
@@ -1823,6 +1969,63 @@ ScriptableInterface *View::GetScriptable() const {
 
 bool View::IsSafeToDestroy() const {
   return impl_->event_stack_.empty() && impl_->safe_to_destroy_;
+}
+
+void View::SetAutoWidth(bool auto_width) {
+  if (impl_->auto_width_ != auto_width) {
+    impl_->auto_width_ = auto_width;
+    impl_->AutoUpdateSize();
+  }
+}
+
+bool View::IsAutoWidth() const {
+  return impl_->auto_width_;
+}
+
+void View::SetAutoHeight(bool auto_height) {
+  if (impl_->auto_height_ != auto_height) {
+    impl_->auto_height_ = auto_height;
+    impl_->AutoUpdateSize();
+  }
+}
+
+bool View::IsAutoHeight() const {
+  return impl_->auto_height_;
+}
+
+double View::GetMinWidth() const {
+  return impl_->min_width_;
+}
+
+void View::SetMinWidth(double min_width) {
+  if (impl_->min_width_ != min_width) {
+    impl_->min_width_ = std::max(0.0, min_width);
+    if (impl_->width_ < impl_->min_width_)
+      impl_->SetSize(min_width, GetHeight());
+  }
+}
+
+double View::GetMinHeight() const {
+  return impl_->min_height_;
+}
+
+void View::SetMinHeight(double min_height) {
+  if (impl_->min_height_ != min_height) {
+    impl_->min_height_ = std::max(0.0, min_height);
+    if (impl_->height_ < impl_->min_height_)
+      impl_->SetSize(GetWidth(), min_height);
+  }
+}
+
+bool View::IsTextRTL() const {
+  return impl_->rtl_;
+}
+
+void View::SetTextRTL(bool rtl) {
+  if (impl_->rtl_ != rtl) {
+    impl_->rtl_ = rtl;
+    QueueDraw();
+  }
 }
 
 void View::SetWidth(double width) {

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_file_system.h>
 #include <ggadget/permissions.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 
 #include "file_system.h"
 #include "runtime.h"
@@ -153,7 +153,7 @@ extern "C" {
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
-                                  Gadget *gadget) {
+                                  GadgetInterface *gadget) {
     LOGI("Register linux_system_framework extension.");
     ASSERT(framework && gadget);
 
@@ -191,9 +191,9 @@ extern "C" {
       return false;
     }
 
-    const Permissions *permissions = gadget->GetPermissions();
-    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ) ||
-        permissions->IsRequiredAndGranted(Permissions::FILE_WRITE)) {
+    const Permissions *perm = gadget->GetPermissions();
+    if (perm && (perm->IsRequiredAndGranted(Permissions::FILE_READ) ||
+                 perm->IsRequiredAndGranted(Permissions::FILE_WRITE))) {
       ScriptableFileSystem *script_filesystem =
           new ScriptableFileSystem(g_filesystem_, gadget);
       reg_system->RegisterVariantConstant("filesystem",
@@ -201,7 +201,7 @@ extern "C" {
     }
 
     // Check permissions.
-    if (!permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+    if (!perm || !perm->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
       DLOG("No permission to access device status.");
       return true;
     }

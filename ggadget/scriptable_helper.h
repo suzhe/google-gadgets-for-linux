@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ class ScriptableHelperImplInterface : public ScriptableInterface,
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetPendingException(ScriptableInterface *exception) = 0;
+  virtual bool RemoveProperty(const char *name) = 0;
 };
 
 /**
@@ -148,7 +149,9 @@ class ScriptableHelper : public I,
                          const Variant values[]) {
     ASSERT(names);
     for (size_t i = 0; i < count; i++)
-      impl_->RegisterVariantConstant(names[i], values ? values[i] : Variant(i));
+      impl_->RegisterVariantConstant(
+          names[i],
+          values ? values[i] : Variant(static_cast<int64_t>(i)));
   }
 
   /**
@@ -254,6 +257,17 @@ class ScriptableHelper : public I,
    */
   void SetPendingException(ScriptableInterface *exception) {
     impl_->SetPendingException(exception);
+  }
+
+  /**
+   * Removes a property previously registered to the scriptable object. Any
+   * kinds of object properties can be removed, such as, properties, signals,
+   * methods, constants, etc. But class properties cannot be removed.
+   * @param name The name of the property to be removed.
+   * @return true if a property is removed.
+   */
+  bool RemoveProperty(const char *name) {
+    return impl_->RemoveProperty(name);
   }
 
   /**

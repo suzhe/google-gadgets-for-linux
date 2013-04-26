@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include <cmath>
-
+#include "ggadget/common.h"
 #include "ggadget/math_utils.h"
 #include "unittest/gtest.h"
 
@@ -266,18 +266,18 @@ TEST(MathUtilsTest, RectangleGetPolygonExtents) {
   const double p2[] = {0.4, 2, 0.6, 2, 0.6, -2, 0.4, -2};
   const double p3[] = {0.5, 1.5, 1.5, 0.5, 0.5, -0.5, -0.5, 0.5};
 
-  Rectangle rect;
-  rect = Rectangle::GetPolygonExtents(4, p1);
+  ggadget::Rectangle rect;
+  rect = ggadget::Rectangle::GetPolygonExtents(4, p1);
   EXPECT_DOUBLE_EQ(0, rect.x);
   EXPECT_DOUBLE_EQ(0, rect.y);
   EXPECT_DOUBLE_EQ(1, rect.w);
   EXPECT_DOUBLE_EQ(1, rect.h);
-  rect = Rectangle::GetPolygonExtents(4, p2);
+  rect = ggadget::Rectangle::GetPolygonExtents(4, p2);
   EXPECT_DOUBLE_EQ(0.4, rect.x);
   EXPECT_DOUBLE_EQ(-2, rect.y);
   EXPECT_DOUBLE_EQ(0.2, rect.w);
   EXPECT_DOUBLE_EQ(4, rect.h);
-  rect = Rectangle::GetPolygonExtents(4, p3);
+  rect = ggadget::Rectangle::GetPolygonExtents(4, p3);
   EXPECT_DOUBLE_EQ(-0.5, rect.x);
   EXPECT_DOUBLE_EQ(-0.5, rect.y);
   EXPECT_DOUBLE_EQ(2, rect.w);
@@ -285,8 +285,8 @@ TEST(MathUtilsTest, RectangleGetPolygonExtents) {
 }
 
 TEST(MathUtilsTest, RectangleUnion) {
-  Rectangle r1(2, 2, 2, 3);
-  Rectangle r2(0, 1, 2, 1);
+  ggadget::Rectangle r1(2, 2, 2, 3);
+  ggadget::Rectangle r2(0, 1, 2, 1);
   r1.Union(r2);
   EXPECT_DOUBLE_EQ(0, r1.x);
   EXPECT_DOUBLE_EQ(1, r1.y);
@@ -295,10 +295,10 @@ TEST(MathUtilsTest, RectangleUnion) {
 }
 
 TEST(MathUtilsTest, RectangleOverlaps) {
-  Rectangle r1(2, 2, 2, 3);
-  Rectangle r2(0, 1, 2, 1);
-  Rectangle r3(1, 1, 4, 3);
-  Rectangle r4(6, 6, 1, 1);
+  ggadget::Rectangle r1(2, 2, 2, 3);
+  ggadget::Rectangle r2(0, 1, 2, 1);
+  ggadget::Rectangle r3(1, 1, 4, 3);
+  ggadget::Rectangle r4(6, 6, 1, 1);
   EXPECT_TRUE(r1.Overlaps(r1));
   EXPECT_TRUE(r1.Overlaps(r3));
   EXPECT_FALSE(r1.Overlaps(r2));
@@ -310,10 +310,10 @@ TEST(MathUtilsTest, RectangleOverlaps) {
 }
 
 TEST(MathUtilsTest, RectangleIntersect) {
-  Rectangle r1(2, 2, 2, 3);
-  Rectangle r2(0, 1, 2, 1);
-  Rectangle r3(1, 1, 4, 3);
-  Rectangle r4 = r1;
+  ggadget::Rectangle r1(2, 2, 2, 3);
+  ggadget::Rectangle r2(0, 1, 2, 1);
+  ggadget::Rectangle r3(1, 1, 4, 3);
+  ggadget::Rectangle r4 = r1;
   EXPECT_FALSE(r1.Intersect(r2));
   EXPECT_TRUE(r4 == r1);
   EXPECT_TRUE(r1.Intersect(r1));
@@ -326,11 +326,11 @@ TEST(MathUtilsTest, RectangleIntersect) {
 }
 
 TEST(MathUtilsTest, RectangleIsInside) {
-  Rectangle r1(1, 1, 4, 4);
-  Rectangle r2(1, 1, 4, 4);
-  Rectangle r3(1.5, 1.5, 3, 3);
-  Rectangle r4(1, 2, 4, 3);
-  Rectangle r5(0.5, 1, 3, 2);
+  ggadget::Rectangle r1(1, 1, 4, 4);
+  ggadget::Rectangle r2(1, 1, 4, 4);
+  ggadget::Rectangle r3(1.5, 1.5, 3, 3);
+  ggadget::Rectangle r4(1, 2, 4, 3);
+  ggadget::Rectangle r5(0.5, 1, 3, 2);
 
   EXPECT_FALSE(r1.IsInside(r3));
   EXPECT_TRUE(r1.IsInside(r1));

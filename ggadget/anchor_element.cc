@@ -54,7 +54,7 @@ class AnchorElement::Impl : public SmallObject<> {
 };
 
 AnchorElement::AnchorElement(View *view, const char *name)
-    : BasicElement(view, "a", name, false),
+    : BasicElement(view, "a", name, true),
       impl_(new Impl(this, view)) {
   SetCursor(ViewInterface::CURSOR_HAND);
   SetEnabled(true);
@@ -80,6 +80,7 @@ AnchorElement::~AnchorElement() {
 }
 
 void AnchorElement::DoDraw(CanvasInterface *canvas) {
+  DrawChildren(canvas);
   if (impl_->mouseover_) {
     impl_->text_.DrawWithTexture(canvas, 0, 0,
                                  GetPixelWidth(), GetPixelHeight(),

@@ -14,25 +14,50 @@
   limitations under the License.
 */
 
+#include "build_config.h"
 #include "logger.h"
+
+#if defined(OS_WIN)
+#include "win32/thread_local_singleton_holder.h"
+#endif // OS_WIN
+
 #include "xml_parser_interface.h"
 
 namespace ggadget {
 
+#if !defined(OS_WIN)
 static XMLParserInterface *g_xml_parser = NULL;
+#endif // OS_WIN
 
 bool SetXMLParser(XMLParserInterface *xml_parser) {
+#if defined(OS_WIN)
+  XMLParserInterface *old_xml_parser =
+      win32::ThreadLocalSingletonHolder<XMLParserInterface>::GetValue();
+  if (old_xml_parser && xml_parser)
+    return false;
+  return win32::ThreadLocalSingletonHolder<XMLParserInterface>::SetValue(
+      xml_parser);
+#else // OS_WIN
   ASSERT(!g_xml_parser && xml_parser);
   if (!g_xml_parser && xml_parser) {
     g_xml_parser = xml_parser;
     return true;
   }
   return false;
+#endif // OS_WIN
 }
 
 XMLParserInterface *GetXMLParser() {
+#if defined(OS_WIN)
+  XMLParserInterface *xml_parser =
+      win32::ThreadLocalSingletonHolder<XMLParserInterface>::GetValue();
+  EXPECT_M(xml_parser,
+           ("The global xml parser has not been set yet."));
+  return xml_parser;
+#else // OS_WIN
   EXPECT_M(g_xml_parser, ("The global xml parser has not been set yet."));
   return g_xml_parser;
+#endif // OS_WIN
 }
 
 } // namespace ggadget

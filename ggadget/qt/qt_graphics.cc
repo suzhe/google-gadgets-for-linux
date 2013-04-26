@@ -91,5 +91,9 @@ FontInterface *QtGraphics::NewFont(const std::string &family,
   return new QtFont(family, pt_size, style, weight);
 }
 
+TextRendererInterface *QtGraphics::NewTextRenderer() const {
+  return NULL;
+}
+
 } // namespace qt
 } // namespace ggadget

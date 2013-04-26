@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -38,7 +38,6 @@ class ViewHostInterface;
 class ImageInterface;
 class ScriptableEvent;
 class Texture;
-class Gadget;
 class Rectangle;
 class MenuInterface;
 
@@ -70,7 +69,7 @@ class View : public ViewInterface {
    *        the View.
    */
   View(ViewHostInterface *host,
-       Gadget *gadget,
+       GadgetInterface *gadget,
        ElementFactory *element_factory,
        ScriptContextInterface *script_context);
 
@@ -107,8 +106,36 @@ class View : public ViewInterface {
   /** Checks if this view is safe to destroy. */
   bool IsSafeToDestroy() const;
 
+  /**
+   * Set whether or not to adjust the view's width automatically according to
+   * children's width. If it's true, then:
+   * 1. If ResizableMode == RESIZABLE_FALSE or RESIZABLE_ZOOM, then the view's
+   *    width will be adjusted to the maximum horizontal extent of all children.
+   * 2. If ResizableMode == RESIZABLE_TRUE or RESIZABLE_KEEP_RATIO, then the
+   *    view will still be resizable by the user, but its minimum width will be
+   *    limited to the maximum horizontal extent of all children.
+   */
+  void SetAutoWidth(bool auto_width);
+  bool IsAutoWidth() const;
+
+  /** @see as SetAutoWidth(). */
+  void SetAutoHeight(bool auto_height);
+  bool IsAutoHeight() const;
+
+  /** Sets and gets the minimum pixel width of the View. */
+  double GetMinWidth() const;
+  void SetMinWidth(double min_width);
+
+  /** Sets and gets the minimum pixel height of the View. */
+  double GetMinHeight() const;
+  void SetMinHeight(double min_height);
+
+  /** Sets and gets the text direction of the view. */
+  bool IsTextRTL() const;
+  void SetTextRTL(bool rtl);
+
  public: // ViewInterface methods.
-  virtual Gadget *GetGadget() const;
+  virtual GadgetInterface *GetGadget() const;
   virtual GraphicsInterface *GetGraphics() const;
   virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
   virtual ViewHostInterface *GetViewHost() const;

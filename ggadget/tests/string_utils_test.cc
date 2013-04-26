@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 #include <cstdio>
 #include "ggadget/string_utils.h"
+#include "ggadget/locales.h"
 #include "unittest/gtest.h"
 
 using namespace ggadget;
@@ -60,13 +61,23 @@ TEST(StringUtils, ToLower) {
 }
 
 TEST(StringUtils, StringPrintf) {
-  EXPECT_STREQ("123", StringPrintf("%d", 123).c_str());
-  char *buf = new char[100000];
-  for (int i = 0; i < 100000; i++)
-    buf[i] = static_cast<char>((i % 50) + '0');
-  buf[99999] = 0;
-  EXPECT_STREQ(buf, StringPrintf("%s", buf).c_str());
-  delete buf;
+  const char *locale_message_lists[] = {
+    "ar-SA", "en_US", "zh_CN.UTF8", "", NULL};
+
+  for (int list_no = 0; locale_message_lists[list_no]; ++list_no) {
+    SetLocaleForUiMessage(locale_message_lists[list_no]);
+
+    EXPECT_STREQ("123", ggadget::StringPrintf("%d", 123).c_str());
+    char *buf = new char[100000];
+    for (int i = 0; i < 100000; i++)
+      buf[i] = static_cast<char>((i % 50) + '0');
+    buf[99999] = 0;
+    EXPECT_STREQ(buf, ggadget::StringPrintf("%s", buf).c_str());
+    EXPECT_STREQ("123 1.23 aBc 03A8",
+        ggadget::StringPrintf("%d %.2lf %s %04X",
+            123, 1.225, "aBc", 936).c_str());
+    delete buf;
+  }
 }
 
 TEST(StringUtils, EncodeDecodeURL) {
@@ -522,6 +533,49 @@ TEST(StringUtils, URLScheme) {
   EXPECT_TRUE(IsValidURLScheme("mailto"));
   EXPECT_FALSE(IsValidURLScheme("ftp"));
   EXPECT_FALSE(IsValidURLScheme("javascript"));
+}
+
+TEST(StringUtils, BorderSize) {
+  double left, top, right, bottom;
+
+  EXPECT_TRUE(
+      ggadget::StringToBorderSize("1 2 3 4", &left, &top, &right, &bottom));
+  EXPECT_EQ(1, left);
+  EXPECT_EQ(2, top);
+  EXPECT_EQ(3, right);
+  EXPECT_EQ(4, bottom);
+
+  EXPECT_TRUE(
+      ggadget::StringToBorderSize("1.0 2", &left, &top, &right, &bottom));
+  EXPECT_EQ(1.0, left);
+  EXPECT_EQ(1.0, right);
+  EXPECT_EQ(2.0, top);
+  EXPECT_EQ(2.0, bottom);
+
+  EXPECT_TRUE(
+      ggadget::StringToBorderSize("0.1 ", &left, &top, &right, &bottom));
+  EXPECT_EQ(0.1, left);
+  EXPECT_EQ(0.1, right);
+  EXPECT_EQ(0.1, top);
+  EXPECT_EQ(0.1, bottom);
+
+  EXPECT_TRUE(
+      ggadget::StringToBorderSize(
+          "1.0,2.0,3.0,4.0", &left, &top, &right, &bottom));
+  EXPECT_EQ(1.0, left);
+  EXPECT_EQ(2.0, top);
+  EXPECT_EQ(3.0, right);
+  EXPECT_EQ(4.0, bottom);
+
+  EXPECT_TRUE(
+      ggadget::StringToBorderSize("1.0, 2", &left, &top, &right, &bottom));
+  EXPECT_EQ(1.0, left);
+  EXPECT_EQ(1.0, right);
+  EXPECT_EQ(2, top);
+  EXPECT_EQ(2, bottom);
+
+  EXPECT_FALSE(
+      ggadget::StringToBorderSize("", &left, &top, &right, &bottom));
 }
 
 int main(int argc, char **argv) {

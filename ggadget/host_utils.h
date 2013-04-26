@@ -59,11 +59,13 @@ void SetupLogger(int log_level, bool long_log);
  */
 bool CheckRequiredExtensions(std::string *error_message);
 
+#if defined(OS_POSIX)  // TODO(zkfan): support XMLHttpRequest
 /**
  * Initialize the default user agent for XMLHttpRequest class.
  * @param app_name the name of the main application.
  */
 void InitXHRUserAgent(const char *app_name);
+#endif
 
 /**
  * Get popup position to show a (w1, h1) rectangle for an existing (x,
@@ -73,6 +75,7 @@ void GetPopupPosition(int x, int y, int w, int h,
                       int w1, int h1, int sw, int sh,
                       int *x1, int *y1);
 
+#if defined(OS_POSIX)  // These functions are not used on windows currently.
 /**
  * Show a stand-alone (not belonging to any gadget) dialog which is defined
  * in XML.
@@ -199,7 +202,7 @@ class HostArgumentParser {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(HostArgumentParser);
 };
-
+#endif
 /** @} */
 
 } // namespace ggadget

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,7 +28,10 @@
 
 namespace ggadget {
 
+template <typename R, typename P1> class Slot1;
+
 class BasicElement;
+class Connection;
 class ElementFactory;
 class CanvasInterface;
 class View;
@@ -225,6 +228,8 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
 
   /**
    * Remove the specified element from the container.
+   * If successful, the BasicElement will be destroyed and the pointer element
+   * will become invalid.
    * @param element the element to remove.
    * @return @c true if removed successfully, or @c false if the specified
    *     element doesn't exists or not the direct child of the container.
@@ -237,7 +242,13 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
   void RemoveAllElements();
 
   /**
-   * Adjusts the layout (e.g. size, position, etc.) of children.
+   * Calculate the size of children.
+   * This method is called just before @c Layout();
+   */
+   void CalculateSize();
+
+  /**
+   * Adjusts the layout (e.g. position, etc.) of children.
    * This method is called just before @c Draw().
    */
   void Layout();
@@ -308,6 +319,18 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * @param region Contains all clip rectangles in view's coordinates.
    */
   void AggregateClipRegion(const Rectangle &boundary, ClipRegion *region);
+
+  /**
+   * Connects a slot to the signal that will be fired when an element is added.
+   */
+  Connection *ConnectOnElementAdded(Slot1<void, BasicElement*> *slot);
+
+  /**
+   * Connects a slot to the signal that will be fired when an element is
+   * removed. The element will be deleted immediately after firing the signal,
+   * so the slot handler should not keep the element at all.
+   */
+  Connection *ConnectOnElementRemoved(Slot1<void, BasicElement*> *slot);
 
  private:
   class Impl;

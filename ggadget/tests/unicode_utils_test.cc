@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -138,8 +138,9 @@ TEST(UnicodeUtils, Invalid) {
 }
 
 TEST(UnicodeUtils, IsLegalString) {
-  EXPECT_TRUE(IsLegalUTF8String("", 0));
-  EXPECT_FALSE(IsLegalUTF8String(NULL, 0));
+  uint32_t zero = 0;
+  EXPECT_TRUE(IsLegalUTF8String("", zero));
+  EXPECT_FALSE(IsLegalUTF8String(NULL, zero));
   EXPECT_TRUE(IsLegalUTF8String(std::string("")));
   EXPECT_TRUE(IsLegalUTF8String(utf8_string, strlen(utf8_string)));
   EXPECT_TRUE(IsLegalUTF8String(std::string(utf8_string)));
@@ -148,9 +149,9 @@ TEST(UnicodeUtils, IsLegalString) {
   EXPECT_FALSE(IsLegalUTF8String(std::string(invalid_utf8_string)));
   EXPECT_TRUE(IsLegalUTF8String(invalid_utf8_string, invalid_utf8_length));
 
-  EXPECT_TRUE(IsLegalUTF16String(utf16_string, 0));
-  EXPECT_FALSE(IsLegalUTF16String(NULL, 0));
-  EXPECT_TRUE(IsLegalUTF16String(UTF16String(utf16_string, 0)));
+  EXPECT_TRUE(IsLegalUTF16String(utf16_string, zero));
+  EXPECT_FALSE(IsLegalUTF16String(NULL, zero));
+  EXPECT_TRUE(IsLegalUTF16String(UTF16String(utf16_string, zero)));
   EXPECT_TRUE(IsLegalUTF16String(utf16_string, arraysize(utf16_string) - 1));
   EXPECT_TRUE(IsLegalUTF16String(UTF16String(utf16_string)));
   EXPECT_FALSE(IsLegalUTF16String(invalid_utf16_string,

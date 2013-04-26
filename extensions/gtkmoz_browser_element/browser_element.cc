@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 #include <gtk/gtk.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/elements.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/scriptable_array.h>
@@ -1040,7 +1040,7 @@ class BrowserElementImpl {
   }
 
   bool OpenURL(const char *url) {
-    Gadget *gadget = owner_->GetView()->GetGadget();
+    GadgetInterface *gadget = owner_->GetView()->GetGadget();
     bool result = false;
     if (gadget) {
       // Let the gadget allow this OpenURL gracefully.

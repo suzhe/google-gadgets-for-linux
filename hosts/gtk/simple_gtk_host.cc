@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@
 #include <ggadget/popout_main_view_decorator.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/view.h>
-#include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
 
@@ -69,7 +68,7 @@ class SimpleGtkHost::Impl {
         debug_console(NULL) {
     }
 
-    Gadget *gadget;
+    GadgetInterface *gadget;
 
     SingleViewHost *main;
     SingleViewHost *popout;
@@ -155,7 +154,7 @@ class SimpleGtkHost::Impl {
   void SetupUI() {
     const int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     host_menu_ = gtk_menu_new();
-    MenuBuilder menu_builder(GTK_MENU_SHELL(host_menu_));
+    MenuBuilder menu_builder(NULL, GTK_MENU_SHELL(host_menu_));
 
     menu_builder.AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
                          MenuInterface::MENU_ITEM_ICON_ADD,
@@ -276,8 +275,10 @@ class SimpleGtkHost::Impl {
     return result;
   }
 
-  Gadget *LoadGadget(const char *path, const char *options_name,
-                     int instance_id, bool show_debug_console) {
+  GadgetInterface *LoadGadget(const char *path,
+                              const char *options_name,
+                              int instance_id,
+                              bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
       return gadgets_[instance_id].gadget;
@@ -320,7 +321,7 @@ class SimpleGtkHost::Impl {
     return gadget;
   }
 
-  ViewHostInterface *NewViewHost(Gadget *gadget,
+  ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                  ViewHostInterface::Type type) {
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
@@ -385,7 +386,7 @@ class SimpleGtkHost::Impl {
     return dvh;
   }
 
-  void RemoveGadget(Gadget *gadget, bool save_data) {
+  void RemoveGadget(GadgetInterface *gadget, bool save_data) {
     GGL_UNUSED(save_data);
     ASSERT(gadget);
     ViewInterface *main_view = gadget->GetMainView();
@@ -523,7 +524,7 @@ class SimpleGtkHost::Impl {
 
   void OnCloseHandler(DecoratedViewHost *decorated) {
     ViewInterface *child = decorated->GetView();
-    Gadget *gadget = child ? child->GetGadget() : NULL;
+    GadgetInterface *gadget = child ? child->GetGadget() : NULL;
 
     ASSERT(gadget);
     if (!gadget) return;
@@ -539,7 +540,8 @@ class SimpleGtkHost::Impl {
         }
         break;
       case ViewHostInterface::VIEW_HOST_DETAILS:
-        gadget->CloseDetailsView();
+        ASSERT(gadget->IsInstanceOf(Gadget::TYPE_ID));
+        down_cast<Gadget*>(gadget)->CloseDetailsView();
         break;
       default:
         ASSERT_M(false, ("Invalid decorator type."));
@@ -842,7 +844,7 @@ class SimpleGtkHost::Impl {
     impl->ToggleAllGadgets();
   }
 
-  void ShowGadgetDebugConsole(Gadget *gadget) {
+  void ShowGadgetDebugConsole(GadgetInterface *gadget) {
     if (!gadget)
       return;
     GadgetInfoMap::iterator it = gadgets_.find(gadget->GetInstanceID());
@@ -916,21 +918,23 @@ SimpleGtkHost::~SimpleGtkHost() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SimpleGtkHost::NewViewHost(Gadget *gadget,
+ViewHostInterface *SimpleGtkHost::NewViewHost(GadgetInterface *gadget,
                                               ViewHostInterface::Type type) {
   return impl_->NewViewHost(gadget, type);
 }
 
-Gadget *SimpleGtkHost::LoadGadget(const char *path, const char *options_name,
-                                  int instance_id, bool show_debug_console) {
+GadgetInterface *SimpleGtkHost::LoadGadget(const char *path,
+                                           const char *options_name,
+                                           int instance_id,
+                                           bool show_debug_console) {
   return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
 }
 
-void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
+void SimpleGtkHost::RemoveGadget(GadgetInterface *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
 }
 
-void SimpleGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
+void SimpleGtkHost::ShowGadgetDebugConsole(GadgetInterface *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 

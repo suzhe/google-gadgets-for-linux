@@ -489,7 +489,7 @@ EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
   int sel_end = cursor_->selectionEnd();
 
   if (type == Event::EVENT_MOUSE_DOWN) {
-    if (event.GetModifier() & Event::MOD_SHIFT) {
+    if (event.GetModifier() & Event::MODIFIER_SHIFT) {
       // If current click position is inside the selection range, then just
       // cancel the selection.
       if (offset > sel_start && offset < sel_end)
@@ -502,7 +502,7 @@ EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
       cursor_->setPosition(offset);
     }
   } else if (type == Event::EVENT_MOUSE_DBLCLICK) {
-    if (event.GetModifier() & Event::MOD_SHIFT)
+    if (event.GetModifier() & Event::MODIFIER_SHIFT)
       cursor_->select(QTextCursor::LineUnderCursor);
     else
       cursor_->select(QTextCursor::WordUnderCursor);
@@ -544,8 +544,8 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
 
   QKeyEvent *key_event = static_cast<QKeyEvent*>(qevent);
   int mod = event.GetModifier();
-  bool shift = (mod & Event::MOD_SHIFT);
-  bool ctrl = (mod & Event::MOD_CONTROL);
+  bool shift = (mod & Event::MODIFIER_SHIFT);
+  bool ctrl = (mod & Event::MODIFIER_CONTROL);
   int keyval = key_event->key();
 
   if (type == Event::EVENT_KEY_DOWN) {

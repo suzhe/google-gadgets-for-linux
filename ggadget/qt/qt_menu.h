@@ -25,6 +25,9 @@
 #include <ggadget/menu_interface.h>
 
 namespace ggadget {
+
+class ImageInterface;
+
 namespace qt {
 
 /**
@@ -39,8 +42,12 @@ class QtMenu : public ggadget::MenuInterface {
   virtual void AddItem(const char *item_text, int style, int stock_icon,
                        ggadget::Slot1<void, const char *> *handler,
                        int priority);
+  virtual void AddItem(const char* item_text, int style,
+                       ImageInterface* image_icon,
+                       Slot1<void, const char*>* handler, int priority);
   virtual void SetItemStyle(const char *item_text, int style);
   virtual MenuInterface *AddPopup(const char *popup_text, int priority);
+  virtual void SetPositionHint(const Rectangle &rect);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(QtMenu);

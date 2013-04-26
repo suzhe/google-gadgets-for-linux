@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,17 +16,29 @@
 
 #ifndef GGADGET_COMMON_H__
 #define GGADGET_COMMON_H__
-
 #include <cassert>
 #include <cstdio>
-#include <stdint.h>
+#include <ggadget/build_config.h>
+#include <ggadget/format_macros.h>
 
-#ifdef _DEBUG
-#include <typeinfo>
+#if defined(OS_WIN)
+#include <ggadget/win32/port.h>     // Includes windows-dependent header files.
+#include <ggadget/win32/sysdeps.h>  // Includes ggadget constants for windows.
+#elif defined(OS_POSIX)
+#include <dirent.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <ggadget/sysdeps.h>
 #endif
 
-#include <ggadget/sysdeps.h>
-
+#ifdef _DEBUG
+#if defined(OS_WIN)
+#include <exception>  // typeinfo depends on this file.
+#endif
+#include <typeinfo>
+#endif
 /**
  * @defgroup SharedLibraries Shared libraries
  * Shared libraries that host applications and third party applications can
@@ -78,22 +90,31 @@ namespace ggadget {
 
 #else // __GNUC__
 
+#ifndef PRINTF_ATTRIBUTE  // avoid name conflict
 #define PRINTF_ATTRIBUTE(arg1, arg2)
+#endif
+
+#ifndef SCANF_ATTRIBUTE  // avoid name conflict
 #define SCANF_ATTRIBUTE(arg1, arg2)
+#endif
 
 #endif // else __GNUC__
 
 /** A macro to turn a symbol into a string. */
+#ifndef AS_STRING  // avoid name conflict
 #define AS_STRING(x)   AS_STRING_INTERNAL(x)
 #define AS_STRING_INTERNAL(x)   #x
+#endif
 
 /**
  * A macro to disallow the evil copy constructor and @c operator= methods.
  * This should be used in the @c private: declarations for a class.
  */
+#ifndef DISALLOW_EVIL_CONSTRUCTORS  // avoid name conflict
 #define DISALLOW_EVIL_CONSTRUCTORS(TypeName)    \
   TypeName(const TypeName&);                    \
   void operator=(const TypeName&)
+#endif
 
 /**
  * A macro to disallow all the implicit constructors, namely the
@@ -102,9 +123,11 @@ namespace ggadget {
  * that wants to prevent anyone from instantiating it. This is
  * especially useful for classes containing only static methods.
  */
+#ifndef DISALLOW_IMPLICIT_CONSTRUCTORS  // avoid name conflict
 #define DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
   TypeName();                                    \
   DISALLOW_EVIL_CONSTRUCTORS(TypeName)
+#endif
 
 #undef ASSERT
 #ifdef NDEBUG
@@ -131,10 +154,11 @@ namespace ggadget {
  * work for some compilers like gcc, because they support array types of
  * size determined at runtime (a C99 feature).
  */
+#ifndef COMPILE_ASSERT  // avoid name conflict
 template <bool> struct CompileAssertHelper { };
 #define COMPILE_ASSERT(expr, msg) \
   typedef ::ggadget::CompileAssertHelper<bool(expr)> msg[bool(expr) ? 1 : -1]
-
+#endif
 /**
  * Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
  * for upcasting in the type hierarchy.
@@ -209,7 +233,12 @@ struct IsDerived {
   static const bool value =
       sizeof(Check(static_cast<const Derived *>(NULL))) == sizeof(char);
 };
+/**
+ * Avoids warning on unused parameters of functions.
+ */
+#define GGL_UNUSED(x) (void)x;
 
+#ifndef arraysize  // avoid name conflict
 /**
  * This template function declaration is used in defining arraysize.
  * Note that the function doesn't need an implementation, as we only
@@ -219,11 +248,6 @@ template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 template <typename T, size_t N>
 char (&ArraySizeHelper(const T (&array)[N]))[N];
-
-/**
- * Avoids warning on unused parameters of functions.
- */
-#define GGL_UNUSED(x) (void)x;
 
 /**
  * The @c arraysize(arr) macro returns the # of elements in an array arr.
@@ -237,7 +261,7 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  * eventually be removed, but it hasn't happened yet.
  */
 #define arraysize(array) (sizeof(::ggadget::ArraySizeHelper(array)))
-
+#endif
 /**
  * Used to indicate an invalid index when size_t is used for the type of the
  * index.

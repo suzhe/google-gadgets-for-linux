@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/script_context_interface.h"
 #include "ggadget/scriptable_helper.h"
-#include "ggadget/gadget.h"
+#include "ggadget/gadget_interface.h"
 
 #define FUNC_NAME_INTERNAL2(a,b)  a##_LTX_##b
 #define FUNC_NAME_INTERNAL1(prefix,name)  FUNC_NAME_INTERNAL2(prefix,name)
@@ -67,7 +67,7 @@ extern "C" {
 #ifdef SCRIPT_EXTENSION
   bool FUNC_NAME(RegisterScriptExtension)(
       ggadget::ScriptContextInterface *context,
-      ggadget::Gadget *gadget) {
+      ggadget::GadgetInterface *gadget) {
     GGL_UNUSED(gadget);
     LOG("Register Script extension %s, context=%p",
         AS_STRING(MODULE_NAME), context);
@@ -77,7 +77,8 @@ extern "C" {
 
 #ifdef FRAMEWORK_EXTENSION
   bool FUNC_NAME(RegisterFrameworkExtension)(
-      ggadget::ScriptableInterface *framework, ggadget::Gadget *gadget) {
+      ggadget::ScriptableInterface *framework,
+      ggadget::GadgetInterface *gadget) {
     LOG("Register Framework extension %s, framework=%p gadget=%p",
         AS_STRING(MODULE_NAME), framework, gadget);
     return true;

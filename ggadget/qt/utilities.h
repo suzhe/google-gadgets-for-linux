@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
 
 namespace ggadget {
 
-class Gadget;
+class GadgetInterface;
 class MainLoopInterface;
+
 namespace qt {
 
 /**
@@ -44,13 +45,13 @@ int GetModifiers(Qt::KeyboardModifiers state);
 
 unsigned int GetKeyCode(int qt_key);
 
-QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget **widget);
+QWidget *NewGadgetDebugConsole(GadgetInterface *gadget, QWidget **widget);
 
-bool OpenURL(const Gadget *gadget, const char *url);
+bool OpenURL(const GadgetInterface *gadget, const char *url);
 
-QPixmap GetGadgetIcon(const Gadget *gadget);
+QPixmap GetGadgetIcon(const GadgetInterface *gadget);
 
-void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget);
+void SetGadgetWindowIcon(QWidget *widget, const GadgetInterface *gadget);
 
 /* Get the proper popup position to show a rectangle of @param size for an existing
  * rectangle with geometry @param rect

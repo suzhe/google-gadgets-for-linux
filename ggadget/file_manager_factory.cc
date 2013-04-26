@@ -14,10 +14,16 @@
   limitations under the License.
 */
 
+#include "build_config.h"
 #include "common.h"
 #include "logger.h"
 #include "file_manager_factory.h"
 #include "dir_file_manager.h"
+
+#if defined(OS_WIN)
+#include "win32/thread_local_singleton_holder.h"
+#endif // OS_WIN
+
 #include "zip_file_manager.h"
 
 namespace ggadget {
@@ -30,7 +36,9 @@ static FileManagerFactory g_factories_[] = {
   NULL
 };
 
+#if !defined(OS_WIN)
 static FileManagerInterface *g_global_file_manager = NULL;
+#endif // OS_WIN
 
 FileManagerInterface *
 CreateFileManager(const char *base_path) {
@@ -47,18 +55,35 @@ CreateFileManager(const char *base_path) {
 }
 
 bool SetGlobalFileManager(FileManagerInterface *manager) {
+#if defined(OS_WIN)
+  FileManagerInterface *old_manager =
+      win32::ThreadLocalSingletonHolder<FileManagerInterface>::GetValue();
+  if (old_manager && manager)
+    return false;
+  return win32::ThreadLocalSingletonHolder<FileManagerInterface>::SetValue(
+      manager);
+#else // OS_WIN
   ASSERT(!g_global_file_manager && manager);
   if (!g_global_file_manager && manager) {
     g_global_file_manager = manager;
     return true;
   }
   return false;
+#endif // OS_WIN
 }
 
 FileManagerInterface *GetGlobalFileManager() {
+#if defined(OS_WIN)
+  FileManagerInterface *file_manager =
+      win32::ThreadLocalSingletonHolder<FileManagerInterface>::GetValue();
+  EXPECT_M(file_manager,
+           ("The global FileManager has not been set yet."));
+  return file_manager;
+#else // OS_WIN
   EXPECT_M(g_global_file_manager,
            ("The global FileManager has not been set yet."));
   return g_global_file_manager;
+#endif // OS_WIN
 }
 
 } // namespace ggadget

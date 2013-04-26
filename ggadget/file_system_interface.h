@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,9 +17,15 @@
 #ifndef GGADGET_FILE_SYSTEM_INTERFACE_H__
 #define GGADGET_FILE_SYSTEM_INTERFACE_H__
 
-#include <stdint.h>
+#include <ggadget/common.h>
 #include <ggadget/variant.h>
 #include <ggadget/small_object.h>
+
+#if defined(OS_WIN)
+#ifdef GetFreeSpace
+#undef GetFreeSpace
+#endif
+#endif
 
 namespace ggadget {
 

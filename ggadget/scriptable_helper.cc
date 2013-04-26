@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual ScriptableInterface *GetPendingException(bool clear);
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
   virtual bool EnumerateElements(EnumerateElementsCallback *callback);
+  virtual bool RemoveProperty(const char *name);
 
   virtual RegisterableInterface *GetRegisterable() { return this; }
 
@@ -173,12 +174,13 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   struct ClassStat {
     ~ClassStat() {
       // Don't use LOG because the logger may be unavailable now.
-      printf("ScriptableHelper class stat: classes: %zu\n", map.size());
+      printf("ScriptableHelper class stat: classes: %" PRIuS "\n", map.size());
       int properties_reg_in_ctor = 0;
       int total_properties = 0;
       int properties_if_obj_reg = 0;
       for (ClassStatMap::iterator it = map.begin(); it != map.end(); ++it) {
-        printf("%jx: class properties: %d object properties: %d objects: %d\n",
+        printf("%" PRIx64 ": class properties: %d object properties:"
+               " %d objects: %d\n",
                it->first, it->second.class_property_count,
                it->second.obj_property_count, it->second.total_created);
         if (it->second.total_created == 0)
@@ -793,6 +795,21 @@ bool ScriptableHelperImpl::EnumerateElements(
     EnumerateElementsCallback *callback) {
   // This helper does nothing.
   delete callback;
+  return true;
+}
+
+bool ScriptableHelperImpl::RemoveProperty(const char *name) {
+  ASSERT(name);
+  ASSERT(!registering_class_);
+
+  EnsureRegistered();
+  ASSERT(class_property_info_);
+
+  PropertyInfoMap::iterator it = property_info_.find(name);
+  if (it == property_info_.end())
+    return false;
+  DestroyPropertyInfo(&it->second);
+  property_info_.erase(it);
   return true;
 }
 

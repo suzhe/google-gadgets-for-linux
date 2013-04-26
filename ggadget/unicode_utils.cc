@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -41,10 +41,12 @@
 #include <cstring>
 #include <cstdlib>
 #include "unicode_utils.h"
+#if defined(OS_POSIX)
 namespace std {
 template class std::basic_string<ggadget::UTF16Char>;
 template class std::basic_string<ggadget::UTF32Char>;
 }
+#endif
 
 namespace ggadget {
 typedef unsigned char UTF8Char;
@@ -843,7 +845,7 @@ bool ConvertUTF16ToLocaleString(const UTF16Char *input, size_t input_size,
   const wchar_t *wchar_input = NULL;
 #if GGL_SIZEOF_WCHAR_T == 2
   UTF16String utf16(input, input_size);
-  wchar_input = utf16.c_str();
+  wchar_input = reinterpret_cast<const wchar_t *>(utf16.c_str());
 #else
   UTF32String utf32;
   if (ConvertStringUTF16ToUTF32(input, input_size, &utf32) != input_size)

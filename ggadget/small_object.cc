@@ -23,6 +23,7 @@
 #include <vector>
 #include <bitset>
 
+#include "format_macros.h"
 #include "logger.h"
 
 #ifdef _DEBUG

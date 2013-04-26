@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class Gadget;
+class GadgetInterface;
 class MainLoopInterface;
 class OptionsInterface;
 class ScriptableInterface;
@@ -50,7 +50,7 @@ class HostInterface {
    *
    * @return a new Viewhost instance.
    */
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                          ViewHostInterface::Type type) = 0;
 
   /**
@@ -64,8 +64,10 @@ class HostInterface {
    *
    * @return the newly created gadget instance, or NULL if failed.
    */
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console) = 0;
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console) = 0;
 
   /**
    * Requests that the gadget be removed from the container (e.g. sidebar).
@@ -76,7 +78,7 @@ class HostInterface {
    * @param save_data if @c true, the gadget's state is saved before the gadget
    *     is removed.
    */
-  virtual void RemoveGadget(Gadget *gadget, bool save_data) = 0;
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data) = 0;
 
   /** Temporarily install a given font on the system. */
   virtual bool LoadFont(const char *filename) = 0;
@@ -84,7 +86,7 @@ class HostInterface {
   /**
    * Shows a debug console that will display all logs for the gadget.
    */
-  virtual void ShowGadgetDebugConsole(Gadget *gadget) = 0;
+  virtual void ShowGadgetDebugConsole(GadgetInterface *gadget) = 0;
 
   /**
    * Gets the default font size, which can be customized by the user.
@@ -101,7 +103,7 @@ class HostInterface {
    *        be opened.
    * @param url The url to be opened.
    */
-  virtual bool OpenURL(const Gadget *gadget, const char *url) = 0;
+  virtual bool OpenURL(const GadgetInterface *gadget, const char *url) = 0;
 };
 
 } // namespace ggadget

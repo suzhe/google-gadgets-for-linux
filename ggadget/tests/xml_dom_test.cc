@@ -23,7 +23,12 @@
 #include "ggadget/xml_parser_interface.h"
 #include "ggadget/xml_utils.h"
 #include "unittest/gtest.h"
+
+#if defined(OS_WIN)
+#include "ggadget/win32/xml_parser.h"
+#elif defined(OS_POSIX)
 #include "init_extensions.h"
+#endif
 
 using namespace ggadget;
 
@@ -1028,12 +1033,15 @@ TEST(XMLDOM, SelectNodes) {
 
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
-
+#if defined(OS_WIN)
+  ggadget::win32::XMLParser xml_parser;
+  ggadget::SetXMLParser(&xml_parser);
+#elif defined(OS_POSIX)
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
-
+#endif
   g_xml_parser = GetXMLParser();
   int result = RUN_ALL_TESTS();
   return result;

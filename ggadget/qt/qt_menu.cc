@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <ggadget/image_interface.h>
 #include <ggadget/light_map.h>
 #include <ggadget/logger.h>
 #include <ggadget/slot.h>
@@ -130,12 +131,25 @@ void QtMenu::AddItem(const char *item_text, int style, int stock_icon,
   impl_->AddItem(item_text, style, stock_icon, handler, priority);
 }
 
+void QtMenu::AddItem(const char* item_text, int style,
+                     ImageInterface* image_icon,
+                     Slot1<void, const char*>* handler, int priority) {
+  // TODO(jiangwei): Implement this method.
+  DestroyImage(image_icon);
+  AddItem(item_text, style, 0, handler, priority);
+}
+
 void QtMenu::SetItemStyle(const char *item_text, int style) {
   impl_->SetItemStyle(item_text, style);
 }
 
 ggadget::MenuInterface *QtMenu::AddPopup(const char *popup_text, int priority) {
   return impl_->AddPopup(popup_text, priority);
+}
+
+void QtMenu::SetPositionHint(const Rectangle &rect) {
+  GGL_UNUSED(rect);
+  LOGE("Not implemented.");
 }
 
 } // namespace qt

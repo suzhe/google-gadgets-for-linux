@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,15 +21,21 @@
 #include <ggadget/common.h>
 
 namespace ggadget {
+#if defined(OS_WIN)
+typedef wchar_t UTF16Char;  // wchar_t is a native type on windows.
+#elif defined(OS_POSIX)
 typedef uint16_t UTF16Char;
+#endif
 typedef uint32_t UTF32Char;
 }
 
+#if defined(OS_POSIX)
 namespace std {
 /* To meet the ODR(One Definition Rule) requirement */
 extern template class std::basic_string<ggadget::UTF16Char>;
 extern template class std::basic_string<ggadget::UTF32Char>;
 }
+#endif
 
 namespace ggadget {
 

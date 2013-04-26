@@ -103,7 +103,7 @@ TEST(Backoff, TimeoutIntervalWithinRange) {
       EXPECT_TRUE_M(IsValidTimeout(backoff.GetNextAllowedTime(kSite1) - now,
                                    error_count, &exp),
                     StringPrintf("IsValidTimeout: error_count %d exp %d "
-                                 "actual interval %ju", error_count, exp,
+                                 "actual interval %" PRIu64, error_count, exp,
                                  backoff.GetNextAllowedTime(kSite1) - now));
       now += 1000000;
     }
@@ -170,7 +170,8 @@ TEST(Backoff, GetSetData) {
   FailMultipleTimes(now, &backoff, kSite1, Backoff::EXPONENTIAL_BACKOFF);
   FailMultipleTimes(now, &backoff, kSite2, Backoff::CONSTANT_BACKOFF);
 
-  std::string expected_data(StringPrintf("%s\t%ju\t%d\n%s\t%ju\t%d\n",
+  std::string expected_data(StringPrintf("%s\t%" PRIu64 "\t%d\n%s\t%" PRIu64
+                                         "\t%d\n",
                                          kSite2, now, -4, kSite1, now, 4));
   EXPECT_EQ(expected_data, backoff.GetData(now));
   EXPECT_TRUE(backoff.GetData(

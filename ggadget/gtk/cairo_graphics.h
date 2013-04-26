@@ -61,6 +61,8 @@ class CairoGraphics : public GraphicsInterface {
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
+  virtual TextRendererInterface *NewTextRenderer() const;
+
   virtual void SetZoom(double zoom);
   virtual double GetZoom() const;
 

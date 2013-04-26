@@ -16,6 +16,7 @@
 
 #include "js_script_context.h"
 
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/unicode_utils.h>
@@ -428,13 +429,13 @@ static JSObject *GetClassPrototype(JSContext *cx, const char *class_name) {
 
 static void ForceGC(JSContext *cx) {
   JSRuntime *rt = JS_GetRuntime(cx);
-  DLOG("Force GC: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
-       "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
-       rt->gcMaxMallocBytes);
+  DLOG("Force GC: gcBytes=%"PRIuS" gcLastBytes=%"PRIuS" gcMaxBytes=%"PRIuS
+       " gcMaxMallocBytes=%"PRIuS,
+       rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes, rt->gcMaxMallocBytes);
   JS_GC(cx);
-  DLOG("Force GC Finished: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
-       "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
-       rt->gcMaxMallocBytes);
+  DLOG("Force GC Finished: gcBytes=%"PRIuS" gcLastBytes=%"PRIuS
+       " gcMaxBytes=%"PRIuS" gcMaxMallocBytes=%"PRIuS,
+       rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes, rt->gcMaxMallocBytes);
 }
 
 static JSBool DoGC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,

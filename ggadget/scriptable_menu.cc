@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,12 +14,16 @@
   limitations under the License.
 */
 
-#include <vector>
-#include "gadget.h"
-#include "menu_interface.h"
 #include "scriptable_menu.h"
+
+#include <vector>
+#include "basic_element.h"
+#include "gadget_interface.h"
+#include "math_utils.h"
+#include "menu_interface.h"
 #include "slot.h"
 #include "small_object.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -27,7 +31,7 @@ class ScriptableMenu::Impl : public SmallObject<> {
  public:
   class MenuItemSlot : public Slot1<void, const char *> {
    public:
-    MenuItemSlot(ScriptableMenu *owner, Gadget *gadget, Slot *handler)
+    MenuItemSlot(ScriptableMenu *owner, GadgetInterface *gadget, Slot *handler)
         : owner_(owner), gadget_(gadget), handler_(handler) {
       // Let the slot hold a reference to its owner to prevent the owner
       // from being deleted before end-of-life of this slot.
@@ -57,11 +61,11 @@ class ScriptableMenu::Impl : public SmallObject<> {
 
    private:
     ScriptableMenu *owner_;
-    Gadget *gadget_;
+    GadgetInterface *gadget_;
     Slot *handler_;
   };
 
-  Impl(ScriptableMenu *owner, Gadget *gadget, MenuInterface *menu)
+  Impl(ScriptableMenu *owner, GadgetInterface *gadget, MenuInterface *menu)
       : owner_(owner), gadget_(gadget), menu_(menu) {
     ASSERT(menu);
   }
@@ -94,12 +98,12 @@ class ScriptableMenu::Impl : public SmallObject<> {
   }
 
   ScriptableMenu *owner_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
   MenuInterface *menu_;
   std::vector<ScriptableMenu *> submenus_;
 };
 
-ScriptableMenu::ScriptableMenu(Gadget *gadget, MenuInterface *menu)
+ScriptableMenu::ScriptableMenu(GadgetInterface *gadget, MenuInterface *menu)
   : impl_(new Impl(this, gadget, menu)) {
 }
 
@@ -110,11 +114,30 @@ void ScriptableMenu::DoClassRegister() {
                  NewSlot(&Impl::SetItemStyle, &ScriptableMenu::impl_));
   RegisterMethod("AddPopup",
                  NewSlot(&Impl::AddPopup, &ScriptableMenu::impl_));
+  RegisterMethod("setPositionHint",
+                 NewSlot(&ScriptableMenu::SetPositionHint));
 }
 
 ScriptableMenu::~ScriptableMenu() {
   delete impl_;
   impl_ = NULL;
+}
+
+MenuInterface *ScriptableMenu::GetMenu() const {
+  return impl_->menu_;
+}
+
+void ScriptableMenu::SetPositionHint(const BasicElement *element) {
+  if (element && element->GetView()->GetGadget() == impl_->gadget_ &&
+      element->IsReallyVisible()) {
+    Rectangle r = element->GetExtentsInView();
+    const View *view = element->GetView();
+    double left, top, right, bottom;
+    view->ViewCoordToNativeWidgetCoord(r.x, r.y, &left, &top);
+    view->ViewCoordToNativeWidgetCoord(r.x + r.w, r.y + r.h, &right, &bottom);
+    impl_->menu_->SetPositionHint(
+        Rectangle(left, top, right - left, bottom - top));
+  }
 }
 
 } // namespace ggadget

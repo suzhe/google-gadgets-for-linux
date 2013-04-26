@@ -21,7 +21,12 @@
 #include <string>
 #include <ostream>
 #include <ggadget/common.h>
+#include <ggadget/small_object.h>
 #include <ggadget/unicode_utils.h>
+
+#ifdef TYPE_BOOL
+#undef TYPE_BOOL
+#endif
 
 namespace ggadget {
 
@@ -62,6 +67,93 @@ struct Date {
 };
 
 class ResultVariant;
+
+#if GGADGET_STD_STRING_SHARED
+
+class VariantString {
+ public:
+  explicit VariantString(const char *buf) : rep_(kNullString) {
+    if (buf) rep_ = buf;
+  }
+  explicit VariantString(const std::string &str) : rep_(str) { }
+  VariantString(const VariantString &src) : rep_(src.rep_) { }
+  const char *c_str() const {
+    return rep_.c_str() == kNullString.c_str() ? NULL : rep_.c_str();
+  }
+  std::string string() const {
+    return rep_.c_str() == kNullString.c_str() ? std::string() : rep_;
+  }
+ private:
+  // Constants to indicate if a string value is a null pointer.
+  // This depends on the value sharing behavior of the basic_string template
+  // in the standard C++ library.
+  static const std::string kNullString;
+  std::string rep_;
+};
+
+class VariantUTF16String {
+ public:
+  explicit VariantUTF16String(const UTF16Char *buf) : rep_(kNullString) {
+    if (buf) rep_ = buf;
+  }
+  explicit VariantUTF16String(const UTF16String &str) : rep_(str) { }
+  VariantUTF16String(const VariantUTF16String &src) : rep_(src.rep_) { }
+  const UTF16Char *c_str() const {
+    return rep_.c_str() == kNullString.c_str() ? NULL : rep_.c_str();
+  }
+  UTF16String string() const {
+    return rep_.c_str() == kNullString.c_str() ? UTF16String() : rep_;
+  }
+ private:
+  static const UTF16String kNullString;
+  UTF16String rep_;
+};
+
+#else // CSCONNECT_STD_STRING_SHARED
+
+/**
+ * MSVC's std::string is too big for Variant, and it introduces too much string
+ * copies. BasicVariantString uses reference counting to share string buffers.
+ */
+template <typename T> class BasicVariantString {
+ public:
+  typedef std::basic_string<T> StringT;
+  explicit BasicVariantString(const T *buf)
+      : rep_(buf ? new _Rep(buf) : NULL) {
+  }
+  explicit BasicVariantString(const StringT &str)
+      : rep_(new _Rep(str)) {
+  }
+  BasicVariantString(const BasicVariantString &src)
+      : rep_(src.rep_) {
+    if (rep_) rep_->ref_++;
+  }
+  ~BasicVariantString() {
+    if (rep_ && --rep_->ref_ == 0)
+      delete rep_;
+  }
+  const T *c_str() const { return rep_ ? rep_->str_.c_str() : NULL; }
+  StringT string() const { return rep_ ? rep_->str_ : StringT(); }
+
+ private:
+  class _Rep : public SmallObject<> {
+   public:
+    _Rep(const T *buf) : ref_(1), str_(buf) { }
+    _Rep(const StringT &str) : ref_(1), str_(str) { }
+    ~_Rep() { ASSERT(ref_ == 0); }
+    int ref_;
+    StringT str_;
+  };
+  _Rep *rep_;
+};
+
+typedef BasicVariantString<char> VariantString;
+typedef BasicVariantString<UTF16Char> VariantUTF16String;
+
+#endif // else GGADGET_STD_STRING_SHARED
+
+COMPILE_ASSERT(sizeof(VariantString) <= 8,
+               Should_define_GGADGET_STD_STRING_SHARED_1);
 
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
@@ -154,7 +246,7 @@ class Variant {
     v_.int64_value_ = static_cast<int64_t>(value);
   }
 
-#if GGL_SIZEOF_LONG_INT != 8
+#if GGL_SIZEOF_LONG_INT != 8 || defined(__APPLE__)
   /**
    * Construct a @c Variant with a @c long value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
@@ -202,7 +294,7 @@ class Variant {
    */
   explicit Variant(const std::string &value)
       : type_(TYPE_STRING) {
-    new (&v_.string_place_) std::string(value);
+    new (&v_.string_place_) VariantString(value);
   }
 
   /**
@@ -211,10 +303,7 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_STRING.
    */
   explicit Variant(const char *value) : type_(TYPE_STRING) {
-    if (value)
-      new (&v_.string_place_) std::string(value);
-    else
-      new (&v_.string_place_) std::string(kNullString);
+    new (&v_.string_place_) VariantString(value);
   }
 
   /**
@@ -223,7 +312,7 @@ class Variant {
    */
   explicit Variant(const JSONString &value)
       : type_(TYPE_JSON) {
-    new (&v_.string_place_) std::string(value.value);
+    new (&v_.string_place_) VariantString(value.value);
   }
 
   /**
@@ -232,7 +321,7 @@ class Variant {
    */
   explicit Variant(const UTF16String &value)
       : type_(TYPE_UTF16STRING) {
-    new (&v_.utf16_string_place_) UTF16String(value);
+    new (&v_.utf16_string_place_) VariantUTF16String(value);
   }
 
   /**
@@ -241,10 +330,7 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_UTF16STRING.
    */
   explicit Variant(const UTF16Char *value) : type_(TYPE_UTF16STRING) {
-    if (value)
-      new (&v_.utf16_string_place_) UTF16String(value);
-    else
-      new (&v_.utf16_string_place_) UTF16String(kNullUTF16String);
+    new (&v_.utf16_string_place_) VariantUTF16String(value);
   }
 
   /**
@@ -337,12 +423,6 @@ class Variant {
 
   bool CheckScriptableType(uint64_t class_id) const;
 
-  // Constants to indicate if a string value is a null pointer.
-  // This depends on the value sharing behavior of the basic_string template
-  // in the standard C++ library.
-  static const std::string kNullString;
-  static const UTF16String kNullUTF16String;
-
   // Value of the Variant.
   union {
     bool bool_value_;
@@ -350,11 +430,10 @@ class Variant {
     double double_value_;
     // For TYPE_STRING and TYPE_JSON. The std::string object is created
     // in-place in string_place_.
-    // Normally sizeof(std::string) equals to sizeof a pointer, thus it won't
+    // Normally sizeof(VariantString) equals to sizeof a pointer, thus it won't
     // make Variant bigger.
-    char string_place_[sizeof(std::string)];
-    // The s_ pointer is created in-place in place_.
-    char utf16_string_place_[sizeof(UTF16String)];
+    char string_place_[sizeof(VariantString)];
+    char utf16_string_place_[sizeof(VariantUTF16String)];
     ScriptableInterface *scriptable_value_;
     Slot *slot_value_;
     void *any_value_;
@@ -544,9 +623,8 @@ struct VariantValue<const char *> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return NULL;
-    const std::string *s =
-        reinterpret_cast<const std::string *>(&v.v_.string_place_);
-    return s->c_str() == Variant::kNullString.c_str() ? NULL : s->c_str();
+    return reinterpret_cast<const VariantString *>(&v.v_.string_place_)
+        ->c_str();
   }
 };
 
@@ -562,9 +640,8 @@ struct VariantValue<std::string> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return "";
-    const std::string *s =
-        reinterpret_cast<const std::string *>(&v.v_.string_place_);
-    return s->c_str() == Variant::kNullString.c_str() ? std::string() : *s;
+    return reinterpret_cast<const VariantString *>(&v.v_.string_place_)
+        ->string();
   }
 };
 
@@ -595,9 +672,8 @@ struct VariantValue<const UTF16Char *> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return NULL;
-    const UTF16String *s =
-        reinterpret_cast<const UTF16String *>(&v.v_.utf16_string_place_);
-    return s->c_str() == Variant::kNullUTF16String.c_str() ? NULL : s->c_str();
+    return reinterpret_cast<const VariantUTF16String *>(
+        &v.v_.utf16_string_place_)->c_str();
   }
 };
 
@@ -613,10 +689,8 @@ struct VariantValue<UTF16String> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return UTF16String();
-    const UTF16String *s =
-        reinterpret_cast<const UTF16String *>(&v.v_.utf16_string_place_);
-    return s->c_str() == Variant::kNullUTF16String.c_str() ?
-           UTF16String() : *s;
+    return reinterpret_cast<const VariantUTF16String *>(
+        &v.v_.utf16_string_place_)->string();
   }
 };
 
@@ -645,10 +719,8 @@ struct VariantValue<JSONString> {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
       return JSONString("");
-    const std::string *s =
-        reinterpret_cast<const std::string *>(&v.v_.string_place_);
-    return JSONString(s->c_str() == Variant::kNullString.c_str() ?
-                      std::string() : *s);
+    return JSONString(reinterpret_cast<const VariantString *>(
+        &v.v_.string_place_)->string());
   }
 };
 

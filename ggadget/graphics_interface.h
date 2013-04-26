@@ -19,8 +19,9 @@
 
 #include <string>
 #include <ggadget/canvas_interface.h>
-#include <ggadget/image_interface.h>
 #include <ggadget/font_interface.h>
+#include <ggadget/image_interface.h>
+#include <ggadget/text_renderer_interface.h>
 
 namespace ggadget {
 
@@ -74,6 +75,12 @@ class GraphicsInterface {
                                  double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
+
+  /**
+   * Creates a new Text Renderer. This renderer is used for rendering formatted
+   * text.
+   */
+  virtual TextRendererInterface *NewTextRenderer() const = 0;
 
   /** Gets and sets the current zoom level. */
   virtual void SetZoom(double zoom) = 0;

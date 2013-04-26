@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -39,16 +39,16 @@
 #endif
 
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
-#include <ggadget/gadget.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_interface.h>
+#include <ggadget/logger.h>
 #include <ggadget/messages.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/permissions.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/file_manager_interface.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/options_interface.h>
 #include <ggadget/view.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/xdg/desktop_entry.h>
@@ -504,7 +504,7 @@ bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot) {
   return false;
 }
 
-void SetGadgetWindowIcon(GtkWindow *window, const Gadget *gadget) {
+void SetGadgetWindowIcon(GtkWindow *window, const GadgetInterface *gadget) {
   if (!gtk_window_get_icon(window)) {
     std::string data;
     if (gadget) {
@@ -632,7 +632,7 @@ static void OnLockScrollToggled(GtkToggleButton *toggle, gpointer user_data) {
   *static_cast<bool *>(user_data) = gtk_toggle_button_get_active(toggle);
 }
 
-GtkWidget *NewGadgetDebugConsole(Gadget *gadget) {
+GtkWidget *NewGadgetDebugConsole(GadgetInterface *gadget) {
   GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   // Gadget main view may be unavailable if this function is called very early.
   if (gadget->GetMainView()) {
@@ -749,7 +749,7 @@ static void StartupNotifyErrorTrapPop(SnDisplay *display, Display *xdisplay) {
 }
 #endif
 
-bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
+bool LaunchDesktopFile(const GadgetInterface *gadget, const char *desktop_file) {
   ASSERT(desktop_file);
 
   ggadget::xdg::DesktopEntry desktop_entry(desktop_file);
@@ -782,8 +782,8 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
     error = NULL;
   }
 
-  GtkWidget *widget = static_cast<GtkWidget *>(
-      gadget ? gadget->GetMainView()->GetNativeWidget() : NULL);
+  GtkWidget *widget =
+      static_cast<GtkWidget *>(gadget->GetMainView()->GetNativeWidget());
   GdkScreen *screen = widget ? gtk_widget_get_screen(widget) : NULL;
 
   if (!screen)
@@ -871,15 +871,16 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file) {
   return result;
 }
 
-bool OpenURL(const Gadget *gadget, const char *url) {
+bool OpenURL(const GadgetInterface *gadget, const char *url) {
   ASSERT(url && *url);
 
   Permissions default_permissions;
   default_permissions.SetRequired(Permissions::NETWORK, true);
   default_permissions.GrantAllRequired();
 
-  const Permissions *permissions =
-      gadget ? gadget->GetPermissions() : &default_permissions;
+  const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+  if (!permissions)
+    permissions = &default_permissions;
 
   std::string path;
   if (IsAbsolutePath(url)) {

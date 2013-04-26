@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -357,10 +357,10 @@ static ggadget::HostInterface *GetManagedHost() {
   return g_managed_host;
 }
 
-static ggadget::Gadget *LoadManagedGadget(const char *path,
-                                          const char *options_name,
-                                          int instance_id,
-                                          bool show_debug_console) {
+static ggadget::GadgetInterface *LoadManagedGadget(const char *path,
+                                                   const char *options_name,
+                                                   int instance_id,
+                                                   bool show_debug_console) {
   return GetManagedHost()->LoadGadget(path, options_name, instance_id,
                                       show_debug_console);
 }

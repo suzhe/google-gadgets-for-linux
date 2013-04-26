@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -46,16 +46,12 @@
 #include "system_utils.h"
 #include "view_host_interface.h"
 #include "view.h"
+#include "xml_dom.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
-#include "messages.h"
 
 namespace ggadget {
-
-// Maximum allowed idle time (in milliseconds) after user interaction.
-// IsInUserInteraction() returns true within this idle time.
-static const uint64_t kMaxAllowedUserInteractionIdleTime = 10000;
 
 class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
@@ -96,8 +92,30 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       view_ = new View(view_host, gadget, element_factory, context_);
       if (details_)
         details_->Ref();
-      if (context_)
+      if (context_) {
         scriptable_ = new ScriptableView(view_, prototype, context_);
+
+        context_->RegisterClass(
+            "DOMDocument", NewSlot(this, &ViewBundle::CreateDOMDocument));
+        context_->RegisterClass(
+            "XMLHttpRequest",
+            NewSlot(view_->GetGadget(),
+                    &GadgetInterface::CreateXMLHttpRequest));
+        context_->RegisterClass(
+            "DetailsView", NewSlot(DetailsViewData::CreateInstance));
+        context_->RegisterClass(
+            "ContentItem", NewSlot(ContentItem::CreateInstance, view_));
+
+        // Execute common.js to initialize global constants and compatibility
+        // adapters.
+        std::string common_js_contents;
+        if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
+          std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
+          context_->Execute(common_js_contents.c_str(), path.c_str(), 1);
+        } else {
+          LOG("Failed to load %s.", kCommonJS);
+        }
+      }
     }
 
     ~ViewBundle() {
@@ -127,6 +145,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                             false) == ViewHostInterface::CONFIRM_NO;
     }
 
+    // Create a customized DOMDocument object with optional "load()" method,
+    // for microsoft compatibility.
+    DOMDocumentInterface *CreateDOMDocument() {
+      const Permissions *perm = view_->GetGadget()->GetPermissions();
+      return ::ggadget::CreateDOMDocument(
+          GetXMLParser(),
+          (perm && perm->IsRequiredAndGranted(Permissions::NETWORK)),
+          (perm && perm->IsRequiredAndGranted(Permissions::FILE_READ)));
+    }
+
    private:
     ScriptContextInterface *context_;
     View *view_;
@@ -135,14 +163,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   };
 
   Impl(Gadget *owner,
-       HostInterface *host,
        const char *base_path,
        const char *options_name,
-       int instance_id,
        const Permissions &global_permissions,
        DebugConsoleConfig debug_console_config)
       : owner_(owner),
-        host_(host),
         element_factory_(new ElementFactory()),
         extension_manager_(ExtensionManager::CreateExtensionManager()),
         file_manager_(new FileManagerWrapper()),
@@ -152,9 +177,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         details_view_(NULL),
         permissions_(global_permissions),
         base_path_(base_path),
-        last_user_interaction_time_(0),
-        instance_id_(instance_id),
-        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         remove_me_timer_(0),
         destroy_details_view_timer_(0),
         display_target_(TARGET_FLOATING_VIEW),
@@ -162,10 +184,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         debug_console_config_(debug_console_config),
         initialized_(false),
         has_options_xml_(false),
-        in_user_interaction_(false),
         safe_to_remove_(true) {
     // Checks if necessary objects are created successfully.
-    ASSERT(host_);
     ASSERT(element_factory_);
     ASSERT(extension_manager_);
     ASSERT(file_manager_);
@@ -195,43 +215,40 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
     delete element_factory_;
     element_factory_ = NULL;
-    GetXMLHttpRequestFactory()->DestroySession(xml_http_request_session_);
-    xml_http_request_session_ = 0;
   }
 
-  static bool ExtractFileFromFileManager(FileManagerInterface *fm,
-                                         const char *file,
-                                         std::string *path) {
-    path->clear();
-    return fm->ExtractFile(file, path);
+  HostInterface *GetHost() const {
+    return owner_->GetHost();
   }
 
   // Do real initialize.
   bool Initialize() {
-    if (!host_ || !element_factory_ || !file_manager_ || !options_ ||
-        !scriptable_options_)
+    if (!element_factory_ || !file_manager_ || !options_ ||
+        !scriptable_options_) {
       return false;
+    }
 
     // Create gadget FileManager
-    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str(),
-                                                       NULL);
+    FileManagerInterface *fm = GadgetBase::CreateFileManager(
+        kGadgetGManifest, base_path_.c_str(), NULL);
     if (fm == NULL)
       return false;
     file_manager_->RegisterFileManager("", fm);
 
     // Create system FileManager
-    fm = CreateFileManager(kDirSeparatorStr);
+    fm = ::ggadget::CreateFileManager(kDirSeparatorStr);
     if (fm) file_manager_->RegisterFileManager(kDirSeparatorStr, fm);
 
     std::string error_msg;
     // Load strings and manifest.
-    if (!ReadStringsAndManifest(file_manager_, &strings_map_,
-                                &manifest_info_map_)) {
+    if (!GadgetBase::ReadStringsAndManifest(
+        file_manager_, kGadgetGManifest, kGadgetTag,
+        &strings_map_, &manifest_info_map_)) {
       error_msg = StringPrintf(GM_("GADGET_LOAD_FAILURE"), base_path_.c_str());
     }
     // Create main view early to allow Alert() during initialization.
     main_view_ = new ViewBundle(
-        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
+        GetHost()->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
         owner_, element_factory_, &global_, NULL, true);
     ASSERT(main_view_);
 
@@ -278,7 +295,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     DLOG("Gadget permissions: %s", permissions_.ToString().c_str());
 
     if (debug_console_config_ == DEBUG_CONSOLE_INITIAL)
-      host_->ShowGadgetDebugConsole(owner_);
+      GetHost()->ShowGadgetDebugConsole(owner_);
 
     // Register strings names as global variables at first, so they have the
     // lowest priority.
@@ -295,8 +312,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         const char *font_name = i->second.c_str();
         std::string path;
         // ignore return, error not fatal
-        if (ExtractFileFromFileManager(file_manager_, font_name, &path))
-          host_->LoadFont(path.c_str());
+        if (GadgetBase::ExtractFileFromFileManager(
+            file_manager_, font_name, &path)) {
+          GetHost()->LoadFont(path.c_str());
+        }
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
 #ifdef GGL_DISABLE_SHARED
@@ -308,8 +327,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           // Only trusted gadget can load local extensions.
           const char *module_name = i->second.c_str();
           std::string path;
-          if (ExtractFileFromFileManager(file_manager_, module_name, &path))
+          if (GadgetBase::ExtractFileFromFileManager(
+              file_manager_, module_name, &path)) {
             extension_manager_->LoadExtension(path.c_str(), false);
+          }
         } else {
           LOG("Local extension module is forbidden for untrusted gadgets.");
         }
@@ -503,20 +524,22 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     global_.SetInheritsFrom(&framework_);
 
     // OpenURL will check permissions by itself.
-    framework_.RegisterMethod("openUrl", NewSlot(owner_, &Gadget::OpenURL));
+    framework_.RegisterMethod("openUrl",
+                              NewSlot(static_cast<GadgetInterface*>(owner_),
+                                      &GadgetInterface::OpenURL));
   }
 
   class RemoveMeWatchCallback : public WatchCallbackInterface {
    public:
-    RemoveMeWatchCallback(HostInterface *host, Gadget *owner, bool save_data)
-      : host_(host), owner_(owner), save_data_(save_data) {
+    RemoveMeWatchCallback(Gadget *owner, bool save_data)
+      : owner_(owner), save_data_(save_data) {
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       GGL_UNUSED(main_loop);
       GGL_UNUSED(watch_id);
       owner_->impl_->remove_me_timer_ = 0;
       if (owner_->impl_->IsSafeToRemove())
-        host_->RemoveGadget(owner_, save_data_);
+        owner_->GetHost()->RemoveGadget(owner_, save_data_);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
@@ -525,7 +548,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       delete this;
     }
    private:
-    HostInterface *host_;
     Gadget *owner_;
     bool save_data_;
   };
@@ -536,7 +558,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         options_->DeleteStorage();
       }
       remove_me_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
-          0, new RemoveMeWatchCallback(host_, owner_, save_data));
+          0, new RemoveMeWatchCallback(owner_, save_data));
     }
   }
 
@@ -547,11 +569,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void DebugConsoleMenuCallback(const char *) {
-    host_->ShowGadgetDebugConsole(owner_);
+    GetHost()->ShowGadgetDebugConsole(owner_);
   }
 
   void FeedbackMenuCallback(const char *, const std::string &url) {
-    host_->OpenURL(NULL, url.c_str());
+    GetHost()->OpenURL(NULL, url.c_str());
   }
 
   void OnAddCustomMenuItems(MenuInterface *menu) {
@@ -670,26 +692,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     manifest_info_map_[kManifestAboutText] = about_text;
   }
 
-  std::string OnContextLog(LogLevel level, const char *filename, int line,
+  std::string OnContextLog(LogLevel level,
+                           const char *filename,
+                           int line,
                            const std::string &message,
                            ScriptContextInterface *context) {
-    GGL_UNUSED(filename);
-    GGL_UNUSED(line);
-    std::string real_message;
-    std::string script_filename;
-    int script_line = 0;
-    if (context)
-      context->GetCurrentFileAndLine(&script_filename, &script_line);
-    if (script_filename.empty() ||
-        strncmp(script_filename.c_str(), message.c_str(),
-                script_filename.size()) == 0) {
-      real_message = message;
-    } else {
-      StringAppendPrintf(&real_message, "%s:%d: %s",
-                         script_filename.c_str(), script_line, message.c_str());
-    }
-    log_signal_(level, real_message);
-    return real_message;
+    return owner_->OnContextLog(level, filename, line, message, context);
   }
 
   void ScriptLog(const char *message, LogLevel level) {
@@ -721,7 +729,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   std::string GetManifestInfo(const char *key) {
-    GadgetStringMap::const_iterator it = manifest_info_map_.find(key);
+    StringMap::const_iterator it = manifest_info_map_.find(key);
     if (it == manifest_info_map_.end())
       return std::string();
     return it->second;
@@ -748,7 +756,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     safe_to_remove_ = false;
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
       ViewBundle options_view(
-          host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
+          GetHost()->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, NULL, NULL, false);
       View *view = options_view.view();
       DisplayWindow *window = new DisplayWindow(view);
@@ -782,7 +790,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (file_manager_->ReadFile(xml_file, &xml) ||
         GetGlobalFileManager()->ReadFile(xml_file, &xml)) {
       ViewBundle options_view(
-          host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
+          GetHost()->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, &global_, NULL, true);
       View *view = options_view.view();
       RegisterScriptExtensions(options_view.context());
@@ -850,7 +858,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     CloseDetailsView();
     details_view_ = new ViewBundle(
-        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_DETAILS),
+        GetHost()->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_DETAILS),
         owner_, element_factory_, &global_, details_view_data, true);
 
     // details_view_data is now referenced by details_view_, so it's safe to
@@ -948,79 +956,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   }
 
-  bool SetInUserInteraction(bool in_user_interaction) {
-    bool old_value = in_user_interaction_;
-    in_user_interaction_ = in_user_interaction;
-    // Record time when ending user interaction.
-    if (old_value && !in_user_interaction_) {
-      last_user_interaction_time_ = GetGlobalMainLoop()->GetCurrentTime();
-    }
-    return old_value;
-  }
-
-  bool IsInUserInteraction() {
-    uint64_t now = GetGlobalMainLoop()->GetCurrentTime();
-    return in_user_interaction_ || (now - last_user_interaction_time_) <=
-        kMaxAllowedUserInteractionIdleTime;
-  }
-
   static void RegisterStrings(const StringMap *strings,
                               ScriptableHelperNativeOwnedDefault *scriptable) {
     for (StringMap::const_iterator it = strings->begin();
          it != strings->end(); ++it) {
       scriptable->RegisterConstant(it->first.c_str(), it->second);
     }
-  }
-
-  static bool ReadStringsAndManifest(FileManagerInterface *file_manager,
-                                     StringMap *strings_map,
-                                     StringMap *manifest_info_map) {
-    // Load string table.
-    std::string strings_data;
-    if (file_manager->ReadFile(kStringsXML, &strings_data)) {
-      std::string full_path = file_manager->GetFullPath(kStringsXML);
-      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data, NULL,
-                                                full_path.c_str(),
-                                                kStringsTag,
-                                                NULL, kEncodingFallback,
-                                                strings_map)) {
-        return false;
-      }
-    }
-
-    std::string manifest_contents;
-    if (!file_manager->ReadFile(kGadgetGManifest, &manifest_contents))
-      return false;
-
-    std::string manifest_path = file_manager->GetFullPath(kGadgetGManifest);
-    if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                              strings_map,
-                                              manifest_path.c_str(),
-                                              kGadgetTag,
-                                              NULL, kEncodingFallback,
-                                              manifest_info_map)) {
-      return false;
-    }
-
-    for (StringMap::iterator it = strings_map->begin();
-         it != strings_map->end(); ++it) {
-      // Trimming is required for compatibility.
-      it->second = TrimString(it->second);
-    }
-    return true;
-  }
-
-  static FileManagerInterface *CreateGadgetFileManager(const char *base_path,
-                                                       const char *locale) {
-    std::string path, filename;
-    SplitFilePath(base_path, &path, &filename);
-
-    // Uses the parent path of base_path if it refers to a manifest file.
-    if (filename != kGadgetGManifest)
-      path = base_path;
-
-    FileManagerInterface *fm = CreateFileManager(path.c_str());
-    return fm ? new LocalizedFileManager(fm, locale) : NULL;
   }
 
   NativeOwnedScriptable<UINT64_C(0x4edfd94b70f04da6)> global_;
@@ -1036,7 +977,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Signal1<void, int> ondisplaystatechange_signal_;
   Signal1<void, int> ondisplaytargetchange_signal_;
   Signal1<void, int> onpluginflagschanged_signal_;
-  Signal2<void, LogLevel, const std::string &> log_signal_;
 
   Signal0<std::string> ongetfeedbackurl_signal_;
 
@@ -1044,7 +984,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   StringMap strings_map_;
 
   Gadget *owner_;
-  HostInterface *host_;
   ElementFactory *element_factory_;
   ExtensionManager *extension_manager_;
   FileManagerWrapper *file_manager_;
@@ -1058,9 +997,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   std::string base_path_;
 
-  uint64_t last_user_interaction_time_;
-  int instance_id_;
-  int xml_http_request_session_;
   int remove_me_timer_;
   int destroy_details_view_timer_;
 
@@ -1069,7 +1005,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   DebugConsoleConfig debug_console_config_ : 2;
   bool initialized_                        : 1;
   bool has_options_xml_                    : 1;
-  bool in_user_interaction_                : 1;
   bool safe_to_remove_                     : 1;
 };
 
@@ -1079,14 +1014,9 @@ Gadget::Gadget(HostInterface *host,
                int instance_id,
                const Permissions &initial_permissions,
                DebugConsoleConfig debug_console_config)
-    : impl_(new Impl(this, host, base_path, options_name, instance_id,
+    : GadgetBase(host, instance_id),
+      impl_(new Impl(this, base_path, options_name,
                      initial_permissions, debug_console_config)) {
-  // Let the gadget become a log context, so that all logs related to this
-  // gadget can be outputted to correct debug console.
-  ConnectContextLogListener(
-      this, NewSlot(impl_, &Impl::OnContextLog,
-                    static_cast<ScriptContextInterface *>(NULL)));
-
   // Initialize the gadget.
   ScopedLogContext log_context(this);
   impl_->initialized_ = impl_->Initialize();
@@ -1095,11 +1025,6 @@ Gadget::Gadget(HostInterface *host,
 Gadget::~Gadget() {
   delete impl_;
   impl_ = NULL;
-  RemoveLogContext(this);
-}
-
-HostInterface *Gadget::GetHost() const {
-  return impl_->host_;
 }
 
 void Gadget::RemoveMe(bool save_data) {
@@ -1112,10 +1037,6 @@ bool Gadget::IsSafeToRemove() const {
 
 bool Gadget::IsValid() const {
   return impl_->initialized_;
-}
-
-int Gadget::GetInstanceID() const {
-  return impl_->instance_id_;
 }
 
 int Gadget::GetPluginFlags() const {
@@ -1134,7 +1055,7 @@ FileManagerInterface *Gadget::GetFileManager() const {
   return impl_->file_manager_;
 }
 
-OptionsInterface *Gadget::GetOptions() const {
+OptionsInterface *Gadget::GetOptions() {
   return impl_->options_;
 }
 
@@ -1212,48 +1133,8 @@ Connection *Gadget::ConnectOnGetFeedbackURL(Slot0<std::string> *handler) {
   return impl_->ongetfeedbackurl_signal_.Connect(handler);
 }
 
-XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
-  if (impl_->permissions_.IsRequiredAndGranted(Permissions::NETWORK)) {
-      return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
-          impl_->xml_http_request_session_, GetXMLParser());
-  }
-  LOG("No permission to access network.");
-  return NULL;
-}
-
-bool Gadget::SetInUserInteraction(bool in_user_interaction) {
-  return impl_->SetInUserInteraction(in_user_interaction);
-}
-
-bool Gadget::IsInUserInteraction() const {
-  return impl_->IsInUserInteraction();
-}
-
-bool Gadget::OpenURL(const char *url) const {
-  if (!impl_->permissions_.IsRequiredAndGranted(Permissions::NETWORK) &&
-      !impl_->permissions_.IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
-    LOG("No permission to open url.");
-    return false;
-  }
-
-  if (impl_->IsInUserInteraction())
-    return impl_->host_->OpenURL(this, url);
-
-  LOG("OpenURL() can only be called during user interaction.");
-  return false;
-}
-
-Connection *Gadget::ConnectLogListener(
-    Slot2<void, LogLevel, const std::string &> *listener) {
-  return impl_->log_signal_.Connect(listener);
-}
-
 const Permissions* Gadget::GetPermissions() const {
   return &impl_->permissions_;
-}
-
-int Gadget::GetDefaultFontSize() const {
-  return impl_->host_->GetDefaultFontSize();
 }
 
 bool Gadget::HasAboutDialog() const {
@@ -1318,24 +1199,14 @@ bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
 bool Gadget::GetGadgetManifestForLocale(const char *base_path,
                                         const char *locale,
                                         StringMap *data) {
-  ASSERT(base_path);
-  ASSERT(data);
-
-  FileManagerInterface *file_manager =
-      Impl::CreateGadgetFileManager(base_path, locale);
-  if (!file_manager)
-    return false;
-
-  StringMap strings_map;
-  bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
-  delete file_manager;
-  return result;
+  return GetManifestForLocale(
+      kGadgetGManifest, kGadgetTag, base_path, locale, data);
 }
 
 FileManagerInterface *Gadget::GetGadgetFileManagerForLocale(
     const char *base_path,
     const char *locale) {
-  return Impl::CreateGadgetFileManager(base_path, locale);
+  return CreateFileManager(kGadgetGManifest, base_path, locale);
 }
 
 bool Gadget::GetGadgetRequiredPermissions(const StringMap *manifest,

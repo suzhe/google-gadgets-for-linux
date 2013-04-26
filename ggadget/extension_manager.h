@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class ScriptContextInterface;
 class ScriptableInterface;
 class ScriptRuntimeManager;
 class Module;
-class Gadget;
+class GadgetInterface;
 
 /**
  * @defgroup Extension Extension
@@ -71,7 +71,7 @@ static const char kFileManagerExtensionSymbolName[] =
  *    classes or objects which can be used by gadgets in their script code.
  *    This kind of extension modules must provide following symbol:
  *    - bool RegisterScriptExtension(ScriptContextInterface *context,
- *                                   Gadget *gadget);
+ *                                   GadgetInterface *gadget);
  *    This function shall register all script classes or objects provided by
  *    the module into the specified ScriptContext instance.
  *
@@ -82,7 +82,7 @@ static const char kFileManagerExtensionSymbolName[] =
  *    extensions.
  *    This kind of extension modules must provide following symbol:
  *    - bool RegisterFrameworkExtension(ScriptableInterface *framework,
- *                                      Gadget *gadget);
+ *                                      GadgetInterface *gadget);
  *    The specified @c framework object will be exported as framework script
  *    object. All objects and methods belong to framework namespace must be
  *    registered to it.
@@ -167,14 +167,14 @@ class ElementExtensionRegister : public ExtensionRegisterInterface {
 class ScriptExtensionRegister : public ExtensionRegisterInterface {
  public:
   explicit ScriptExtensionRegister(ScriptContextInterface *context,
-                                   Gadget *gadget);
+                                   GadgetInterface *gadget);
   virtual bool RegisterExtension(const Module *extension);
 
   typedef bool (*RegisterScriptExtensionFunc)(ScriptContextInterface *,
-                                              Gadget *);
+                                              GadgetInterface *);
  private:
   ScriptContextInterface *context_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
   DISALLOW_EVIL_CONSTRUCTORS(ScriptExtensionRegister);
 };
 
@@ -188,14 +188,14 @@ class FrameworkExtensionRegister : public ExtensionRegisterInterface {
    * @param file_manager The FileManager instance used by a specified gadget.
    */
   FrameworkExtensionRegister(ScriptableInterface *framework,
-                             Gadget *gadget);
+                             GadgetInterface *gadget);
   virtual bool RegisterExtension(const Module *extension);
 
   typedef bool (*RegisterFrameworkExtensionFunc)(ScriptableInterface *,
-                                                 Gadget *);
+                                                 GadgetInterface *);
  private:
   ScriptableInterface *framework_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
   DISALLOW_EVIL_CONSTRUCTORS(FrameworkExtensionRegister);
 };
 

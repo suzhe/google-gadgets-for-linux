@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include "common.h"
 #include "gadget_consts.h"
 #include "elements.h"
-#include "gadget.h"
 #include "signals.h"
 #include "slot.h"
 #include "view.h"
@@ -65,10 +64,10 @@ class DockedMainViewDecorator::Impl : public SmallObject<> {
 
   void SetupResizeBorder(int borders) {
     bool visibles[4] = {
-      borders & BORDER_TOP,
-      borders & BORDER_LEFT,
-      borders & BORDER_BOTTOM,
-      borders & BORDER_RIGHT
+      (borders & BORDER_TOP) != 0,
+      (borders & BORDER_LEFT) != 0,
+      (borders & BORDER_BOTTOM) != 0,
+      (borders & BORDER_RIGHT) != 0
     };
     for (size_t i = 0; i < 4; ++i) {
       if (!visibles[i] && resize_borders_[i]) {

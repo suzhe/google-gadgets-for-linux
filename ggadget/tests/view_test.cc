@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -27,7 +27,12 @@
 #include "mocked_element.h"
 #include "mocked_timer_main_loop.h"
 #include "mocked_view_host.h"
+
+#if defined(OS_WIN)
+#include "ggadget/win32/xml_parser.h"
+#elif defined(OS_POSIX)
 #include "init_extensions.h"
+#endif
 
 ggadget::ElementFactory *g_factory = NULL;
 MockedTimerMainLoop main_loop(0);
@@ -139,18 +144,46 @@ TEST(ViewTest, XMLConstruction) {
                 GetChildren()->GetItemByIndex(0));
 }
 
+TEST(ViewTest, MinSize) {
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
+
+  view.SetSize(100, 100);
+  ASSERT_DOUBLE_EQ(100.0, view.GetWidth());
+  ASSERT_DOUBLE_EQ(100.0, view.GetHeight());
+
+  view.SetMinWidth(120);
+  ASSERT_DOUBLE_EQ(120.0, view.GetWidth());
+  view.SetWidth(80);
+  ASSERT_DOUBLE_EQ(120.0, view.GetWidth());
+  view.SetWidth(200);
+  ASSERT_DOUBLE_EQ(200.0, view.GetWidth());
+
+  view.SetMinHeight(120);
+  ASSERT_DOUBLE_EQ(120.0, view.GetHeight());
+  view.SetHeight(80);
+  ASSERT_DOUBLE_EQ(120.0, view.GetHeight());
+  view.SetHeight(200);
+  ASSERT_DOUBLE_EQ(200.0, view.GetHeight());
+}
+
 int main(int argc, char *argv[]) {
   ggadget::SetGlobalMainLoop(&main_loop);
   testing::ParseGTestFlags(&argc, argv);
 
+#if defined(OS_WIN)
+  ggadget::win32::XMLParser xml_parser;
+  ggadget::SetXMLParser(&xml_parser);
+#elif defined(OS_POSIX)
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
+#endif
 
   g_factory = new ggadget::ElementFactory();
-  g_factory->RegisterElementClass("muffin", Muffin::CreateInstance);
-  g_factory->RegisterElementClass("pie", Pie::CreateInstance);
+  g_factory->RegisterElementClass("muffin", MuffinElement::CreateInstance);
+  g_factory->RegisterElementClass("pie", PieElement::CreateInstance);
   int result = RUN_ALL_TESTS();
   delete g_factory;
   return result;

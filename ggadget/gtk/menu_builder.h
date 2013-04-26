@@ -25,6 +25,10 @@
 #include <ggadget/menu_interface.h>
 
 namespace ggadget {
+
+class ImageInterface;
+class ViewHostInterface;
+
 namespace gtk {
 
 /**
@@ -38,18 +42,25 @@ class MenuBuilder : public ggadget::MenuInterface {
    *
    * @param gtk_menu a GtkMenuShell instance, MenuBuilder doesn't own it.
    */
-  MenuBuilder(GtkMenuShell *gtk_menu);
+  MenuBuilder(ViewHostInterface *view_host, GtkMenuShell *gtk_menu);
   virtual ~MenuBuilder();
 
   virtual void AddItem(const char *item_text, int style, int stock_icon,
                        Slot1<void, const char *> *handler, int priority);
+  virtual void AddItem(const char* item_text, int style,
+                       ImageInterface* image_icon,
+                       Slot1<void, const char*>* handler, int priority);
   virtual void SetItemStyle(const char *item_text, int style);
   virtual MenuInterface *AddPopup(const char *popup_text, int priority);
+  virtual void SetPositionHint(const Rectangle &rect);
 
   GtkMenuShell *GetGtkMenuShell() const;
 
   /** Checks if any item was added. */
   bool ItemAdded() const;
+
+  /** Shows the popup menu. */
+  void Popup(guint button, guint32 activate_time) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(MenuBuilder);

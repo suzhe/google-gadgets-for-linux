@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+#include "variant.h"
 
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
-#include "variant.h"
+#include "common.h"  // It defines some int types.
+#include "format_macros.h"  // It defines PRId64/PRIu64/PRIx64.
 #include "logger.h"
 #include "scriptable_interface.h"
 #include "signals.h"
@@ -26,15 +28,17 @@
 
 namespace ggadget {
 
+#if GGADGET_STD_STRING_SHARED
 // The values doesn't matter, because we only use their c_str() result to
 // check if a string is constructed from these "NULL" strings.
 // We choose the value "(nil)" to ease printing (see Print()).
 // Don't use blank value, because all strings with blank values are shared
 // in the standard impl of C++ library.
-const std::string Variant::kNullString("(nil)");
+const std::string VariantString::kNullString("(nil)");
 static const UTF16Char kNullUTF16StringValue[] =
     { '(', 'n', 'i', 'l', ')', 0 };
-const UTF16String Variant::kNullUTF16String(kNullUTF16StringValue);
+const UTF16String VariantUTF16String::kNullString(kNullUTF16StringValue);
+#endif
 
 Variant::Variant() : type_(TYPE_VOID) {
   memset(&v_, 0, sizeof(v_));
@@ -52,9 +56,9 @@ Variant::Variant(const ResultVariant &source) : type_(TYPE_VOID) {
 
 Variant::Variant(Type type) : type_(type) {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
-    new (&v_.string_place_) std::string(kNullString);
+    new (&v_.string_place_) VariantString(NULL);
   } else if (type_ == TYPE_UTF16STRING) {
-    new (&v_.utf16_string_place_) UTF16String(kNullUTF16String);
+    new (&v_.utf16_string_place_) VariantUTF16String(NULL);
   } else {
     memset(&v_, 0, sizeof(v_));
   }
@@ -62,15 +66,12 @@ Variant::Variant(Type type) : type_(type) {
 
 Variant::~Variant() {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
-    // This typedef is required because ...~std::string() may cause error.
-    typedef std::string String;
     // Don't delete because the pointer is allocated in place.
-    void *data = v_.string_place_;
-    reinterpret_cast<String *>(data)->~String();
+    reinterpret_cast<VariantString *>(&v_.string_place_)->~VariantString();
   } else if (type_ == TYPE_UTF16STRING) {
     // Don't delete because the pointer is allocated in place.
-    void *data = v_.utf16_string_place_;
-    reinterpret_cast<UTF16String *>(data)->~UTF16String();
+    reinterpret_cast<VariantUTF16String *>(&v_.utf16_string_place_)
+        ->~VariantUTF16String();
   }
 }
 
@@ -79,19 +80,15 @@ Variant &Variant::operator=(const Variant &source) {
     return *this;
 
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
-    // This typedef is required because ...~std::string() may cause error.
-    typedef std::string String;
     // Don't delete because the pointer is allocated in place.
-    void *data = v_.string_place_;
-    reinterpret_cast<String *>(data)->~String();
+    reinterpret_cast<VariantString *>(&v_.string_place_)->~VariantString();
   } else if (type_ == TYPE_UTF16STRING) {
     // Don't delete because the pointer is allocated in place.
-    void *data = v_.utf16_string_place_;
-    reinterpret_cast<UTF16String *>(data)->~UTF16String();
+    reinterpret_cast<VariantUTF16String *>(&v_.utf16_string_place_)
+        ->~VariantUTF16String();
   }
 
   type_ = source.type_;
-  const void *data = source.v_.string_place_;
   switch (type_) {
     case TYPE_VOID:
       break;
@@ -106,12 +103,13 @@ Variant &Variant::operator=(const Variant &source) {
       break;
     case TYPE_STRING:
     case TYPE_JSON:
-      new (&v_.string_place_) std::string(
-          *reinterpret_cast<const std::string *>(data));
+      new (&v_.string_place_) VariantString(
+          *reinterpret_cast<const VariantString *>(&source.v_.string_place_));
       break;
     case TYPE_UTF16STRING:
-      new (&v_.utf16_string_place_) UTF16String(
-       *reinterpret_cast<const UTF16String *>(data));
+      new (&v_.utf16_string_place_) VariantUTF16String(
+           *reinterpret_cast<const VariantUTF16String *>(
+               &source.v_.utf16_string_place_));
       break;
     case TYPE_SCRIPTABLE:
       v_.scriptable_value_ = source.v_.scriptable_value_;
@@ -192,20 +190,20 @@ static std::string FitString(const std::string &input) {
 
 // Used in unittests.
 std::string Variant::Print() const {
-  const void *data = v_.string_place_;
   switch (type_) {
     case TYPE_VOID:
       return "VOID";
     case TYPE_BOOL:
       return std::string("BOOL:") + (v_.bool_value_ ? "true" : "false");
     case TYPE_INT64:
-      return "INT64:" + StringPrintf("%jd", v_.int64_value_);
+      return "INT64:" + StringPrintf("%" PRId64, v_.int64_value_);
     case TYPE_DOUBLE:
       return "DOUBLE:" + StringPrintf("%g", v_.double_value_);
     case TYPE_STRING:
       return std::string("STRING:") +
          // Print "(nil)" for NULL string pointer.
-         FitString(*reinterpret_cast<const std::string *>(data));
+         FitString(reinterpret_cast<const VariantString *>(
+             &v_.string_place_)->string());
     case TYPE_JSON:
       return std::string("JSON:") +
              FitString(VariantValue<JSONString>()(*this).value);
@@ -213,19 +211,20 @@ std::string Variant::Print() const {
       std::string utf8_string;
       ConvertStringUTF16ToUTF8(
           // Print "(nil)" for NULL string pointer.
-          *reinterpret_cast<const UTF16String *>(data),
+          reinterpret_cast<const VariantUTF16String *>(
+              &v_.utf16_string_place_)->string(),
           &utf8_string);
       return "UTF16STRING:" + FitString(utf8_string);
     }
     case TYPE_SCRIPTABLE:
-      return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)",
+      return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%" PRIx64 ")",
                           v_.scriptable_value_,
                           v_.scriptable_value_ ?
                               v_.scriptable_value_->GetClassId() : 0);
     case TYPE_SLOT:
       return StringPrintf("SLOT:%p", v_.slot_value_);
     case TYPE_DATE:
-      return StringPrintf("DATE:%ju", v_.int64_value_);
+      return StringPrintf("DATE:%" PRIu64, v_.int64_value_);
     case TYPE_ANY:
       return StringPrintf("ANY:%p", v_.any_value_);
     case TYPE_CONST_ANY:
@@ -247,7 +246,7 @@ bool Variant::ConvertToString(std::string *result) const {
       *result = v_.bool_value_ ? "true" : "false";
       return true;
     case TYPE_INT64:
-      *result = StringPrintf("%jd", v_.int64_value_);
+      *result = StringPrintf("%" PRId64, v_.int64_value_);
       return true;
     case TYPE_DOUBLE:
       *result = StringPrintf("%g", v_.double_value_);
@@ -448,7 +447,7 @@ bool Variant::CheckScriptableType(uint64_t class_id) const {
   ASSERT(type_ == TYPE_SCRIPTABLE);
   if (v_.scriptable_value_ &&
       !v_.scriptable_value_->IsInstanceOf(class_id)) {
-    LOG("The parameter is not an instance pointer of 0x%jx", class_id);
+    LOG("The parameter is not an instance pointer of 0x%" PRIx64, class_id);
     return false;
   }
   return true;

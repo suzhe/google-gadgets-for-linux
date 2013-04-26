@@ -19,9 +19,10 @@
 #ifndef GGADGET_SMALL_OBJECT_H__
 #define GGADGET_SMALL_OBJECT_H__
 
-#include <stdint.h>
 #include <cstddef>
 #include <new> // needed for std::nothrow_t parameter.
+
+#include <ggadget/common.h>
 
 #ifndef LOKI_DEFAULT_CHUNK_SIZE
 #define LOKI_DEFAULT_CHUNK_SIZE 4096
@@ -49,6 +50,8 @@
 
 namespace ggadget
 {
+
+#if !defined(OS_WIN)
     class FixedAllocator;
 
     /** @class SmallObjAllocator
@@ -401,6 +404,41 @@ namespace ggadget
         { return *this; }
         inline ~SmallValueObject() {}
     }; // end class SmallValueObject
+
+#else
+
+    template
+    <
+        std::size_t chunkSize = LOKI_DEFAULT_CHUNK_SIZE,
+        std::size_t maxSmallObjectSize = LOKI_MAX_SMALL_OBJECT_SIZE,
+        std::size_t objectAlignSize = LOKI_DEFAULT_OBJECT_ALIGNMENT
+    >
+    class SmallObject {
+    protected:
+        inline SmallObject() {}
+    private:
+        /// Copy-constructor is not implemented.
+        SmallObject( const SmallObject & );
+        /// Copy-assignment operator is not implemented.
+        SmallObject & operator = ( const SmallObject & );
+    }; // end class SmallObject
+
+    template
+    <
+        std::size_t chunkSize = LOKI_DEFAULT_CHUNK_SIZE,
+        std::size_t maxSmallObjectSize = LOKI_MAX_SMALL_OBJECT_SIZE,
+        std::size_t objectAlignSize = LOKI_DEFAULT_OBJECT_ALIGNMENT
+    >
+    class SmallValueObject {
+    protected:
+        inline SmallValueObject() {}
+        inline SmallValueObject( const SmallValueObject & ) {}
+        inline SmallValueObject & operator = ( const SmallValueObject & )
+        { return *this; }
+        inline ~SmallValueObject() {}
+    }; // end class SmallValueObject
+
+#endif  // OS_WIN
 
 } // namespace ggadget
 

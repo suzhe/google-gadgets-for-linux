@@ -28,6 +28,10 @@
 #include "slot.h"
 #include "small_object.h"
 
+#if defined(OS_WIN)
+#include "win32/thread_local_singleton_holder.h"
+#endif
+
 namespace ggadget {
 
 static const char kMessagesCatalog[] = "messages-catalog.xml";
@@ -216,10 +220,14 @@ class Messages::Impl : public SmallObject<> {
   std::string system_locale_;
   std::string default_locale_;
 
+#if !defined(OS_WIN)
   static Messages *messages_;
+#endif
 };
 
+#if !defined(OS_WIN)
 Messages *Messages::Impl::messages_ = NULL;
+#endif
 
 Messages::Messages()
   : impl_(new Impl()) {
@@ -248,10 +256,23 @@ bool Messages::EnumerateAllMessages(Slot1<bool, const char *> *slot) const {
 }
 
 const Messages *Messages::get() {
+#if defined(OS_WIN)
+  Messages *messages =
+      win32::ThreadLocalSingletonHolder<Messages>::GetValue();
+  if (!messages) {
+    messages = new Messages();
+    const bool result =
+        win32::ThreadLocalSingletonHolder<Messages>::SetValue(messages);
+    ASSERT(result);
+  }
+
+  return messages;
+#else
   if (!Impl::messages_)
     Impl::messages_ = new Messages();
 
   return Impl::messages_;
+#endif
 }
 
 } // namespace ggadget

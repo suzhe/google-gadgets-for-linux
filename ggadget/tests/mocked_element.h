@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,16 +18,17 @@
 #define GGADGET_TESTS_MOCKED_ELEMENT_H__
 
 #include "ggadget/basic_element.h"
+#include "ggadget/common.h"
 #include "ggadget/view.h"
 #include "ggadget/elements.h"
 
-class Muffin : public ggadget::BasicElement {
+class MuffinElement : public ggadget::BasicElement {
  public:
-  Muffin(ggadget::View *view, const char *name)
+  MuffinElement(ggadget::View *view, const char *name)
       : ggadget::BasicElement(view, "muffin", name, true) {
   }
 
-  virtual ~Muffin() {
+  virtual ~MuffinElement() {
   }
 
   virtual void DoDraw(ggadget::CanvasInterface *canvas) { }
@@ -38,17 +39,17 @@ class Muffin : public ggadget::BasicElement {
  public:
   static ggadget::BasicElement *CreateInstance(ggadget::View *view,
                                                const char *name) {
-    return new Muffin(view, name);
+    return new MuffinElement(view, name);
   }
 };
 
-class Pie : public ggadget::BasicElement {
+class PieElement : public ggadget::BasicElement {
  public:
-  Pie(ggadget::View *view, const char *name)
+  PieElement(ggadget::View *view, const char *name)
       : ggadget::BasicElement(view, "pie", name, true) {
   }
 
-  virtual ~Pie() {
+  virtual ~PieElement() {
   }
 
   virtual void DoDraw(ggadget::CanvasInterface *canvas) { }
@@ -59,7 +60,7 @@ class Pie : public ggadget::BasicElement {
  public:
   static ggadget::BasicElement *CreateInstance(ggadget::View *view,
                                                const char *name) {
-    return new Pie(view, name);
+    return new PieElement(view, name);
   }
 };
 

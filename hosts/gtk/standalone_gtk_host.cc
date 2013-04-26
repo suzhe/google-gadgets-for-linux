@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -120,8 +120,10 @@ class StandaloneGtkHost::Impl {
     return true;
   }
 
-  Gadget *LoadGadget(const char *path, const char *options_name,
-                     int instance_id, bool show_debug_console) {
+  GadgetInterface *LoadGadget(const char *path,
+                              const char *options_name,
+                              int instance_id,
+                              bool show_debug_console) {
     if (gadget_) {
       DLOG("Standalone gadget has been loaded. "
            "Load gadget %s in managed host.", path);
@@ -165,7 +167,7 @@ class StandaloneGtkHost::Impl {
     return gadget_;
   }
 
-  ViewHostInterface *NewViewHost(Gadget *gadget,
+  ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                  ViewHostInterface::Type type) {
     GGL_UNUSED(gadget);
     int vh_flags = GtkHostBase::FlagsToViewHostFlags(flags_);
@@ -226,7 +228,7 @@ class StandaloneGtkHost::Impl {
     return view_host;
   }
 
-  void RemoveGadget(Gadget *gadget, bool save_data) {
+  void RemoveGadget(GadgetInterface *gadget, bool save_data) {
     GGL_UNUSED(gadget);
     GGL_UNUSED(save_data);
     ASSERT(gadget && gadget == gadget_);
@@ -325,7 +327,7 @@ class StandaloneGtkHost::Impl {
     return true;
   }
 
-  void ShowGadgetDebugConsole(Gadget *gadget) {
+  void ShowGadgetDebugConsole(GadgetInterface *gadget) {
     ASSERT(gadget && (!gadget_ || gadget == gadget_));
 
     if (!debug_console_) {
@@ -348,7 +350,7 @@ class StandaloneGtkHost::Impl {
   Gadget::DebugConsoleConfig debug_console_config_;
   std::string options_name_;
 
-  Signal4<Gadget *, const char *, const char *, int, bool>
+  Signal4<GadgetInterface *, const char *, const char *, int, bool>
       on_load_gadget_signal_;
 };
 
@@ -364,21 +366,21 @@ StandaloneGtkHost::~StandaloneGtkHost() {
 }
 
 ViewHostInterface *StandaloneGtkHost::NewViewHost(
-    Gadget *gadget, ViewHostInterface::Type type) {
+    GadgetInterface *gadget, ViewHostInterface::Type type) {
   return impl_->NewViewHost(gadget, type);
 }
 
-Gadget *StandaloneGtkHost::LoadGadget(
+GadgetInterface *StandaloneGtkHost::LoadGadget(
     const char *path, const char *options_name,
     int instance_id, bool show_debug_console) {
   return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
 }
 
-void StandaloneGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
+void StandaloneGtkHost::RemoveGadget(GadgetInterface *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
 }
 
-void StandaloneGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
+void StandaloneGtkHost::ShowGadgetDebugConsole(GadgetInterface *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 
@@ -396,7 +398,8 @@ void StandaloneGtkHost::Present() {
 }
 
 Connection *StandaloneGtkHost::ConnectOnLoadGadget(
-      ggadget::Slot4<Gadget *, const char *, const char *, int, bool> *slot) {
+    ggadget::Slot4<GadgetInterface *, const char *, const char *, int, bool> *
+    slot) {
   return impl_->on_load_gadget_signal_.Connect(slot);
 }
 

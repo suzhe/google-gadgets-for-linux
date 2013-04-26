@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -182,7 +182,7 @@ class ViewDecoratorBase : public View {
 
  public:
   // Overridden methods.
-  virtual Gadget *GetGadget() const;
+  virtual GadgetInterface *GetGadget() const;
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual EventResult OnOtherEvent(const Event &event);
   virtual bool OnSizing(double *width, double *height);

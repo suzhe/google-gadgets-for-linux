@@ -135,6 +135,7 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
                                const char *filename) {
   bool is_object = false;
   std::string tag_name = xml_element->GetTagName();
+#if defined(OS_POSIX)  // TODO(zkfan): support ObjectElement
   if (scriptable->IsInstanceOf(ObjectElement::CLASS_ID)) {
     is_object = true;
     // The classId attribute must be set before any other attributes.
@@ -146,7 +147,7 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
           filename, xml_element->GetRow(), xml_element->GetColumn());
     }
   }
-
+#endif
   const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
 
   ASSERT(attributes);
@@ -232,7 +233,7 @@ BasicElement *InsertElementFromDOM(Elements *elements,
       const DOMElementInterface *child_element =
           down_cast<const DOMElementInterface*>(child);
       std::string child_tag = child_element->GetTagName();
-
+#if defined(OS_POSIX)  // TODO(zkfan): support ObjectElement
       // Special process for the child element (i.e. param element) of object
       // element. This is for the compatability with GDWin.
       // We set each param as a property of the real object wrapped in the
@@ -262,9 +263,17 @@ BasicElement *InsertElementFromDOM(Elements *elements,
                filename, xml_element->GetRow(), xml_element->GetColumn());
         }
       } else if (children) {
-        InsertElementFromDOM(children, script_context,
-                             child_element,
-                             NULL, filename);
+#else
+      if (children) {
+#endif
+        if (!InsertElementFromDOM(children, script_context,
+                                  child_element,
+                                  NULL, filename)) {
+          // Treat unknown tag as text format tag.
+          text += child->GetXML();
+        }
+      } else {
+        text += child->GetXML();
       }
     } else if (type == DOMNodeInterface::TEXT_NODE ||
                type == DOMNodeInterface::CDATA_SECTION_NODE) {

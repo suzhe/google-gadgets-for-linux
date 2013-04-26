@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 
 #include <vector>
 #include "gadget_consts.h"
-#include "gadget.h"
 #include "host_interface.h"
 #include "signals.h"
 #include "slot.h"

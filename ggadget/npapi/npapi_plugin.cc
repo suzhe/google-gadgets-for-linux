@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 #include <cmath>
 
 #include <ggadget/basic_element.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/graphics_interface.h>
 #include <ggadget/main_loop_interface.h>
@@ -412,7 +412,7 @@ class Plugin::Impl : public SmallObject<> {
     if (absolute_url.empty())
       return NPERR_INVALID_PARAM;
 
-    Gadget *gadget = element_->GetView()->GetGadget();
+    GadgetInterface *gadget = element_->GetView()->GetGadget();
     if (!gadget)
       return NPERR_GENERIC_ERROR;
 
@@ -433,11 +433,11 @@ class Plugin::Impl : public SmallObject<> {
     StreamHandler *handler = NULL;
     std::string file_path = GetPathFromFileURL(absolute_url.c_str());
     if (!file_path.empty()) {
+      const Permissions *permissions = gadget->GetPermissions();
       // Only can set src to a local file. The plugin can't request to read
       // local files.
-      if (absolute_url != location_ ||
-          !gadget->GetPermissions()->IsRequiredAndGranted(
-              Permissions::FILE_READ)) {
+      if (absolute_url != location_ || !permissions ||
+          !permissions->IsRequiredAndGranted(Permissions::FILE_READ)) {
         DoURLNotify(absolute_url.c_str(), notify, notify_data,
                     NPRES_USER_BREAK);
         LOG("The plugin is not permitted to read local files.");

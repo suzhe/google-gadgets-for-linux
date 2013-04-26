@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #define HOSTS_QT_HOST_INTERNAL_H__
 
 #include <QtGui/QCursor>
+#include <ggadget/gadget.h>
 #include <ggadget/host_utils.h>
 
 using namespace ggadget;
@@ -134,8 +135,10 @@ class QtHost::Impl : public QObject {
     return result;
   }
 
-  Gadget *LoadGadget(const char *path, const char *options_name,
-                     int instance_id, bool show_debug_console) {
+  GadgetInterface *LoadGadget(const char *path,
+                              const char *options_name,
+                              int instance_id,
+                              bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
       return gadgets_[instance_id].gadget;
@@ -172,7 +175,7 @@ class QtHost::Impl : public QObject {
     return gadget;
   }
 
-  ViewHostInterface *NewViewHost(Gadget *gadget,
+  ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                  ViewHostInterface::Type type) {
     QWidget *parent = NULL;
     QtViewHost::Flags flags;
@@ -217,7 +220,7 @@ class QtHost::Impl : public QObject {
     return dvh;
   }
 
-  void RemoveGadget(Gadget *gadget, bool save_data) {
+  void RemoveGadget(GadgetInterface *gadget, bool save_data) {
     GGL_UNUSED(save_data);
     ViewInterface *main_view = gadget->GetMainView();
 
@@ -266,7 +269,7 @@ class QtHost::Impl : public QObject {
       OnPopInHandler(decorated);
 
     ViewInterface *child = decorated->GetView();
-    Gadget *gadget = child ? child->GetGadget() : NULL;
+    GadgetInterface *gadget = child ? child->GetGadget() : NULL;
 
     if (gadget) gadget->RemoveMe(true);
   }
@@ -278,9 +281,11 @@ class QtHost::Impl : public QObject {
 
   void OnCloseDetailsViewHandler(DecoratedViewHost *decorated) {
     ViewInterface *child = decorated->GetView();
-    Gadget *gadget = child ? child->GetGadget() : NULL;
-    if (gadget)
-      gadget->CloseDetailsView();
+    GadgetInterface *gadget = child ? child->GetGadget() : NULL;
+    if (gadget){
+      ASSERT(gadget->IsInstanceOf(Gadget::TYPE_ID));
+      down_cast<Gadget*>(gadget)->CloseDetailsView();
+    }
   }
 
   void OnPopOutHandler(DecoratedViewHost *decorated) {
@@ -324,8 +329,11 @@ class QtHost::Impl : public QObject {
       ViewInterface *child = expanded_popout_->GetView();
       ASSERT(child);
       if (child) {
-        // Close details view
-        child->GetGadget()->CloseDetailsView();
+        GadgetInterface *gadget = child->GetGadget();
+        if (gadget) {
+          ASSERT(gadget->IsInstanceOf(Gadget::TYPE_ID));
+          down_cast<Gadget*>(gadget)->CloseDetailsView();
+        }
 
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
@@ -338,7 +346,7 @@ class QtHost::Impl : public QObject {
     }
   }
 
-  void ShowGadgetDebugConsole(Gadget *gadget) {
+  void ShowGadgetDebugConsole(GadgetInterface *gadget) {
     if (!gadget) return;
     GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
     if (it == gadgets_.end()) return;

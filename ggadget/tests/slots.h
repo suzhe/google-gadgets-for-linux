@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@
 #define GGADGET_TESTS_SLOTS_H__
 
 #include <vector>
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/string_utils.h"
-#include "ggadget/variant.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 DECLARE_VARIANT_PTR_TYPE(std::vector<int>);
@@ -39,8 +39,9 @@ inline void TestVoidFunction9(int p1, bool p2, const char *p3,
                               const std::string &p4, std::string p5,
                               char p6, unsigned char p7,
                               short p8, std::vector<int> *p9) {
-  result = StringPrintf("TestVoidFunction9: %d %d %s %s %s %c %c %d %d",
-               p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+  result = ggadget::StringPrintf(
+      "TestVoidFunction9: %d %d %s %s %s %c %c %d %d",
+      p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
 }
 
 inline bool TestBoolFunction0() {
@@ -52,8 +53,9 @@ inline bool TestBoolFunction9(int p1, bool p2, const char *p3,
                               const std::string &p4, std::string p5,
                               char p6, unsigned char p7,
                               short p8, const std::vector<int> *p9) {
-  result = StringPrintf("TestBoolFunction9: %d %d %s %s %s %c %c %d %d",
-               p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+  result = ggadget::StringPrintf(
+      "TestBoolFunction9: %d %d %s %s %s %c %c %d %d",
+      p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   return true;
 }
 
@@ -74,8 +76,9 @@ struct TestVoidFunctor9 {
   void operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
                   short p8, std::vector<int> *p9) const {
-    result = StringPrintf("TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
-                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = ggadget::StringPrintf(
+        "TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
+        p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   }
   // This operator== is required for testing.  Slot's == will call it.
   bool operator==(TestVoidFunctor9 f) const { return true; }
@@ -94,8 +97,9 @@ struct TestBoolFunctor9 {
   bool operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
                   short p8, const std::vector<int> *p9) const {
-    result = StringPrintf("TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
-                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = ggadget::StringPrintf(
+        "TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
+        p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
     return true;
   }
   // This operator== is required for testing.  Slot's == will call it.
@@ -118,23 +122,25 @@ class TestClass : public TestClass0 {
     return true;
   }
   virtual void TestVoidMethod2(char p1, unsigned long p2) {
-    result = StringPrintf("TestVoidMethod2: %c %lx", p1, p2);
+    result = ggadget::StringPrintf("TestVoidMethod2: %c %lx", p1, p2);
   }
   double TestDoubleMethod2(int p1, double p2) const {
-    result = StringPrintf("TestDoubleMethod2: %d %.3lf", p1, p2);
+    result = ggadget::StringPrintf("TestDoubleMethod2: %d %.3lf", p1, p2);
     return 2;
   }
   void TestVoidMethod9(int p1, bool p2, const char *p3, const std::string &p4,
                        std::string p5, char p6, unsigned char p7,
                        short p8, std::vector<int> *p9) const {
-    result = StringPrintf("TestVoidMethod9: %d %d %s %s %s %c %c %d %d",
-                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = ggadget::StringPrintf(
+        "TestVoidMethod9: %d %d %s %s %s %c %c %d %d",
+        p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
   }
   bool TestBoolMethod9(int p1, bool p2, const char *p3, const std::string &p4,
                        std::string p5, char p6, unsigned char p7,
                        short p8, const std::vector<int> *p9) {
-    result = StringPrintf("TestBoolMethod9: %d %d %s %s %s %c %c %d %d",
-                 p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
+    result = ggadget::StringPrintf(
+        "TestBoolMethod9: %d %d %s %s %s %c %c %d %d",
+        p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, (*p9)[0]);
     return false;
   }
 

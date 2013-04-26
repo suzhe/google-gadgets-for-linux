@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -127,7 +127,8 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
     buttons_div_->SetRelativeX(1);
     buttons_div_->SetPixelY(0);
     buttons_div_->SetBackgroundMode(
-        DivElement::BACKGROUND_MODE_STRETCH_MIDDLE);
+        DivElement::BACKGROUND_MODE_STRETCH);
+    buttons_div_->SetBackgroundBorder(-1, -1, -1, -1);
     buttons_div_->SetBackground(Variant(kVDButtonBackground));
     buttons_div_->SetVisible(false);
     owner_->InsertDecoratorElement(buttons_div_, false);
@@ -162,7 +163,7 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
     size_t count = elements->GetCount();
     for (size_t i = 0; i < count; ++i) {
       BasicElement *button = elements->GetItemByIndex(i);
-      button->Layout();
+      button->RecursiveLayout();
       if (button->IsVisible()) {
         if (button_box_orientation_ == MainViewDecoratorBase::HORIZONTAL) {
           button->SetPixelY(0);
@@ -197,15 +198,15 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
   }
 
   void OnBackButtonClicked() {
-    Gadget *gadget = owner_->GetGadget();
-    if (gadget)
-      gadget->OnCommand(Gadget::CMD_TOOLBAR_BACK);
+    GadgetInterface *gadget = owner_->GetGadget();
+    if (gadget && gadget->IsInstanceOf(Gadget::TYPE_ID))
+      down_cast<Gadget*>(gadget)->OnCommand(Gadget::CMD_TOOLBAR_BACK);
   }
 
   void OnForwardButtonClicked() {
-    Gadget *gadget = owner_->GetGadget();
-    if (gadget)
-      gadget->OnCommand(Gadget::CMD_TOOLBAR_FORWARD);
+    GadgetInterface *gadget = owner_->GetGadget();
+    if (gadget && gadget->IsInstanceOf(Gadget::TYPE_ID))
+      down_cast<Gadget*>(gadget)->OnCommand(Gadget::CMD_TOOLBAR_FORWARD);
   }
 
   void OnPopInOutButtonClicked() {
@@ -314,19 +315,19 @@ class  MainViewDecoratorBase::Impl : public SmallObject<> {
   }
 
   void OptionsMenuCallback(const char *) {
-    Gadget *gadget = owner_->GetGadget();
+    GadgetInterface *gadget = owner_->GetGadget();
     if (gadget)
       gadget->ShowOptionsDialog();
   }
 
   void AboutMenuCallback(const char *) {
-    Gadget *gadget = owner_->GetGadget();
+    GadgetInterface *gadget = owner_->GetGadget();
     if (gadget)
       gadget->ShowAboutDialog();
   }
 
   void RemoveMenuCallback(const char *) {
-    Gadget *gadget = owner_->GetGadget();
+    GadgetInterface *gadget = owner_->GetGadget();
     if (gadget)
       gadget->RemoveMe(true);
   }
@@ -597,7 +598,7 @@ Connection *MainViewDecoratorBase::ConnectOnPopOut(Slot0<void> *slot) {
   return impl_->on_popout_signal_.Connect(slot);
 }
 
-Gadget *MainViewDecoratorBase::GetGadget() const {
+GadgetInterface *MainViewDecoratorBase::GetGadget() const {
   if (impl_->popped_out_ && impl_->original_child_view_)
     return impl_->original_child_view_->GetGadget();
   return ViewDecoratorBase::GetGadget();
@@ -696,8 +697,9 @@ void MainViewDecoratorBase::OnChildViewChanged() {
     impl_->plugin_flags_connection_ = NULL;
   }
 
-  Gadget *gadget = GetGadget();
-  if (gadget) {
+  GadgetInterface *gadget_interface = GetGadget();
+  if (gadget_interface && gadget_interface->IsInstanceOf(Gadget::TYPE_ID)) {
+    Gadget *gadget = down_cast<Gadget*>(gadget_interface);
     impl_->plugin_flags_connection_ = gadget->ConnectOnPluginFlagsChanged(
         NewSlot(impl_, &Impl::OnPluginFlagsChanged));
     impl_->OnPluginFlagsChanged(gadget->GetPluginFlags());
@@ -794,7 +796,7 @@ void MainViewDecoratorBase::AddCollapseExpandMenuItem(MenuInterface *menu) const
 }
 
 void MainViewDecoratorBase::OnAddDecoratorMenuItems(MenuInterface *menu) {
-  Gadget *gadget = GetGadget();
+  GadgetInterface *gadget = GetGadget();
   if (gadget) {
     if (gadget->HasOptionsDialog()) {
       menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,

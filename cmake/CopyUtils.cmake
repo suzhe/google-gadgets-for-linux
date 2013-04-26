@@ -75,17 +75,33 @@ MACRO(COPY_TARGET _target_name _dest_dir)
     IF(NOT WIN32)
       GET_TARGET_PROPERTY(COPY_TARGET_soversion ${_target_name} SOVERSION)
       GET_TARGET_PROPERTY(COPY_TARGET_version ${_target_name} VERSION)
+      GET_TARGET_PROPERTY(COPY_TARGET_suffix ${_target_name} PREFIX)
+      GET_FILENAME_COMPONENT(COPY_TARGET_path ${COPY_TARGET_location} PATH)
       # SOVERSION symbolic link.
       IF(NOT COPY_TARGET_soversion MATCHES "NOTFOUND")
-        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_soversion}
-          ${_dest_dir}/${COPY_TARGET_name}.${COPY_TARGET_soversion}
-          ${_target_name})
+        # Filename of shared libraries in Mac OS X are <libname>.<soversion>.dylib
+        # instead of <libname>.dylib.<soversion>
+        IF(APPLE)
+          COPY_FILE_INTERNAL(${COPY_TARGET_path}/lib${_target_name}.${COPY_TARGET_soversion}${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${_dest_dir}/lib${_target_name}.${COPY_TARGET_soversion}${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${_target_name})
+        ELSE(APPLE)
+          COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_soversion}
+            ${_dest_dir}/${COPY_TARGET_name}.${COPY_TARGET_soversion}
+            ${_target_name})
+        ENDIF(APPLE)
       ENDIF(NOT COPY_TARGET_soversion MATCHES "NOTFOUND")
       # VERSION symbolic link.
       IF(NOT COPY_TARGET_version MATCHES "NOTFOUND")
-        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_version}
-          ${_dest_dir}/${COPY_TARGET_name}.${COPY_TARGET_version}
-          ${_target_name})
+        IF(APPLE)
+          COPY_FILE_INTERNAL(${COPY_TARGET_path}/lib${_target_name}.${COPY_TARGET_version}${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${_dest_dir}/lib${_target_name}.${COPY_TARGET_version}${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${_target_name})
+        ELSE(APPLE)
+          COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_version}
+            ${_dest_dir}/${COPY_TARGET_name}.${COPY_TARGET_version}
+            ${_target_name})
+        ENDIF(APPLE)
       ENDIF(NOT COPY_TARGET_version MATCHES "NOTFOUND")
     ENDIF(NOT WIN32)
   ENDIF(${ARGC} GREATER 2)

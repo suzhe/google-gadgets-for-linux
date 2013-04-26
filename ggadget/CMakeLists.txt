@@ -1,5 +1,5 @@
 #
-# Copyright 2008 Google Inc.
+# Copyright 2011 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ ADD_SUBDIRECTORY(xdg)
 ADD_SUBDIRECTORY(npapi)
 ADD_SUBDIRECTORY(tests)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+
 SET(SRCS
   backoff.cc
   basic_element.cc
@@ -40,6 +42,7 @@ SET(SRCS
   permissions.cc
   extension_manager.cc
   gadget.cc
+  gadget_base.cc
   gadget_manager.cc
   locales.cc
   logger.cc
@@ -64,9 +67,11 @@ SET(SRCS
   slot.cc
   small_object.cc
   string_utils.cc
+  system_file_functions_posix.cc
   system_utils.cc
   host_utils.cc
   texture.cc
+  text_formats.cc
   text_frame.cc
   unicode_utils.cc
   usage_collector_factory.cc
@@ -91,6 +96,7 @@ SET(SRCS
   img_element.cc
   item_element.cc
   label_element.cc
+  linear_element.cc
   listbox_element.cc
   object_element.cc
   object_videoplayer.cc
@@ -129,6 +135,7 @@ INSTALL(FILES
   audioclip_interface.h
   backoff.h
   basic_element.h
+  build_config.h
   button_element.h
   canvas_interface.h
   canvas_utils.h
@@ -160,10 +167,13 @@ INSTALL(FILES
   file_system_interface.h
   floating_main_view_decorator.h
   font_interface.h
+  format_macros.h
   framed_view_decorator_base.h
   framework_interface.h
   gadget.h
+  gadget_base.h
   gadget_consts.h
+  gadget_interface.h
   gadget_manager_interface.h
   graphics_interface.h
   host_interface.h
@@ -173,6 +183,7 @@ INSTALL(FILES
   item_element.h
   label_element.h
   light_map.h
+  linear_element.h
   listbox_element.h
   locales.h
   localized_file_manager.h
@@ -219,6 +230,8 @@ INSTALL(FILES
   string_utils.h
   system_utils.h
   host_utils.h
+  text_formats_decl.h
+  text_formats.h
   text_frame.h
   texture.h
   unicode_utils.h

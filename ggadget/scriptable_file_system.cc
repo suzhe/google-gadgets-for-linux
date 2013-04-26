@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 #include "file_system_interface.h"
 #include "scriptable_array.h"
 #include "string_utils.h"
-#include "gadget.h"
+#include "gadget_interface.h"
 #include "permissions.h"
 #include "small_object.h"
 
@@ -83,8 +83,9 @@ static const Variant kGetStandardStreamDefaultArgs[] = {
 
 class ScriptableFileSystem::Impl : public SmallObject<> {
  public:
-  Impl(FileSystemInterface *filesystem, ScriptableFileSystem *owner,
-       Gadget *gadget)
+  Impl(FileSystemInterface *filesystem,
+       ScriptableFileSystem *owner,
+       GadgetInterface *gadget)
       : filesystem_(filesystem), owner_(owner), gadget_(gadget) {
   }
 
@@ -862,11 +863,11 @@ class ScriptableFileSystem::Impl : public SmallObject<> {
 
   FileSystemInterface *filesystem_;
   ScriptableFileSystem *owner_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
 ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem,
-                                           Gadget *gadget)
+                                           GadgetInterface *gadget)
     : impl_(new Impl(filesystem, this, gadget)) {
   ASSERT(filesystem);
   if (impl_->CanRead()) {

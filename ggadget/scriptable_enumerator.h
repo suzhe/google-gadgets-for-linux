@@ -68,26 +68,31 @@ class ScriptableEnumerator : public SharedScriptable<ClassId> {
 
  protected:
   virtual void DoClassRegister() {
-    RegisterMethod("atEnd",
-                   NewSlot(&E::AtEnd,
-                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
-                               ::enumerator_));
-    RegisterMethod("moveFirst",
-                   NewSlot(&E::MoveFirst,
-                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
-                               ::enumerator_));
-    RegisterMethod("moveNext",
-                   NewSlot(&E::MoveNext,
-                           &ScriptableEnumerator<E, Wrapper, Param, ClassId>
-                               ::enumerator_));
-    RegisterMethod("item",
-                   NewSlot(&ScriptableEnumerator<E, Wrapper, Param, ClassId>
-                               ::GetItem));
-    RegisterProperty("count",
-                     NewSlot(&E::GetCount,
-                             &ScriptableEnumerator<E, Wrapper, Param, ClassId>
-                                 ::enumerator_),
-                     NULL);
+    this->RegisterMethod(
+        "atEnd",
+        NewSlot(&E::AtEnd,
+                &ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                ::enumerator_));
+    this->RegisterMethod(
+        "moveFirst",
+        NewSlot(&E::MoveFirst,
+                &ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                ::enumerator_));
+    this->RegisterMethod(
+        "moveNext",
+        NewSlot(&E::MoveNext,
+                &ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                ::enumerator_));
+    this->RegisterMethod(
+        "item",
+        NewSlot(&ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                ::GetItem));
+    this->RegisterProperty(
+        "count",
+        NewSlot(&E::GetCount,
+                &ScriptableEnumerator<E, Wrapper, Param, ClassId>
+                ::enumerator_),
+        NULL);
   }
 
  private:

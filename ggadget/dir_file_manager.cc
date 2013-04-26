@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -15,23 +15,27 @@
 */
 
 #include "dir_file_manager.h"
+#include "build_config.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <unistd.h>
 #include <cstring>
 #include <vector>
 #include <string>
 #include <cstdio>
 #include <cerrno>
 
-#include "common.h"
+#include "common.h"  // It includes platform-dependent header files
 #include "logger.h"
 #include "gadget_consts.h"
 #include "slot.h"
-#include "system_utils.h"
 #include "small_object.h"
+#include "system_file_functions.h"
+#include "system_utils.h"
+
+#if defined(OS_WIN)
+#include <shlwapi.h>
+#endif
 
 namespace ggadget {
 
@@ -65,20 +69,20 @@ class DirFileManager::Impl : public SmallObject<> {
     std::string path(base_path);
 
     // Use absolute path.
-    if (*base_path != kDirSeparator)
+    if (!ggadget::IsAbsolutePath(base_path))
       path = BuildFilePath(GetCurrentDirectory().c_str(), base_path, NULL);
 
     path = NormalizeFilePath(path.c_str());
 
-    struct stat stat_value;
+    ggadget::StatStruct stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
-    if (::stat(path.c_str(), &stat_value) == 0) {
+    if (ggadget::stat(path.c_str(), &stat_value) == 0) {
       if (!S_ISDIR(stat_value.st_mode)) {
         LOG("Not a directory: %s", path.c_str());
         return false;
       }
 
-      if (::access(path.c_str(), R_OK|X_OK) != 0) {
+      if (ggadget::access(path.c_str(), R_OK|X_OK) != 0) {
         LOG("No permission to access the directory %s", path.c_str());
         return false;
       }
@@ -90,10 +94,8 @@ class DirFileManager::Impl : public SmallObject<> {
     } else {
       return false;
     }
-
     DLOG("DirFileManager was initialized successfully for path %s",
          path.c_str());
-
     Finalize();
 
     base_path_ = path;
@@ -116,9 +118,9 @@ class DirFileManager::Impl : public SmallObject<> {
     if (!CheckFilePath(file, &path))
       return false;
 
-    if (access(path.c_str(), F_OK) == 0) {
+    if (ggadget::access(path.c_str(), F_OK) == 0) {
       if (overwrite) {
-        if (unlink(path.c_str()) == -1) {
+        if (ggadget::unlink(path.c_str()) == -1) {
           LOG("Failed to unlink file %s when trying to overwrite it: %s.",
               path.c_str(), strerror(errno));
           return false;
@@ -136,26 +138,7 @@ class DirFileManager::Impl : public SmallObject<> {
     if (!EnsureDirectories(dir.c_str()))
       return false;
 
-    // Only the current user can read and write the file.
-    mode_t org_umask = umask(0177);
-    FILE *datafile = fopen(path.c_str(), "w");
-    umask(org_umask);
-    if (!datafile) {
-      LOG("Failed to open file %s for writing: %s",
-          path.c_str(), strerror(errno));
-      return false;
-    }
-
-    bool result = data.empty() ||
-                  (fwrite(data.c_str(), data.length(), 1, datafile) == 1);
-    // fclose() is placed first to ensure it's always called.
-    result = (fclose(datafile) == 0 && result);
-    if (!result) {
-      // Remove the file if error occured during writing.
-      LOG("Error writing to file %s", path.c_str());
-      unlink(path.c_str());
-    }
-    return result;
+    return WriteFileContents(path.c_str(), data);
   }
 
   bool RemoveFile(const char *file) {
@@ -164,12 +147,12 @@ class DirFileManager::Impl : public SmallObject<> {
       return false;
 
     bool result = false;
-    struct stat stat_value;
+    ggadget::StatStruct stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
 
-    if (::stat(path.c_str(), &stat_value) == 0) {
+    if (ggadget::stat(path.c_str(), &stat_value) == 0) {
       if (!S_ISDIR(stat_value.st_mode))
-        result = (::unlink(path.c_str()) == 0);
+        result = (ggadget::unlink(path.c_str()) == 0);
       else
         result = RemoveDirectory(path.c_str(), true);
     }
@@ -213,7 +196,7 @@ class DirFileManager::Impl : public SmallObject<> {
     bool result = CheckFilePath(file, &file_path);
     if (path) *path = file_path;
 
-    return result && ::access(file_path.c_str(), F_OK) == 0;
+    return result && ggadget::access(file_path.c_str(), F_OK) == 0;
   }
 
   bool IsDirectlyAccessible(const char *file, std::string *path) {
@@ -242,7 +225,7 @@ class DirFileManager::Impl : public SmallObject<> {
 
     // Can't read a file from an absolute path.
     // The file must be a relative path under base_path.
-    if (!file || !*file || *file == kDirSeparator) {
+    if (!file || !*file || IsAbsolutePath(file)) {
       LOG("Invalid file path: %s", (file ? file : "(NULL)"));
       return false;
     }
@@ -287,9 +270,9 @@ class DirFileManager::Impl : public SmallObject<> {
     std::string path;
     if (!CheckFilePath(file, &path))
       return 0;
-    struct stat stat_value;
+    ggadget::StatStruct stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
-    return ::stat(path.c_str(), &stat_value) == 0 ?
+    return ggadget::stat(path.c_str(), &stat_value) == 0 ?
            stat_value.st_mtime * UINT64_C(1000) : 0;
   }
 
@@ -308,6 +291,65 @@ class DirFileManager::Impl : public SmallObject<> {
     return result;
   }
 
+#if defined(OS_WIN)
+  bool EnumerateFilesInternalUTF16(const std::wstring &utf16_relative_dir,
+                                   const std::wstring &utf16_absolute_dir,
+                                   Slot1<bool, const char *> *callback) {
+    WIN32_FIND_DATAW file_data = {0};
+    wchar_t utf16_search_path[MAX_PATH];
+    ::PathCombineW(utf16_search_path, utf16_absolute_dir.c_str(), L"*");
+    HANDLE handle = ::FindFirstFileW(utf16_search_path, &file_data);
+    if (handle != INVALID_HANDLE_VALUE) {
+      do {
+        wchar_t utf16_absolute_file[MAX_PATH] = {0};
+        wchar_t utf16_relative_file[MAX_PATH] = {0};
+        ::PathCombineW(utf16_absolute_file, utf16_absolute_dir.c_str(),
+                       file_data.cFileName);
+        ::PathCombineW(utf16_relative_file, utf16_relative_dir.c_str(),
+                       file_data.cFileName);
+        if (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+          if (*file_data.cFileName == L'.')
+            continue;  // skip itself('.') and its parent ('..')
+          if (!EnumerateFilesInternalUTF16(utf16_relative_file,
+                                           utf16_absolute_file,
+                                           callback)) {
+            ::FindClose(handle);
+            return false;
+          }
+        } else {
+          std::string relative_file;
+          ConvertStringUTF16ToUTF8(utf16_relative_file,
+                                   wcslen(utf16_relative_file),
+                                   &relative_file);
+          if (!(*callback)(relative_file.c_str())) {
+            ::FindClose(handle);
+            return false;
+          }
+        }
+      } while (::FindNextFileW(handle, &file_data));
+      ::FindClose(handle);
+      return true;
+    } else {
+#ifdef _DEBUG
+      std::string absolute_dir;
+      ConvertStringUTF16ToUTF8(utf16_absolute_dir, &absolute_dir);
+      DLOG("Failed to list directory %s: %h.", absolute_dir.c_str(),
+           GetLastError());
+#endif
+      // Enumeration non-exist directory succeeds with empty result.
+      return true;
+    }
+  }
+  bool EnumerateFilesInternal(const std::string &relative_dir,
+                              const std::string &absolute_dir,
+                              Slot1<bool, const char *> *callback) {
+    std::wstring utf16_relative_dir, utf16_absolute_dir;
+    ConvertStringUTF8ToUTF16(relative_dir, &utf16_relative_dir);
+    ConvertStringUTF8ToUTF16(absolute_dir, &utf16_absolute_dir);
+    return EnumerateFilesInternalUTF16(utf16_relative_dir, utf16_absolute_dir,
+                                       callback);
+  }
+#elif defined(OS_POSIX)
   bool EnumerateFilesInternal(const std::string &relative_dir,
                               const std::string &absolute_dir,
                               Slot1<bool, const char *> *callback) {
@@ -320,9 +362,9 @@ class DirFileManager::Impl : public SmallObject<> {
                                                   dir_ent->d_name, NULL));
           std::string relative_file(BuildFilePath(relative_dir.c_str(),
                                                   dir_ent->d_name, NULL));
-          struct stat stat_value;
+          ggadget::StatStruct stat_value;
           memset(&stat_value, 0, sizeof(stat_value));
-          if (::stat(absolute_file.c_str(), &stat_value) == 0) {
+          if (ggadget::stat(absolute_file.c_str(), &stat_value) == 0) {
             if (S_ISREG(stat_value.st_mode)) {
               if (!(*callback)(relative_file.c_str())) {
                 closedir(dir);
@@ -348,6 +390,7 @@ class DirFileManager::Impl : public SmallObject<> {
       return true;
     }
   }
+#endif
 
   std::string temp_dir_;
   std::string base_path_;
@@ -355,7 +398,7 @@ class DirFileManager::Impl : public SmallObject<> {
 
 
 DirFileManager::DirFileManager()
-  : impl_(new Impl()){
+  : impl_(new Impl()) {
 }
 
 DirFileManager::~DirFileManager() {

@@ -23,17 +23,17 @@ namespace ggadget {
 namespace framework {
 namespace linux_system {
 
-#ifdef NM_DEVICE_TYPE_WIFI
+//#ifdef NM_DEVICE_TYPE_WIFI
 static const int kDeviceTypeWifi = NM_DEVICE_TYPE_WIFI;
-#else
-static const int kDeviceTypeWifi = DEVICE_TYPE_802_11_WIRELESS;
-#endif
+//#else
+//static const int kDeviceTypeWifi = DEVICE_TYPE_802_11_WIRELESS;
+//#endif
 
-#ifdef NM_DEVICE_TYPE_ETHERNET
+//#ifdef NM_DEVICE_TYPE_ETHERNET
 static const int kDeviceTypeEthernet = NM_DEVICE_TYPE_ETHERNET;
-#else
-static const int kDeviceTypeEthernet = DEVICE_TYPE_802_3_ETHERNET;
-#endif
+//#else
+//static const int kDeviceTypeEthernet = DEVICE_TYPE_802_3_ETHERNET;
+//#endif
 
 static const int kDeviceTypeUnknown = 0;
 

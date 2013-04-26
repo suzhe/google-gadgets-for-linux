@@ -13,6 +13,9 @@
 #include "zlib.h"
 #include "ioapi.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 
 /* I've found an old Unix (a SunOS 4.1.3_U1) without all SEEK_* defined.... */
@@ -65,6 +68,35 @@ int ZCALLBACK ferror_file_func OF((
    voidpf stream));
 
 
+#ifdef _WIN32
+voidpf ZCALLBACK fopen_file_func (opaque, filename, mode)
+   voidpf opaque;
+   const char* filename;
+   int mode;
+{
+    FILE* file = NULL;
+    const wchar_t* mode_fopen = NULL;
+    if ((mode & ZLIB_FILEFUNC_MODE_READWRITEFILTER)==ZLIB_FILEFUNC_MODE_READ)
+        mode_fopen = L"rb";
+    else
+    if (mode & ZLIB_FILEFUNC_MODE_EXISTING)
+        mode_fopen = L"r+b";
+    else
+    if (mode & ZLIB_FILEFUNC_MODE_CREATE)
+        mode_fopen = L"wb";
+
+    if ((filename!=NULL) && (mode_fopen != NULL)) {
+        int charcount = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+        if (charcount != 0) {
+            wchar_t* wfilename = malloc(sizeof(wchar_t) * charcount);
+            MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, charcount);
+            file = _wfopen(wfilename, mode_fopen);
+            free(wfilename);
+        }
+    }
+    return file;
+}
+#else
 voidpf ZCALLBACK fopen_file_func (opaque, filename, mode)
    voidpf opaque;
    const char* filename;
@@ -85,6 +117,7 @@ voidpf ZCALLBACK fopen_file_func (opaque, filename, mode)
         file = fopen(filename, mode_fopen);
     return file;
 }
+#endif
 
 
 uLong ZCALLBACK fread_file_func (opaque, stream, buf, size)

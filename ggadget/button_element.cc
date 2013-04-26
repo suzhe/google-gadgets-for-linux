@@ -203,6 +203,7 @@ void ButtonElement::DoDraw(CanvasInterface *canvas) {
   double text_x = kButtonMargin;
   double text_y = kButtonMargin;
   double text_width, text_height;
+  impl_->text_.SetRTL(IsTextRTL());
   impl_->text_.GetSimpleExtents(&text_width, &text_height);
   bool has_text = (text_width > 0 && text_height > 0);
 

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ static const char kGadgetFileManagerPrefix[] = "gadget://";
 static FileManagerInterface *g_gadget_file_manager = NULL;
 static FileManagerWrapper *g_designer_file_manager = NULL;
 static Gadget *g_designer_gadget = NULL;
-static Gadget *g_designee_gadget = NULL;
+static GadgetInterface *g_designee_gadget = NULL;
 static Connection *g_designee_close_connection = NULL;
 
 class ScriptableFileManager : public ScriptableHelperDefault {
@@ -403,9 +403,10 @@ extern "C" {
   }
 
   bool RegisterScriptExtension(ggadget::ScriptContextInterface *context,
-                               ggadget::Gadget *gadget) {
+                               ggadget::GadgetInterface *gadget) {
     ASSERT(context);
     ASSERT(gadget);
+    ASSERT(gadget->IsInstanceOf(ggadget::Gadget::TYPE_ID));
     if (context) {
       if (!context->AssignFromNative(
           NULL, NULL, "designerUtils",
@@ -413,7 +414,8 @@ extern "C" {
         LOG("Failed to register designerUtils.");
         return false;
       }
-      ggadget::designer::g_designer_gadget = gadget;
+      ggadget::designer::g_designer_gadget =
+          ggadget::down_cast<ggadget::Gadget*>(gadget);
       return true;
     }
     return false;

@@ -30,7 +30,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <inttypes.h>
 
 #include <ggadget/logger.h>
 

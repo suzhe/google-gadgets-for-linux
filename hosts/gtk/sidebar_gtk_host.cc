@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -48,7 +48,6 @@
 #include <ggadget/slot.h>
 #include <ggadget/view.h>
 #include <ggadget/view_element.h>
-#include <ggadget/host_utils.h>
 
 #include "gadget_browser_host.h"
 
@@ -555,7 +554,7 @@ class SideBarGtkHost::Impl {
 
   void OnSideBarChildViewMoved(View *view) {
     if (view) {
-      Gadget *gadget = view->GetGadget();
+      GadgetInterface *gadget = view->GetGadget();
       if (gadget) {
         int gadget_id = gadget->GetInstanceID();
         SetPopOutViewPosition(gadget_id);
@@ -614,7 +613,7 @@ class SideBarGtkHost::Impl {
   }
 
   bool SaveGadgetOrder(size_t index, View *view) {
-    Gadget *gadget = view->GetGadget();
+    GadgetInterface *gadget = view->GetGadget();
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue(kOptionPositionInSideBar, Variant(index));
     return true;
@@ -1313,8 +1312,10 @@ class SideBarGtkHost::Impl {
 #endif
   }
 
-  Gadget *LoadGadget(const char *path, const char *options_name,
-                     int instance_id, bool show_debug_console) {
+  GadgetInterface *LoadGadget(const char *path,
+                              const char *options_name,
+                              int instance_id,
+                              bool show_debug_console) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
       // Gadget is already loaded.
       return gadgets_[instance_id].gadget;
@@ -1551,7 +1552,8 @@ class SideBarGtkHost::Impl {
     }
   }
 
-  ViewHostInterface *NewViewHost(Gadget *gadget, ViewHostInterface::Type type) {
+  ViewHostInterface *NewViewHost(Gadget *gadget,
+                                 ViewHostInterface::Type type) {
     // Options view host can be created without a gadget.
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS) {
       // No decorator for options view.
@@ -1583,7 +1585,7 @@ class SideBarGtkHost::Impl {
     return NULL;
   }
 
-  void RemoveGadget(Gadget *gadget, bool save_data) {
+  void RemoveGadget(GadgetInterface *gadget, bool save_data) {
     GGL_UNUSED(save_data);
     ASSERT(gadget);
     int id = gadget->GetInstanceID();
@@ -1894,7 +1896,7 @@ class SideBarGtkHost::Impl {
       gtk_widget_destroy(impl->status_icon_menu_);
 
     impl->status_icon_menu_ = gtk_menu_new();
-    MenuBuilder menu_builder(GTK_MENU_SHELL(impl->status_icon_menu_));
+    MenuBuilder menu_builder(NULL, GTK_MENU_SHELL(impl->status_icon_menu_));
 
     impl->OnSideBarMenu(&menu_builder);
     gtk_menu_popup(GTK_MENU(impl->status_icon_menu_), NULL, NULL,
@@ -1903,7 +1905,7 @@ class SideBarGtkHost::Impl {
   }
 #endif
 
-  void ShowGadgetDebugConsole(Gadget *gadget) {
+  void ShowGadgetDebugConsole(GadgetInterface *gadget) {
     if (!gadget)
       return;
     GadgetInfoMap::iterator it = gadgets_.find(gadget->GetInstanceID());
@@ -2013,21 +2015,24 @@ SideBarGtkHost::~SideBarGtkHost() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SideBarGtkHost::NewViewHost(Gadget *gadget,
+ViewHostInterface *SideBarGtkHost::NewViewHost(GadgetInterface *gadget,
                                                ViewHostInterface::Type type) {
-  return impl_->NewViewHost(gadget, type);
+  ASSERT(!gadget || gadget->IsInstanceOf(Gadget::TYPE_ID));
+  return impl_->NewViewHost(down_cast<Gadget*>(gadget), type);
 }
 
-Gadget *SideBarGtkHost::LoadGadget(const char *path, const char *options_name,
-                                   int instance_id, bool show_debug_console) {
+GadgetInterface *SideBarGtkHost::LoadGadget(const char *path,
+                                            const char *options_name,
+                                            int instance_id,
+                                            bool show_debug_console) {
   return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
 }
 
-void SideBarGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
+void SideBarGtkHost::RemoveGadget(GadgetInterface *gadget, bool save_data) {
   return impl_->RemoveGadget(gadget, save_data);
 }
 
-void SideBarGtkHost::ShowGadgetDebugConsole(Gadget *gadget) {
+void SideBarGtkHost::ShowGadgetDebugConsole(GadgetInterface *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 

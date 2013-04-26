@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #include "gadget_consts.h"
 #include "string_utils.h"
 #include "common.h"
+#include "variant.h"
 
 namespace ggadget {
 
@@ -62,7 +63,7 @@ bool AssignIfDiffer(
       changed = true;
       *dest = source;
     }
-  } else if (!dest->empty()){
+  } else if (!dest->empty()) {
     changed = true;
     dest->clear();
   }
@@ -183,13 +184,15 @@ bool IsValidURLChar(char c) {
   // check for INVALID character (in US-ASCII: 0-127) and consider all
   // others valid
   return c > ' ' &&
-         // always true: c <= 127 &&
+         c <= 127 &&  // Always checks this because compiler may treat char as
+                      // an unsigned type.
          strchr(kInvalidURLChars, c) == NULL;
 }
 
 bool IsValidURLComponentChar(char c) {
   return c > ' ' &&
-         // always true: c <= 127 &&
+         c <= 127 &&  // Always checks this because compiler may treat char as
+                      // an unsigned type.
          strchr(kInvalidURLComponentChars, c) == NULL;
 }
 
@@ -244,10 +247,10 @@ std::string DecodeURL(const std::string &source) {
   for (std::string::const_iterator i = source.begin(); i != end; ++i) {
     char src = *i;
     if (src == '%' && i + 1 != end && i + 2 != end) {
-      int decoded1 = DECODE_HEX_CHAR(*(i + 1));
-      int decoded2 = DECODE_HEX_CHAR(*(i + 2));
-      if (decoded1 != -1 && decoded2 != -1) {
-        dest.append(1, static_cast<char>((decoded1 << 4) | decoded2));
+      int decodeleft = DECODE_HEX_CHAR(*(i + 1));
+      int decodetop = DECODE_HEX_CHAR(*(i + 2));
+      if (decodeleft != -1 && decodetop != -1) {
+        dest.append(1, static_cast<char>((decodeleft << 4) | decodetop));
         i += 2;
       } else {
         dest.append(1, src);
@@ -1041,6 +1044,44 @@ bool EndWithNoCase(const char *string, const char *suffix) {
       return strcasecmp(string + string_len - suffix_len, suffix) == 0;
   }
   return false;
+}
+
+bool StringToBorderSize(const std::string &values,
+                        double *left, double *top,
+                        double *right, double *bottom) {
+  StringVector values_vector;
+  if (strchr(values.c_str(), ','))
+    SplitStringList(values, ",", &values_vector);
+  else
+    SplitStringList(values, " ", &values_vector);
+
+  double double_values[4];
+  for (size_t i = 0; i < values_vector.size() && i < 4; ++i) {
+    if (!Variant(TrimString(values_vector[i])).ConvertToDouble(
+        double_values + i)) {
+      return false;
+    }
+  }
+
+  if (values_vector.size() == 4) {
+    *left = double_values[0];
+    *top = double_values[1];
+    *right = double_values[2];
+    *bottom = double_values[3];
+  } else if (values_vector.size() == 2) {
+    *left = double_values[0];
+    *right = double_values[0];
+    *top = double_values[1];
+    *bottom = double_values[1];
+  } else if (values_vector.size() == 1) {
+    *left = double_values[0];
+    *top = double_values[0];
+    *right = double_values[0];
+    *bottom = double_values[0];
+  } else {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace ggadget
