@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@
 #include "gtk_host_base.h"
 
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
-#include <ggadget/locales.h>
-#include <ggadget/messages.h>
-#include <ggadget/string_utils.h>
-#include <ggadget/permissions.h>
+#include <ggadget/gadget.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gtk/single_view_host.h>
+#include <ggadget/locales.h>
+#include <ggadget/logger.h>
+#include <ggadget/messages.h>
+#include <ggadget/permissions.h>
+#include <ggadget/string_utils.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;

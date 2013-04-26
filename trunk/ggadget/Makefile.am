@@ -1,5 +1,5 @@
 #
-# Copyright 2008 Google Inc.
+# Copyright 2011 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  audioclip_interface.h \
 			  backoff.h \
 			  basic_element.h \
+			  build_config.h \
 			  button_element.h \
 			  canvas_interface.h \
 			  canvas_utils.h \
@@ -71,10 +72,13 @@ gglinclude_HEADERS	= anchor_element.h \
 			  file_system_interface.h \
 			  floating_main_view_decorator.h \
 			  font_interface.h \
+			  format_macros.h \
 			  framed_view_decorator_base.h \
 			  framework_interface.h \
 			  gadget.h \
+			  gadget_base.h \
 			  gadget_consts.h \
+			  gadget_interface.h \
 			  gadget_manager_interface.h \
 			  graphics_interface.h \
 			  host_interface.h \
@@ -84,6 +88,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  item_element.h \
 			  label_element.h \
 			  light_map.h \
+			  linear_element.h \
 			  listbox_element.h \
 			  locales.h \
 			  localized_file_manager.h \
@@ -129,8 +134,11 @@ gglinclude_HEADERS	= anchor_element.h \
 			  slot.h \
 			  small_object.h \
 			  string_utils.h \
+			  system_file_functions.h \
 			  system_utils.h \
 			  host_utils.h \
+			  text_formats_decl.h \
+			  text_formats.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
@@ -187,11 +195,13 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  floating_main_view_decorator.cc \
 			  framed_view_decorator_base.cc \
 			  gadget.cc \
+			  gadget_base.cc \
 			  gadget_manager.cc \
 			  image_cache.cc \
 			  img_element.cc \
 			  item_element.cc \
 			  label_element.cc \
+			  linear_element.cc \
 			  listbox_element.cc \
 			  locales.cc \
 			  localized_file_manager.cc \
@@ -226,8 +236,10 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  slot.cc \
 			  small_object.cc \
 			  string_utils.cc \
+			  system_file_functions_posix.cc \
 			  system_utils.cc \
 			  host_utils.cc \
+			  text_formats.cc \
 			  text_frame.cc \
 			  texture.cc \
 			  unicode_utils.cc \

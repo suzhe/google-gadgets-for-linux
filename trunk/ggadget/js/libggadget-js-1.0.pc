@@ -1,0 +1,22 @@
+prefix=/usr/local
+exec_prefix=/usr/local
+libdir=/usr/local/lib
+includedir=/usr/local/include
+datarootdir=/usr/local/share
+datadir=/usr/local/share
+sysconfdir=/usr/local/etc
+
+ggl_module_dir=/usr/local/lib/google-gadgets/modules
+ggl_resource_dir=/usr/local/share/google-gadgets
+ggl_include_dir=/usr/local/include/google-gadgets
+ggl_sysdeps_include_dir=/usr/local/lib/google-gadgets/include
+ggl_libexec_dir=/usr/local/lib/google-gadgets
+
+binary_version=1.0.0
+
+Name: libggadget-js
+Description: Google Gadgets Runtime JavaScript utilities
+Version: 0.11.2
+Requires: libggadget-1.0
+Libs: -L${libdir} -lggadget-js-1.0
+Cflags: -I${ggl_include_dir}

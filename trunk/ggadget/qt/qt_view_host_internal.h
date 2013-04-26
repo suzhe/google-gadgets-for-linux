@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 #ifndef GGADGET_QT_QT_VIEW_HOST_INTERNAL_H__
 #define GGADGET_QT_QT_VIEW_HOST_INTERNAL_H__
+
+#include <ggadget/gadget.h>
 
 namespace ggadget {
 namespace qt {
@@ -334,13 +336,16 @@ class QtViewHost::Impl : public QObject {
   }
 
   void OnViewWidgetClose() {
-    if (type_ == ViewHostInterface::VIEW_HOST_DETAILS)
-      view_->GetGadget()->CloseDetailsView();
-    else  // main view
+    if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
+      GadgetInterface *gadget = view_->GetGadget();
+      if (gadget->IsInstanceOf(Gadget::TYPE_ID))
+        down_cast<Gadget*>(gadget)->CloseDetailsView();
+    } else {  // main view
       CloseView();
+    }
   }
 
-  void OnShow(bool flag, Gadget *gadget) {
+  void OnShow(bool flag, GadgetInterface *gadget) {
     if (!gadget || gadget == view_->GetGadget())
       SetVisibility(flag);
   }

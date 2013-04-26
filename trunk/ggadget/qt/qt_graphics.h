@@ -66,6 +66,8 @@ class QtGraphics : public GraphicsInterface {
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
+  virtual TextRendererInterface *NewTextRenderer() const;
+
  private:
   class Impl;
   Impl *impl_;

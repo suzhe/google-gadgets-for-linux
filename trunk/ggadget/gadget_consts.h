@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,13 +19,18 @@
 
 #include <map>
 #include <string>
-#include <ggadget/sysdeps.h>
+#include <ggadget/common.h>
 
 namespace ggadget {
 
 /** Character to separate directories */
+#if defined(OS_WIN)
+const char kDirSeparator = '\\';
+const char kDirSeparatorStr[] = "\\";
+#elif defined(OS_POSIX)
 const char kDirSeparator = '/';
 const char kDirSeparatorStr[] = "/";
+#endif
 
 /** Character to separate search paths, eg. used in PATH environment var */
 const char kSearchPathSeparator = ':';
@@ -245,6 +250,8 @@ const char kGGLAboutView[] = "resource://ggl_about.xml";
 const char kGadgetAboutView[] = "resource://gadget_about.xml";
 
 const char kGadgetsIcon[] = "resource://google-gadgets.png";
+
+const char kMenuCheckedMarkIcon[] = "resource://menu_checked_mark.png";
 
 const char kFtpUrlPrefix[] = "ftp://";
 const char kHttpUrlPrefix[] = "http://";

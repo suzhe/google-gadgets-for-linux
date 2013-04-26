@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,28 +17,26 @@
 #include "scriptable_view.h"
 
 #include <string>
-#include "common.h"
-#include "gadget_consts.h"
-#include "logger.h"
-#include "content_item.h"
-#include "details_view_data.h"
-#include "elements.h"
 #include "basic_element.h"
-#include "scriptable_image.h"
-#include "scriptable_event.h"
-#include "image_interface.h"
-#include "file_manager_interface.h"
+#include "common.h"
+#include "elements.h"
 #include "file_manager_factory.h"
+#include "file_manager_interface.h"
+#include "gadget_consts.h"
+#include "gadget_interface.h"
+#include "image_interface.h"
+#include "logger.h"
+#include "permissions.h"
+#include "scriptable_event.h"
+#include "scriptable_image.h"
 #include "script_context_interface.h"
+#include "small_object.h"
+#include "string_utils.h"
+#include "system_utils.h"
 #include "unicode_utils.h"
 #include "xml_dom.h"
 #include "xml_parser_interface.h"
-#include "xml_http_request_interface.h"
 #include "xml_utils.h"
-#include "string_utils.h"
-#include "permissions.h"
-#include "system_utils.h"
-#include "small_object.h"
 
 namespace ggadget {
 
@@ -62,14 +60,6 @@ class ScriptableView::Impl : public SmallObject<> {
 
     if (script_context_) {
       script_context_->SetGlobalObject(&global_object_);
-      script_context_->RegisterClass("DOMDocument",
-          NewSlot(this, &Impl::CreateDOMDocument));
-      script_context_->RegisterClass("XMLHttpRequest",
-          NewSlot(view->GetGadget(), &Gadget::CreateXMLHttpRequest));
-      script_context_->RegisterClass("DetailsView",
-          NewSlot(DetailsViewData::CreateInstance));
-      script_context_->RegisterClass("ContentItem",
-          NewSlot(ContentItem::CreateInstance, view_));
 
       // Old "utils" global object, for backward compatibility.
       utils_.RegisterMethod("loadImage",
@@ -90,16 +80,6 @@ class ScriptableView::Impl : public SmallObject<> {
                             NewSlot(view_, &View::Prompt));
 
       script_context_->AssignFromNative(NULL, "", "utils", Variant(&utils_));
-
-      // Execute common.js to initialize global constants and compatibility
-      // adapters.
-      std::string common_js_contents;
-      if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
-        std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
-        script_context_->Execute(common_js_contents.c_str(), path.c_str(), 1);
-      } else {
-        LOG("Failed to load %s.", kCommonJS);
-      }
     }
   }
 
@@ -155,7 +135,7 @@ class ScriptableView::Impl : public SmallObject<> {
   bool InitFromXML(const std::string &xml, const char *filename) {
     DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
     xmldoc->Ref();
-    Gadget *gadget = view_->GetGadget();
+    GadgetInterface *gadget = view_->GetGadget();
     bool success = false;
     if (gadget) {
       success = gadget->ParseLocalizedXML(xml, filename, xmldoc);
@@ -273,16 +253,6 @@ class ScriptableView::Impl : public SmallObject<> {
       }
     }
     return true;
-  }
-
-  // Create a customized DOMDocument object with optional "load()" method,
-  // for microsoft compatibility.
-  DOMDocumentInterface *CreateDOMDocument() {
-    const Permissions *permissions = view_->GetGadget()->GetPermissions();
-    return ::ggadget::CreateDOMDocument(
-        GetXMLParser(),
-        permissions->IsRequiredAndGranted(Permissions::NETWORK),
-        permissions->IsRequiredAndGranted(Permissions::FILE_READ));
   }
 
   ScriptableView *owner_;

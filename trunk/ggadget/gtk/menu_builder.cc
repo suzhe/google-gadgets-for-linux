@@ -14,23 +14,32 @@
   limitations under the License.
 */
 
-#include <ggadget/logger.h>
-#include <ggadget/common.h>
-#include <ggadget/slot.h>
 #include "menu_builder.h"
+
+#include <math.h>
+
+#include <ggadget/common.h>
+#include <ggadget/image_interface.h>
+#include <ggadget/logger.h>
+#include <ggadget/math_utils.h>
+#include <ggadget/slot.h>
+#include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 namespace gtk {
 
-static const char *kMenuItemTextTag = "menu-item-text";
-static const char *kMenuItemStyleTag = "menu-item-style";
-static const char *kMenuItemPriorityTag = "menu-item-priority";
-static const char *kMenuItemCallbackTag = "menu-item-callback";
-static const char *kMenuItemBuilderTag = "menu-item-builder";
-static const char *kMenuItemNoCallbackTag = "menu-item-no-callback";
+namespace {
+
+const char kMenuItemTextTag[] = "menu-item-text";
+const char kMenuItemStyleTag[] = "menu-item-style";
+const char kMenuItemPriorityTag[] = "menu-item-priority";
+const char kMenuItemCallbackTag[] = "menu-item-callback";
+const char kMenuItemBuilderTag[] = "menu-item-builder";
+const char kMenuItemNoCallbackTag[] = "menu-item-no-callback";
+const char kMenuPositionHintTag[] = "menu-position-hint";
 
 // Must keep the same order as MenuInterface::MenuItemStockIcon
-static const char *kStockIcons[] = {
+const char *kStockIcons[] = {
   NULL,
   GTK_STOCK_ABOUT,
   GTK_STOCK_ADD,
@@ -58,11 +67,16 @@ static const char *kStockIcons[] = {
   GTK_STOCK_ZOOM_OUT
 };
 
-static const int kNumberOfStockIcons = static_cast<int>(arraysize(kStockIcons));
+const int kNumberOfStockIcons = static_cast<int>(arraysize(kStockIcons));
+
+}  // namespace
 
 class MenuBuilder::Impl {
  public:
-  Impl(GtkMenuShell *gtk_menu) : gtk_menu_(gtk_menu), item_added_(false) {
+  Impl(ViewHostInterface *view_host, GtkMenuShell *gtk_menu)
+      : view_host_(view_host),
+        gtk_menu_(gtk_menu),
+        item_added_(false) {
     ASSERT(GTK_IS_MENU_SHELL(gtk_menu_));
     g_object_ref(G_OBJECT(gtk_menu_));
   }
@@ -330,7 +344,7 @@ class MenuBuilder::Impl {
     if (item) {
       GtkMenu *popup = GTK_MENU(gtk_menu_new());
       gtk_widget_show(GTK_WIDGET(popup));
-      submenu = new MenuBuilder(GTK_MENU_SHELL(popup));
+      submenu = new MenuBuilder(view_host_, GTK_MENU_SHELL(popup));
 
       gtk_menu_item_set_submenu(item, GTK_WIDGET(popup));
       g_object_set_data_full(G_OBJECT(item), kMenuItemBuilderTag,
@@ -340,12 +354,107 @@ class MenuBuilder::Impl {
     return submenu;
   }
 
+  static void DestroyMenuPositionHintCallback(gpointer data) {
+    delete reinterpret_cast<Rectangle*>(data);
+  }
+
+  void SetPositionHint(const Rectangle &rect) {
+    Rectangle *hint = new Rectangle(rect);
+    g_object_set_data_full(G_OBJECT(gtk_menu_), kMenuPositionHintTag,
+                           reinterpret_cast<gpointer>(hint),
+                           DestroyMenuPositionHintCallback);
+  }
+
+  static void TranslateCoordinatesToScreen(ViewHostInterface *view_host,
+                                           const Rectangle &src_rect,
+                                           gint *left,
+                                           gint *top,
+                                           gint *right,
+                                           gint *bottom) {
+    GtkWidget *widget = GTK_WIDGET(view_host->GetNativeWidget());
+    ASSERT(widget);
+
+    GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
+    ASSERT(toplevel);
+    ASSERT(GTK_IS_WINDOW(toplevel));
+
+    *left = static_cast<gint>(::round(src_rect.x));
+    *top = static_cast<gint>(::round(src_rect.y));
+    *right = static_cast<gint>(::round(src_rect.x + src_rect.w));
+    *bottom = static_cast<gint>(::round(src_rect.y + src_rect.h));
+
+    if (widget != toplevel) {
+      gtk_widget_translate_coordinates(
+          widget, toplevel, *left, *top, left, top);
+      gtk_widget_translate_coordinates(
+          widget, toplevel, *right, *bottom, right, bottom);
+    }
+
+    gint window_x, window_y;
+    gtk_window_get_position(GTK_WINDOW(toplevel), &window_x, &window_y);
+
+    *left += window_x;
+    *top += window_y;
+    *right += window_x;
+    *bottom += window_y;
+  }
+
+  static void PositionMenuCallback(GtkMenu *menu,
+                                   gint *x,
+                                   gint *y,
+                                   gboolean *push_in,
+                                   gpointer data) {
+    ViewHostInterface *view_host = reinterpret_cast<ViewHostInterface*>(data);
+    ASSERT(view_host);
+
+    Rectangle *hint = reinterpret_cast<Rectangle*>(
+        g_object_get_data(G_OBJECT(menu), kMenuPositionHintTag));
+    ASSERT(hint);
+
+    GdkScreen *screen =
+        gtk_widget_get_screen(GTK_WIDGET(view_host->GetNativeWidget()));
+    ASSERT(screen);
+
+    const gint screen_width = gdk_screen_get_width(screen);
+    const gint screen_height = gdk_screen_get_height(screen);
+
+    gtk_menu_set_screen(menu, screen);
+
+    GtkRequisition menu_size;
+    gtk_widget_size_request(GTK_WIDGET(menu), &menu_size);
+
+    gint left, top, right, bottom;
+    TranslateCoordinatesToScreen(view_host, *hint,
+                                 &left, &top, &right, &bottom);
+
+    *x = (left + menu_size.width < screen_width) ?
+        left : (screen_width - menu_size.width);
+    *y = (bottom + menu_size.height < screen_height) ?
+        bottom : (top - menu_size.height);
+    *x = std::max(0, *x);
+    *y = std::max(0, *y);
+    *push_in = false;
+  }
+
+  void Popup(guint button, guint32 activate_time) {
+    if (view_host_ &&
+        g_object_get_data(G_OBJECT(gtk_menu_), kMenuPositionHintTag)) {
+      gtk_menu_popup(GTK_MENU(gtk_menu_), NULL, NULL,
+                     PositionMenuCallback, view_host_,
+                     button, activate_time);
+    } else {
+      gtk_menu_popup(GTK_MENU(gtk_menu_), NULL, NULL, NULL, NULL,
+                     button, activate_time);
+    }
+  }
+
+  ViewHostInterface *view_host_;
   GtkMenuShell *gtk_menu_;
   bool item_added_;
 };
 
-MenuBuilder::MenuBuilder(GtkMenuShell *gtk_menu)
-    : impl_(new Impl(gtk_menu)) {
+MenuBuilder::MenuBuilder(ViewHostInterface *view_host, GtkMenuShell *gtk_menu)
+    : impl_(new Impl(view_host, gtk_menu)) {
   DLOG("Create MenuBuilder.");
 }
 
@@ -360,6 +469,14 @@ void MenuBuilder::AddItem(const char *item_text, int style, int stock_icon,
   impl_->AddMenuItem(item_text, style, stock_icon, handler, priority);
 }
 
+void MenuBuilder::AddItem(const char* item_text, int style,
+                          ImageInterface* image_icon,
+                          Slot1<void, const char*>* handler, int priority) {
+  // TODO(jiangwei): Implement this method.
+  DestroyImage(image_icon);
+  AddItem(item_text, style, 0, handler, priority);
+}
+
 void MenuBuilder::SetItemStyle(const char *item_text, int style) {
   impl_->SetItemStyle(item_text, style);
 }
@@ -369,12 +486,20 @@ ggadget::MenuInterface *MenuBuilder::AddPopup(const char *popup_text,
   return impl_->AddPopup(popup_text, priority);
 }
 
+void MenuBuilder::SetPositionHint(const Rectangle &rect) {
+  impl_->SetPositionHint(rect);
+}
+
 GtkMenuShell *MenuBuilder::GetGtkMenuShell() const {
   return impl_->gtk_menu_;
 }
 
 bool MenuBuilder::ItemAdded() const {
   return impl_->item_added_;
+}
+
+void MenuBuilder::Popup(guint button, guint32 activate_time) const {
+  impl_->Popup(button, activate_time);
 }
 
 } // namespace gtk

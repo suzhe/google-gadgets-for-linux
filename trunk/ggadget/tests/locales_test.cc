@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,8 +14,17 @@
   limitations under the License.
 */
 
+#include <string.h>
+
+#include <map>
+
+#include "ggadget/build_config.h"
 #include "ggadget/locales.h"
 #include "unittest/gtest.h"
+
+#if defined(OS_WIN)
+#include <windows.h>
+#endif
 
 using namespace ggadget;
 
@@ -43,14 +52,16 @@ TEST(Locales, GetLocaleShortName) {
 }
 
 TEST(Locales, GetSystemLocaleName) {
-  setlocale(LC_MESSAGES, "en_US.UTF-8");
+  SetLocaleForUiMessage("ar_SA.UTF-8");
+  ASSERT_EQ(std::string("ar-SA"), GetSystemLocaleName());
+  SetLocaleForUiMessage("en_GB.UTF-8");
+  ASSERT_EQ(std::string("en-GB"), GetSystemLocaleName());
+  SetLocaleForUiMessage("en_US.UTF-8");
   ASSERT_EQ(std::string("en"), GetSystemLocaleName());
-  setlocale(LC_MESSAGES, "en_US");
+  SetLocaleForUiMessage("en_US");
   ASSERT_EQ(std::string("en"), GetSystemLocaleName());
-  setlocale(LC_MESSAGES, "zh_CN.UTF-8");
+  SetLocaleForUiMessage("zh_CN.UTF-8");
   ASSERT_EQ(std::string("zh-CN"), GetSystemLocaleName());
-  setlocale(LC_MESSAGES, "C");
-  ASSERT_EQ(std::string("en"), GetSystemLocaleName());
 }
 
 int main(int argc, char **argv) {

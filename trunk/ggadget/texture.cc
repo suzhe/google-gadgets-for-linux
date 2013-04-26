@@ -14,8 +14,9 @@
   limitations under the License.
 */
 
-#include <cmath>
 #include "texture.h"
+
+#include <cmath>
 #include "canvas_interface.h"
 #include "graphics_interface.h"
 #include "image_interface.h"
@@ -102,6 +103,19 @@ class Texture::Impl : public SmallObject<> {
     }
   }
 
+  void DrawFormattedText(CanvasInterface *canvas,
+                         TextRendererInterface *renderer) {
+    if (image_) {
+      const CanvasInterface *image_canvas = image_->GetCanvas();
+      if (image_canvas) {
+        // Don't apply opacity_ here because it is only applicable with color_.
+        renderer->DrawTextWithTexture(image_canvas, canvas);
+        return;
+      }
+    }
+    renderer->DrawText(canvas);
+  }
+
   bool IsFullyOpaque() {
     if (image_)
       return image_->IsFullyOpaque();
@@ -154,6 +168,11 @@ const ImageInterface *Texture::GetImage() const {
 
 bool Texture::IsFullyOpaque() const {
   return impl_->IsFullyOpaque();
+}
+
+void Texture::DrawText(CanvasInterface *canvas,
+                       TextRendererInterface *renderer) const {
+  impl_->DrawFormattedText(canvas, renderer);
 }
 
 } // namespace ggadget

@@ -33,10 +33,18 @@ class ElementFactoryTest : public testing::Test {
 
 TEST_F(ElementFactoryTest, TestRegister) {
   ggadget::ElementFactory factory;
-  ASSERT_TRUE(factory.RegisterElementClass("muffin", Muffin::CreateInstance));
-  ASSERT_FALSE(factory.RegisterElementClass("muffin", Muffin::CreateInstance));
-  ASSERT_TRUE(factory.RegisterElementClass("pie", Pie::CreateInstance));
-  ASSERT_FALSE(factory.RegisterElementClass("pie", Pie::CreateInstance));
+  ASSERT_TRUE(factory.RegisterElementClass(
+      "muffin",
+      MuffinElement::CreateInstance));
+  ASSERT_FALSE(factory.RegisterElementClass(
+      "muffin",
+      MuffinElement::CreateInstance));
+  ASSERT_TRUE(factory.RegisterElementClass(
+      "pie",
+      PieElement::CreateInstance));
+  ASSERT_FALSE(factory.RegisterElementClass(
+      "pie",
+      PieElement::CreateInstance));
 }
 
 TEST_F(ElementFactoryTest, TestCreate) {
@@ -44,8 +52,8 @@ TEST_F(ElementFactoryTest, TestCreate) {
   ggadget::View view(
       new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
       NULL, &factory, NULL);
-  factory.RegisterElementClass("muffin", Muffin::CreateInstance);
-  factory.RegisterElementClass("pie", Pie::CreateInstance);
+  factory.RegisterElementClass("muffin", MuffinElement::CreateInstance);
+  factory.RegisterElementClass("pie", PieElement::CreateInstance);
 
   ggadget::BasicElement *e1 = factory.CreateElement("muffin", &view, NULL);
   ASSERT_TRUE(e1 != NULL);
@@ -57,8 +65,8 @@ TEST_F(ElementFactoryTest, TestCreate) {
 
   ggadget::BasicElement *e3 = factory.CreateElement("bread", &view, NULL);
   ASSERT_TRUE(e3 == NULL);
-  delete ggadget::down_cast<Muffin *>(e1);
-  delete ggadget::down_cast<Pie *>(e2);
+  delete ggadget::down_cast<MuffinElement *>(e1);
+  delete ggadget::down_cast<PieElement *>(e2);
 }
 
 int main(int argc, char *argv[]) {

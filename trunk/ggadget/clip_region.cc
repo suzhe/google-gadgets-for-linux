@@ -15,15 +15,23 @@
 */
 
 #include <vector>
+#include "build_config.h"
 #include "clip_region.h"
 #include "math_utils.h"
 #include "slot.h"
 #include "small_object.h"
+
+#if !defined(OS_WIN)
 #include "light_map.h"
+#endif
 
 namespace ggadget {
 
+#if defined(OS_WIN)
+typedef std::vector<Rectangle> RectangleVector;
+#else
 typedef std::vector<Rectangle, LokiAllocator<Rectangle> > RectangleVector;
+#endif
 
 class ClipRegion::Impl : public SmallObject<> {
  public:

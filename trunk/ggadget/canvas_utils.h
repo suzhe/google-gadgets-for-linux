@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 namespace ggadget {
 
 class CanvasInterface;
+class GraphicsInterface;
 class ImageInterface;
 
 /**
@@ -29,23 +30,15 @@ class ImageInterface;
  */
 
 /**
- * Draw the specified area in the source canvas on the destination canvas.
- * The source will be zoomed if necessary.
- */
-void DrawCanvasArea(const CanvasInterface *src, double src_x, double src_y,
-                    double src_width, double src_height,
-                    CanvasInterface *dest, double dest_x, double dest_y,
-                    double dest_width, double dest_height);
-
-/**
  * Draw the source canvas on the destination canvas with given width and height,
- * by stretching the middle area of the image and keeping the four corners
- * unstretched and the four borders only stretched in one direction.
+ * by stretching or tiling the middle area of the image and keeping the four
+ * corners unchanged and the four borders only stretched or tiled in one
+ * direction.
  *
  * If the border widths/heights are all 0, this method does nearly the same as
- * @c ImageInterface::StretchDraw().
- * If a border width or height is negative, the middle area is calculated from
- * the center of the image.
+ * @c ImageInterface::StretchDraw() or
+ * CanvasInterface::DrawFilledRectWithCanvas. if a border width or height is
+ * negative, the middle area is calculated from the center of the image.
  */
 void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
                              double x, double y, double width, double height,
@@ -60,6 +53,22 @@ void StretchMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
                             double top_border_height,
                             double right_border_width,
                             double bottom_border_height);
+
+void TileMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
+                          const GraphicsInterface *graphics,
+                          double x, double y, double width, double height,
+                          double left_border_width,
+                          double top_border_height,
+                          double right_border_width,
+                          double bottom_border_height);
+
+void TileMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
+                         const GraphicsInterface *graphics,
+                         double x, double y, double width, double height,
+                         double left_border_width,
+                         double top_border_height,
+                         double right_border_width,
+                         double bottom_border_height);
 
 /**
  * Maps the destination coordinates to the source coordinates if the source

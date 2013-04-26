@@ -18,12 +18,13 @@
 #define GGADGET_TEXT_FRAME_H__
 
 #include <ggadget/canvas_interface.h>
+#include <ggadget/text_formats.h>
 #include <ggadget/variant.h>
 #include <ggadget/small_object.h>
 
 namespace ggadget {
 
-class Color;
+struct Color;
 class Texture;
 class BasicElement;
 class View;
@@ -38,18 +39,32 @@ class TextFrame : public SmallObject<> {
   TextFrame(BasicElement *owner, View *view);
   ~TextFrame();
 
+  /** Attaches the TextFrame object to a new view. */
+  void SetView(View *view);
+
   void RegisterClassProperties(
       TextFrame *(*delegate_getter)(BasicElement *),
       const TextFrame *(*delegate_getter_const)(BasicElement *));
 
-  /** Gets and sets the text of the frame. */
+  /**
+   * Gets and sets the text of the frame. The text can be plain text or
+   * markup Text.
+   */
   std::string GetText() const;
+
   /**
    * Returns @c true if the text changed.
    * Use std::string as the parameter type to allow arbitrary binary data.
    * Some gadgets (such as gmail gadget) relies on this
    */
   bool SetText(const std::string &text);
+
+  /**
+   * Set text and their formats.
+   * Returns @c true if the text changed.
+   */
+  bool SetTextWithFormats(const std::string &text,
+                          const TextFormats& formats);
 
   void DrawWithTexture(CanvasInterface *canvas, double x, double y,
                        double width, double height, Texture *texture);
@@ -67,6 +82,17 @@ class TextFrame : public SmallObject<> {
    * in_width without trimming.
    */
   void GetExtents(double in_width, double *width, double *height);
+
+  /**
+   * Draws the caret on canvas at caret_pos with color.
+   * The caret_pos is counted by UTF16 codepoints.
+   */
+  void DrawCaret(CanvasInterface* canvas, int caret_pos, const Color& color);
+
+  /**
+   * Sets the default format of the text frame.
+   */
+  void SetDefaultFormat(const TextFormat& default_format);
 
  public: // registered properties
   /** Gets and sets the text horizontal alignment. */
@@ -129,6 +155,10 @@ class TextFrame : public SmallObject<> {
   /** Gets and sets whether to wrap the text when it's too large to display. */
   bool IsWordWrap() const;
   void SetWordWrap(bool wrap);
+
+  /** Gets and sets the basic reading direction. True means right to left. */
+  bool IsRTL() const;
+  void SetRTL(bool rtl);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(TextFrame);

@@ -456,7 +456,7 @@ EventResult GtkEditImpl::OnMouseEvent(const MouseEvent &event) {
     SelectWord();
     last_dblclick_time_ = current_time;
   } else if (type == Event::EVENT_MOUSE_DOWN) {
-    if (event.GetModifier() & Event::MOD_SHIFT) {
+    if (event.GetModifier() & Event::MODIFIER_SHIFT) {
       // If current click position is inside the selection range, then just
       // cancel the selection.
       if (index > sel_start && index < sel_end)

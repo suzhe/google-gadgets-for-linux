@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #define GGADGET_FRAMEWORK_INTERFACE_H__
 
 #include <string>
-#include <stdint.h>
+#include <ggadget/common.h>
 #include <ggadget/slot.h>
 
 namespace ggadget {

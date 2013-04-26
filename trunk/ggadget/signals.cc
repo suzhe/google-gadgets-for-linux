@@ -220,7 +220,7 @@ ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
     Impl::Connections::iterator it = impl_->connections_.begin();
     while (it != impl_->connections_.end()) {
       if (!*it)
-        impl_->connections_.erase(it);
+        it = impl_->connections_.erase(it);
       else
         ++it;
     }

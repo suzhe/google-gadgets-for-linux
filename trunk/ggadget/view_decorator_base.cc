@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
 #include "common.h"
 #include "elements.h"
 #include "messages.h"
+#include "gadget_interface.h"
 #include "gadget_consts.h"
-#include "gadget.h"
 #include "main_loop_interface.h"
 #include "menu_interface.h"
 #include "options_interface.h"
@@ -417,7 +417,7 @@ std::string ViewDecoratorBase::GetOptionPrefix() const {
 }
 
 bool ViewDecoratorBase::HasOptions() const {
-  Gadget *gadget = GetGadget();
+  GadgetInterface *gadget = GetGadget();
   if (gadget && !impl_->option_prefix_.empty())
     return true;
   else
@@ -425,7 +425,7 @@ bool ViewDecoratorBase::HasOptions() const {
 }
 
 Variant ViewDecoratorBase::GetOption(const std::string &name) const {
-  Gadget *gadget = GetGadget();
+  GadgetInterface *gadget = GetGadget();
   if (gadget && !impl_->option_prefix_.empty()) {
     OptionsInterface *opt = gadget->GetOptions();
     return opt->GetInternalValue((impl_->option_prefix_ + "_" + name).c_str());
@@ -435,7 +435,7 @@ Variant ViewDecoratorBase::GetOption(const std::string &name) const {
 }
 void ViewDecoratorBase::SetOption(const std::string &name,
                                   Variant value) const {
-  Gadget *gadget = GetGadget();
+  GadgetInterface *gadget = GetGadget();
   if (gadget && !impl_->option_prefix_.empty()) {
     OptionsInterface *opt = gadget->GetOptions();
     opt->PutInternalValue((impl_->option_prefix_ + "_" + name).c_str(), value);
@@ -473,7 +473,7 @@ Connection *ViewDecoratorBase::ConnectOnClose(Slot0<void> *slot) {
   return impl_->on_close_signal_.Connect(slot);
 }
 
-Gadget *ViewDecoratorBase::GetGadget() const {
+GadgetInterface *ViewDecoratorBase::GetGadget() const {
   View *child = GetChildView();
   return child ? child->GetGadget() : NULL;
 }

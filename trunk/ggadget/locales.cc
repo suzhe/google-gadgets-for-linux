@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <map>
 #include "common.h"
 #include "logger.h"
 #include "string_utils.h"
@@ -26,6 +27,7 @@
 
 namespace ggadget {
 
+namespace {
 // Stores locale names, short names and Windows locale identifiers.
 struct LocaleNameAndId {
   const char *name;
@@ -280,6 +282,95 @@ static bool WindowsLocaleIDToString(short windows_locale_id,
   return false;
 }
 
+#if defined(OS_WIN)
+static int GetLocaleIndexFromId(short windows_locale_id) {
+  static std::map<short, int> locale_id_index;
+
+  // We establish the id ==> index mapping only once.
+  if (locale_id_index.empty()) {
+    const int num_locale_names = arraysize(kLocaleNames);
+    for (int i = 0; i < num_locale_names; ++i) {
+      locale_id_index.insert(
+        std::make_pair(kLocaleNames[i].windows_locale_id, i));
+    }
+  }
+
+  ASSERT(locale_id_index.find(windows_locale_id) != locale_id_index.end());
+  return locale_id_index[windows_locale_id];
+}
+
+// Set windows locale by windows locale id.
+static bool SetLocaleById(const LCID locale_id) {
+  std::string locale_name;
+  char buf[128];
+
+  // Get the English name of the locale.
+  if (!GetLocaleInfoA(locale_id, LOCALE_SENGLANGUAGE, buf, 127))
+    return false;
+  locale_name = buf;
+
+  // Get the English name of the country/region.
+  if (!GetLocaleInfoA(locale_id, LOCALE_SENGCOUNTRY, buf, 127))
+    return false;
+  if (buf[0]) {
+    locale_name += "_";
+    locale_name += buf;
+  }
+
+  // Get the codepage.
+  if((GetLocaleInfoA(locale_id, LOCALE_IDEFAULTANSICODEPAGE, buf, 127) ||
+    GetLocaleInfoA(locale_id, LOCALE_IDEFAULTCODEPAGE, buf, 127)) &&
+    buf[0]) {
+      locale_name += ".";
+      locale_name += buf;
+  }
+
+  setlocale(LC_ALL, locale_name.c_str());
+  SetThreadLocale(locale_id);
+  return true;
+}
+#endif
+}  // namespace
+
+// Set corresponding system locale by locale name.
+bool SetLocaleForUiMessage(const char *locale_name) {
+#if defined(OS_WIN)
+  // Deal with the special cases "C" and "".
+  if (strcmp(locale_name, "C") == 0 || strcmp(locale_name, "") == 0) {
+    setlocale(LC_ALL, locale_name);
+    return true;
+  }
+
+  std::string locale_str(locale_name);
+  // Remove encoding and variant part.
+  std::string::size_type str_pos = locale_str.find('.');
+  if (str_pos != std::string::npos)
+    locale_str.erase(str_pos);
+  // Replace "_" with "-".
+  str_pos = locale_str.find('_');
+  if (str_pos != std::string::npos)
+    locale_str.replace(str_pos, 1, "-");
+
+  // Binary search key in kLocaleNames table.
+  LocaleNameAndId key = { locale_str.c_str(), NULL, 0 };
+  const LocaleNameAndId *key_pos = std::lower_bound(
+      kLocaleNames, kLocaleNames + arraysize(kLocaleNames), key,
+      LocaleNameCompare);
+
+  // If we find that key, set the corresponding windows locale id
+  // through method SetLocaleById().
+  if (key_pos && strcmp(locale_str.c_str(), key_pos->name) == 0) {
+    return SetLocaleById(static_cast<LCID>(key_pos->windows_locale_id));
+  } else {
+    return false;
+  }
+#elif defined(OS_POSIX)
+  setlocale(LC_MESSAGES, locale_name);
+  return true;
+#endif
+  return false;
+}
+
 bool GetLocaleWindowsIDString(const char *name, std::string *windows_id) {
   ASSERT(windows_id);
   LocaleNameAndId key = { name, NULL, 0 };
@@ -297,6 +388,8 @@ bool GetLocaleWindowsIDString(const char *name, std::string *windows_id) {
     if (strncmp(name, pos->name, len) == 0) {
       if (pos->short_name && strcmp(name, pos->short_name) == 0)
         return WindowsLocaleIDToString(pos->windows_locale_id, windows_id);
+    } else {
+      break;
     }
   }
   return false;
@@ -332,6 +425,13 @@ bool GetLocaleShortName(const char *name, std::string *short_name) {
 }
 
 std::string GetSystemLocaleName() {
+#if defined(OS_WIN)
+  // We get the thread locale id by calling corresponding API.
+  const short windows_locale_id = static_cast<short>(GetThreadLocale());
+  const int locale_index = GetLocaleIndexFromId(windows_locale_id);
+  return (kLocaleNames[locale_index].short_name) ?
+    kLocaleNames[locale_index].short_name : kLocaleNames[locale_index].name;
+#elif defined(OS_POSIX)
   std::string language, territory;
   if (GetSystemLocaleInfo(&language, &territory)) {
     if (territory.length()) {
@@ -347,6 +447,7 @@ std::string GetSystemLocaleName() {
     return language;
   }
   return "en";
+#endif
 }
 
 } // namespace ggadget

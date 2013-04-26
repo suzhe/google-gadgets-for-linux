@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
     refresh_timer_ = owner->GetView()->SetInterval(
         NewSlot(this, &Impl::QueueDraw), kRefreshInterval);
 
-    Gadget *gadget = owner->GetView()->GetGadget();
+    Gadget *gadget = GetGadget();
     if (gadget) {
       target_connection_ = gadget->ConnectOnDisplayTargetChanged(
           NewSlot(this, &Impl::DisplayTargetChangedHandler));
@@ -117,6 +117,13 @@ class ContentAreaElement::Impl : public SmallObject<> {
     refresh_timer_ = 0;
     RemoveAllContentItems();
     layout_canvas_->Destroy();
+  }
+
+  // Call through View::GetGadget() and downcast to Gadget*.
+  Gadget *GetGadget() {
+    GadgetInterface *gadget = owner_->GetView()->GetGadget();
+    return (gadget && gadget->IsInstanceOf(Gadget::TYPE_ID)) ?
+        down_cast<Gadget*>(gadget) : NULL;
   }
 
   void DisplayTargetChangedHandler(int target) {
@@ -488,13 +495,20 @@ class ContentAreaElement::Impl : public SmallObject<> {
     return true;
   }
 
+  // Call through Gadget::CloseDetailsView();
+  void CloseDetailsView() {
+    Gadget *gadget = GetGadget();
+    if (gadget)
+      gadget->CloseDetailsView();
+  }
+
   bool RemoveContentItem(ContentItem *item) {
     ContentItems::iterator it = std::find(content_items_.begin(),
                                           content_items_.end(),
                                           item);
     if (it != content_items_.end()) {
       if (*it == details_open_item_)
-        owner_->GetView()->GetGadget()->CloseDetailsView();
+        CloseDetailsView();
 
       (*it)->DetachContentArea(owner_);
       content_items_.erase(it);
@@ -511,7 +525,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
     }
     content_items_.clear();
     if (details_open_item_)
-      owner_->GetView()->GetGadget()->CloseDetailsView();
+      CloseDetailsView();
     Modified();
   }
 
@@ -615,15 +629,16 @@ class ContentAreaElement::Impl : public SmallObject<> {
                 mouse_over_item_->ToggleItemPinnedState();
               } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
                 if (mouse_over_item_ == details_open_item_) {
-                  owner_->GetView()->GetGadget()->CloseDetailsView();
+                  CloseDetailsView();
                 } else {
                   std::string title;
                   DetailsViewData *details_view_data = NULL;
                   int flags = 0;
-                  if (!mouse_over_item_->OnDetailsView(
+                  Gadget *gadget = GetGadget();
+                  if (gadget && !mouse_over_item_->OnDetailsView(
                          &title, &details_view_data, &flags) &&
                       details_view_data) {
-                    owner_->GetView()->GetGadget()->ShowDetailsView(
+                    gadget->ShowDetailsView(
                         details_view_data, title.c_str(), flags,
                         NewFunctorSlot<bool, int>(DetailsViewFeedbackHandler(
                             this, mouse_over_item_)));
@@ -694,7 +709,7 @@ class ContentAreaElement::Impl : public SmallObject<> {
       if (content_area_.Get() && item_.Get()) {
         // Make sure that openUrl can work.
         bool old_interaction = false;
-        Gadget *gadget = impl_->owner_->GetView()->GetGadget();
+        GadgetInterface *gadget = impl_->owner_->GetView()->GetGadget();
         if (gadget)
           old_interaction = gadget->SetInUserInteraction(true);
         (impl_->*method_)(item_.Get());

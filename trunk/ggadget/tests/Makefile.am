@@ -1,5 +1,5 @@
 #
-# Copyright 2008 Google Inc.
+# Copyright 2011 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ check_PROGRAMS		= backoff_test \
 			  unicode_utils_test \
 			  string_utils_test \
 			  basic_element_test \
+			  linear_element_test \
 			  module_test \
 			  system_utils_test \
 			  uuid_test \
@@ -92,6 +93,7 @@ native_main_loop_test_SOURCES	= native_main_loop.cc native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
+linear_element_test_SOURCES	= linear_element_test.cc
 module_test_SOURCES		= module_test.cc
 system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc

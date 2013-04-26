@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -105,10 +105,10 @@ class Event {
   };
 
   enum Modifier {
-    MOD_NONE = 0,
-    MOD_SHIFT = 1,
-    MOD_CONTROL = 2,
-    MOD_ALT = 4
+    MODIFIER_NONE = 0,
+    MODIFIER_SHIFT = 1,
+    MODIFIER_CONTROL = 2,
+    MODIFIER_ALT = 4
   };
 
  protected:
@@ -244,7 +244,7 @@ class KeyboardEvent : public Event {
     KEY_DOWN           = 40,
     KEY_SELECT         = 41,
     KEY_PRINT          = 42,
-    KEY_EXECUTE        = 43,
+    KEY_TO_EXECUTE     = 43,  // KEY_EXECUTE is a macro name on windows
     KEY_INSERT         = 45,
     KEY_DELETE         = 46,
     KEY_HELP           = 47,
@@ -304,7 +304,8 @@ class KeyboardEvent : public Event {
     KEY_BRACKET_LEFT   = 0xDB,  // VK_OEM_4 in winuser.h, [{ in the keyboard.
     KEY_BACK_SLASH     = 0xDC,  // VK_OEM_5 in winuser.h, \| in the keyboard.
     KEY_BRACKET_RIGHT  = 0xDD,  // VK_OEM_6 in winuser.h, ]} in the keyboard.
-    KEY_QUOTE          = 0xDE  // VK_OEM_7 in winuser.h, '" in the keyboard.
+    KEY_QUOTE_CHAR     = 0xDE   // VK_OEM_7 in winuser.h, '" in the keyboard.
+                                // KEY_QUOTE is a macro on windows.
   };
 
   KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)

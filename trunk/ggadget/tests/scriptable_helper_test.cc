@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ static void CheckPropertyInfo(bool register_class) {
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
 
-TEST(scriptable_helper, TestPropertyInfo) {
+TEST(ScriptableHelperTest, TestPropertyInfo) {
   CheckPropertyInfo(true);
   CheckPropertyInfo(false);
 }
@@ -128,7 +128,7 @@ static void CheckOnDelete(bool register_class) {
                g_buffer.c_str());
 }
 
-TEST(scriptable_helper, TestOnDelete) {
+TEST(ScriptableHelperTest, TestOnDelete) {
   CheckOnDelete(true);
   CheckOnDelete(false);
 }
@@ -182,7 +182,7 @@ static void CheckPropertyAndMethod(bool register_class) {
   delete scriptable;
 }
 
-TEST(scriptable_helper, TestPropertyAndMethod) {
+TEST(ScriptableHelperTest, TestPropertyAndMethod) {
   CheckPropertyAndMethod(true);
   CheckPropertyAndMethod(false);
 }
@@ -210,7 +210,7 @@ static void CheckConstants(bool register_class) {
   delete scriptable;
 }
 
-TEST(scriptable_helper, TestConstants) {
+TEST(ScriptableHelperTest, TestConstants) {
   CheckConstants(true);
   CheckConstants(false);
 }
@@ -310,12 +310,12 @@ static void CheckExtPropertyInfo(bool register_class) {
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
 
-TEST(scriptable_helper, TestExtPropertyInfo) {
+TEST(ScriptableHelperTest, TestExtPropertyInfo) {
   CheckExtPropertyInfo(true);
   CheckExtPropertyInfo(false);
 }
 
-TEST(scriptable_helper, TestArray) {
+TEST(ScriptableHelperTest, TestArray) {
   ExtScriptable *scriptable = new ExtScriptable(true, true, false);
   for (int i = 0; i < ExtScriptable::kArraySize; i++)
     ASSERT_TRUE(scriptable->SetPropertyByIndex(i, Variant(i * 2)));
@@ -328,7 +328,7 @@ TEST(scriptable_helper, TestArray) {
   delete scriptable;
 }
 
-TEST(scriptable_helper, TestDynamicProperty) {
+TEST(ScriptableHelperTest, TestDynamicProperty) {
   ExtScriptable *scriptable = new ExtScriptable(true, true, false);
   char name[20];
   char value[20];
@@ -406,9 +406,41 @@ static void CheckEnumerateProperties(bool register_class) {
   ASSERT_TRUE(expected.empty());
 }
 
-TEST(scirptable_helper, TestEnumerateProperties) {
+TEST(ScriptableHelperTest, TestEnumerateProperties) {
   CheckEnumerateProperties(true);
   CheckEnumerateProperties(false);
+}
+
+// We need a new scriptable class to prevent interferring from other tests.
+class RemovePropertyScriptable : public BaseScriptable {
+ public:
+  DEFINE_CLASS_ID(0x44fac5eaf67b408b, BaseScriptable);
+
+  explicit RemovePropertyScriptable(bool register_class)
+      : BaseScriptable(true, register_class) {
+  }
+};
+
+TEST(ScriptableHelperTest, TestRemoveProperty) {
+  RemovePropertyScriptable *scriptable = new RemovePropertyScriptable(false);
+
+  ASSERT_TRUE(scriptable->RemoveProperty("ClearBuffer"));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
+            scriptable->GetPropertyInfo("ClearBuffer", NULL));
+  ASSERT_TRUE(scriptable->RemoveProperty("DoubleProperty"));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
+            scriptable->GetPropertyInfo("DoubleProperty", NULL));
+  ASSERT_TRUE(scriptable->RemoveProperty("my_ondelete"));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
+            scriptable->GetPropertyInfo("my_ondelete", NULL));
+  ASSERT_FALSE(scriptable->RemoveProperty("not_exist"));
+
+  delete scriptable;
+  scriptable = new RemovePropertyScriptable(true);
+  ASSERT_FALSE(scriptable->RemoveProperty("ClearBuffer"));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_METHOD,
+            scriptable->GetPropertyInfo("ClearBuffer", NULL));
+  delete scriptable;
 }
 
 int main(int argc, char **argv) {

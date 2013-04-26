@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #include <ggadget/dbus/dbus_proxy.h>
 #include <ggadget/variant.h>
 #include <ggadget/slot.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/permissions.h>
 #include "scriptable_dbus_object.h"
 
@@ -35,7 +35,7 @@ using ggadget::dbus::DBusProxy;
 using ggadget::Variant;
 using ggadget::NewSlot;
 using ggadget::ScriptContextInterface;
-using ggadget::Gadget;
+using ggadget::GadgetInterface;
 using ggadget::Permissions;
 
 static const char *kDBusSystemObjectName = "DBusSystemObject";
@@ -66,13 +66,12 @@ extern "C" {
   }
 
   bool RegisterScriptExtension(ScriptContextInterface *context,
-                               Gadget *gadget) {
+                               GadgetInterface *gadget) {
     LOGI("Register dbus_script_class extension.");
     // Only register D-Bus extension if <allaccess/> is granted.
-    const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+    const Permissions *perm = gadget ? gadget->GetPermissions() : NULL;
     // Only calling inside unittest can have NULl gadget and permissions.
-    if (permissions &&
-        !permissions->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
+    if (!perm || !perm->IsRequiredAndGranted(Permissions::ALL_ACCESS)) {
       DLOG("No permission to access D-Bus.");
       return true;
     }

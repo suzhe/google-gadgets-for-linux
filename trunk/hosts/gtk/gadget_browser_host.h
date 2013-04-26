@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -31,28 +31,30 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   GadgetBrowserHost(ggadget::HostInterface *owner, int view_debug_mode)
     : owner_(owner), view_debug_mode_(view_debug_mode) {
   }
-  virtual ViewHostInterface *NewViewHost(Gadget *,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *,
                                          ViewHostInterface::Type type) {
     int flags = ggadget::gtk::SingleViewHost::WM_MANAGEABLE |
                 ggadget::gtk::SingleViewHost::REMOVE_ON_CLOSE |
                 ggadget::gtk::SingleViewHost::RECORD_STATES;
     return new ggadget::gtk::SingleViewHost(type, 1.0, flags, view_debug_mode_);
   }
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console) {
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console) {
     return owner_->LoadGadget(path, options_name, instance_id,
                               show_debug_console);
   }
-  virtual void RemoveGadget(Gadget *gadget, bool save_data) {
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data) {
     GGL_UNUSED(save_data);
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
-  virtual void ShowGadgetDebugConsole(Gadget *) {}
+  virtual void ShowGadgetDebugConsole(GadgetInterface *) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
-  virtual bool OpenURL(const Gadget *gadget, const char *url) {
+  virtual bool OpenURL(const GadgetInterface *gadget, const char *url) {
     return owner_->OpenURL(gadget, url);
   }
  private:

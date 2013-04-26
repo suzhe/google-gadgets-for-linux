@@ -19,6 +19,8 @@
 
 #include <ggadget/basic_element.h>
 #include <ggadget/scriptable_helper.h>
+// Undefine the annoying windows macro "#define DrawText DrawTextW"
+#undef DrawText
 #include <ggadget/canvas_interface.h>
 #include <ggadget/image_interface.h>
 #include <ggadget/small_object.h>
@@ -26,6 +28,7 @@
 namespace ggadget {
 
 class FontInterface;
+class TextRendererInterface;
 
 /**
  * @ingroup Utilities
@@ -64,6 +67,12 @@ class Texture : public SmallObject<> {
                 CanvasInterface::VAlignment valign,
                 CanvasInterface::Trimming trimming,
                 int text_flags) const;
+
+  /**
+   * Draws the formatted text specified in renderer on canvas.
+   */
+  void DrawText(CanvasInterface *canvas,
+                TextRendererInterface *renderer) const;
 
   /**
    * @return the file name this texture is loaded from a file; returns the

@@ -343,7 +343,7 @@ String UnitTestOptions::GetOutputFormat() {
   const char* const colon = strchr(gtest_output_flag, ':');
   return (colon == NULL) ?
       String(gtest_output_flag) :
-      String(gtest_output_flag, colon - gtest_output_flag);
+      String(gtest_output_flag, static_cast<size_t>(colon - gtest_output_flag));
 }
 
 // Returns the name of the requested output file, or the default if none
@@ -418,7 +418,7 @@ bool UnitTestOptions::FilterMatchesTest(const String &test_case_name,
     positive = FLAGS_gtest_filter.c_str();  // Whole string is a positive filter
     negative = String("");
   } else {
-    positive.Set(p, dash - p);       // Everything up to the dash
+    positive.Set(p, static_cast<size_t>(dash - p)); // Everything up to the dash
     negative = String(dash+1);       // Everything after the dash
     if (positive.is_empty()) {
       // Treat '-test1' as the same as '*-test1'
@@ -827,7 +827,7 @@ Message& Message::operator <<(const ::wstring& wstr) {
 // For a char value, we print it as a C++ char literal and as an
 // unsigned integer (both in decimal and in hexadecimal).
 String FormatForFailureMessage(char ch) {
-  const unsigned int ch_as_uint = ch;
+  const unsigned int ch_as_uint = static_cast<const unsigned int>(ch);
   // A String object cannot contain '\0', so we print "\\0" when ch is
   // '\0'.
   return String::Format("'%s' (%u, 0x%X)",
@@ -848,7 +848,7 @@ String FormatForFailureMessage(wchar_t wchar) {
   //
   // We use streaming to print the value as "%llu" doesn't work
   // correctly with MSVC 7.1.
-  const UInt64 wchar_as_uint64 = wchar;
+  const UInt64 wchar_as_uint64 = static_cast<const UInt64>(wchar);
   Message msg;
   // A String object cannot contain '\0', so we print "\\0" when wchar is
   // L'\0'.

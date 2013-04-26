@@ -77,11 +77,11 @@ namespace linux_system {
 
 using namespace ggadget::dbus;
 
-#ifdef NM_DEVICE_TYPE_WIFI
+//#ifdef NM_DEVICE_TYPE_WIFI
 static const int kDeviceTypeWifi = NM_DEVICE_TYPE_WIFI;
-#else
-static const int kDeviceTypeWifi = DEVICE_TYPE_802_11_WIRELESS;
-#endif
+//#else
+//static const int kDeviceTypeWifi = DEVICE_TYPE_802_11_WIRELESS;
+//#endif
 
 // Defined in nm 0.7
 static const int kDeviceStateActivated = 8;

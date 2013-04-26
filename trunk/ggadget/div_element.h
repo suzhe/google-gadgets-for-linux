@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ class DivElement : public ScrollingElement {
   enum BackgroundMode {
     BACKGROUND_MODE_TILE,
     BACKGROUND_MODE_STRETCH,
-    BACKGROUND_MODE_STRETCH_MIDDLE,
   };
 
   /** Gets the background color or image of the element. */
@@ -56,6 +55,17 @@ class DivElement : public ScrollingElement {
 
   BackgroundMode GetBackgroundMode() const;
   void SetBackgroundMode(BackgroundMode mode);
+
+  /**
+   * Set the border length of background, the border part will not be stretched
+   * or tiled.
+   * @param left, top, right, bottom border width/height.
+   */
+  void GetBackgroundBorder(double *left, double *top,
+                           double *right, double *bottom) const;
+
+  void SetBackgroundBorder(double left, double top,
+                           double right, double bottom);
 
  public:
   static BasicElement *CreateInstance(View *view, const char *name);

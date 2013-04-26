@@ -21,7 +21,7 @@ cd `dirname $0`/..
 srcdir=`pwd`
 mkdir -p build/release
 cd build/release
-cmake -DCMAKE_BUILD_TYPE=Release "$srcdir"
+cmake -Wno-dev -DCMAKE_BUILD_TYPE=Release "$srcdir"
 make "$@"
 cd output
 $srcdir/utils/codesize.sh

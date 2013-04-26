@@ -16,12 +16,17 @@
 
 #ifndef GGADGET_TESTS_MAIN_LOOP_TEST_H__
 #define GGADGET_TESTS_MAIN_LOOP_TEST_H__
+
+#if !defined(OS_WIN)
 #include <unistd.h>
+#endif  // OS_WIN
+
 #include <cstdlib>
 #include <cstring>
 #include <vector>
 #include <string>
 
+#include "ggadget/common.h"
 #include "ggadget/logger.h"
 #include "unittest/gtest.h"
 #include "ggadget/main_loop_interface.h"
@@ -75,6 +80,7 @@ class TimeoutWatchCallback : public WatchCallbackInterface {
 
 const int kTimePiece = 100;
 
+#if !defined(OS_WIN)
 // Callback class for an IO read watch.
 // Inside this callback, a timeout watch may be added/removed according to the
 // content of input string. It's for testing the ability of adding/removing
@@ -240,6 +246,7 @@ void IOReadWatchTest(MainLoopInterface *main_loop) {
     EXPECT_STREQ(test_strings[i], strings[i].c_str());
   close(output_pipe[0]);
 }
+#endif  // OS_WIN
 
 // First, test basic functionalities of main loop in single thread by adding
 // many timeout watches and check if they are called for expected times in a

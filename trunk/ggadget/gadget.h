@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,25 +19,15 @@
 
 #include <string>
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
+#include <ggadget/gadget_base.h>
 #include <ggadget/string_utils.h>
 
 namespace ggadget {
 
 template <typename R> class Slot0;
 template <typename R, typename P1> class Slot1;
-template <typename R, typename P1, typename P2> class Slot2;
-class HostInterface;
 class DetailsViewData;
-class FileManagerInterface;
-class MenuInterface;
-class View;
-class Connection;
-class OptionsInterface;
-class DOMDocumentInterface;
 class ScriptableInterface;
-class XMLHttpRequestInterface;
-class Permissions;
 
 /**
  * @defgroup Gadget Gadget
@@ -47,10 +37,12 @@ class Permissions;
 
 /**
  * @ingroup Gadget
- * A class to hold a gadget instance.
+ * A class to hold a Google Desktop Gadget instance.
  */
-class Gadget {
+class Gadget : public GadgetBase {
  public:
+  DEFINE_GADGET_TYPE_ID(0xde6ec21196ed4215, GadgetBase);
+
   /** special commands that can be executed by gadget. */
   enum Command {
     /** Show About dialog. */
@@ -140,31 +132,29 @@ class Gadget {
          DebugConsoleConfig debug_console_config);
 
   /** Destructor */
-  ~Gadget();
+  virtual ~Gadget();
 
-  /**
-   * Asks the Host to remove the Gadget instance.
-   *
-   * Unlike just delete the Gadget instance, this method will remove the Gadget
-   * instance from GadgetManager, so that it won't be displayed anymore.
-   *
-   * @param save_data if save the options data of this Gadget instance.
-   */
-  void RemoveMe(bool save_data);
+  // Overridden from GadgetInterface:
+  virtual void RemoveMe(bool save_data);
+  virtual bool IsSafeToRemove() const;
+  virtual bool IsValid() const;
+  virtual FileManagerInterface *GetFileManager() const;
+  virtual OptionsInterface *GetOptions();
+  virtual std::string GetManifestInfo(const char *key) const;
+  virtual bool ParseLocalizedXML(const std::string &xml,
+                                 const char *filename,
+                                 DOMDocumentInterface *xmldoc) const;
+  virtual View *GetMainView() const;
+  virtual bool ShowMainView();
+  virtual void CloseMainView();
+  virtual bool HasAboutDialog() const;
+  virtual void ShowAboutDialog();
+  virtual bool HasOptionsDialog() const;
+  virtual bool ShowOptionsDialog();
+  virtual void OnAddCustomMenuItems(MenuInterface *menu);
+  virtual const Permissions* GetPermissions() const;
 
-  /** Checks if this gadget instance is safe to remove. */
-  bool IsSafeToRemove() const;
-
-  /** Returns the HostInterface instance used by this gadget. */
-  HostInterface *GetHost() const;
-
-  /**
-   * Checks if the gadget is valid or not.
-   */
-  bool IsValid() const;
-
-  /** Returns the instance id of this gadget instance. */
-  int GetInstanceID() const;
+  // Additional methods for Google Desktop Gadgets.
 
   /** Returns current plugin flags of the gadget. */
   int GetPluginFlags() const;
@@ -172,53 +162,6 @@ class Gadget {
   DisplayTarget GetDisplayTarget() const;
 
   void SetDisplayTarget(DisplayTarget target);
-
-  /**
-   * Gets the FileManager instance used by this gadget.
-   * Caller shall not destroy the returned FileManager instance.
-   */
-  FileManagerInterface *GetFileManager() const;
-
-  /**
-   * Gets the Options instance used by this gadget.
-   * Caller shall not destroy the returned Options instance.
-   */
-  OptionsInterface *GetOptions() const;
-
-  /** Gets the main view of this gadget. */
-  View *GetMainView() const;
-
-  /**
-   * Get a value configured in the gadget manifest file.
-   * @param key the value key like a simple XPath expression. See
-   *     gadget_consts.h for available keys, and @c ParseXMLIntoXPathMap() in
-   *     xml_utils.h for details of the XPath expression.
-   * @return the configured value. @c NULL if not found.
-   */
-  std::string GetManifestInfo(const char *key) const;
-
-  /**
-   * Parse XML into DOM, using the entities defined in strings.xml.
-   */
-  bool ParseLocalizedXML(const std::string &xml,
-                         const char *filename,
-                         DOMDocumentInterface *xmldoc) const;
-
-  /** Checks whether this gadget has options dialog. */
-  bool HasOptionsDialog() const;
-
-  /** Shows main view of the gadget. */
-  bool ShowMainView();
-
-  /** Closes main view of the gadget. */
-  void CloseMainView();
-
-  /**
-   * Show the options dialog, either old @c GDDisplayWindowInterface style or
-   * XML view style, depending on whether @c options.xml exists.
-   * @return @c true if succeeded.
-   */
-  bool ShowOptionsDialog();
 
   /**
    * Shows an XML view as a modal options dialog.
@@ -252,11 +195,6 @@ class Gadget {
    */
   void CloseDetailsView();
 
-  /**
-   * Fires just before the gadget's menu is displayed. Handle this event to
-   * customize the menu.
-   */
-  void OnAddCustomMenuItems(MenuInterface *menu);
 
   /** Execute a gadget specific command. */
   void OnCommand(Command command);
@@ -300,56 +238,6 @@ class Gadget {
    * should be opened.
    */
   Connection *ConnectOnGetFeedbackURL(Slot0<std::string> *handler);
-
-  /**
-   * Creates a new @c XMLHttpRequestInterface instance.
-   * All instances created by this gadget share the same set of cookies.
-   */
-  XMLHttpRequestInterface *CreateXMLHttpRequest();
-
-  /**
-   * Sets whether the gadget is currently in user interaction.
-   * The state should only applicable within one event loop.
-   * @param in_user_interaction whether the current event loop is in user
-   *     interaction.
-   * @return the old in_user_interaction value.
-   */
-  bool SetInUserInteraction(bool in_user_interaction);
-
-  /**
-   * Returns the current value of in_user_interaction.
-   */
-  bool IsInUserInteraction() const;
-
-  /**
-   * Opens the given URL in the user's default web brower.
-   * Only HTTP, HTTPS URLs are supported.
-   * Only called during user interaction is allowed.
-   *
-   * This method is just a delegation of HostInterface::OpenURL().
-   */
-  bool OpenURL(const char *url) const;
-
-  /**
-   * Connect a log listener which will receive all logs for this gadget.
-   */
-  Connection *ConnectLogListener(
-      Slot2<void, LogLevel, const std::string &> *listener);
-
-  /** Gets Permissions of this gadget. */
-  const Permissions* GetPermissions() const;
-
-  /**
-   * Gets the default font size, which can be customized by the user.
-   * @return the default font point size.
-   */
-  int GetDefaultFontSize() const;
-
-  /** Checks if about dialog can be shown. */
-  bool HasAboutDialog() const;
-
-  /** Shows this gadget's about dialog. */
-  void ShowAboutDialog();
 
  public:
   /**

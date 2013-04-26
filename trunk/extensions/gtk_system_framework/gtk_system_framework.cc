@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include <vector>
 #include <gtk/gtk.h>
 #include <ggadget/common.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/framework_interface.h>
 #include <ggadget/options_interface.h>
@@ -82,7 +82,8 @@ static const Variant kBrowseForFileDefaultArgs[] = {
 
 class GtkSystemBrowseForFileHelper {
  public:
-  GtkSystemBrowseForFileHelper(ScriptableInterface *framework, Gadget *gadget)
+  GtkSystemBrowseForFileHelper(ScriptableInterface *framework,
+                               GadgetInterface *gadget)
     : gadget_(gadget) {
     framework->ConnectOnReferenceChange(
       NewSlot(this, &GtkSystemBrowseForFileHelper::OnFrameworkRefChange));
@@ -214,7 +215,7 @@ class GtkSystemBrowseForFileHelper {
     return true;
   }
 
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
 // Looks up an icon file with specified name from current gtk icon theme.
@@ -345,7 +346,7 @@ extern "C" {
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
-                                  Gadget *gadget) {
+                                  GadgetInterface *gadget) {
     LOGI("Register gtk_system_framework extension.");
     ASSERT(framework && gadget);
 
@@ -384,8 +385,8 @@ extern "C" {
     }
 
     // Check permissions.
-    const Permissions *permissions = gadget->GetPermissions();
-    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ)) {
+    const Permissions *perm = gadget->GetPermissions();
+    if (perm && perm->IsRequiredAndGranted(Permissions::FILE_READ)) {
       GtkSystemBrowseForFileHelper *helper =
           new GtkSystemBrowseForFileHelper(framework, gadget);
       reg_framework->RegisterMethod("BrowseForFile",
@@ -403,7 +404,7 @@ extern "C" {
       DLOG("No permission to read file.");
     }
 
-    if (permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+    if (perm && perm->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
       reg_system->RegisterVariantConstant("cursor",
                                           Variant(&g_script_cursor_));
       reg_system->RegisterVariantConstant("screen",

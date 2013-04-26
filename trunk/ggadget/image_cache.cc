@@ -18,36 +18,57 @@
 #include <map>
 #include <algorithm>
 #include "common.h"
-#include "logger.h"
-#include "image_cache.h"
-#include "graphics_interface.h"
 #include "file_manager_factory.h"
+#include "format_macros.h"
+#include "graphics_interface.h"
+#include "image_cache.h"
+#include "logger.h"
+#include "main_loop_interface.h"
 #include "small_object.h"
 #include "system_utils.h"
 
+#if defined(OS_WIN)
+#include "win32/thread_local_singleton_holder.h"
+#endif // OS_WIN
+
 #ifdef _DEBUG
-// #define DEBUG_IMAGE_CACHE
+#define DEBUG_IMAGE_CACHE
 #endif
+
+namespace {
+
+const int kPurgeTrashInterval = 60000;  // 60 seconds
+
+}  // namespace
 
 namespace ggadget {
 
-class ImageCache::Impl : public SmallObject<> {
+class ImageCache::Impl : public WatchCallbackInterface {
   class SharedImage;
   typedef LightMap<std::string, SharedImage *> ImageMap;
+  typedef LightMap<std::string, ImageInterface *> TrashImageMap;
 
   class SharedImage : public ImageInterface {
    public:
-    SharedImage(const std::string &key, const std::string &tag,
-                ImageMap *owner, ImageInterface *image)
-        : key_(key), tag_(tag), owner_(owner), image_(image), ref_(1) {
+    SharedImage(Impl *owner,
+                const std::string &key,
+                const std::string &tag,
+                ImageInterface *image,
+                bool is_mask)
+        : owner_(owner),
+          key_(key),
+          tag_(tag),
+          image_(image),
+          is_mask_(is_mask),
+          ref_(1) {
     }
     virtual ~SharedImage() {
 #ifdef DEBUG_IMAGE_CACHE
       DLOG("Destroy image %s", key_.c_str());
 #endif
       if (owner_)
-        owner_->erase(key_);
-      if (image_)
+        owner_->Trash(key_, image_, is_mask_);
+      else if (image_)
         image_->Destroy();
     }
     void Ref() {
@@ -107,30 +128,44 @@ class ImageCache::Impl : public SmallObject<> {
       return image_ ? image_->IsFullyOpaque() : false;
     }
    public:
+    Impl *owner_;
     std::string key_;
     std::string tag_;
-    ImageMap *owner_;
     ImageInterface *image_;
+    bool is_mask_;
     int ref_;
   };
 
  public:
-  Impl() : ref_(0) {
+  Impl() : ref_(0), watch_id_(-1) {
 #ifdef DEBUG_IMAGE_CACHE
+    DLOG("Create ImageCache: %p", this);
     num_new_local_images_ = 0;
     num_shared_local_images_ = 0;
     num_new_global_images_ = 0;
     num_shared_global_images_ = 0;
+    num_trashed_images_ = 0;
+    num_untrashed_images_ = 0;
 #endif
+    MainLoopInterface *main_loop = GetGlobalMainLoop();
+    if (main_loop)
+      watch_id_ = main_loop->AddTimeoutWatch(kPurgeTrashInterval, this);
   }
 
   ~Impl() {
+    MainLoopInterface *main_loop = GetGlobalMainLoop();
+    if (main_loop)
+      main_loop->RemoveWatch(watch_id_);
+
 #ifdef DEBUG_IMAGE_CACHE
+    DLOG("Delete ImageCache: %p", this);
     DLOG("Image statistics(new/shared): "
-         "local: %d/%d, global: %d/%d, remained: %zd",
+         "local: %d/%d, global: %d/%d, remained: %"PRIuS
+         " trashed/untrashed: %d/%d",
          num_new_local_images_, num_shared_local_images_,
          num_new_global_images_, num_shared_global_images_,
-         images_.size() + mask_images_.size());
+         images_.size() + mask_images_.size(),
+         num_trashed_images_, num_untrashed_images_);
 #endif
     for (ImageMap::const_iterator it = images_.begin();
          it != images_.end(); ++it) {
@@ -144,6 +179,21 @@ class ImageCache::Impl : public SmallObject<> {
       DLOG("!!! Mask image leak: %s", it->first.c_str());
       it->second->owner_ = NULL;
     }
+
+    PurgeTrashCan();
+  }
+
+  // Overridden from WatchCallbackInterface:
+  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
+    PurgeTrashCan();
+    return true;
+  }
+
+  virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    GGL_UNUSED(main_loop);
+    GGL_UNUSED(watch_id);
   }
 
   ImageInterface *LoadImage(GraphicsInterface *gfx, FileManagerInterface *fm,
@@ -186,6 +236,19 @@ class ImageCache::Impl : public SmallObject<> {
 
     // The image was not loaded yet.
     ImageInterface *img = NULL;
+
+    // Find the image in trash can first.
+    if (fm) {
+      img = Untrash(local_key, is_mask);
+      if (img)
+        return NewSharedImage(local_key, filename, img, is_mask);
+    }
+    if (global_fm) {
+      img = Untrash(global_key, is_mask);
+      if (img)
+        return NewSharedImage(global_key, filename, img, is_mask);
+    }
+
     std::string data;
     std::string key;
     if (fm && fm->ReadFile(filename.c_str(), &data)) {
@@ -214,54 +277,144 @@ class ImageCache::Impl : public SmallObject<> {
     if (IsAbsolutePath(filename.c_str())) {
       // Don't cache files loaded with absolute file path, because the gadget
       // might want to load the new file when the file changes.
-      return img ? img : new SharedImage(key, filename, NULL, NULL);
+      return img ? img : new SharedImage(NULL, key, filename, NULL, is_mask);
     }
 
-    SharedImage *shared_img = new SharedImage(key, filename, image_map, img);
+    return NewSharedImage(key, filename, img, is_mask);
+  }
+
+  ImageInterface *NewSharedImage(const std::string &key,
+                                 const std::string &tag,
+                                 ImageInterface *image,
+                                 bool is_mask) {
+    ImageMap *image_map = is_mask ? &mask_images_ : &images_;
+    SharedImage *shared_img =
+        new SharedImage(this, key, tag, image, is_mask);
     (*image_map)[key] = shared_img;
     return shared_img;
   }
 
+  void Trash(const std::string &key, ImageInterface *image, bool is_mask) {
+    ImageMap *images = is_mask ? &mask_images_ : &images_;
+    images->erase(key);
+
+    if (!image)
+      return;
+
+#ifdef DEBUG_IMAGE_CACHE
+    DLOG("Trash image: %s", key.c_str());
+    num_trashed_images_++;
+#endif
+    TrashImageMap *trash = is_mask ? &trashed_mask_images_ : &trashed_images_;
+    ASSERT(!trash->count(key));
+    (*trash)[key] = image;
+  }
+
+  ImageInterface* Untrash(const std::string &key, bool is_mask) {
+    TrashImageMap *trash = is_mask ? &trashed_mask_images_ : &trashed_images_;
+    TrashImageMap::iterator i = trash->find(key);
+    if (i != trash->end()) {
+#ifdef DEBUG_IMAGE_CACHE
+      DLOG("Untrash image: %s", key.c_str());
+      num_untrashed_images_++;
+#endif
+      ImageInterface *image = i->second;
+      trash->erase(i);
+      return image;
+    }
+    return NULL;
+  }
+
+  void PurgeTrashCan() {
+#ifdef DEBUG_IMAGE_CACHE
+    DLOG("Purge trashed images: %"PRIuS,
+         trashed_images_.size() + trashed_mask_images_.size());
+#endif
+    for (TrashImageMap::const_iterator it = trashed_images_.begin();
+         it != trashed_images_.end(); ++it) {
+      if (it->second)
+        it->second->Destroy();
+    }
+    trashed_images_.clear();
+
+    for (TrashImageMap::const_iterator it = trashed_mask_images_.begin();
+         it != trashed_mask_images_.end(); ++it) {
+      if (it->second)
+        it->second->Destroy();
+    }
+    trashed_mask_images_.clear();
+  }
+
   void Ref() {
     ASSERT(ref_ >= 0);
-    ASSERT(this == impl_);
+    ASSERT(this == GetGlobal());
     ++ref_;
   }
 
   void Unref() {
     ASSERT(ref_ > 0);
-    ASSERT(this == impl_);
+    ASSERT(this == GetGlobal());
     --ref_;
     if (ref_ == 0) {
-      impl_ = NULL;
+      SetGlobal(NULL);
       delete this;
     }
   }
 
   static Impl *Get() {
-    if (!impl_)
-      impl_ = new Impl();
-    impl_->Ref();
-    return impl_;
+    Impl* impl = GetGlobal();
+    if (!impl) {
+      impl = new Impl();
+      SetGlobal(impl);
+    }
+    impl->Ref();
+    return impl;
+  }
+
+  static Impl *GetGlobal() {
+#if defined(OS_WIN)
+    return win32::ThreadLocalSingletonHolder<Impl>::GetValue();
+#else
+    return global_impl;
+#endif
+  }
+
+  static void SetGlobal(Impl* impl) {
+#if defined(OS_WIN)
+    win32::ThreadLocalSingletonHolder<Impl>::SetValue(impl);
+#else
+    global_impl = impl;
+#endif
   }
 
  private:
   ImageMap images_;
   ImageMap mask_images_;
+
+  TrashImageMap trashed_images_;
+  TrashImageMap trashed_mask_images_;
+
   int ref_;
+  int watch_id_;
 
 #ifdef DEBUG_IMAGE_CACHE
   int num_new_local_images_;
   int num_shared_local_images_;
   int num_new_global_images_;
   int num_shared_global_images_;
+  int num_trashed_images_;
+  int num_untrashed_images_;
 #endif
 
+#if !defined(OS_WIN)
  private:
-  static Impl *impl_;
+  static Impl *global_impl;
+#endif
 };
 
-ImageCache::Impl *ImageCache::Impl::impl_ = NULL;
+#if !defined(OS_WIN)
+ImageCache::Impl *ImageCache::Impl::global_impl = NULL;
+#endif
 
 ImageCache::ImageCache() : impl_(Impl::Get()) {
 }

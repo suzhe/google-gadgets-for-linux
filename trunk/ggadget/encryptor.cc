@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 */
 
 #include <cstdlib>
-#include <sys/time.h>
 #include <time.h>
 
 #include "encryptor_interface.h"

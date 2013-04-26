@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,21 +18,22 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <string>
-#include <ggadget/gadget_consts.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/file_manager_factory.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/logger.h>
-#include <ggadget/options_interface.h>
-#include <ggadget/gadget.h>
-#include <ggadget/messages.h>
 #include <ggadget/math_utils.h>
-#include "single_view_host.h"
-#include "view_widget_binder.h"
+#include <ggadget/messages.h>
+#include <ggadget/options_interface.h>
+
 #include "cairo_graphics.h"
+#include "key_convert.h"
 #include "menu_builder.h"
+#include "single_view_host.h"
 #include "tooltip.h"
 #include "utilities.h"
-#include "key_convert.h"
+#include "view_widget_binder.h"
 
 // It might not be necessary, because X server will grab the pointer
 // implicitly when button is pressed.
@@ -539,7 +540,7 @@ class SingleViewHost::Impl {
       gtk_widget_destroy(context_menu_);
 
     context_menu_ = gtk_menu_new();
-    MenuBuilder menu_builder(GTK_MENU_SHELL(context_menu_));
+    MenuBuilder menu_builder(owner_, GTK_MENU_SHELL(context_menu_));
 
     // If it returns true, then means that it's allowed to add additional menu
     // items.
@@ -562,8 +563,7 @@ class SingleViewHost::Impl {
       }
 
       // don't set button parameter, which will cause problem.
-      gtk_menu_popup(GTK_MENU(context_menu_), NULL, NULL, NULL, NULL, 0,
-                     gtk_get_current_event_time());
+      menu_builder.Popup(0, gtk_get_current_event_time());
       return true;
     }
     return false;

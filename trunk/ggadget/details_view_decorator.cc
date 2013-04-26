@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 #include "logger.h"
 #include "common.h"
 #include "gadget_consts.h"
-#include "gadget.h"
+#include "gadget_interface.h"
 #include "signals.h"
 #include "slot.h"
 #include "view.h"
@@ -134,7 +134,7 @@ void DetailsViewDecorator::CloseDecoratedView() {
   if (impl_->feedback_handler_) {
     // To make sure that openUrl can work.
     bool old_interaction = false;
-    Gadget *gadget = GetGadget();
+    GadgetInterface *gadget = GetGadget();
     if (gadget)
       old_interaction = gadget->SetInUserInteraction(true);
 

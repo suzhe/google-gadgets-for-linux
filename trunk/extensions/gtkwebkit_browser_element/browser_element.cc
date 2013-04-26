@@ -22,7 +22,7 @@
 
 #include "browser_element.h"
 #include <ggadget/element_factory.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/script_context_interface.h>
@@ -316,7 +316,7 @@ class BrowserElement::Impl {
   }
 
   bool OpenURL(const char *url) {
-    Gadget *gadget = owner_->GetView()->GetGadget();
+    GadgetInterface *gadget = owner_->GetView()->GetGadget();
     bool result = false;
     if (gadget) {
       // Let the gadget allow this OpenURL gracefully.

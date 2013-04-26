@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@
 
 namespace ggadget {
 
+class BasicElement;
+class GadgetInterface;
 class MenuInterface;
-class Gadget;
 
 /**
  * @ingroup ScriptableObjects
@@ -33,8 +34,15 @@ class ScriptableMenu : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x95432249155845d6, ScriptableInterface)
 
-  ScriptableMenu(Gadget *gadget, MenuInterface *menu);
+  ScriptableMenu(GadgetInterface *gadget, MenuInterface *menu);
   virtual ~ScriptableMenu();
+
+  MenuInterface *GetMenu() const;
+
+  /**
+   * Sets the menu's position hint to the boundary box of the given element.
+   */
+  void SetPositionHint(const BasicElement *element);
 
  protected:
   virtual void DoClassRegister();

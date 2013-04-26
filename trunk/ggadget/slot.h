@@ -552,6 +552,8 @@ class SlotProxyClosure0 : public Slot0<R> {
   ~SlotProxyClosure0() { delete slot_; slot_ = NULL; }
   virtual ResultVariant Call(ScriptableInterface *object,
                              int argc, const Variant argv[]) const {
+    GGL_UNUSED(argc);
+    GGL_UNUSED(argv);
     ASSERT(argc == 0);
     Variant vargs[1];
     vargs[1] = Variant(pa_);
@@ -580,6 +582,11 @@ inline Slot0<R> *NewSlot(R (*functor)()) {
 template <typename R, typename PA>
 inline Slot0<R> *NewSlot(R (*functor)(PA), PA pa) {
   return new FunctorSlotClosure0<R, R (*)(PA), PA>(functor, pa);
+}
+
+template <typename R, typename PA>
+inline Slot0<R> *NewSlot(R (*functor)(const PA&), const PA &pa) {
+  return new FunctorSlotClosure0<R, R (*)(const PA&), PA>(functor, pa);
 }
 
 /**
@@ -656,6 +663,18 @@ template <typename R, typename T, typename PA>
 inline Slot0<R> *NewSlot(const T *object, R (T::*method)(PA) const, PA pa) {
   return new MethodSlotClosure0<R, const T,
                                 R (T::*)(PA) const, PA>(object, method, pa);
+}
+
+template <typename R, typename T, typename PA>
+inline Slot0<R> *NewSlot(T *object, R (T::*method)(const PA&), const PA &pa) {
+  return new MethodSlotClosure0<R, T, R (T::*)(const PA&), PA>(
+      object, method, pa);
+}
+template <typename R, typename T, typename PA>
+inline Slot0<R> *NewSlot(
+    const T *object, R (T::*method)(const PA&) const, const PA &pa) {
+  return new MethodSlotClosure0<R, const T, R (T::*)(const PA&) const, PA>(
+      object, method, pa);
 }
 
 /**
@@ -1089,6 +1108,7 @@ class SlotProxyClosure##n : public Slot##n<R, _arg_type_names> {              \
   ~SlotProxyClosure##n() { delete slot_; slot_ = NULL; }                      \
   virtual ResultVariant Call(ScriptableInterface *obj,                        \
                              int argc, const Variant argv[]) const {          \
+    GGL_UNUSED(argc);                                                         \
     ASSERT(argc == n);                                                        \
     Variant vargs[n + 1];                                                     \
     for(size_t i = 0; i < n; ++i) vargs[i] = argv[i];                         \
@@ -1187,6 +1207,12 @@ inline Slot##n<R, _arg_type_names> *                                          \
 NewSlot(R (*f)(_arg_type_names, PA), PA pa) {                                 \
   return new FunctorSlotClosure##n<R, _arg_type_names,                        \
                                    R (*)(_arg_type_names, PA), PA>(f, pa);    \
+}                                                                             \
+template <typename R, _arg_types, typename PA>                                \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (*f)(_arg_type_names, const PA&), const PA &pa) {                   \
+  return new FunctorSlotClosure##n<R, _arg_type_names,                        \
+                   R (*)(_arg_type_names, const PA&), PA>(f, pa);             \
 }                                                                             \
 template <typename R, _arg_types, typename T, typename PA>                    \
 inline Slot##n<R, _arg_type_names> *                                          \

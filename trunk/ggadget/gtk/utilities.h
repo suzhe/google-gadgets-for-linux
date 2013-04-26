@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,13 +21,14 @@
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-#include <ggadget/view_interface.h>
-#include <ggadget/view_host_interface.h>
+
 #include <ggadget/slot.h>
+#include <ggadget/view_host_interface.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
-class Gadget;
+class GadgetInterface;
 
 namespace gtk {
 
@@ -150,12 +151,12 @@ bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot);
  * icon if @a gadget is @c NULL or the gadget has not a valid icon.
  * Won't set icon if the window has already an icon.
  */
-void SetGadgetWindowIcon(GtkWindow *window, const Gadget *gadget);
+void SetGadgetWindowIcon(GtkWindow *window, const GadgetInterface *gadget);
 
 /**
  * Shows a debug console that will display all logs for the gadget.
  */
-GtkWidget *NewGadgetDebugConsole(Gadget *gadget);
+GtkWidget *NewGadgetDebugConsole(GadgetInterface *gadget);
 
 /**
  * Launches a desktop file.
@@ -164,7 +165,7 @@ GtkWidget *NewGadgetDebugConsole(Gadget *gadget);
  * @param desktop_file The desktop file to be launched.
  * @return true if succeed.
  */
-bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file);
+bool LaunchDesktopFile(const GadgetInterface *gadget, const char *desktop_file);
 
 /**
  * Opens a specified URL by system default application.
@@ -179,7 +180,7 @@ bool LaunchDesktopFile(const Gadget *gadget, const char *desktop_file);
  * @param url The url to open.
  * @return true if succeed.
  */
-bool OpenURL(const Gadget *gadget, const char *url);
+bool OpenURL(const GadgetInterface *gadget, const char *url);
 
 /**
  * Gets the current desktop of a screen.

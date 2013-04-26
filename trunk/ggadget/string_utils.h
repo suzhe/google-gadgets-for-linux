@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <stdint.h>         // Integer types and macros.
 #include <ggadget/common.h>
 #include <ggadget/light_map.h>
 #include <ggadget/unicode_utils.h>
@@ -354,6 +353,22 @@ bool EndWith(const char *string, const char *suffix);
 
 /** Checks if a string has a specified suffix, ignoring the case. */
 bool EndWithNoCase(const char *string, const char *suffix);
+
+/** Parse an string contains at most four double numbers split by space.
+ * @param values original string contains the string numbers consisting
+ * of 4/2/1 double numbers. if two numbers are specified , both @a d1
+ * and @a d3 will be set to the first value, while @a d2 and @a d4 will be set
+ * to the second value. if one number is specified, all four parameters are set
+ * to the specified value.
+ * @param left first parameter usually indicates left border or margin.
+ * @param top sedoncd parameter usually indicates top border or margin.
+ * @param right third parameter usually indicates right border or margin.
+ * @param bottom fourth parameter usually indicates bottom border or margin.
+ * @return @c false if @1 values doesn't have valid format.
+ */
+bool StringToBorderSize(const std::string &values,
+                        double *left, double *top,
+                        double *right, double *bottom);
 
 /** @} */
 

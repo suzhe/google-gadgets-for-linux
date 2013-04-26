@@ -8,7 +8,7 @@
 #else
 #include <QtNetwork/QNetworkRequest>
 #endif
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/scriptable_holder.h>
 
 namespace ggadget {
@@ -111,7 +111,7 @@ class BrowserElement::Impl {
 
   void OpenUrl(const QString &url) const {
     std::string u = url.toStdString();
-    Gadget *gadget = owner_->GetView()->GetGadget();
+    GadgetInterface *gadget = owner_->GetView()->GetGadget();
     if (gadget) {
       // Let the gadget allow this OpenURL gracefully.
       bool old_interaction = gadget->SetInUserInteraction(true);

@@ -1327,16 +1327,20 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
 
   virtual void DoClassRegister() {
     Super::DoClassRegister();
-    RegisterProperty("data", NewSlot(&DOMCharacterData::GetData),
-                     NewSlot(&DOMCharacterData::SetData));
-    RegisterProperty("length", NewSlot(&DOMCharacterData::GetLength), NULL);
-    RegisterMethod("substringData",
-                   NewSlot(&DOMCharacterData::ScriptSubstringData));
-    RegisterMethod("appendData", NewSlot(&DOMCharacterData::AppendData));
-    RegisterMethod("insertData", NewSlot(&DOMCharacterData::ScriptInsertData));
-    RegisterMethod("deleteData", NewSlot(&DOMCharacterData::ScriptDeleteData));
-    RegisterMethod("replaceData",
-                   NewSlot(&DOMCharacterData::ScriptReplaceData));
+    this->RegisterProperty("data", NewSlot(&DOMCharacterData::GetData),
+                           NewSlot(&DOMCharacterData::SetData));
+    this->RegisterProperty("length",
+                           NewSlot(&DOMCharacterData::GetLength),
+                           NULL);
+    this->RegisterMethod("substringData",
+                         NewSlot(&DOMCharacterData::ScriptSubstringData));
+    this->RegisterMethod("appendData", NewSlot(&DOMCharacterData::AppendData));
+    this->RegisterMethod("insertData",
+                         NewSlot(&DOMCharacterData::ScriptInsertData));
+    this->RegisterMethod("deleteData",
+                         NewSlot(&DOMCharacterData::ScriptDeleteData));
+    this->RegisterMethod("replaceData",
+                         NewSlot(&DOMCharacterData::ScriptReplaceData));
   }
 
   virtual std::string GetNodeValue() const { return impl_.GetNodeValue(); }
@@ -1377,20 +1381,20 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
  private:
   UTF16String ScriptSubstringData(size_t offset, size_t count) {
     UTF16String result;
-    CheckException(SubstringData(offset, count, &result));
+    this->CheckException(SubstringData(offset, count, &result));
     return result;
   }
 
   void ScriptInsertData(size_t offset, const UTF16String &arg) {
-    CheckException(InsertData(offset, arg));
+    this->CheckException(InsertData(offset, arg));
   }
 
   void ScriptDeleteData(size_t offset, size_t count) {
-    CheckException(DeleteData(offset, count));
+    this->CheckException(DeleteData(offset, count));
   }
 
   void ScriptReplaceData(size_t offset, size_t count, const UTF16String &arg) {
-    CheckException(ReplaceData(offset, count, arg));
+    this->CheckException(ReplaceData(offset, count, arg));
   }
 
   DOMCharacterDataImpl impl_;

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -31,32 +31,34 @@ class GadgetBrowserHost : public ggadget::HostInterface {
   GadgetBrowserHost(ggadget::HostInterface *owner, int view_debug_mode)
     : owner_(owner), view_debug_mode_(view_debug_mode) {
   }
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                          ViewHostInterface::Type type) {
     GGL_UNUSED(gadget);
     return new ggadget::qt::QtViewHost(
         type, 1.0, ggadget::qt::QtViewHost::FLAG_RECORD_STATES,
         view_debug_mode_, NULL);
   }
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console) {
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console) {
     GGL_UNUSED(path);
     GGL_UNUSED(options_name);
     GGL_UNUSED(instance_id);
     GGL_UNUSED(show_debug_console);
     return NULL;
   }
-  virtual void RemoveGadget(Gadget *gadget, bool save_data) {
-    GGL_UNUSED(save_data);    
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data) {
+    GGL_UNUSED(save_data);
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
   }
   virtual bool LoadFont(const char *filename) {
     return owner_->LoadFont(filename);
   }
   virtual void Run() {}
-  virtual void ShowGadgetDebugConsole(Gadget *) {}
+  virtual void ShowGadgetDebugConsole(GadgetInterface *) {}
   virtual int GetDefaultFontSize() { return ggadget::kDefaultFontSize; }
-  virtual bool OpenURL(const Gadget *, const char *) { return false; }
+  virtual bool OpenURL(const GadgetInterface *, const char *) { return false; }
  private:
   ggadget::HostInterface *owner_;
   int view_debug_mode_;

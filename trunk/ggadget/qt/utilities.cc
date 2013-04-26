@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,22 +26,22 @@
 #include <QtGui/QDesktopWidget>
 
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
+#include <ggadget/extension_manager.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
-#include <ggadget/string_utils.h>
 #include <ggadget/host_utils.h>
-#include <ggadget/file_manager_interface.h>
-#include <ggadget/extension_manager.h>
-#include <ggadget/options_interface.h>
 #include <ggadget/locales.h>
-#include <ggadget/script_runtime_manager.h>
+#include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/qt/qt_main_loop.h>
-#include <ggadget/file_manager_factory.h>
+#include <ggadget/script_runtime_manager.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
+#include <ggadget/usage_collector_interface.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/xdg/utilities.h>
-#include <ggadget/usage_collector_interface.h>
 #include "utilities.h"
 #include "utilities_internal.h"
 
@@ -97,10 +97,10 @@ int GetMouseButton(const Qt::MouseButton button) {
 }
 
 int GetModifiers(Qt::KeyboardModifiers state) {
-  int mod = Event::MOD_NONE;
-  if (state & Qt::ShiftModifier) mod |= Event::MOD_SHIFT;
-  if (state & Qt::ControlModifier)  mod |= Event::MOD_CONTROL;
-  if (state & Qt::AltModifier) mod |= Event::MOD_ALT;
+  int mod = Event::MODIFIER_NONE;
+  if (state & Qt::ShiftModifier) mod |= Event::MODIFIER_SHIFT;
+  if (state & Qt::ControlModifier)  mod |= Event::MODIFIER_CONTROL;
+  if (state & Qt::AltModifier) mod |= Event::MODIFIER_ALT;
   return mod;
 }
 
@@ -132,7 +132,7 @@ static KeyvalKeyCode keyval_key_code_map[] = {
   { Qt::Key_Down,         KeyboardEvent::KEY_DOWN },
   { Qt::Key_Select,       KeyboardEvent::KEY_SELECT },
   { Qt::Key_Print,        KeyboardEvent::KEY_PRINT },
-  { Qt::Key_Execute,      KeyboardEvent::KEY_EXECUTE },
+  { Qt::Key_Execute,      KeyboardEvent::KEY_TO_EXECUTE },
   { Qt::Key_Insert,       KeyboardEvent::KEY_INSERT },
   { Qt::Key_Delete,       KeyboardEvent::KEY_DELETE },
   { Qt::Key_Help,         KeyboardEvent::KEY_HELP },
@@ -172,8 +172,8 @@ static KeyvalKeyCode keyval_key_code_map[] = {
   { Qt::Key_Bar,          KeyboardEvent::KEY_BACK_SLASH },
   { Qt::Key_BracketRight, KeyboardEvent::KEY_BRACKET_RIGHT },
   { Qt::Key_BraceRight,   KeyboardEvent::KEY_BRACKET_RIGHT },
-  { Qt::Key_QuoteDbl,     KeyboardEvent::KEY_QUOTE },
-  { Qt::Key_Apostrophe,   KeyboardEvent::KEY_QUOTE },
+  { Qt::Key_QuoteDbl,     KeyboardEvent::KEY_QUOTE_CHAR },
+  { Qt::Key_Apostrophe,   KeyboardEvent::KEY_QUOTE_CHAR },
   { Qt::Key_0,            '0' },
   { Qt::Key_1,            '1' },
   { Qt::Key_2,            '2' },
@@ -304,25 +304,26 @@ unsigned int GetKeyCode(int qt_key) {
   return pos->qt_key == qt_key ? pos->key_code : 0;
 }
 
-QWidget *NewGadgetDebugConsole(Gadget *gadget, QWidget** widget) {
+QWidget *NewGadgetDebugConsole(GadgetInterface *gadget, QWidget** widget) {
   DebugConsole *console = new DebugConsole(gadget, widget);
   console->show();
   return console;
 }
 
-bool OpenURL(const Gadget *gadget, const char *url) {
+bool OpenURL(const GadgetInterface *gadget, const char *url) {
   Permissions default_permissions;
   default_permissions.SetRequired(Permissions::NETWORK, true);
   default_permissions.GrantAllRequired();
 
-  const Permissions *permissions =
-      gadget ? gadget->GetPermissions() : &default_permissions;
+  const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
+  if (!permissions)
+    permissions = &default_permissions;
 
   // FIXME: Support launching desktop file.
   return ggadget::xdg::OpenURL(*permissions, url);
 }
 
-QPixmap GetGadgetIcon(const Gadget *gadget) {
+QPixmap GetGadgetIcon(const GadgetInterface *gadget) {
   std::string data;
   QPixmap pixmap;
   if (gadget) {
@@ -341,7 +342,7 @@ QPixmap GetGadgetIcon(const Gadget *gadget) {
   return pixmap;
 }
 
-void SetGadgetWindowIcon(QWidget *widget, const Gadget *gadget) {
+void SetGadgetWindowIcon(QWidget *widget, const GadgetInterface *gadget) {
   widget->setWindowIcon(GetGadgetIcon(gadget));
 }
 

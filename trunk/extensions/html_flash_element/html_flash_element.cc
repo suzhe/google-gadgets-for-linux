@@ -152,7 +152,7 @@ class HtmlFlashElement : public BasicElement {
       browser_->SetRelativeHeight(1.0);
       browser_->SetEnabled(true);
       // Force the browser window to be loaded.
-      browser_->Layout();
+      browser_->RecursiveLayout();
       if (!browser_->SetProperty("external", Variant(&external_))) {
         DLOG("Invalid browser element.");
         delete browser_;
@@ -176,7 +176,7 @@ class HtmlFlashElement : public BasicElement {
   virtual void Layout() {
     BasicElement::Layout();
     if (browser_)
-      browser_->Layout();
+      browser_->RecursiveLayout();
   }
 
  protected:

@@ -17,6 +17,7 @@
 #include <locale.h>
 #include <cstring>
 #include "ggadget/common.h"
+#include "ggadget/locales.h"
 #include "ggadget/logger.h"
 #include "ggadget/gadget_consts.h"
 #include "ggadget/file_manager_wrapper.h"
@@ -28,7 +29,12 @@
 #include "ggadget/string_utils.h"
 #include "ggadget/slot.h"
 #include "unittest/gtest.h"
+
+#if defined(OS_WIN)
+#include "ggadget/win32/xml_parser.h"
+#elif defined(OS_POSIX)
 #include "init_extensions.h"
+#endif
 
 using namespace ggadget;
 
@@ -154,13 +160,18 @@ bool PrepareResource() {
 }
 
 int main(int argc, char **argv) {
-  setlocale(LC_MESSAGES, "en_US.UTF-8");
+  ggadget::SetLocaleForUiMessage("en_US.UTF-8");
   testing::ParseGTestFlags(&argc, argv);
+#if defined(OS_WIN)
+  ggadget::win32::XMLParser xml_parser;
+  ggadget::SetXMLParser(&xml_parser);
+#elif defined(OS_POSIX)
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
 
   INIT_EXTENSIONS(argc, argv, kExtensions);
+#endif
 
   PrepareResource();
 

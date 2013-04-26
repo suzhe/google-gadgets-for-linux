@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -70,17 +70,19 @@ QtHost::~QtHost() {
   DLOG("QtHost removed");
 }
 
-ViewHostInterface *QtHost::NewViewHost(Gadget *gadget,
+ViewHostInterface *QtHost::NewViewHost(GadgetInterface *gadget,
                                        ViewHostInterface::Type type) {
   return impl_->NewViewHost(gadget, type);
 }
 
-Gadget *QtHost::LoadGadget(const char *path, const char *options_name,
-                           int instance_id, bool show_debug_console) {
+GadgetInterface *QtHost::LoadGadget(const char *path,
+                                    const char *options_name,
+                                    int instance_id,
+                                    bool show_debug_console) {
   return impl_->LoadGadget(path, options_name, instance_id, show_debug_console);
 }
 
-void QtHost::RemoveGadget(Gadget *gadget, bool save_data) {
+void QtHost::RemoveGadget(GadgetInterface *gadget, bool save_data) {
   impl_->RemoveGadget(gadget, save_data);
 }
 
@@ -94,7 +96,7 @@ bool QtHost::LoadFont(const char *filename) {
 void QtHost::Run() {
 }
 
-void QtHost::ShowGadgetDebugConsole(ggadget::Gadget *gadget) {
+void QtHost::ShowGadgetDebugConsole(ggadget::GadgetInterface *gadget) {
   impl_->ShowGadgetDebugConsole(gadget);
 }
 
@@ -102,7 +104,7 @@ int QtHost::GetDefaultFontSize() {
   return kDefaultFontSize;
 }
 
-bool QtHost::OpenURL(const ggadget::Gadget *gadget, const char *url) {
+bool QtHost::OpenURL(const ggadget::GadgetInterface *gadget, const char *url) {
   return ggadget::qt::OpenURL(gadget, url);
 }
 

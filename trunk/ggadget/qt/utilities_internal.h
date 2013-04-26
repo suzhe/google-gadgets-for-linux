@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,12 +28,15 @@
 #include <ggadget/messages.h>
 
 namespace ggadget {
+
+class GadgetInterface;
+
 namespace qt {
 
 class DebugConsole : public QWidget {
   Q_OBJECT
  public:
-  DebugConsole(Gadget *gadget, QWidget **widget)
+  DebugConsole(GadgetInterface *gadget, QWidget **widget)
     : text_(NULL), log_conn_(NULL), level_(0), self_(widget) {
     QVBoxLayout *vb = new QVBoxLayout();
     QHBoxLayout *hb = new QHBoxLayout();

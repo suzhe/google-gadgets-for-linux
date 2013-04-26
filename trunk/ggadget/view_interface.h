@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class GraphicsInterface;
 class ScriptContextInterface;
 class MenuInterface;
 class ViewHostInterface;
-class Gadget;
+class GadgetInterface;
 class ClipRegion;
 class Rectangle;
 
@@ -138,7 +138,7 @@ class ViewInterface {
   /**
    * @return the Gadget instance which owns this view.
    */
-  virtual Gadget* GetGadget() const = 0;
+  virtual GadgetInterface* GetGadget() const = 0;
 
   /**
    * Returns the @c GraphicsInterface associated with this view.

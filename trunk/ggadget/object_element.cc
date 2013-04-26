@@ -86,7 +86,7 @@ void ObjectElement::SetObjectClassId(const std::string& classid) {
 void ObjectElement::Layout() {
   BasicElement::Layout();
   if (impl_->object_)
-    impl_->object_->Layout();
+    impl_->object_->RecursiveLayout();
 }
 
 void ObjectElement::DoDraw(CanvasInterface *canvas) {

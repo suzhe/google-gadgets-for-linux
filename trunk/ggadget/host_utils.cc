@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 #include "host_utils.h"
 
-#include <sys/time.h>
 #include <ctime>
 #include <string>
 #include <map>
 #include <sys/types.h>
-#include <unistd.h>
 
+#include "common.h"
 #include "dir_file_manager.h"
 #include "element_factory.h"
 #include "file_manager_factory.h"
@@ -100,10 +99,36 @@ static int g_log_level = LOG_TRACE;
 static bool g_long_log = true;
 static Connection *g_global_listener_connection = NULL;
 
+
 static std::string DefaultLogListener(LogLevel level,
-                               const char *filename,
-                               int line,
-                               const std::string &message) {
+                                      const char *filename,
+                                      int line,
+                                      const std::string &message) {
+#if defined(OS_WIN)
+  if (level >= g_log_level) {
+    std::string output_message;
+    if (g_long_log) {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      StringAppendPrintf(&output_message,
+                         "%02d:%02d.%03d: ",
+                         static_cast<int>(tv.tv_sec / 60 % 60),
+                         static_cast<int>(tv.tv_sec % 60),
+                         static_cast<int>(tv.tv_usec / 1000));
+      if (filename) {
+        // Print only the last part of the file name.
+        const char *name = strrchr(filename, kDirSeparator);
+        if (name)
+          filename = name + 1;
+        StringAppendPrintf(&output_message, "%s:%d: ", filename, line);
+      }
+    }
+    output_message.append(message);
+    output_message.append("\n");
+    ::OutputDebugStringA(output_message.c_str());
+  }
+  return message;
+#elif defined(OS_POSIX)
   if (level >= g_log_level) {
     if (g_long_log) {
       struct timeval tv;
@@ -124,6 +149,7 @@ static std::string DefaultLogListener(LogLevel level,
     fflush(stdout);
   }
   return message;
+#endif
 }
 
 void SetupLogger(int log_level, bool long_log) {
@@ -136,6 +162,21 @@ void SetupLogger(int log_level, bool long_log) {
 }
 
 bool CheckRequiredExtensions(std::string *message) {
+#if defined(OS_WIN)
+  if (!GetGlobalFileManager()) {
+    *message = "Program can't start because gloable file manager is not ready";
+    return false;
+  }
+  if (!GetXMLParser()) {
+    *message = "Program can't start because xml parser is not ready";
+    return false;
+  }
+  if (!GetGlobalMainLoop()) {
+    *message = "Program can't start because global main loop is not ready";
+    return false;
+  }
+  return true;
+#elif defined(OS_POSIX)
   if (!GetGlobalFileManager()->FileExists(kCommonJS, NULL)) {
     // We can't use localized message here because resource failed to load.
     *message = "Program can't start because it failed to load resources";
@@ -162,8 +203,10 @@ bool CheckRequiredExtensions(std::string *message) {
     return false;
   }
   return true;
+#endif
 }
 
+#if defined(OS_POSIX)
 void InitXHRUserAgent(const char *app_name) {
   XMLHttpRequestFactoryInterface *xhr_factory = GetXMLHttpRequestFactory();
   ASSERT(xhr_factory);
@@ -181,6 +224,7 @@ void InitXHRUserAgent(const char *app_name) {
       app_name, platform.c_str(), GetSystemLocaleName().c_str());
   xhr_factory->SetDefaultUserAgent(user_agent.c_str());
 }
+#endif
 
 static int BestPosition(int total, int pos, int size) {
   if (pos + size < total)
@@ -215,6 +259,7 @@ void GetPopupPosition(int x, int y, int w, int h,
   }
 }
 
+#if defined(OS_POSIX)
 static bool DialogCallback(int flag, View *view) {
   SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
                     Event::EVENT_OK : Event::EVENT_CANCEL);
@@ -604,5 +649,6 @@ void SetupGadgetGetFeedbackURLHandler(Gadget *gadget) {
     gadget->ConnectOnGetFeedbackURL(new GetFeedbackURLSlot(gadget));
   }
 }
+#endif
 
 } // namespace ggadget

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 #include "audioclip_interface.h"
 #include "file_manager_interface.h"
 #include "framework_interface.h"
-#include "gadget.h"
+#include "gadget_interface.h"
 #include "image_interface.h"
 #include "scriptable_array.h"
 #include "scriptable_file_system.h"
@@ -122,7 +122,7 @@ class ScriptableAudioclip : public ScriptableHelperDefault {
 
 class ScriptableAudio::Impl : public SmallObject<> {
  public:
-  Impl(AudioInterface *audio, Gadget *gadget)
+  Impl(AudioInterface *audio, GadgetInterface *gadget)
     : audio_(audio), gadget_(gadget) {
   }
 
@@ -138,7 +138,7 @@ class ScriptableAudio::Impl : public SmallObject<> {
       // If it's not a local file uri, then only allow it when gadget has the
       // permission to access network.
       if (strncasecmp(src, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1) &&
-          !perm->IsRequiredAndGranted(Permissions::NETWORK)) {
+          (!perm || !perm->IsRequiredAndGranted(Permissions::NETWORK))) {
         LOG("No permission to access %s", src);
         return NULL;
       }
@@ -179,11 +179,11 @@ class ScriptableAudio::Impl : public SmallObject<> {
   }
 
   AudioInterface *audio_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
 ScriptableAudio::ScriptableAudio(AudioInterface *audio,
-                                 Gadget *gadget)
+                                 GadgetInterface *gadget)
     : impl_(new Impl(audio, gadget)) {
 }
 
@@ -361,7 +361,7 @@ class ScriptablePerfmon::Impl : public SmallObject<> {
     EventSignal signal;
   };
 
-  Impl(PerfmonInterface *perfmon, Gadget *gadget)
+  Impl(PerfmonInterface *perfmon, GadgetInterface *gadget)
     : perfmon_(perfmon), gadget_(gadget) {
     ASSERT(perfmon_);
     ASSERT(gadget_);
@@ -424,11 +424,11 @@ class ScriptablePerfmon::Impl : public SmallObject<> {
   typedef LightMap<std::string, Counter *> CounterMap;
   CounterMap counters_;
   PerfmonInterface *perfmon_;
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
 ScriptablePerfmon::ScriptablePerfmon(PerfmonInterface *perfmon,
-                                     Gadget *gadget)
+                                     GadgetInterface *gadget)
   : impl_(new Impl(perfmon, gadget)) {
 }
 
@@ -657,7 +657,7 @@ ScriptableUser::~ScriptableUser() {
 // Implementation of ScriptableGraphics
 class ScriptableGraphics::Impl : public SmallObject<> {
  public:
-  Impl(Gadget *gadget) : gadget_(gadget) {
+  Impl(GadgetInterface *gadget) : gadget_(gadget) {
     ASSERT(gadget_);
   }
 
@@ -676,10 +676,10 @@ class ScriptableGraphics::Impl : public SmallObject<> {
     return image ? new ScriptableImage(image) : NULL;
   }
 
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
-ScriptableGraphics::ScriptableGraphics(Gadget *gadget)
+ScriptableGraphics::ScriptableGraphics(GadgetInterface *gadget)
     : impl_(new Impl(gadget)) {
 }
 

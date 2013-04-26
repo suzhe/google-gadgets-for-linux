@@ -89,7 +89,8 @@ class ContentItem::Impl : public SmallObject<> {
   void UpdateTimeText(double width) {
     time_text_.SetText(GetTimeDisplayString(
         time_created_,
-        flags_ & CONTENT_ITEM_FLAG_TIME_ABSOLUTE ? 0 : view_->GetCurrentTime(),
+        (((flags_ & CONTENT_ITEM_FLAG_TIME_ABSOLUTE) || !view_) ?
+         0 : view_->GetCurrentTime()),
         width < kMinWidthToUseLongVersionOfTimeString));
   }
 
@@ -149,6 +150,19 @@ class ContentItem::Impl : public SmallObject<> {
       }
       display_text_changed_ = false;
     }
+  }
+
+  void SetContentArea(ContentAreaElement *content_area) {
+    if (content_area_ == content_area)
+      return;
+
+    content_area_ = content_area;
+    view_ = content_area ? content_area->GetView() : NULL;
+
+    heading_text_.SetView(view_);
+    source_text_.SetView(view_);
+    time_text_.SetView(view_);
+    snippet_text_.SetView(view_);
   }
 
   DEFINE_DELEGATE_GETTER(GetHeadingText, &src->impl_->heading_text_,
@@ -273,14 +287,14 @@ ContentItem::~ContentItem() {
 
 void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
   ASSERT(impl_->content_area_ == NULL);
-  impl_->content_area_ = content_area;
+  impl_->SetContentArea(content_area);
   Ref();
 }
 
 void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
   GGL_UNUSED(content_area);
   ASSERT(impl_->content_area_ == content_area);
-  impl_->content_area_ = NULL;
+  impl_->SetContentArea(NULL);
   Unref();
 }
 
@@ -455,6 +469,8 @@ bool ContentItem::CanOpen() const {
 void ContentItem::Draw(Gadget::DisplayTarget target,
                        CanvasInterface *canvas,
                        double x, double y, double width, double height) {
+  if (!impl_->view_)
+    return;
 
   // Rect adjustments apply even if OnDraw handler is set
   x += kItemBorderOffsets[3];
@@ -541,6 +557,9 @@ Connection *ContentItem::ConnectOnDrawItem(
 
 double ContentItem::GetHeight(Gadget::DisplayTarget target,
                            CanvasInterface *canvas, double width) {
+  if (!impl_->view_)
+    return 0;
+
   impl_->UpdateDisplayText();
 
   // Try script handler first.
@@ -613,7 +632,7 @@ void ContentItem::OpenItem() {
   if (impl_->on_open_item_signal_.HasActiveConnections())
     result = VariantToBool(impl_->on_open_item_signal_(this));
 
-  if (!result)
+  if (!result && impl_->view_)
     impl_->view_->OpenURL(impl_->open_command_.c_str());
 }
 
@@ -643,6 +662,9 @@ bool ContentItem::IsTooltipRequired(Gadget::DisplayTarget target,
                                     CanvasInterface *canvas,
                                     double x, double y,
                                     double width, double height) {
+  if (!impl_->view_)
+    return false;
+
   if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
     return VariantToBool(impl_->on_get_is_tooltip_required_signal_(

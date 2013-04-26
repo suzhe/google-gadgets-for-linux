@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -27,14 +27,11 @@
 
 MockedTimerMainLoop main_loop(0);
 
-// The total count of elements_.
-int count = 0;
-
 class MockedElementFactory : public ggadget::ElementFactory {
  public:
   MockedElementFactory() {
-    RegisterElementClass("muffin", Muffin::CreateInstance);
-    RegisterElementClass("pie", Pie::CreateInstance);
+    RegisterElementClass("muffin", MuffinElement::CreateInstance);
+    RegisterElementClass("pie", PieElement::CreateInstance);
   }
 };
 
@@ -46,11 +43,23 @@ class ElementsTest : public testing::Test {
         new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
         NULL, factory_, NULL);
     view_elements_ = view_->GetChildren();
-    muffin_ = new Muffin(view_, NULL);
+    muffin_ = new MuffinElement(view_, NULL);
     elements_ = muffin_->GetChildren();
 
-    another_muffin_ = new Muffin(view_, NULL);
+    another_muffin_ = new MuffinElement(view_, NULL);
     another_elements_ = another_muffin_->GetChildren();
+
+    second_view_ = new ggadget::View(
+        new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
+        NULL, factory_, NULL);
+    muffin_in_second_view_ = new MuffinElement(second_view_, NULL);
+
+    element_just_added_ = NULL;
+    element_just_removed_ = NULL;
+    elements_->ConnectOnElementAdded(
+        NewSlot(this, &ElementsTest::OnElementAdded));
+    elements_->ConnectOnElementRemoved(
+        NewSlot(this, &ElementsTest::OnElementRemoved));
   }
 
   virtual void TearDown() {
@@ -58,17 +67,32 @@ class ElementsTest : public testing::Test {
     delete muffin_;
     delete factory_;
     delete view_;
-    ASSERT_EQ(0, count);
+    delete muffin_in_second_view_;
+    delete second_view_;
+  }
+
+  void OnElementAdded(BasicElement *element) {
+    element_just_added_ = element;
+  }
+
+  void OnElementRemoved(BasicElement *element) {
+    element_just_removed_ = element;
   }
 
   MockedElementFactory *factory_;
   ggadget::View *view_;
   ggadget::Elements *view_elements_;
   ggadget::Elements *elements_;
-  Muffin *muffin_;
+  MuffinElement *muffin_;
 
   ggadget::Elements *another_elements_;
-  Muffin *another_muffin_;
+  MuffinElement *another_muffin_;
+
+  MuffinElement *muffin_in_second_view_;
+  ggadget::View *second_view_;
+
+  BasicElement *element_just_added_;
+  BasicElement *element_just_removed_;
 };
 
 #define ASSERT_INDEX(index, elements, element) \
@@ -277,7 +301,7 @@ TEST_F(ElementsTest, TestInsertInView) {
 }
 
 TEST_F(ElementsTest, TestRemove) {
-  ggadget::BasicElement *e1 = elements_->AppendElement("muffin", NULL);
+  ggadget::BasicElement *e1 = elements_->AppendElement("muffin", "e1");
   ggadget::BasicElement *e2 = elements_->AppendElement("pie", NULL);
   ggadget::BasicElement *e3 = elements_->AppendElement("pie", NULL);
   ASSERT_EQ(3U, elements_->GetCount());
@@ -285,13 +309,17 @@ TEST_F(ElementsTest, TestRemove) {
   ASSERT_EQ(2U, elements_->GetCount());
   ASSERT_INDEX(0U, elements_, e1);
   ASSERT_INDEX(1U, elements_, e3);
+  ASSERT_TRUE(e1 == elements_->GetItemByName("e1"));
   ASSERT_TRUE(elements_->RemoveElement(e1));
-  ASSERT_FALSE(elements_->RemoveElement(e1));
+  ASSERT_TRUE(NULL == elements_->GetItemByName("e1"));
+  ASSERT_EQ(1U, elements_->GetCount());
+  ASSERT_FALSE(elements_->RemoveElement(NULL));
+  ASSERT_FALSE(elements_->RemoveElement(muffin_in_second_view_));
   ASSERT_INDEX(0U, elements_, e3);
 }
 
 TEST_F(ElementsTest, TestRemoveInView) {
-  ggadget::BasicElement *e1 = view_elements_->AppendElement("muffin", NULL);
+  ggadget::BasicElement *e1 = view_elements_->AppendElement("muffin", "e1");
   ggadget::BasicElement *e2 = view_elements_->AppendElement("pie", NULL);
   ggadget::BasicElement *e3 = view_elements_->AppendElement("pie", NULL);
   ASSERT_EQ(3U, view_elements_->GetCount());
@@ -299,8 +327,12 @@ TEST_F(ElementsTest, TestRemoveInView) {
   ASSERT_EQ(2U, view_elements_->GetCount());
   ASSERT_INDEX(0U, view_elements_, e1);
   ASSERT_INDEX(1U, view_elements_, e3);
+  ASSERT_TRUE(e1 == view_elements_->GetItemByName("e1"));
   ASSERT_TRUE(view_elements_->RemoveElement(e1));
-  ASSERT_FALSE(view_elements_->RemoveElement(e1));
+  ASSERT_TRUE(NULL == view_elements_->GetItemByName("e1"));
+  ASSERT_EQ(1U, view_elements_->GetCount());
+  ASSERT_FALSE(view_elements_->RemoveElement(NULL));
+  ASSERT_FALSE(view_elements_->RemoveElement(muffin_in_second_view_));
   ASSERT_INDEX(0U, view_elements_, e3);
 }
 
@@ -337,11 +369,24 @@ TEST_F(ElementsTest, TestInvalidInsert) {
   ggadget::View *view1 = new ggadget::View(
       new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
       NULL, factory_, NULL);
-  ggadget::BasicElement *e_another_view = new Muffin(view1, NULL);
+  ggadget::BasicElement *e_another_view = new MuffinElement(view1, NULL);
   ASSERT_FALSE(elements_->AppendElement(e_another_view));
   ASSERT_FALSE(view_elements_->AppendElement(e_another_view));
   delete e_another_view;
   delete view1;
+}
+
+TEST_F(ElementsTest, OnElementAddedRemovedSignal) {
+  element_just_added_ = NULL;
+  ggadget::BasicElement *e1 = elements_->AppendElement("muffin", NULL);
+  ASSERT_EQ(e1, element_just_added_);
+  element_just_removed_ = NULL;
+  elements_->RemoveElement(e1);
+  ASSERT_EQ(e1, element_just_removed_);
+  e1 = elements_->AppendElement("muffin", NULL);
+  element_just_removed_ = NULL;
+  elements_->RemoveAllElements();
+  ASSERT_EQ(e1, element_just_removed_);
 }
 
 int main(int argc, char *argv[]) {

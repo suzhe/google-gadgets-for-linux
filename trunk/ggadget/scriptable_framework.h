@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-class Gadget;
+class GadgetInterface;
 
 namespace framework {
 
@@ -65,7 +65,7 @@ class ScriptableAudio : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x7f460413b19241fe, ScriptableInterface);
 
-  ScriptableAudio(AudioInterface *audio, Gadget *gadget);
+  ScriptableAudio(AudioInterface *audio, GadgetInterface *gadget);
   virtual ~ScriptableAudio();
 
  protected:
@@ -112,7 +112,7 @@ class ScriptablePerfmon : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x07495B8910EE4BCC, ScriptableInterface);
 
-  ScriptablePerfmon(PerfmonInterface *perfmon, Gadget *gadget);
+  ScriptablePerfmon(PerfmonInterface *perfmon, GadgetInterface *gadget);
   virtual ~ScriptablePerfmon();
 
  protected:
@@ -261,7 +261,7 @@ class ScriptableGraphics : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x211b114e852e4a1b, ScriptableInterface);
 
-  explicit ScriptableGraphics(Gadget *gadget);
+  explicit ScriptableGraphics(GadgetInterface *gadget);
   virtual ~ScriptableGraphics();
 
  protected:

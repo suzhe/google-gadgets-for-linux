@@ -101,6 +101,7 @@ class C : public A {
 class D {
 };
 
+#pragma warning(disable:4101)  // unreferenced local variable p and p1
 TEST(Common, IsDerived) {
   ASSERT_TRUE((IsDerived<A, B>::value));
   ASSERT_FALSE((IsDerived<B, A>::value));
@@ -116,12 +117,14 @@ TEST(Common, IsDerived) {
   char p1[IsDerived<B, A>::value ? 10 : 20];
   ASSERT_EQ(20U, sizeof(p1));
 }
+#pragma warning(default:4101)
 
 struct S {
   int x;
   double y;
 };
 
+#pragma warning(disable: 4101)  // unreferenced local variable array and array1
 TEST(Common, arraysize_MACRO) {
   int array[20];
   ASSERT_EQ(20U, arraysize(array));
@@ -133,6 +136,7 @@ TEST(Common, arraysize_MACRO) {
   // int *p = array;
   // arraysize(p);
 }
+#pragma warning(default: 4101)
 
 TEST(Common, IsDerived_COMPILE_ASSERT) {
   COMPILE_ASSERT((IsDerived<A, B>::value), Yes);

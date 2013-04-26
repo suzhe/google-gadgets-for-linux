@@ -83,7 +83,7 @@ class Backoff::Impl : public SmallObject<> {
 
     ASSERT(result_type == EXPONENTIAL_BACKOFF);
     // wait_exp is failure_count - random(3 .. failure_count).
-    int wait_exp = failure_count - (rand() / (0xFFFF / 4)) % 4;
+    int wait_exp = failure_count - (rand() / (0x7FFF / 4)) % 4;
     wait_exp = std::max(1, std::min(15, wait_exp));
     return Randomize(std::min(kMaxRetryInterval,
                               kBaseInterval * (1 << (wait_exp - 1))));
@@ -115,9 +115,9 @@ class Backoff::Impl : public SmallObject<> {
     while (data && *data) {
       const char *p = strchr(data, '\t');
       if (p) {
-        std::string request(data, p - data);
+        std::string request(data, static_cast<size_t>(p - data));
         BackoffInfo backoff_info;
-        if (sscanf(p + 1, "%ju\t%d\n",
+        if (sscanf(p + 1, "%" PRIu64 "\t%d\n",
                    &backoff_info.last_failure_time,
                    &backoff_info.failure_count) == 2) {
           if (backoff_info.failure_count < 0) {
@@ -157,7 +157,8 @@ class Backoff::Impl : public SmallObject<> {
         // compatibility of config file can be achived.
         if (it->second.result_type == CONSTANT_BACKOFF)
           failure_count = -failure_count;
-        result.append(StringPrintf("\t%ju\t%d\n", it->second.last_failure_time,
+        result.append(StringPrintf("\t%" PRIu64 "\t%d\n",
+                                   it->second.last_failure_time,
                                    failure_count));
       }
     }

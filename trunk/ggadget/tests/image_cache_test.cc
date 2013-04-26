@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -28,6 +28,11 @@
 
 using namespace ggadget;
 
+#if defined(OS_WIN)
+#define SEP "\\"
+#elif defined(OS_POSIX)
+#define SEP "/"
+#endif
 class MockedGraphics : public ggadget::GraphicsInterface {
   class MockedImage : public ggadget::ImageInterface {
    public:
@@ -88,6 +93,9 @@ class MockedGraphics : public ggadget::GraphicsInterface {
       ggadget::FontInterface::Weight weight) const {
     return NULL;
   }
+  virtual ggadget::TextRendererInterface *NewTextRenderer() const {
+    return NULL;
+  }
   virtual double GetZoom() const { return 1.; }
   virtual void SetZoom(double z) { }
 
@@ -138,14 +146,14 @@ TEST(ImageCache, LoadImage) {
   img1->Destroy();
   img2->Destroy();
 
-  img1 = img_cache.LoadImage(&gfx, &g_local_fm, "/global-image", false);
+  img1 = img_cache.LoadImage(&gfx, &g_local_fm, SEP "global-image", false);
   ASSERT_STREQ("global-image", local_root->requested_file_.c_str());
-  ASSERT_STREQ("/global-image", img1->GetTag().c_str());
+  ASSERT_STREQ(SEP "global-image", img1->GetTag().c_str());
   global_root->requested_file_.clear();
   img1->Destroy();
 
   local_root->should_fail_ = true;
-  img1 = img_cache.LoadImage(&gfx, &g_local_fm, "/global-image", false);
+  img1 = img_cache.LoadImage(&gfx, &g_local_fm, SEP "global-image", false);
   ASSERT_STREQ("global-image", local_root->requested_file_.c_str());
   ASSERT_STREQ("global-image", global_root->requested_file_.c_str());
   img1->Destroy();
@@ -153,11 +161,11 @@ TEST(ImageCache, LoadImage) {
   global_root->should_fail_ = true;
   local_root->requested_file_.clear();
   global_root->requested_file_.clear();
-  img2 = img_cache.LoadImage(&gfx, NULL, "/global-image2", false);
+  img2 = img_cache.LoadImage(&gfx, NULL, SEP "global-image2", false);
   ASSERT_STREQ("", local_root->requested_file_.c_str());
   ASSERT_STREQ("global-image2", global_root->requested_file_.c_str());
   ASSERT_TRUE(img2);
-  ASSERT_STREQ("/global-image2", img2->GetTag().c_str());
+  ASSERT_STREQ(SEP "global-image2", img2->GetTag().c_str());
   ASSERT_FALSE(img2->GetCanvas());
   img2->Destroy();
 
@@ -178,16 +186,17 @@ int main(int argc, char *argv[]) {
   testing::ParseGTestFlags(&argc, argv);
 
   FileManagerWrapper *fm = new FileManagerWrapper();
-  global_root = new MockedFileManager("/");
+  global_root = new MockedFileManager(SEP);
   fm->RegisterFileManager(kDirSeparatorStr, global_root);
-  resource = new MockedFileManager("/usr/share/google-gadgets/resources/");
+  resource = new MockedFileManager(SEP "usr" SEP "share" SEP "google-gadgets"
+                                   SEP "resources" SEP);
   fm->RegisterFileManager(kGlobalResourcePrefix, resource);
   SetGlobalFileManager(fm);
 
-  local = new MockedFileManager("/test/gadgets/");
+  local = new MockedFileManager(SEP "test" SEP "gadgets" SEP);
   g_local_fm.RegisterFileManager("", local);
-  local_root = new MockedFileManager("/");
-  g_local_fm.RegisterFileManager(kDirSeparatorStr, local_root);
+  local_root = new MockedFileManager(SEP);
+  g_local_fm.RegisterFileManager(SEP, local_root);
 
   return RUN_ALL_TESTS();
 }

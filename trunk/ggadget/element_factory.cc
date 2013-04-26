@@ -30,6 +30,7 @@
 #include "img_element.h"
 #include "item_element.h"
 #include "label_element.h"
+#include "linear_element.h"
 #include "listbox_element.h"
 #include "object_element.h"
 #include "object_videoplayer.h"
@@ -69,16 +70,18 @@ ElementFactory::ElementFactory()
     : impl_(new Impl) {
   RegisterElementClass("a", &AnchorElement::CreateInstance);
   RegisterElementClass("button", &ButtonElement::CreateInstance);
+  RegisterElementClass("div", &DivElement::CreateInstance);
+  RegisterElementClass("img", &ImgElement::CreateInstance);
+  RegisterElementClass("label", &LabelElement::CreateInstance);
+  RegisterElementClass("linear", &LinearElement::CreateInstance);
+#if defined(OS_POSIX)  // TODO(zkfan): support more kinds of elements
   RegisterElementClass("checkbox",
                        &CheckBoxElement::CreateCheckBoxInstance);
   RegisterElementClass("combobox", &ComboBoxElement::CreateInstance);
   RegisterElementClass("contentarea", &ContentAreaElement::CreateInstance);
   // Internal element. Don't add it for now.
   // RegisterElementClass("_copy", &CopyElement::CreateInstance);
-  RegisterElementClass("div", &DivElement::CreateInstance);
-  RegisterElementClass("img", &ImgElement::CreateInstance);
   RegisterElementClass("item", &ItemElement::CreateInstance);
-  RegisterElementClass("label", &LabelElement::CreateInstance);
   RegisterElementClass("listbox", &ListBoxElement::CreateInstance);
   RegisterElementClass("listitem", &ItemElement::CreateListItemInstance);
   RegisterElementClass("object", &ObjectElement::CreateInstance);
@@ -92,6 +95,7 @@ ElementFactory::ElementFactory()
   RegisterElementClass("progressbar", &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
+#endif
 }
 
 ElementFactory::~ElementFactory() {

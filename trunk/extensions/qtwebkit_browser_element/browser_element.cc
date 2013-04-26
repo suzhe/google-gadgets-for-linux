@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include <QtWebKit/QWebPage>
 #include <QtWebKit/QWebSettings>
 #endif
-#include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/scriptable_array.h>

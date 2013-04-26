@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#include <unistd.h>
 #include <cstring>
 #include <vector>
 #include <string>
 
+#include "ggadget/common.h"
 #include "ggadget/logger.h"
 #include "native_main_loop.h"
 #include "main_loop_test.h"

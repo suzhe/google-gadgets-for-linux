@@ -62,6 +62,8 @@ const TextFrame *LabelElement::GetTextFrame() const {
 }
 
 void LabelElement::DoDraw(CanvasInterface *canvas) {
+  // Text direction does not affect size.
+  impl_->text_.SetRTL(IsTextRTL());
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
 }
 

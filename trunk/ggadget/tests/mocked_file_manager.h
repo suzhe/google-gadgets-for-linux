@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@
 #ifndef GGADGET_TESTS_MOCKED_FILE_MANAGER_H__
 #define GGADGET_TESTS_MOCKED_FILE_MANAGER_H__
 
-#include "ggadget/file_manager_interface.h"
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/common.h>
 
 class MockedFileManager : public ggadget::FileManagerInterface {
  public:

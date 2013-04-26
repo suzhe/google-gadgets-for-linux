@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ bool ElementExtensionRegister::RegisterExtension(const Module *extension) {
 }
 
 ScriptExtensionRegister::ScriptExtensionRegister(
-    ScriptContextInterface *context, Gadget *gadget)
+    ScriptContextInterface *context, GadgetInterface *gadget)
   : context_(context), gadget_(gadget) {
 }
 
@@ -52,7 +52,7 @@ bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
 }
 
 FrameworkExtensionRegister::FrameworkExtensionRegister(
-    ScriptableInterface *framework, Gadget *gadget)
+    ScriptableInterface *framework, GadgetInterface *gadget)
   : framework_(framework), gadget_(gadget) {
 }
 

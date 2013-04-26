@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class Droplist : public ListBoxElement {
     if (mouse_selection_mode_ && event.GetType() == Event::EVENT_KEY_DOWN) {
       unsigned int code = event.GetKeyCode();
       if (code == KeyboardEvent::KEY_DOWN &&
-          event.GetModifier() == Event::MOD_CONTROL) {
+          event.GetModifier() == Event::MODIFIER_CONTROL) {
         combobox_->SetDroplistVisible(true);
         return EVENT_RESULT_HANDLED;
       }

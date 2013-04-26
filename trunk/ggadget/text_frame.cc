@@ -15,16 +15,40 @@
 */
 
 #include "text_frame.h"
+
 #include "basic_element.h"
 #include "color.h"
 #include "gadget_consts.h"
 #include "graphics_interface.h"
+#include "slot.h"
+#include "small_object.h"
 #include "string_utils.h"
 #include "texture.h"
+#include "text_formats.h"
+#include "text_renderer_interface.h"
 #include "view.h"
-#include "small_object.h"
 
-namespace ggadget{
+namespace ggadget {
+
+namespace {
+
+FontInterface* CreateFontFromFormat(const GraphicsInterface* graphics,
+                                    const TextFormat& format) {
+  return graphics->NewFont(
+      format.font(),
+      format.size() * format.scale(),
+      format.italic() ? FontInterface::STYLE_ITALIC :
+                        FontInterface::STYLE_NORMAL,
+      format.bold() ? FontInterface::WEIGHT_BOLD :
+                      FontInterface::WEIGHT_NORMAL);
+}
+
+bool IsPlainText(const std::string& text) {
+  return text.find("</") == text.npos ||
+      text.find(">", text.find("</")) == text.npos;
+}
+
+}  // namespace
 
 static const Color kDefaultColor(0, 0, 0);
 
@@ -47,33 +71,52 @@ class TextFrame::Impl : public SmallObject<> {
  public:
   Impl(BasicElement *owner, View *view)
     : owner_(owner),
-      view_(view),
-      font_(NULL),
+      view_(NULL),
       color_texture_(new Texture(kDefaultColor, 1.0)),
+      on_theme_changed_connection_(NULL),
       width_(0.0),
       height_(0.0),
-      size_(kDefaultFontSize),
-      // font_name_ is left blank to indicate default font.
-      flags_(CanvasInterface::TEXT_FLAGS_NONE),
       trimming_(CanvasInterface::TRIMMING_NONE),
       align_(CanvasInterface::ALIGN_LEFT),
       valign_(CanvasInterface::VALIGN_TOP),
-      bold_(false),
-      italic_(false),
-      size_is_default_(true) {
+      size_is_default_(true),
+      renderer_(NULL),
+      rtl_(false),
+      word_wrap_(false) {
+    SetView(view);
   }
 
   ~Impl() {
+    SetView(NULL);
     delete color_texture_;
     color_texture_ = NULL;
     ClearFont();
+    if (renderer_) renderer_->Destroy();
+  }
+
+  void SetView(View *view) {
+    if (view_ != view) {
+      if (on_theme_changed_connection_) {
+        on_theme_changed_connection_->Disconnect();
+        on_theme_changed_connection_ = NULL;
+      }
+
+      view_ = view;
+      if (view) {
+        on_theme_changed_connection_ = view->ConnectOnThemeChangedEvent(
+            NewSlot(this, &Impl::ResetFont));
+        if (view_->GetGraphics()) {
+          if (renderer_) renderer_->Destroy();
+          renderer_ = view_->GetGraphics()->NewTextRenderer();
+          if (renderer_) renderer_->SetTextAndFormat(text_, formats_);
+        }
+      }
+      ResetFont();
+    }
   }
 
   void ClearFont() {
-    if (font_) {
-      font_->Destroy();
-      font_ = NULL;
-    }
+    formats_.clear();
   }
 
   void ResetFont() {
@@ -87,6 +130,13 @@ class TextFrame::Impl : public SmallObject<> {
   }
 
   bool SetUpFont() {
+    if (!view_)
+      return false;
+
+    GraphicsInterface *graphics = view_->GetGraphics();
+    if (!graphics)
+      return false;
+
     if (size_is_default_) {
       int default_size = view_->GetDefaultFontSize();
       if (default_size != size_) {
@@ -95,25 +145,28 @@ class TextFrame::Impl : public SmallObject<> {
       }
     }
 
-    // The FontInterface object is cached on draw.
-    if (!font_) {
-      font_ = view_->GetGraphics()->NewFont(
-          font_name_.empty() ? kDefaultFontName : font_name_,
-          size_,
-          italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
-          bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL);
-      if (!font_) {
-        return false;
-      }
+    if (renderer_) {
+      renderer_->SetDefaultFormat(default_format_);
+      renderer_->SetAlignment(align_);
+      renderer_->SetVAlignment(valign_);
+      renderer_->SetWordWrap(word_wrap_);
+      renderer_->SetTrimming(trimming_);
     }
-
     if (text_.empty()) {
       width_ = height_ = 0;
     } else if (width_ == 0 && height_ == 0) {
-      CanvasInterface *canvas = view_->GetGraphics()->NewCanvas(5, 5);
-      canvas->GetTextExtents(text_.c_str(), font_, flags_, 0,
-                             &width_, &height_);
-      canvas->Destroy();
+      if (renderer_) {
+        renderer_->SetLayoutRectangle(0, 0, -1, -1);
+        renderer_->GetTextExtents(&width_, &height_);
+      } else {
+        FontInterface *font = CreateFontFromFormat(graphics, default_format_);
+        CanvasInterface *canvas = graphics->NewCanvas(5, 5);
+        int flags = 0;
+        canvas->GetTextExtents(text_.c_str(), font, GetTextFlags(), 0,
+                               &width_, &height_);
+        canvas->Destroy();
+        font->Destroy();
+      }
     }
     return true;
   }
@@ -123,25 +176,73 @@ class TextFrame::Impl : public SmallObject<> {
       owner_->QueueDraw();
   }
 
+  bool SetPlainText(const std::string& text) {
+    if (text_ != text || formats_.size()) {
+      text_ = text;
+      ResetFont();
+      if (renderer_)
+        renderer_->SetTextAndFormat(text_, formats_);
+      return true;
+    }
+    return false;
+  }
+
+  bool SetMarkUpText(const std::string& text) {
+    if (mark_up_text_ != text) {
+      ResetFont();
+      mark_up_text_ = text;
+      ParseMarkUpText(mark_up_text_, &default_format_, &text_, &formats_);
+      if (renderer_)
+        renderer_->SetTextAndFormat(text_, formats_);
+      return true;
+    }
+    return false;
+  }
+
+  bool SetTextWithFormats(const std::string& text, const TextFormats& formats) {
+    text_ = text;
+    ResetFont();
+    for (size_t i = 0; i < formats.size(); ++i) {
+      formats_.push_back(formats[i]);
+      formats_.back().format.set_default_format(&default_format_);
+    }
+    if (renderer_)
+      renderer_->SetTextAndFormat(text_, formats_);
+    return true;
+  }
+
+  int GetTextFlags() {
+    int flags =
+        (default_format_.strikeout() ?
+            CanvasInterface::TEXT_FLAGS_STRIKEOUT : 0) |
+        (default_format_.underline() ?
+            CanvasInterface::TEXT_FLAGS_UNDERLINE : 0) |
+        (word_wrap_ ? CanvasInterface::TEXT_FLAGS_WORDWRAP : 0);
+    return flags;
+  }
+
   BasicElement *owner_;
   View *view_;
-  FontInterface *font_;
   Texture *color_texture_;
+  Connection *on_theme_changed_connection_;
   double width_;
   double height_;
   double size_;
 
-  std::string font_name_;
-  std::string color_;
   std::string text_;
+  std::string mark_up_text_;
 
-  CanvasInterface::TextFlag flags_    : 3;
+  TextFormat default_format_;
+  TextFormats formats_;
+
   CanvasInterface::Trimming trimming_ : 3;
   CanvasInterface::Alignment align_   : 2;
   CanvasInterface::VAlignment valign_ : 2;
-  bool bold_                          : 1;
-  bool italic_                        : 1;
   bool size_is_default_               : 1;
+  bool rtl_                           : 1;
+  bool word_wrap_                     : 1;
+
+  TextRendererInterface *renderer_;
 };
 
 TextFrame::TextFrame(BasicElement *owner, View *view)
@@ -201,6 +302,10 @@ TextFrame::~TextFrame() {
   impl_ = NULL;
 }
 
+void TextFrame::SetView(View *view) {
+  impl_->SetView(view);
+}
+
 CanvasInterface::Alignment TextFrame::GetAlign() const {
   return impl_->align_;
 }
@@ -213,12 +318,12 @@ void TextFrame::SetAlign(CanvasInterface::Alignment align) {
 }
 
 bool TextFrame::IsBold() const {
-  return impl_->bold_;
+  return impl_->default_format_.bold();
 }
 
 void TextFrame::SetBold(bool bold) {
-  if (bold != impl_->bold_) {
-    impl_->bold_ = bold;
+  if (bold != impl_->default_format_.bold()) {
+    impl_->default_format_.set_bold(bold);
     impl_->ResetFont();
   }
 }
@@ -229,70 +334,71 @@ Variant TextFrame::GetColor() const {
 
 void TextFrame::SetColor(const Variant &color) {
   delete impl_->color_texture_;
-  impl_->color_texture_ = impl_->view_->LoadTexture(color);
+  impl_->color_texture_ = NULL;
+  if (impl_->view_)
+    impl_->color_texture_ = impl_->view_->LoadTexture(color);
   if (!impl_->color_texture_)
     impl_->color_texture_ = new Texture(kDefaultColor, 1.0);
-  impl_->QueueDraw();
+  impl_->default_format_.set_foreground(
+      Color(impl_->color_texture_->GetSrc().c_str()));
 }
 
 void TextFrame::SetColor(const Color &color, double opacity) {
   delete impl_->color_texture_;
   impl_->color_texture_ = new Texture(color, opacity);
-  impl_->QueueDraw();
+  impl_->default_format_.set_foreground(color);
 }
 
 std::string TextFrame::GetFont() const {
-  return impl_->font_name_;
+  return impl_->default_format_.font();
 }
 
 void TextFrame::SetFont(const char *font) {
-  if (AssignIfDiffer(font, &impl_->font_name_, strcasecmp)) {
+  if (impl_->default_format_.font() != font) {
+    impl_->default_format_.set_font(font);
     impl_->ResetFont();
   }
 }
 
 bool TextFrame::IsItalic() const {
-  return impl_->italic_;
+  return impl_->default_format_.italic();
 }
 
 void TextFrame::SetItalic(bool italic) {
-  if (italic != impl_->italic_) {
-    impl_->italic_ = italic;
+  if (italic != impl_->default_format_.italic()) {
+    impl_->default_format_.set_italic(italic);
     impl_->ResetFont();
   }
 }
 
 double TextFrame::GetSize() const {
-  return impl_->size_is_default_ ? -1 : impl_->size_;
+  return impl_->size_is_default_ ? -1 : impl_->default_format_.size();
 }
 
 void TextFrame::SetSize(double size) {
   if (size == -1) {
     impl_->size_is_default_ = true;
-    size = impl_->view_->GetDefaultFontSize();
+    size = impl_->view_ ? impl_->view_->GetDefaultFontSize() : 0;
   } else {
     impl_->size_is_default_ = false;
   }
-  if (size != impl_->size_) {
-    impl_->size_ = size;
+  if (size != impl_->default_format_.size()) {
+    impl_->default_format_.set_size(size);
     impl_->ResetFont();
   }
 }
 
 double TextFrame::GetCurrentSize() const {
-  return impl_->size_;
+  return impl_->default_format_.size();
 }
 
 bool TextFrame::IsStrikeout() const {
-  return impl_->flags_ & CanvasInterface::TEXT_FLAGS_STRIKEOUT;
+  return impl_->default_format_.strikeout();
 }
 
 void TextFrame::SetStrikeout(bool strikeout) {
-  if (strikeout == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_STRIKEOUT)) {
-    // Casting to TextFlag to avoid conversion warning when compiling by the
-    // latest gcc.
-    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
-        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_STRIKEOUT);
+  if (strikeout != impl_->default_format_.strikeout()) {
+    impl_->default_format_.set_strikeout(strikeout);
     impl_->ResetFont();
   }
 }
@@ -309,15 +415,12 @@ void TextFrame::SetTrimming(CanvasInterface::Trimming trimming) {
 }
 
 bool TextFrame::IsUnderline() const {
-  return impl_->flags_ & CanvasInterface::TEXT_FLAGS_UNDERLINE;
+  return impl_->default_format_.underline();
 }
 
 void TextFrame::SetUnderline(bool underline) {
-  if (underline == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_UNDERLINE)) {
-    // Casting to TextFlag to avoid conversion warning when compiling by the
-    // latest gcc.
-    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
-        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_UNDERLINE);
+  if (underline != impl_->default_format_.underline()) {
+    impl_->default_format_.set_underline(underline);
     impl_->ResetFont();
   }
 }
@@ -334,15 +437,12 @@ void TextFrame::SetVAlign(CanvasInterface::VAlignment valign) {
 }
 
 bool TextFrame::IsWordWrap() const {
-  return impl_->flags_ & CanvasInterface::TEXT_FLAGS_WORDWRAP;
+  return impl_->word_wrap_;
 }
 
 void TextFrame::SetWordWrap(bool wrap) {
-  if (wrap == !(impl_->flags_ & CanvasInterface::TEXT_FLAGS_WORDWRAP)) {
-    // Casting to TextFlag to avoid conversion warning when compiling by the
-    // latest gcc.
-    impl_->flags_ = static_cast<CanvasInterface::TextFlag>(
-        impl_->flags_ ^ CanvasInterface::TEXT_FLAGS_WORDWRAP);
+  if (wrap != impl_->word_wrap_) {
+    impl_->word_wrap_ = wrap;
     impl_->ResetFont();
   }
 }
@@ -352,23 +452,34 @@ std::string TextFrame::GetText() const {
 }
 
 bool TextFrame::SetText(const std::string &text) {
-  if (text != impl_->text_) {
-    impl_->text_ = text;
-    impl_->ResetExtents();
-    return true;
-  }
-  return false;
+  if (IsPlainText(text))
+    return impl_->SetPlainText(text);
+  else
+    return impl_->SetMarkUpText(text);
+}
+
+bool TextFrame::SetTextWithFormats(const std::string &text,
+                                   const TextFormats &formats) {
+  return impl_->SetTextWithFormats(text, formats);
 }
 
 void TextFrame::DrawWithTexture(CanvasInterface *canvas, double x, double y,
                                 double width, double height, Texture *texture) {
   ASSERT(texture);
   impl_->SetUpFont();
-  if (impl_->font_ && !impl_->text_.empty()) {
-    texture->DrawText(canvas, x, y, width, height,
-                      impl_->text_.c_str(), impl_->font_,
-                      impl_->align_, impl_->valign_,
-                      impl_->trimming_, impl_->flags_);
+  if (!impl_->text_.empty()) {
+    if (impl_->renderer_) {
+      impl_->renderer_->SetLayoutRectangle(x, y, width, height);
+      texture->DrawText(canvas, impl_->renderer_);
+    } else {
+      FontInterface *font = CreateFontFromFormat(impl_->view_->GetGraphics(),
+                                                 impl_->default_format_);
+      texture->DrawText(canvas, x, y, width, height,
+                        impl_->text_.c_str(), font,
+                        impl_->align_, impl_->valign_,
+                        impl_->trimming_, impl_->GetTextFlags());
+      font->Destroy();
+    }
   }
 }
 
@@ -385,15 +496,49 @@ void TextFrame::GetSimpleExtents(double *width, double *height) {
 
 void TextFrame::GetExtents(double in_width, double *width, double *height) {
   impl_->SetUpFont();
+  *width = 0;
+  *height = 0;
   if (in_width >= impl_->width_) {
     *width = impl_->width_;
     *height = impl_->height_;
-  } else {
-    CanvasInterface *canvas = impl_->view_->GetGraphics()->NewCanvas(5, 5);
-    canvas->GetTextExtents(impl_->text_.c_str(), impl_->font_, impl_->flags_,
-                           in_width, width, height);
-    canvas->Destroy();
+  } else if (impl_->view_ && impl_->view_->GetGraphics()) {
+    if (impl_->renderer_) {
+      impl_->renderer_->SetLayoutRectangle(0, 0, in_width, -1);
+      impl_->renderer_->GetTextExtents(width, height);
+    } else {
+      FontInterface *font = CreateFontFromFormat(impl_->view_->GetGraphics(),
+                                                 impl_->default_format_);
+      CanvasInterface *canvas = impl_->view_->GetGraphics()->NewCanvas(5, 5);
+      canvas->GetTextExtents(impl_->text_.c_str(), font, impl_->GetTextFlags(),
+                             in_width, width, height);
+      canvas->Destroy();
+      font->Destroy();
+    }
   }
+}
+
+void TextFrame::DrawCaret(CanvasInterface* canvas,
+                          int caret_pos, const Color& color) {
+  impl_->SetUpFont();
+  if (impl_->view_ && impl_->view_->GetGraphics() && impl_->renderer_)
+    impl_->renderer_->DrawCaret(canvas, caret_pos, color);
+  return;
+}
+
+bool TextFrame::IsRTL() const {
+  return impl_->rtl_;
+}
+
+void TextFrame::SetRTL(bool rtl) {
+  if (impl_->default_format_.text_rtl() != rtl) {
+    impl_->default_format_.set_text_rtl(rtl);
+    impl_->ResetFont();
+  }
+}
+
+void TextFrame::SetDefaultFormat(const TextFormat& default_format) {
+  impl_->default_format_ = default_format;
+  impl_->ResetFont();
 }
 
 } // namespace ggadget

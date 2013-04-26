@@ -40,6 +40,8 @@
 
 namespace ggadget {
 
+#if !defined(OS_WIN)
+
 // The following code is from Loki(0.1.7)'s Allocator.h
 //-----------------------------------------------------------------------------
 
@@ -215,6 +217,46 @@ class LightSet : public std::set<Key, Compare, LokiAllocator<Key> > {
   LightSet &operator=(const LightSet &x)
   { Super::operator=(x); return *this; }
 };
+
+#else
+
+template <typename Key, typename Value, typename Compare = std::less<Key> >
+class LightMap : public std::map<Key, Value, Compare> {
+ public:
+  typedef std::map<Key, Value, Compare> Super;
+  LightMap() { }
+  LightMap(const Compare &comp) : Super(comp) { }
+  LightMap(const LightMap &x) : Super(x) { }
+  template <typename I> LightMap(I first, I last) : Super(first, last) { }
+  LightMap &operator=(const LightMap &x)
+  { Super::operator=(x); return *this; }
+};
+
+template <typename Key, typename Value, typename Compare = std::less<Key> >
+class LightMultiMap : public std::multimap<Key, Value, Compare> {
+ public:
+  typedef std::multimap<Key, Value, Compare> Super;
+  LightMultiMap() { }
+  LightMultiMap(const Compare &comp) : Super(comp) { }
+  LightMultiMap(const LightMultiMap &x) : Super(x) { }
+  template <typename I> LightMultiMap(I first, I last) : Super(first, last) { }
+  LightMultiMap &operator=(const LightMultiMap &x)
+  { Super::operator=(x); return *this; }
+};
+
+template <typename Key, typename Compare = std::less<Key> >
+class LightSet : public std::set<Key, Compare> {
+ public:
+  typedef std::set<Key, Compare> Super;
+  LightSet() { }
+  LightSet(const Compare &comp) : Super(comp) { }
+  LightSet(const LightSet &x) : Super(x) { }
+  template <typename I> LightSet(I first, I last) : Super(first, last) { }
+  LightSet &operator=(const LightSet &x)
+  { Super::operator=(x); return *this; }
+};
+
+#endif  // OS_WIN
 
 } // namespace ggadget
 

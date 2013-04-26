@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -15,14 +15,25 @@
 */
 
 #include <cmath>
+#include <string>
 #include "div_element.h"
 #include "canvas_interface.h"
 #include "canvas_utils.h"
 #include "elements.h"
 #include "logger.h"
+#include "string_utils.h"
 #include "texture.h"
+#include "variant.h"
 #include "view.h"
 #include "small_object.h"
+
+namespace {
+
+const char *kBackgroundModeName[] = {
+  "tile", "stretch"
+};
+
+} // namespace
 
 namespace ggadget {
 
@@ -32,6 +43,10 @@ class DivElement::Impl : public SmallObject<> {
       : owner_(owner),
         background_texture_(NULL),
         background_mode_(BACKGROUND_MODE_TILE),
+        background_left_border_(0),
+        background_top_border_(0),
+        background_right_border_(0),
+        background_bottom_border_(0),
         layout_recurse_depth_(0),
         last_client_width_(0),
         last_client_height_(0) {
@@ -41,9 +56,37 @@ class DivElement::Impl : public SmallObject<> {
     background_texture_ = NULL;
   }
 
+  std::string GetBackgroundBorder() const {
+    return StringPrintf("%.0f %.0f %.0f %.0f",
+                        background_left_border_,
+                        background_top_border_,
+                        background_right_border_,
+                        background_bottom_border_);
+  }
+
+  void SetBackgroundBorder(const std::string &border) {
+    double left, top, right, bottom;
+    if (!StringToBorderSize(border,
+                            &left,
+                            &top,
+                            &right,
+                            &bottom)) {
+      owner_->SetBackgroundBorder(0, 0, 0, 0);
+    } else {
+      owner_->SetBackgroundBorder(left,
+                                  top,
+                                  right,
+                                  bottom);
+    }
+  }
+
   DivElement *owner_;
   Texture *background_texture_;
   BackgroundMode background_mode_;
+  double background_left_border_;
+  double background_top_border_;
+  double background_right_border_;
+  double background_bottom_border_;
   int layout_recurse_depth_;
   int last_client_width_;
   int last_client_height_;
@@ -67,8 +110,14 @@ void DivElement::DoClassRegister() {
   RegisterProperty("background",
                    NewSlot(&DivElement::GetBackground),
                    NewSlot(&DivElement::SetBackground));
-  // "backgroundMode" is for native use only.
-  // JS can use <img stretchMode="true"> to get the similar effect.
+  RegisterProperty("backgroundBorder",
+                   NewSlot(&Impl::GetBackgroundBorder, &DivElement::impl_),
+                   NewSlot(&Impl::SetBackgroundBorder, &DivElement::impl_));
+  RegisterStringEnumProperty(
+      "backgroundMode",
+      NewSlot(&DivElement::GetBackgroundMode),
+      NewSlot(&DivElement::SetBackgroundMode),
+      kBackgroundModeName, arraysize(kBackgroundModeName));
 }
 
 DivElement::~DivElement() {
@@ -115,19 +164,27 @@ void DivElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->background_texture_) {
     const ImageInterface *texture_image =
         impl_->background_texture_->GetImage();
-    if (!texture_image || impl_->background_mode_ == BACKGROUND_MODE_TILE) {
-      impl_->background_texture_->Draw(canvas, 0, 0, GetPixelWidth(),
-                                       GetPixelHeight());
-    } else if (impl_->background_mode_ == BACKGROUND_MODE_STRETCH) {
-      texture_image->StretchDraw(canvas, 0, 0,
-                                 GetPixelWidth(), GetPixelHeight());
+    if (!texture_image) {
+        impl_->background_texture_->Draw(canvas, 0, 0, GetPixelWidth(),
+                                         GetPixelHeight());
+    } else if (impl_->background_mode_ == BACKGROUND_MODE_TILE) {
+      TileMiddleDrawImage(texture_image, canvas,
+                          GetView()->GetGraphics(),
+                          0, 0,
+                          GetPixelWidth(), GetPixelHeight(),
+                          impl_->background_left_border_,
+                          impl_->background_top_border_,
+                          impl_->background_right_border_,
+                          impl_->background_bottom_border_);
     } else {
       StretchMiddleDrawImage(texture_image, canvas, 0, 0,
                              GetPixelWidth(), GetPixelHeight(),
-                             -1, -1, -1, -1);
+                             impl_->background_left_border_,
+                             impl_->background_top_border_,
+                             impl_->background_right_border_,
+                             impl_->background_bottom_border_);
     }
   }
-
   canvas->TranslateCoordinates(-GetScrollXPosition(),
                                -GetScrollYPosition());
   DrawChildren(canvas);
@@ -155,6 +212,28 @@ DivElement::BackgroundMode DivElement::GetBackgroundMode() const {
 void DivElement::SetBackgroundMode(BackgroundMode mode) {
   if (mode != impl_->background_mode_) {
     impl_->background_mode_ = mode;
+    QueueDraw();
+  }
+}
+
+void DivElement::GetBackgroundBorder(double *left, double *top,
+                                     double *right, double *bottom) const {
+  *left = impl_->background_left_border_;
+  *top = impl_->background_top_border_;
+  *right = impl_->background_right_border_;
+  *bottom = impl_->background_bottom_border_;
+}
+
+void DivElement::SetBackgroundBorder(double left, double top,
+                                     double right, double bottom) {
+  if (left != impl_->background_left_border_ ||
+      top != impl_->background_top_border_ ||
+      right != impl_->background_right_border_ ||
+      bottom != impl_->background_bottom_border_) {
+    impl_->background_left_border_ = left;
+    impl_->background_top_border_ = top;
+    impl_->background_right_border_ = right;
+    impl_->background_bottom_border_ = bottom;
     QueueDraw();
   }
 }

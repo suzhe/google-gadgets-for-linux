@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,8 +26,7 @@
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
-#include <ggadget/gadget.h>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/permissions.h>
 #include <ggadget/xdg/desktop_entry.h>
 #include <ggadget/xdg/icon_theme.h>
@@ -78,7 +77,8 @@ static const Variant kBrowseForFileDefaultArgs[] = {
 
 class QtSystemBrowseForFileHelper {
  public:
-  QtSystemBrowseForFileHelper(ScriptableInterface *framework, Gadget *gadget)
+  QtSystemBrowseForFileHelper(ScriptableInterface *framework,
+                              GadgetInterface *gadget)
     : gadget_(gadget) {
     framework->ConnectOnReferenceChange(
       NewSlot(this, &QtSystemBrowseForFileHelper::OnFrameworkRefChange));
@@ -164,7 +164,7 @@ class QtSystemBrowseForFileHelper {
     return false;
   }
 
-  Gadget *gadget_;
+  GadgetInterface *gadget_;
 };
 
 // Gets the icon file of a DesktopEntry file.
@@ -261,7 +261,7 @@ extern "C" {
   }
 
   bool RegisterFrameworkExtension(ScriptableInterface *framework,
-                                  Gadget *gadget) {
+                                  GadgetInterface *gadget) {
     LOGI("Register qt_system_framework extension.");
     ASSERT(framework && gadget);
 
@@ -300,8 +300,8 @@ extern "C" {
     }
 
     // Check permissions.
-    const Permissions *permissions = gadget->GetPermissions();
-    if (permissions->IsRequiredAndGranted(Permissions::FILE_READ)) {
+    const Permissions *perm = gadget->GetPermissions();
+    if (perm && perm->IsRequiredAndGranted(Permissions::FILE_READ)) {
       QtSystemBrowseForFileHelper *helper =
           new QtSystemBrowseForFileHelper(framework, gadget);
 
@@ -320,7 +320,7 @@ extern "C" {
       DLOG("No permission to read file.");
     }
 
-    if (permissions->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
+    if (perm && perm->IsRequiredAndGranted(Permissions::DEVICE_STATUS)) {
       reg_system->RegisterVariantConstant("cursor",
                                           Variant(&g_script_cursor_));
       reg_system->RegisterVariantConstant("screen",

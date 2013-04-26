@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ namespace hosts {
 namespace gtk {
 
 using ggadget::Gadget;
+using ggadget::GadgetInterface;
 using ggadget::ViewHostInterface;;
 
 class SideBarGtkHost : public GtkHostBase {
@@ -37,12 +38,14 @@ class SideBarGtkHost : public GtkHostBase {
   SideBarGtkHost(const char *options, int flags, int view_debug_mode,
                  Gadget::DebugConsoleConfig debug_console_config);
   virtual ~SideBarGtkHost();
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                          ViewHostInterface::Type type);
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console);
-  virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual void ShowGadgetDebugConsole(Gadget *gadget);
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console);
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data);
+  virtual void ShowGadgetDebugConsole(GadgetInterface *gadget);
   virtual int GetDefaultFontSize();
 
  public:

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,17 +19,18 @@
 
 #include <string>
 #include <ggadget/gadget.h>
+#include <ggadget/gtk/utilities.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/permissions.h>
 #include <ggadget/signals.h>
-#include <ggadget/gtk/utilities.h>
 
 namespace hosts {
 namespace gtk {
 
 using ggadget::Connection;
 using ggadget::Gadget;
+using ggadget::GadgetInterface;
 using ggadget::HostInterface;
 using ggadget::Permissions;
 
@@ -50,7 +51,7 @@ class GtkHostBase : public ggadget::HostInterface {
   virtual bool LoadFont(const char *filename) {
     return ggadget::gtk::LoadFont(filename);
   }
-  virtual bool OpenURL(const Gadget *gadget, const char *url) {
+  virtual bool OpenURL(const GadgetInterface *gadget, const char *url) {
     return ggadget::gtk::OpenURL(gadget, url);
   }
 

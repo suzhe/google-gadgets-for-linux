@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -139,7 +139,14 @@ void CheckDoubleVariant(T value, const char *str_value) {
 }
 
 TEST(Variant, TestDouble) {
+#if defined(OS_WIN)
+  // Windows will dispaly 3 digits for exponent.
+  // See http://msdn.microsoft.com/en-us/library/hf4y5e3w(v=vs.71).aspx.
+  CheckDoubleVariant<float>(-12345.6789e-20f, "-1.23457e-016");
+  CheckDoubleVariant<float>(-12345.6789e+5f, "-1.23457e+009");
+#elif defined(OS_POSIX)
   CheckDoubleVariant<float>(-12345.6789e-20f, "-1.23457e-16");
+#endif
   CheckDoubleVariant<double>(30423.34932, "30423.3");
   CheckDoubleVariant<double>(0, "0");
 }

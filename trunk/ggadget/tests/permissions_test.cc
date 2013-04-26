@@ -17,6 +17,7 @@
 #include "ggadget/common.h"
 #include "ggadget/permissions.h"
 #include "ggadget/slot.h"
+#include "ggadget/locales.h"
 #include "ggadget/logger.h"
 #include "unittest/gtest.h"
 
@@ -237,7 +238,7 @@ TEST(Permissions, SaveLoad) {
 }
 
 int main(int argc, char **argv) {
-  setlocale(LC_MESSAGES, "en_US.UTF-8");
+  ggadget::SetLocaleForUiMessage("en_US.UTF-8");
   testing::ParseGTestFlags(&argc, argv);
 
   return RUN_ALL_TESTS();

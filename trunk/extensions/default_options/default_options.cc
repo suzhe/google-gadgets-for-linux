@@ -98,7 +98,7 @@ class DefaultOptions : public MemoryOptions {
     StringMap table;
     if (parser_->ParseXMLIntoXPathMap(data, NULL, location_.c_str(),
                                       "options", NULL, NULL, &table)) {
-      for (GadgetStringMap::const_iterator it = table.begin();
+      for (StringMap::const_iterator it = table.begin();
            it != table.end(); ++it) {
         const std::string &key = it->first;
         if (key.find('@') != key.npos)

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #define HOSTS_GTK_STANDALONE_GTK_HOST_H__
 
 #include <string>
-#include <ggadget/gadget.h>
+#include <ggadget/gadget_interface.h>
 #include <ggadget/host_interface.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/signals.h>
@@ -26,14 +26,14 @@
 #include "gtk_host_base.h"
 
 namespace ggadget {
-  DECLARE_VARIANT_PTR_TYPE(Gadget);
+  DECLARE_VARIANT_PTR_TYPE(GadgetInterface);
 };
 
 namespace hosts {
 namespace gtk {
 
 using ggadget::Connection;
-using ggadget::Gadget;
+using ggadget::GadgetInterface;
 using ggadget::ViewHostInterface;
 
 class StandaloneGtkHost : public GtkHostBase {
@@ -41,12 +41,14 @@ class StandaloneGtkHost : public GtkHostBase {
   StandaloneGtkHost(int flags, int view_debug_mode,
                     Gadget::DebugConsoleConfig debug_console_config);
   virtual ~StandaloneGtkHost();
-  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+  virtual ViewHostInterface *NewViewHost(GadgetInterface *gadget,
                                          ViewHostInterface::Type type);
-  virtual Gadget *LoadGadget(const char *path, const char *options_name,
-                             int instance_id, bool show_debug_console);
-  virtual void RemoveGadget(Gadget *gadget, bool save_data);
-  virtual void ShowGadgetDebugConsole(Gadget *gadget);
+  virtual GadgetInterface *LoadGadget(const char *path,
+                                      const char *options_name,
+                                      int instance_id,
+                                      bool show_debug_console);
+  virtual void RemoveGadget(GadgetInterface *gadget, bool save_data);
+  virtual void ShowGadgetDebugConsole(GadgetInterface *gadget);
   virtual int GetDefaultFontSize();
 
   virtual bool IsSafeToExit() const;
@@ -63,7 +65,8 @@ class StandaloneGtkHost : public GtkHostBase {
   void Present();
 
   Connection *ConnectOnLoadGadget(
-      ggadget::Slot4<Gadget *, const char *, const char *, int, bool> *slot);
+      ggadget::Slot4<GadgetInterface *, const char *, const char *, int, bool> *
+      slot);
 
  private:
   class Impl;

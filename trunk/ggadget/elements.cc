@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,21 +16,23 @@
 
 #include <vector>
 #include <algorithm>
-#include "elements.h"
+
 #include "basic_element.h"
-#include "event.h"
 #include "element_factory.h"
-#include "gadget.h"
+#include "elements.h"
+#include "event.h"
+#include "gadget_interface.h"
 #include "graphics_interface.h"
 #include "logger.h"
 #include "math_utils.h"
 #include "scriptable_helper.h"
+#include "signals.h"
+#include "small_object.h"
 #include "view.h"
 #include "view_element.h"
 #include "xml_dom_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
-#include "small_object.h"
 
 namespace ggadget {
 
@@ -104,6 +106,8 @@ class Elements::Impl : public SmallObject<> {
         children_.push_back(element);
       }
       ASSERT_ELEMENTS_INTEGRITY;
+      if (on_element_added_.HasActiveConnections())
+        on_element_added_(element);
       return true;
     }
     delete element;
@@ -120,6 +124,8 @@ class Elements::Impl : public SmallObject<> {
     UpdateIndexes(index);
     element_removed_ = true;
     ASSERT_ELEMENTS_INTEGRITY;
+    if (on_element_removed_.HasActiveConnections())
+        on_element_removed_(element);
   }
 
   bool InsertElement(BasicElement *element, const BasicElement *before) {
@@ -188,6 +194,8 @@ class Elements::Impl : public SmallObject<> {
       for (Children::iterator ite = children_.begin();
            ite != children_.end(); ++ite) {
         view_->OnElementRemove(*ite);
+        if (on_element_removed_.HasActiveConnections())
+          on_element_removed_(*ite);
         delete *ite;
       }
       Children v;
@@ -359,12 +367,19 @@ class Elements::Impl : public SmallObject<> {
     }
   }
 
+  void CalculateSize() {
+    Children::iterator it = children_.begin();
+    Children::iterator end = children_.end();
+    for (; it != end; ++it)
+      (*it)->CalculateSize();
+  }
+
   void Layout() {
     Children::iterator it = children_.begin();
     Children::iterator end = children_.end();
     bool need_update_extents = element_removed_;
     for (; it != end; ++it) {
-      (*it)->Layout();
+      (*it)->RecursiveLayout();
       if ((*it)->IsPositionChanged() || (*it)->IsSizeChanged())
         need_update_extents = true;
       // Clear the size and position changed state here, because children's
@@ -474,6 +489,8 @@ class Elements::Impl : public SmallObject<> {
   View *view_;
   typedef std::vector<BasicElement *> Children;
   Children children_;
+  Signal1<void, BasicElement*> on_element_added_;
+  Signal1<void, BasicElement*> on_element_removed_;
 
   bool scrollable_      : 1;
   bool element_removed_ : 1;
@@ -566,7 +583,7 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
 
   DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
   xmldoc->Ref();
-  Gadget *gadget = impl_->view_->GetGadget();
+  GadgetInterface *gadget = impl_->view_->GetGadget();
   bool success = false;
   if (gadget) {
     success = gadget->ParseLocalizedXML(xml, xml.c_str(), xmldoc);
@@ -641,6 +658,10 @@ void Elements::RemoveAllElements() {
   }
 }
 
+void Elements::CalculateSize() {
+  impl_->CalculateSize();
+}
+
 void Elements::Layout() {
   impl_->Layout();
 }
@@ -678,6 +699,15 @@ void Elements::MarkRedraw() {
 void Elements::AggregateClipRegion(const Rectangle &boundary,
                                    ClipRegion *region) {
   impl_->AggregateClipRegion(boundary, region);
+}
+
+Connection *Elements::ConnectOnElementAdded(Slot1<void, BasicElement*> *slot) {
+  return impl_->on_element_added_.Connect(slot);
+}
+
+Connection *Elements::ConnectOnElementRemoved(
+    Slot1<void, BasicElement*> *slot) {
+  return impl_->on_element_removed_.Connect(slot);
 }
 
 } // namespace ggadget

@@ -144,5 +144,9 @@ FontInterface *CairoGraphics::NewFont(const std::string &family,
   return new CairoFont(font, pt_size, style, weight);
 }
 
+TextRendererInterface *CairoGraphics::NewTextRenderer() const {
+  return NULL;
+}
+
 } // namespace gtk
 } // namespace ggadget

@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,28 +17,37 @@
 // Enable it to print verbose debug info
 // #define EVENT_VERBOSE_DEBUG
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+
 #include "basic_element.h"
+#include "canvas_utils.h"
+#include "clip_region.h"
 #include "common.h"
-#include "logger.h"
-#include "math_utils.h"
 #include "element_factory.h"
 #include "elements.h"
+#include "event.h"
+#include "gadget_consts.h"
+#include "gadget_interface.h"
 #include "graphics_interface.h"
+#include "logger.h"
 #include "math_utils.h"
 #include "menu_interface.h"
+#include "permissions.h"
 #include "scriptable_event.h"
+#include "small_object.h"
 #include "string_utils.h"
 #include "view.h"
-#include "event.h"
-#include "clip_region.h"
-#include "permissions.h"
-#include "gadget.h"
-#include "small_object.h"
-#include "canvas_utils.h"
-#include "gadget_consts.h"
+
+// Prevents windows max/min macros conflicting with std::max/min.
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 
 namespace ggadget {
 
@@ -58,6 +67,7 @@ class BasicElement::Impl : public SmallObject<> {
         tag_name_(tag_name),
         index_(kInvalidIndex), // Invalid until set by Elements.
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
+        min_width_(0.0), min_height_(0.0),
         x_(0.0), y_(0.0), px_(0.0), py_(0.0),
         pin_x_(0.0), pin_y_(0.0), ppin_x_(0.0), ppin_y_(0.0),
         rotation_(0.0),
@@ -70,6 +80,7 @@ class BasicElement::Impl : public SmallObject<> {
         hittest_(ViewInterface::HT_CLIENT),
         cursor_(ViewInterface::CURSOR_DEFAULT),
         flip_(FLIP_NONE),
+        text_direction_(TEXT_DIRECTION_INHERIT_FROM_VIEW),
         drop_target_(false),
         enabled_(false),
         width_relative_(false), height_relative_(false),
@@ -434,15 +445,7 @@ class BasicElement::Impl : public SmallObject<> {
     }
   }
 
-  void Layout() {
-    if (!width_specified_ || !height_specified_) {
-      double width, height;
-      owner_->GetDefaultSize(&width, &height);
-      if (!width_specified_)
-        SetPixelWidth(width);
-      if (!height_specified_)
-        SetPixelHeight(height);
-    }
+  void CalculateRelativeAttributes() {
     if (!x_specified_ || !y_specified_) {
       double x, y;
       owner_->GetDefaultPosition(&x, &y);
@@ -458,8 +461,8 @@ class BasicElement::Impl : public SmallObject<> {
     // Other values have already triggered position_changed_ when they were set.
     double parent_width = GetParentWidth();
     if (x_relative_) {
-      // 'volatile' prevents the value of new_x from being used from registers,
-      // ensures the correct new_x != x_ comparison.
+      // 'volatile' prevents the value of new_x from being used from
+      // registers, ensures the correct new_x != x_ comparison.
       volatile double new_x = px_ * parent_width;
       if (new_x != x_) {
         position_changed_ = true;
@@ -509,14 +512,36 @@ class BasicElement::Impl : public SmallObject<> {
       ppin_y_ = height_ > 0.0 ? pin_y_ / height_ : 0.0;
     }
 
+    // Adjusts pixel size according to minimum width/height limitation.
+    const double min_width = owner_->GetMinWidth();
+    if (width_ < min_width) {
+      size_changed_ = true;
+      width_ = min_width;
+    }
+    const double min_height = owner_->GetMinHeight();
+    if (height_ < min_height) {
+      size_changed_ = true;
+      height_ = min_height;
+    }
+  }
+
+  void Layout() {
+    CalculateRelativeAttributes();
     if (position_changed_ || size_changed_ || visibility_changed_) {
       AddToClipRegion(NULL);
     }
+
+    owner_->BeforeChildrenLayout();
 
     if (size_changed_)
       PostSizeEvent();
     if (children_)
       children_->Layout();
+
+    // Call element's layout to let it layout itself.
+    // It should be called after children_->Layout() because some elements needs
+    // the position and size of children elements to do its own layout.
+    owner_->Layout();
 
     if (content_changed_) {
       // To let all associated copy elements to update their content.
@@ -1104,6 +1129,7 @@ class BasicElement::Impl : public SmallObject<> {
   size_t index_;
 
   double width_, height_, pwidth_, pheight_;
+  double min_width_, min_height_;
   double x_, y_, px_, py_;
   double pin_x_, pin_y_, ppin_x_, ppin_y_;
   double rotation_;
@@ -1146,11 +1172,22 @@ class BasicElement::Impl : public SmallObject<> {
 
   static LightMap<uint64_t, bool> class_has_children_;
 #endif
-
+#if defined(OS_WIN)
+  // MSVC treats enum bit fields as signed! That means if a 2-bit enum bit field
+  // is assigned an enum value with integer values of 3, when the field is read
+  // later, the result will be -1 instead of 3, because the first bit is
+  // considered as sign bit. So surprisingly the result isn't equal to the
+  // original enum value.
+  ViewInterface::HitTest hittest_;
+  ViewInterface::CursorType cursor_;
+  FlipMode flip_;
+  TextDirection text_direction_;
+#elif defined(OS_POSIX)
   ViewInterface::HitTest hittest_   : 6;
   ViewInterface::CursorType cursor_ : 4;
   FlipMode flip_                    : 2;
-
+  TextDirection text_direction_     : 2;
+#endif
   bool drop_target_             : 1;
   bool enabled_                 : 1;
   bool width_relative_          : 1;
@@ -1204,6 +1241,10 @@ static const char *kHitTestNames[] = {
 
 static const char *kFlipNames[] = {
   "none", "horizontal", "vertical", "both",
+};
+
+static const char *kTextDirectionNames[] = {
+  "inheritfromview", "inheritfromparent", "ltr", "rtl",
 };
 
 BasicElement::BasicElement(View *view, const char *tag_name, const char *name,
@@ -1265,6 +1306,12 @@ void BasicElement::DoClassRegister() {
   RegisterProperty("height",
                    NewSlot(&Impl::GetHeight, &BasicElement::impl_),
                    NewSlot(&Impl::SetHeight, &BasicElement::impl_));
+  RegisterProperty("minWidth",
+                   NewSlot(&BasicElement::GetMinWidth),
+                   NewSlot(&BasicElement::SetMinWidth));
+  RegisterProperty("minHeight",
+                   NewSlot(&BasicElement::GetMinHeight),
+                   NewSlot(&BasicElement::SetMinHeight));
   RegisterProperty("name", NewSlot(&BasicElement::GetName), NULL);
   RegisterProperty("tagName", NewSlot(&BasicElement::GetTagName), NULL);
 
@@ -1321,6 +1368,11 @@ void BasicElement::DoClassRegister() {
                    NewSlot(&BasicElement::IsVisible),
                    NewSlot(&BasicElement::SetVisible));
 
+  RegisterStringEnumProperty("textDirection",
+                             NewSlot(&BasicElement::GetTextDirection),
+                             NewSlot(&BasicElement::SetTextDirection),
+                             kTextDirectionNames,
+                             arraysize(kTextDirectionNames));
   // Note: don't use 'flip' property until it is in the public API.
   RegisterStringEnumProperty("flip",
                              NewSlot(&BasicElement::GetFlip),
@@ -1435,11 +1487,11 @@ void BasicElement::SetCursor(ViewInterface::CursorType cursor) {
 }
 
 bool BasicElement::IsDropTarget() const {
-  Gadget *gadget = GetView()->GetGadget();
+  GadgetInterface *gadget = GetView()->GetGadget();
   // If gadget is NULL then means that the view is not used in a gadget
   // (eg. in unittest), so it's ok to grant the permission.
   const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
-  if (!permissions || permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
     return impl_->drop_target_;
   else
     LOG("No permission to use basicElement.dropTarget.");
@@ -1447,11 +1499,11 @@ bool BasicElement::IsDropTarget() const {
 }
 
 void BasicElement::SetDropTarget(bool drop_target) {
-  Gadget *gadget = GetView()->GetGadget();
+  GadgetInterface *gadget = GetView()->GetGadget();
   // If gadget is NULL then means that the view is not used in a gadget
   // (eg. in unittest), so it's ok to grant the permission.
   const Permissions *permissions = gadget ? gadget->GetPermissions() : NULL;
-  if (!permissions || permissions->IsRequiredAndGranted(Permissions::FILE_READ))
+  if (permissions && permissions->IsRequiredAndGranted(Permissions::FILE_READ))
     impl_->drop_target_ = drop_target;
   else
     LOG("No permission to use basicElement.dropTarget.");
@@ -1512,6 +1564,28 @@ double BasicElement::GetRelativeHeight() const {
   return impl_->pheight_;
 }
 
+double BasicElement::GetMinWidth() const {
+  return impl_->min_width_;
+}
+
+void BasicElement::SetMinWidth(double min_width) {
+  if (impl_->min_width_ != min_width) {
+    impl_->min_width_ = std::max(0.0, min_width);
+    impl_->WidthChanged();
+  }
+}
+
+double BasicElement::GetMinHeight() const {
+  return impl_->min_height_;
+}
+
+void BasicElement::SetMinHeight(double min_height) {
+  if (impl_->min_height_ != min_height) {
+    impl_->min_height_ = std::max(0.0, min_height);
+    impl_->HeightChanged();
+  }
+}
+
 double BasicElement::GetPixelX() const {
   return impl_->x_;
 }
@@ -1534,8 +1608,18 @@ double BasicElement::GetRelativeX() const {
   return impl_->px_;
 }
 
+void BasicElement::SetRelativeX(double x) {
+  impl_->x_specified_ = true;
+  impl_->SetRelativeX(x);
+}
+
 double BasicElement::GetRelativeY() const {
   return impl_->py_;
+}
+
+void BasicElement::SetRelativeY(double y) {
+  impl_->y_specified_ = true;
+  impl_->SetRelativeY(y);
 }
 
 double BasicElement::GetPixelPinX() const {
@@ -1562,16 +1646,6 @@ void BasicElement::SetRelativeWidth(double width) {
 void BasicElement::SetRelativeHeight(double height) {
   impl_->height_specified_ = true;
   impl_->SetRelativeHeight(height);
-}
-
-void BasicElement::SetRelativeX(double x) {
-  impl_->x_specified_ = true;
-  impl_->SetRelativeX(x);
-}
-
-void BasicElement::SetRelativeY(double y) {
-  impl_->y_specified_ = true;
-  impl_->SetRelativeY(y);
 }
 
 double BasicElement::GetRelativePinX() const {
@@ -1805,6 +1879,29 @@ void BasicElement::SetFlip(FlipMode flip) {
   }
 }
 
+BasicElement::TextDirection BasicElement::GetTextDirection() const {
+  return impl_->text_direction_;
+}
+
+void BasicElement::SetTextDirection(TextDirection text_direction) {
+  if (impl_->text_direction_ != text_direction) {
+    impl_->text_direction_ = text_direction;
+    QueueDraw();
+  }
+}
+
+bool BasicElement::IsTextRTL() const {
+  switch (impl_->text_direction_) {
+    case TEXT_DIRECTION_INHERIT_FROM_PARENT:
+      return GetParentElement() ? GetParentElement()->IsTextRTL() :
+                                  GetView()->IsTextRTL();
+    case TEXT_DIRECTION_INHERIT_FROM_VIEW:
+      return GetView()->IsTextRTL();
+    default:
+      return impl_->text_direction_ == TEXT_DIRECTION_RIGHT_TO_LEFT;
+  }
+}
+
 Variant BasicElement::GetFocusOverlay() const {
   return Variant(GetImageTag(impl_->focus_overlay_));
 }
@@ -1844,7 +1941,7 @@ bool BasicElement::IsTabStopDefault() const {
   return false;
 }
 
-void BasicElement::Layout() {
+void BasicElement::RecursiveLayout() {
   impl_->Layout();
 }
 
@@ -1854,6 +1951,31 @@ void BasicElement::Draw(CanvasInterface *canvas) {
 
 void BasicElement::DrawChildren(CanvasInterface *canvas) {
   impl_->DrawChildren(canvas);
+}
+
+void BasicElement::CalculateSize() {
+  if (impl_->children_)
+    impl_->children_->CalculateSize();
+  if (!impl_->width_specified_ || !impl_->height_specified_) {
+    double width, height;
+    GetDefaultSize(&width, &height);
+    if (!impl_->width_specified_)
+      impl_->width_ = width;
+    if (!impl_->height_specified_)
+      impl_->height_ = height;
+  }
+  if (!impl_->width_relative_ && impl_->width_ < impl_->min_width_)
+    impl_->width_ = impl_->min_width_;
+  if (!impl_->height_relative_ && impl_->height_ < impl_->min_height_)
+    impl_->height_= impl_->min_height_;
+}
+
+void BasicElement::BeforeChildrenLayout() {
+  // Do nothing.
+}
+
+void BasicElement::Layout() {
+  // Do nothing.
 }
 
 void BasicElement::DoDraw(CanvasInterface * /* canvas */) {
@@ -1915,6 +2037,40 @@ Rectangle BasicElement::GetRectExtentsInView(const Rectangle &rect) const {
   SelfCoordToViewCoord(tmp.x + tmp.w, tmp.y + tmp.h, &r[4], &r[5]);
   SelfCoordToViewCoord(tmp.x + tmp.w, tmp.y, &r[6], &r[7]);
   return Rectangle::GetPolygonExtents(4, r);
+}
+
+Rectangle BasicElement::GetExtentsInParent() const {
+  const double width = GetPixelWidth();
+  const double height = GetPixelHeight();
+  const double pin_x = GetPixelPinX();
+  const double pin_y = GetPixelPinY();
+  const double radians = DegreesToRadians(GetRotation());
+  double left = 0;
+  double right = 0;
+  double top = 0;
+  double bottom = 0;
+  GetChildRectExtentInParent(GetPixelX(), GetPixelY(), pin_x, pin_y, radians,
+                             0, 0, width, height,
+                             &left, &top, &right, &bottom);
+  return Rectangle(left, top, right - left, bottom - top);
+}
+
+Rectangle BasicElement::GetMinExtentsInParent() const {
+  const double width = WidthIsRelative() ? GetMinWidth() : GetPixelWidth();
+  const double height = HeightIsRelative() ? GetMinHeight() : GetPixelHeight();
+  const double pin_x = PinXIsRelative() ?
+      (width * GetRelativePinX()) : GetPixelPinX();
+  const double pin_y = PinYIsRelative() ?
+      (height * GetRelativePinY()) : GetPixelPinY();
+  const double radians = DegreesToRadians(GetRotation());
+  double left = 0;
+  double right = 0;
+  double top = 0;
+  double bottom = 0;
+  GetChildRectExtentInParent(GetPixelX(), GetPixelY(), pin_x, pin_y, radians,
+                             0, 0, width, height,
+                             &left, &top, &right, &bottom);
+  return Rectangle(left, top, right - left, bottom - top);
 }
 
 void BasicElement::QueueDraw() {
@@ -2276,6 +2432,10 @@ void BasicElement::EnsureAreaVisible(const Rectangle &rect,
     impl_->parent_->EnsureAreaVisible(
         Rectangle(left, top, right - left, bottom - top), this);
   }
+}
+
+void BasicElement::CalculateRelativeAttributes() {
+  impl_->CalculateRelativeAttributes();
 }
 
 } // namespace ggadget

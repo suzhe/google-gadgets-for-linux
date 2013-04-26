@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include "common.h"
 #include "elements.h"
 #include "gadget_consts.h"
-#include "gadget.h"
 #include "main_loop_interface.h"
 #include "signals.h"
 #include "slot.h"
@@ -152,7 +151,7 @@ class FramedViewDecoratorBase::Impl : public SmallObject<> {
     close_button_->SetDownImage(Variant(kVDFramedCloseDown));
     close_button_->ConnectOnClickEvent(
         NewSlot(owner, &FramedViewDecoratorBase::OnCloseButtonClicked));
-    close_button_->Layout();
+    close_button_->RecursiveLayout();
 
     action_div_->SetVisible(false);
     action_div_->SetRelativePinX(1);
@@ -179,7 +178,7 @@ class FramedViewDecoratorBase::Impl : public SmallObject<> {
     size_t count = elements->GetCount();
     for (size_t i = 0; i < count; ++i) {
       BasicElement *elm = elements->GetItemByIndex(i);
-      elm->Layout();
+      elm->RecursiveLayout();
       if (elm->IsVisible()) {
         elm->SetPixelY(0);
         elm->SetPixelX(width);

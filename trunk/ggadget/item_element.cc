@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
+#include <string>
 
 #include "item_element.h"
 #include "canvas_interface.h"
@@ -245,9 +247,9 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
         ElementHolder self_holder(this);
         // Need to invoke selection through parent, since
         // parent knows about multiselect status.
-        if (event.GetModifier() & Event::MOD_SHIFT) {
+        if (event.GetModifier() & Event::MODIFIER_SHIFT) {
           listbox->SelectRange(this);
-        } else if (event.GetModifier() & Event::MOD_CONTROL) {
+        } else if (event.GetModifier() & Event::MODIFIER_CONTROL) {
           listbox->AppendSelection(this);
         } else {
           listbox->SetSelectedItem(this);

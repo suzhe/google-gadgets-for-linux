@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -78,6 +78,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
     FLIP_HORIZONTAL = 1,
     FLIP_VERTICAL = 2,
     FLIP_BOTH = FLIP_HORIZONTAL | FLIP_VERTICAL
+  };
+
+  /** Flag that indicate the text direction when drawing text. */
+  // TODO(synch): modify all elements to support BIDI.
+  enum TextDirection {
+    /** the text direction is inherited from the view. */
+    TEXT_DIRECTION_INHERIT_FROM_VIEW = 0,
+    /** the text direction is inherited from the parent element. */
+    TEXT_DIRECTION_INHERIT_FROM_PARENT,
+    /** the text direction is left to right. */
+    TEXT_DIRECTION_LEFT_TO_RIGHT,
+    /** the text direction is right to left. */
+    TEXT_DIRECTION_RIGHT_TO_LEFT,
   };
 
  public:
@@ -159,10 +172,37 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /** Sets the height in relative related to the parent. */
   void SetRelativeHeight(double height);
 
+  /**
+   * Gets the minimum pixel width of the element.
+   * Might be overrided by derived classes to customize the value.
+   */
+  virtual double GetMinWidth() const;
+  /**
+   * Sets the minimum pixel width of the element. It's not specified by default.
+   * By specifying a positive value to limit the element's minimum pixel width.
+   * Setting it to zero or a negative value to remove the limitation.
+   */
+  void SetMinWidth(double min_width);
+
+  /**
+   * Gets the minimum pixel height of the element.
+   * Might be overrided by derived classes to customize the value.
+   */
+  virtual double GetMinHeight() const;
+  /**
+   * Sets the minimum pixel height of the element. It's not specified by
+   * default. By specifying a positive value to limit the element's minimum
+   * pixel height. Setting it to zero or a negative value to remove the
+   * limitation.
+   */
+  void SetMinHeight(double min_height);
+
+
   /** Retrieves the horizontal position in pixelds. */
   double GetPixelX() const;
   /** Sets the horizontal position in pixels. */
   void SetPixelX(double x);
+
   /** Retrieves the vertical position in pixels. */
   double GetPixelY() const;
   /** Sets the vertical position in pixels. */
@@ -172,6 +212,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   double GetRelativeX() const;
   /** Sets the horizontal position in relative related to the parent. */
   void SetRelativeX(double x);
+
   /** Retrieves the vertical position in relative related to the parent. */
   double GetRelativeY() const;
   /** Sets the vertical position in relative related to the parent. */
@@ -346,6 +387,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
   //@{
   /**
+   * Gets and sets the text direction. Default text direction is @c
+   * TEXT_DIRECTION_INHERITED_FROM_VIEW.
+   */
+  TextDirection GetTextDirection() const;
+  void SetTextDirection(TextDirection text_direction);
+
+  //@}
+
+  /** Returns true if the element's actual text direction is rtl. */
+  bool IsTextRTL() const;
+
+  //@{
+  /**
    * Gets and sets the image to be displayed over the element when this
    * element is focused. Setting a valid focus overlay image will automatically
    * enable focus overlay (IsShowFocusOverlay() returns true).
@@ -427,6 +481,18 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
   /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
   const CanvasInterface *GetMaskCanvas() const;
+
+  /**
+   * Calculate the pixel value of the relative attributes.
+   * This function will only be called in Layout or RecursiveLayout.
+   */
+  void CalculateRelativeAttributes();
+
+  /**
+    * Adjusts the layout of this element and its children.
+    * This method is called just before @c Draw() and after @c CalculateSize().
+    */
+  void RecursiveLayout();
 
   /**
    * Draws the element to a specified canvas.
@@ -602,17 +668,29 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   bool GetChildrenExtents(double *width, double *height);
 
   /**
-   * Get the element's extents information in its view's coordinates.
+   * Gets the element's extents information in its view's coordinates.
    * @return the rectangle containing the information.
    */
   Rectangle GetExtentsInView() const;
 
   /**
-   * Get a rectangle's extents information in the view's coordinates.
+   * Gets a rectangle's extents information in the view's coordinates.
    * @param rect The rectangle in element's coordinates.
    * @return the rectangle containing the information.
    */
   Rectangle GetRectExtentsInView(const Rectangle &rect) const;
+
+  /**
+    * Gets the element's extents in its parent. This function should be called
+    * after calling CalculateRelativeAttribute.
+    */
+  Rectangle GetExtentsInParent() const;
+
+  /**
+   * Gets the element's minimum possible extents in its parent, taking its
+   * minimum width/height into account.
+   */
+  Rectangle GetMinExtentsInParent() const;
 
  public: // Event handlers and event related methods.
   /**
@@ -702,12 +780,17 @@ public: // Other overridable public methods.
   virtual double GetClientHeight() const;
 
   /**
-   * Adjusts the layout (e.g. size, position, etc.) of this element and its
-   * children. This method is called just before @c Draw().
-   * The implementation of this method of the derived classes must call through
-   * that of the base classes first.
+   * Calculate the size of this element according to children's size.
+   * Either relative or absolute size of the element should be provided after
+   * calling this method.
+   * Notice that it only calculate the size if the element's size is determined
+   * by its children.
+   * This method will calculate the size of all children first, so the
+   * implementation of this method in the derived classes can call
+   * BasicElement::CalculateSize() to calculate children's size before
+   * calculating the size of itself.
    */
-  virtual void Layout();
+  virtual void CalculateSize();
 
   /**
    * Sets a redraw mark, so that all things and children will be redrawed
@@ -826,6 +909,24 @@ public: // Other overridable public methods.
    * class to draw its children elements.
    */
   void DrawChildren(CanvasInterface *canvas);
+
+  /**
+   * Adjusts the layout of this element before layouting children. You can
+   * change children's size and position in this method.
+   * The pixel size of the element is calculated before calling this method, and
+   * they should not be changed in this method.
+   */
+  virtual void BeforeChildrenLayout();
+
+  /**
+   * Adjusts the layout of this element when all children is layouted. For
+   * example, you can adjust children's position in this method. But you can not
+   * change children's size in this method, if you want to do this, do it in
+   * BeforeChildrenLayout().
+   * The pixel size of the element is calculated before calling this method, and
+   * they should not be changed in this method.
+   */
+   virtual void Layout();
 
   /**
    * Draws the element onto the canvas.

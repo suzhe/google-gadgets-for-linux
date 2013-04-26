@@ -1,5 +1,5 @@
 /*
-  Copyright 2008 Google Inc.
+  Copyright 2011 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <cstring>
 #include <vector>
 #include <string>
@@ -31,10 +30,12 @@
 #include "common.h"
 #include "logger.h"
 #include "gadget_consts.h"
+#include "scoped_ptr.h"
 #include "slot.h"
-#include "string_utils.h"
-#include "system_utils.h"
 #include "small_object.h"
+#include "string_utils.h"
+#include "system_file_functions.h"
+#include "system_utils.h"
 
 namespace ggadget {
 
@@ -48,6 +49,84 @@ static const uLong kMaxFieldSize = 200000;
 static const char kZipGlobalComment[] = "Created by Google Gadgets for Linux.";
 static const char kZipReadMeFile[] = ".readme";
 static const char kTempZipFile[] = "%%Temp%%.zip";
+
+namespace {
+#if defined(OS_WIN)
+// Zip uses '/' for internal path inside the package. But windows convention
+// uses a '\\'. To make unzip compatible with windows convention, here it
+// wrappers all unzip interfaces involving internal file paths. It replaces
+// '\\' with '/' when passing an internal file path to unzip, and repalces '/'
+// back to '\\' when receiving an internal file path from unzip.
+
+// replace old_char with new_char in path.
+void StringReplace(char* path, char old_char, char new_char) {
+  if (path == NULL)
+    return;
+  while (*path != '\0') {
+    if (*path == old_char)
+      *path = new_char;
+    ++path;
+  }
+  return;
+}
+#endif
+
+int UnzLocateFile(unzFile file, const char* szFileName, int iCaseSensitivity) {
+#if defined(OS_WIN)
+  int name_buffer_length = strlen(szFileName) + 1;
+  scoped_array<char> file_name(new char[name_buffer_length]);
+  strcpy_s(file_name.get(), name_buffer_length, szFileName);
+  StringReplace(file_name.get(), '\\', '/');
+  return ::unzLocateFile(file, file_name.get(), iCaseSensitivity);
+#elif defined(OS_POSIX)
+  return ::unzLocateFile(file, szFileName, iCaseSensitivity);
+#endif
+}
+
+int UnzGetCurrentFileInfo(unzFile file, unz_file_info* pfile_info,
+                          char* szFileName, uLong fileNameBufferSize,
+                          void* extraField, uLong extraFieldBufferSize,
+                          char *szComment, uLong commentBufferSize) {
+#if defined(OS_WIN)
+  int result_code = ::unzGetCurrentFileInfo(file, pfile_info, szFileName,
+                                            fileNameBufferSize, extraField,
+                                            extraFieldBufferSize, szComment,
+                                            commentBufferSize);
+  StringReplace(szFileName, '/', '\\');
+  return result_code;
+#elif defined(OS_POSIX)
+  return ::unzGetCurrentFileInfo(file, pfile_info, szFileName,
+                                 fileNameBufferSize, extraField,
+                                 extraFieldBufferSize, szComment,
+                                 commentBufferSize);
+#endif
+}
+
+int ZipOpenNewFileInZip(zipFile file,
+                        const char* filename,
+                        const zip_fileinfo* zipfi,
+                        const void* extrafield_local,
+                        uInt size_extrafield_local,
+                        const void* extrafield_global,
+                        uInt size_extrafield_global,
+                        const char* comment,
+                        int method,
+                        int level) {
+#if defined(OS_WIN)
+  int name_buffer_length = strlen(filename) + 1;
+  scoped_array<char> file_name(new char[name_buffer_length]);
+  strcpy_s(file_name.get(), name_buffer_length, filename);
+  StringReplace(file_name.get(), '\\', '/');
+  return ::zipOpenNewFileInZip(file, file_name.get(), zipfi, extrafield_local,
+                               size_extrafield_local, extrafield_global,
+                               size_extrafield_global, comment, method, level);
+#elif defined(OS_POSIX)
+  return ::zipOpenNewFileInZip(file, filename, zipfi, extrafield_local,
+                               size_extrafield_local, extrafield_global,
+                               size_extrafield_global, comment, method, level);
+#endif
+}
+} // namespace
 
 class ZipFileManager::Impl : public SmallObject<> {
  public:
@@ -87,22 +166,22 @@ class ZipFileManager::Impl : public SmallObject<> {
     std::string path(base_path);
 
     // Use absolute path.
-    if (*base_path != kDirSeparator)
+    if (!ggadget::IsAbsolutePath(base_path))
       path = BuildFilePath(GetCurrentDirectory().c_str(), base_path, NULL);
 
     path = NormalizeFilePath(path.c_str());
 
     unzFile unzip_handle = NULL;
     zipFile zip_handle = NULL;
-    struct stat stat_value;
+    ggadget::StatStruct stat_value;
     memset(&stat_value, 0, sizeof(stat_value));
-    if (::stat(path.c_str(), &stat_value) == 0) {
+    if (ggadget::stat(path.c_str(), &stat_value) == 0) {
       if (!S_ISREG(stat_value.st_mode)) {
         DLOG("Not a regular file: %s", path.c_str());
         return false;
       }
 
-      if (::access(path.c_str(), R_OK) != 0) {
+      if (ggadget::access(path.c_str(), R_OK) != 0) {
         LOG("No permission to access the file %s", path.c_str());
         return false;
       }
@@ -146,8 +225,8 @@ class ZipFileManager::Impl : public SmallObject<> {
     if (!SwitchToRead())
       return false;
 
-    if (unzLocateFile(unzip_handle_, relative_path.c_str(),
-                      kZipCaseSensitivity) != UNZ_OK)
+    if (ggadget::UnzLocateFile(unzip_handle_, relative_path.c_str(),
+                               kZipCaseSensitivity) != UNZ_OK)
       return false;
 
     if (unzOpenCurrentFile(unzip_handle_) != UNZ_OK) {
@@ -223,16 +302,17 @@ class ZipFileManager::Impl : public SmallObject<> {
       }
 
       unz_file_info unz_info;
-      if (unzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info,
-                                NULL, 0, NULL, 0, NULL, 0) != UNZ_OK ||
+      if (ggadget::UnzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info,
+                                         NULL, 0, NULL, 0, NULL, 0) != UNZ_OK ||
           unz_info.size_file_extra > kMaxFieldSize ||
           unz_info.size_file_comment > kMaxFieldSize)
         return false;
       char *extra = new char[unz_info.size_file_extra];
       char *comment = new char[unz_info.size_file_comment + 1];
-      if (unzGetCurrentFileInfo(impl_->unzip_handle_, &unz_info, NULL, 0,
-                                extra, unz_info.size_file_extra,
-                                comment, unz_info.size_file_comment + 1)
+      if (ggadget::UnzGetCurrentFileInfo(impl_->unzip_handle_,
+                                         &unz_info, NULL, 0, extra,
+                                         unz_info.size_file_extra, comment,
+                                         unz_info.size_file_comment + 1)
           != UNZ_OK) {
         delete [] extra;
         delete [] comment;
@@ -245,7 +325,7 @@ class ZipFileManager::Impl : public SmallObject<> {
       zip_info.internal_fa = unz_info.internal_fa;
       zip_info.external_fa = unz_info.external_fa;
       std::string content;
-      bool result = zipOpenNewFileInZip(
+      bool result = ggadget::ZipOpenNewFileInZip(
                         dest_, filename, &zip_info, extra,
                         static_cast<uInt>(unz_info.size_file_extra),
                         NULL, 0, comment,
@@ -286,7 +366,7 @@ class ZipFileManager::Impl : public SmallObject<> {
 
     std::string temp_file = BuildFilePath(temp_dir_.c_str(),
                                           kTempZipFile, NULL);
-    unlink(temp_file.c_str());
+    ggadget::unlink(temp_file.c_str());
     zipFile temp_zip = zipOpen(temp_file.c_str(), APPEND_STATUS_CREATE);
     if (!temp_zip) {
       LOG("Can't create temp zip file: %s", temp_file.c_str());
@@ -304,14 +384,14 @@ class ZipFileManager::Impl : public SmallObject<> {
       // Copy the temp zip file over the original zip.
       unzClose(unzip_handle_);
       unzip_handle_ = NULL;
-      res = unlink(base_path_.c_str()) == 0 &&
+      res = ggadget::unlink(base_path_.c_str()) == 0 &&
             CopyFile(temp_file.c_str(), base_path_.c_str());
       if (!res) {
         LOG("Failed to copy temp zip file %s to original zip file %s: %s",
             temp_file.c_str(), base_path_.c_str(), strerror(errno));
       }
     }
-    unlink(temp_file.c_str());
+    ggadget::unlink(temp_file.c_str());
     return res;
   }
 
@@ -325,8 +405,8 @@ class ZipFileManager::Impl : public SmallObject<> {
     if (!SwitchToRead())
       return false;
 
-    if (unzLocateFile(unzip_handle_, relative_path.c_str(),
-                      kZipCaseSensitivity) != UNZ_OK)
+    if (ggadget::UnzLocateFile(unzip_handle_, relative_path.c_str(),
+                               kZipCaseSensitivity) != UNZ_OK)
       return false;
 
     if (into_file->empty()) {
@@ -344,8 +424,8 @@ class ZipFileManager::Impl : public SmallObject<> {
       *into_file = BuildFilePath(dir.c_str(), file_name.c_str(), NULL);
     }
 
-    unlink(into_file->c_str());
-    FILE *out_fp = fopen(into_file->c_str(), "w");
+    ggadget::unlink(into_file->c_str());
+    FILE *out_fp = ggadget::fopen(into_file->c_str(), "wb");
     if (!out_fp) {
       LOG("Can't open file %s for writing.", into_file->c_str());
       return false;
@@ -388,7 +468,7 @@ class ZipFileManager::Impl : public SmallObject<> {
     result = (fclose(out_fp) == 0 && result);
 
     if (!result)
-      unlink(into_file->c_str());
+      ggadget::unlink(into_file->c_str());
 
     return result;
   }
@@ -399,8 +479,8 @@ class ZipFileManager::Impl : public SmallObject<> {
     if (path) *path = full_path;
 
     return result && SwitchToRead() &&
-           unzLocateFile(unzip_handle_, relative_path.c_str(),
-                         kZipCaseSensitivity) == UNZ_OK;
+           ggadget::UnzLocateFile(unzip_handle_, relative_path.c_str(),
+                                  kZipCaseSensitivity) == UNZ_OK;
   }
 
   bool IsDirectlyAccessible(const char *file, std::string *path) {
@@ -423,10 +503,10 @@ class ZipFileManager::Impl : public SmallObject<> {
 
     unz_file_info file_info;
     if (result && SwitchToRead() &&
-        unzLocateFile(unzip_handle_, relative_path.c_str(),
-                      kZipCaseSensitivity) == UNZ_OK &&
-        unzGetCurrentFileInfo(unzip_handle_, &file_info,
-                              NULL, 0, NULL, 0, NULL, 0) == UNZ_OK) {
+        ggadget::UnzLocateFile(unzip_handle_, relative_path.c_str(),
+                               kZipCaseSensitivity) == UNZ_OK &&
+        ggadget::UnzGetCurrentFileInfo(unzip_handle_, &file_info,
+                                       NULL, 0, NULL, 0, NULL, 0) == UNZ_OK) {
       struct tm tm;
       memset(&tm, 0, sizeof(tm));
       tm.tm_year = file_info.tmu_date.tm_year - 1900;
@@ -435,6 +515,9 @@ class ZipFileManager::Impl : public SmallObject<> {
       tm.tm_hour = file_info.tmu_date.tm_hour;
       tm.tm_min = file_info.tmu_date.tm_min;
       tm.tm_sec = file_info.tmu_date.tm_sec;
+      // Sets tm.tm_isdst with -1 to have system decide whether daylight savings
+      // time is in effect or not.
+      tm.tm_isdst = -1;
       return mktime(&tm) * UINT64_C(1000);
     }
     return 0;
@@ -456,9 +539,9 @@ class ZipFileManager::Impl : public SmallObject<> {
     while (res == UNZ_OK) {
       unz_file_info file_info;
       char filename[256];
-      res = unzGetCurrentFileInfo(unzip_handle_, &file_info,
-                                  filename, sizeof(filename),
-                                  NULL, 0, NULL, 0);
+      res = ggadget::UnzGetCurrentFileInfo(unzip_handle_, &file_info,
+                                           filename, sizeof(filename),
+                                           NULL, 0, NULL, 0);
       if (res != UNZ_OK)
         break;
       char *filename_ptr = filename;
@@ -466,9 +549,9 @@ class ZipFileManager::Impl : public SmallObject<> {
       // In most cases filename buffer is big enough to contain the file name.
       if (filename_size > sizeof(filename)) {
         filename_ptr = new char[filename_size];
-        res = unzGetCurrentFileInfo(unzip_handle_, &file_info,
-                                    filename_ptr, filename_size,
-                                    NULL, 0, NULL, 0);
+        res = ggadget::UnzGetCurrentFileInfo(unzip_handle_, &file_info,
+                                             filename_ptr, filename_size,
+                                             NULL, 0, NULL, 0);
         if (res != UNZ_OK)
           break;
       }
@@ -501,7 +584,7 @@ class ZipFileManager::Impl : public SmallObject<> {
 
     // Can't read a file from an absolute path.
     // The file must be a relative path under base_path.
-    if (!file || !*file || *file == kDirSeparator) {
+    if (!file || !*file || IsAbsolutePath(file)) {
       LOG("Invalid file path: %s", (file ? file : "(NULL)"));
       return false;
     }
@@ -582,7 +665,7 @@ class ZipFileManager::Impl : public SmallObject<> {
 
     // If the file already exists, then try to open in append mode,
     // otherwise open in create mode.
-    if (::access(base_path_.c_str(), F_OK) == 0) {
+    if (ggadget::access(base_path_.c_str(), F_OK) == 0) {
       zip_handle_ = zipOpen(base_path_.c_str(), APPEND_STATUS_ADDINZIP);
     } else {
       zip_handle_ = zipOpen(base_path_.c_str(), APPEND_STATUS_CREATE);
@@ -602,15 +685,16 @@ class ZipFileManager::Impl : public SmallObject<> {
     zip_fileinfo info;
     memset(&info, 0, sizeof(info));
     time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
+    struct tm *tm = localtime(&t);  // Daylight savings time may be in effect.
     info.tmz_date.tm_sec = tm->tm_sec;
     info.tmz_date.tm_min = tm->tm_min;
     info.tmz_date.tm_hour = tm->tm_hour;
     info.tmz_date.tm_mday = tm->tm_mday;
     info.tmz_date.tm_mon = tm->tm_mon;
     info.tmz_date.tm_year = tm->tm_year + 1900;
-    if (zipOpenNewFileInZip(zip, file, &info, NULL, 0, NULL, 0, NULL,
-                            Z_DEFLATED, Z_DEFAULT_COMPRESSION) != ZIP_OK) {
+    if (ggadget::ZipOpenNewFileInZip(zip, file, &info, NULL, 0,
+                                     NULL, 0, NULL, Z_DEFLATED,
+                                     Z_DEFAULT_COMPRESSION) != ZIP_OK) {
       LOG("Can't add new file %s in zip archive %s.", file, zip_path);
       return false;
     }
